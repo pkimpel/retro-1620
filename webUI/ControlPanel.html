@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>retro-1620 Control Console</title>
+<!--
+/***********************************************************************
+* retro-1620/webUI 1620ControlConsole.html
+************************************************************************
+* Copyright (c) 2022, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 Model 2 Emulator Control Console page.
+************************************************************************
+* 2022-10-26  P.Kimpel
+*   Original version, from B220ControlConsole.html.
+***********************************************************************/
+-->
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link id=defaultStyleSheet rel=stylesheet type="text/css" href="./Common.css">
+<link id=supervisoryStyleSheet rel=stylesheet type="text/css" href="./ControlPanel.css">
+</head>
+
+<body class=panelBody>
+
+<div id=LogoSurface>
+    <img id=IBMLogo src="./resources/IBM-logo-BW.png" alt="IBM Logo">
+    <img id=I1620IILogo src="./resources/1620-II-Logo.png" alt="IBM 1620 II Logo">
+    <div id=DPSLogo>
+        <span id=DPSLogoText>DATA PROCESSING SYSTEM</span>
+    </div>
+</div>
+
+<div id=PanelContainer>
+    <div id=PanelSurface class=panelSurface></div>
+
+    <div id=Panel1Gray class="panelRegister ibmGray">
+        <div id=ControlGatesCaption class=caption>CONTROL GATES</div>
+    </div>
+
+    <div id=Panel2Blue class="panelRegister ibmBlue">
+        <div id=InputOutputCaption class=caption>INPUT-OUTPUT</div>
+    </div>
+
+    <div id=Panel3Gray class="panelRegister ibmGray">
+        <div id=InstExecCycleCaption class=caption>INST & EXEC CYCLE</div>
+    </div>
+
+    <div id=Panel4Blue class="panelRegister ibmBlue">
+        <div id=OperationRegisterCaption class=caption>OPERATION REGISTER</div>
+        <div id=ORECaption class=evenOddCaption>E</div>
+        <div id=OROCaption class=evenOddCaption>O</div>
+        <div id=MQRegisterCaption class=caption>MULTIPLIER/QUOTIENT</div>
+        <div id=DataRegisterCaption class=caption>DATA REGISTER</div>
+        <div id=DRECaption class=evenOddCaption>E</div>
+        <div id=DROCaption class=evenOddCaption>O</div>
+    </div>
+
+    <div id=Panel5Gray class="panelRegister ibmGray">
+        <div id=MemoryBufferRegisterCaption class=caption>MEMORY BUFFER REGISTER</div>
+        <div id=MBRECaption class=evenOddCaption>E</div>
+        <div id=MBROCaption class=evenOddCaption>O</div>
+        <div id=MemoryInhibitRegisterCaption class=caption>MEMORY INHIBIT REGISTER</div>
+        <div id=MIRECaption class=evenOddCaption>E</div>
+        <div id=MIROCaption class=evenOddCaption>O</div>
+    </div>
+
+    <div id=Panel6Blue class="panelRegister ibmBlue">
+        <div id=MemoryAddressRegisterCaption class=caption>MEMORY ADDRESS REGISTER</div>
+        <div id=MAR10000Caption class=rowCaption>TEN THOUSANDS</div>
+        <div id=MAR1000Caption  class=rowCaption>THOUSANDS</div>
+        <div id=MAR100Caption   class=rowCaption>HUNDREDS</div>
+        <div id=MAR10Caption    class=rowCaption>TENS</div>
+        <div id=MAR1Caption     class=rowCaption>UNITS</div>
+    </div>
+
+    <div id=Panel7Gray class="panelRegister ibmGray">
+        <div id=MemoryAddressDisplayCaption class=caption>MEMORY ADDRESS REGISTER<br>DISPLAY SELECTOR</div>
+        <div id=MARSelectorDiv></div>
+    </div>
+</div>
+
+<div id=VersionDiv class=caption>
+    retro-1620 <span id=EmulatorVersion>?.??</span>
+</div>
+
+</body>
+</html>

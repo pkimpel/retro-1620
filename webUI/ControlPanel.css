@@ -1,0 +1,211 @@
+/***********************************************************************
+* retro-1620/webUI ControlPanel.css
+************************************************************************
+* Copyright (c) 2022, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 Emulator Control Panel style sheet.
+************************************************************************
+* 2022-07-22  P.Kimpel
+*   Original version, from retro-220/webIU/B220ControlConsole.css
+***********************************************************************/
+
+BODY {
+    position:           relative;
+    height:             100%;
+    width:              100%;
+    background-color:   #F4F0E5}
+
+DIV.rowCaption {
+    position:           absolute;
+    left:               0;
+    width:              100%;
+    line-height:        100%;
+    font-size:          7px;
+    text-align:         center}
+DIV.evenOddCaption {
+    position:           absolute;
+    width:              14px;
+    left:               0;
+    line-height:        100%;
+    font-size:          8px;
+    text-align:         center}
+
+CANVAS.selectorKnob {
+    position:           absolute;
+    font-size:          4px}
+
+
+#LogoSurface {
+    position:           absolute;
+    left:               16px;
+    top:                8px;
+    height:             48px;
+    width:              1382px;
+    background-color:   #DDD;
+    box-shadow:         4px 4px 4px black}
+#IBMLogo{
+    position:           absolute;
+    left:               0;
+    height:             100%}
+#I1620IILogo {
+    position:           absolute;
+    top:                15%;
+    left:               192px;
+    height:             70%}
+#DPSLogo {
+    position:           absolute;
+    left:               624px;
+    right:              0;
+    height:             100%;
+    text-align:         center;
+    font-family:        Verdana, Arial, Helvetica, DejaVuSansWeb, san-serif;
+    font-size:          24px;
+    font-weight:        bold;
+    background-color:   #999}
+#DPSLogoText {
+    position:           absolute;
+    top:                50%;
+    left:               50%;
+    width:              100%;
+    transform:          translate(-50%,-50%)}
+
+#PanelContainer{
+    position:           absolute;
+    left:               16px;
+    top:                72px;
+    height:             282px;
+    width:              1382px}
+
+#PanelSurface {
+    position:           absolute;
+    left:               2px;
+    right:              2px;
+    top:                2px;
+    height:             278px;
+    background-color:   black}
+
+#Panel1Gray {
+    top:                0;
+    bottom:             0;
+    left:               0;
+    width:              354px}
+#ControlGatesCaption {
+    bottom:             calc(100% - 44px);
+    left:               0;
+    right:              0}
+
+#Panel2Blue {
+    top:                0;
+    bottom:             0;
+    left:               358px;
+    width:              214px}
+#InputOutputCaption {
+    bottom:             calc(100% - 44px);
+    left:               0;
+    right:              0}
+
+#Panel3Gray {
+    top:                0;
+    bottom:             0;
+    left:               576px;
+    width:              102px}
+#InstExecCycleCaption {
+    bottom:             calc(100% - 44px);
+    left:               0;
+    right:              0}
+
+#Panel4Blue {
+    top:                0;
+    bottom:             0;
+    left:               682px;
+    width:              158px}
+#OperationRegisterCaption {
+    bottom:             calc(100% - 44px);
+    left:               0;
+    right:              0}
+#ORECaption {
+    top:                79px}
+#OROCaption {
+    top:                119px}
+#MQRegisterCaption {
+    top:                134px;
+    left:               14px;
+    right:              14px;
+    border-top:         2px solid white}
+#DataRegisterCaption {
+    top:                174px;
+    left:               14px;
+    right:              14px;
+    border-top:         2px solid white}
+#DRECaption {
+    top:                199px}
+#DROCaption {
+    top:                239px}
+
+#Panel5Gray {
+    top:                0;
+    bottom:             0;
+    left:               844px;
+    width:              186px}
+#MemoryBufferRegisterCaption {
+    bottom:             calc(100% - 44px);
+    left:               0;
+    right:              0}
+#MBRECaption {
+    top:                79px}
+#MBROCaption {
+    top:                119px}
+#MemoryInhibitRegisterCaption {
+    top:                174px;
+    left:               14px;
+    right:              14px;
+    border-top:         2px solid white}
+#MIRECaption {
+    top:                199px}
+#MIROCaption {
+    top:                239px}
+
+#Panel6Blue {
+    top:                0;
+    bottom:             0;
+    left:               1034px;
+    width:              158px}
+#MemoryAddressRegisterCaption {
+    bottom:             calc(100% - 44px);
+    left:               0;
+    right:              0}
+#MAR10000Caption {
+    top:                56px}
+#MAR1000Caption {
+    top:                96px}
+#MAR100Caption {
+    top:                136px}
+#MAR10Caption {
+    top:                176px}
+#MAR1Caption {
+    top:                216px}
+
+#Panel7Gray {
+    top:                0;
+    bottom:             0;
+    left:               1196px;
+    width:              186px}
+#MemoryAddressDisplayCaption {
+    bottom:             calc(100% - 44px);
+    left:               0;
+    right:              0}
+#MARSelectorDiv {
+    position:           absolute;
+    top:                74px;
+    left:               0;
+    width:              186px;
+    height:             186px}
+
+#VersionDiv {
+    position:           absolute;
+    right:              8px;
+    bottom:             8px;
+    font-size:          8px;
+    color:              black}

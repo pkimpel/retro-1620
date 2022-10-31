@@ -1,0 +1,82 @@
+/***********************************************************************
+* retro-1620/webUI 1620.css
+************************************************************************
+* Copyright (c) 2022, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 emulator home page style sheet.
+************************************************************************
+* 2022-07-22  P.Kimpel
+*   Original version, from retro-g15 webUI/G15.css.
+***********************************************************************/
+
+BODY {
+    position:           relative}
+
+H1 {
+    margin-top:         1em;
+    margin-bottom:      0.5em;
+    font-size:          14pt;
+    font-weight:        bold}
+
+.registerRoundedBorder {
+    border-top:         2px solid white;
+    border-left:        2px solid white;
+    border-right:       2px solid white;
+    border-bottom:      none;
+    height:             48px;
+    border-radius:      24px}
+
+#VersionDiv {
+    position:           absolute;
+    top:                4px;
+    right:              4px;
+    text-align:         right}
+#StatusMsg {
+    text-align:         center;
+    font-size:          85%;
+    color:              blue}
+#InfoTable {
+    margin-top:         0;
+    width:              100%}
+#CenteredBody {
+    position:           absolute;
+    text-align:         center;
+    top:                25%;
+    bottom:             25%;
+    left:               0;
+    right:              0}
+#IBM1620Image {
+    box-shadow:         12px 12px 12px gray;
+    max-width:          80%;
+    height:             80%}
+#StartUpBtn,
+#ConfigureBtn {
+    margin-top:         2em;
+    background-color:   #246;
+    color:              white;
+    font-family:        DejaVuSansWeb, sans-serif;
+    font-weight:        normal;
+    font-size:          12pt;
+    width:              auto;
+    height:             auto;
+    padding:            0.5em;
+    border-radius:      16px;
+    border:             2px solid #999}
+#StartUpBtn[disabled],
+#ConfigureBtn[disabled] {
+    background-color:   #468;
+    color:              #999;
+    border-color:       #666}
+#PageFooter {
+    margin-top:         2em;
+    margin-left:        calc(50% - 20em);
+    margin-right:       calc(50% - 20em);
+    font-weight:        bold;
+    color:              red;
+    text-align:         center}
+#PhotoCredit {
+    position:           absolute;
+    right:              4px;
+    bottom:             4px}

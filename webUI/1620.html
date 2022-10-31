@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>retro-1620 Emulator</title>
+<!--
+/***********************************************************************
+* retro-1620/webUI 1620.html
+************************************************************************
+* Copyright (c) 2022, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 emulator home page.
+************************************************************************
+* 2022-07-22  P.Kimpel
+*   Original version, from retro-g15 webUI/G15.html.
+***********************************************************************/
+-->
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link id=defaultStyleSheet rel=stylesheet type="text/css" href="Common.css">
+<link id=homeStyleSheet rel=stylesheet type="text/css" href="1620.css">
+
+<script type=module src="./1620.js"></script>
+
+</head>
+
+<body>
+<div id=VersionDiv>
+    <img id=Retro1620Logo src="./resources/retro-1620-Logo.png" alt="retro-1620 Logo">
+    <div id=EmulatorVersion>?.??</div>
+</div>
+<h1>IBM 1620 Model 2 Emulator</h1>
+<hr>
+<table id=InfoTable>
+<tr>
+    <td><a href="https://github.com/pkimpel/retro-1620/" target="_blank">
+        Open-Source Project</a>
+    <td id=StatusMsg>
+    <td class=rj><a href="http://retro-emulation.blogspot.com/"
+        target="_blank">Project Blog</a>
+<tr>
+    <td><a href="https://github.com/pkimpel/retro-1620/wiki/" target="_blank">
+        Project Wiki</a>
+    <td>&nbsp;
+    <td>&nbsp;
+</table>
+
+<div id=CenteredBody>
+    <img id=IBM1620Image src="./resources/IBM-1620-Mod2-St.AndrewsU_85858601_85855406.jpg"
+         title="IBM 1620 Model 2 Computer System at University of St. Andrews, UK, 1966"
+         alt="IBM 1620 Model 2 Computer System">
+    <br>
+    <button id=StartUpBtn DISABLED>
+        Start the Emulator
+    </button>
+    &nbsp;&nbsp;&nbsp;
+    <button id=ConfigureBtn DISABLED title="Configuration of the emulation is not yet implemented">
+        Configure System
+    </button>
+
+    <div id=PageFooter>
+        <i>(Caution: Closing this window, minimizing it, or placing the page on a non-active tab may cause the emulator to run very slowly)</i>
+    </div>
+</div>
+
+<a id=PhotoCredit href="https://www.st-andrews.ac.uk/itsnew/newsletter/2011/07/1620picture.html"
+   target="_blank">Photo Credit</a>
+
+</body>
+</html>
