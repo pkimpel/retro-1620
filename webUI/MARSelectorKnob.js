@@ -15,117 +15,192 @@ export {MARSelectorKnob};
 
 class MARSelectorKnob {
 
-    const degrees = Math.PI/180;
-    const fullCircle = 360*degrees;
-
-    constructor(parent, id, initial, positions) {
+    constructor(parent, id, initial, positions, captions) {
         /* Constructor for the black control knob objects used within panels.
             parent      the containing DOM element; the control will be sized to fill
                         this element
             id          the DOM id for the knob element (i.e., its canvas)
             initial     the 0-relative index indicating the default position of the switch;
-            positions   an array of objects with the following properties:
-                angle       indicates the angular position (in degrees, where 0 is
-                            straight up) of each of the knob's positions
-                caption     a textual label for the position
+            positions   an array of angles for the knob positions (in degrees, where 0 is
+                            straight up)
+            captions    an arrays of caption labels corresponding to each position
         */
 
-        this.position = 0;              // current knob position
         this.direction = 1;             // rotate knob clockwise(1), counter-clockwise(-1)
-        this.positions = {};            // array of knob position objects
-        for (item of positions) {
-            this.positions.push({radians: item.angle*degrees, caption: item.caption});
-        }
+        this.parent = parent;           // the parent div
+        this.position = 0;              // current knob position
+        this.positions = [];            // knob position angles
+
+        this.boundStep = this.step.bind(this);
+        this.boundCaptionClick = this.captionClick.bind(this);
 
         // visible DOM element
-        this.size = Math.min(parent.clientWidth, parent.clientHeight);
-        this.element = document.createElement("canvas");
+        this.size = parent.clientWidth;
+
+        this.element = document.createElement("div");
         this.element.id = id;
-        this.element.height = this.size;
-        this.element.width = this.size;
-        this.element.className = MARSelectorKnob.className;
+        this.element.className = MARSelectorKnob.cupClassName;
         parent.appendChild(this.element);
+        this.cupSize = this.element.clientWidth;
+
+        this.canvas = document.createElement("canvas");
+        this.canvas.height = this.cupSize;
+        this.canvas.width = this.cupSize;
+        this.canvas.className = MARSelectorKnob.className;
+        this.element.appendChild(this.canvas);
+
+        // Build the captions
+        let offset = Math.round(this.size/2);
+        let radius = Math.round((this.size + this.cupSize)/4) + 2;
+        let captionSize = Math.round(this.size*0.12);
+        for (let i=0; i<positions.length; ++i) {
+            let angle = Math.PI - positions[i]*MARSelectorKnob.degrees;
+            this.positions.push(angle);
+            let caption = document.createElement("div");
+            caption.id = "MARSelectorPos_" + i;
+            caption.className = MARSelectorKnob.captionClassName;
+            caption.style.width = `${captionSize}px`;
+            caption.style.height = `${captionSize}px`;
+            let x = Math.sin(angle)*radius + offset;
+            let y = Math.cos(angle)*radius + offset;
+            caption.style.left = `${x}px`;
+            caption.style.top = `${y}px`;
+            let span = document.createElement("span");
+            span.textContent = captions[i];
+            caption.appendChild(span);
+            parent.appendChild(caption);
+            caption.addEventListener("click", this.boundCaptionClick, false);
+        }
 
         this.set(initial);              // set to its initial position
+        this.canvas.addEventListener("click", this.boundStep, false);
     }
 
     /**************************************/
-    MARSelectorKnob.prototype.addEventListener = function addEventListener(eventName, handler, useCapture) {
+    addEventListener(eventName, handler, useCapture) {
         /* Sets an event handler whenever the canvas element is clicked */
 
-        this.element.addEventListener(eventName, handler, useCapture);
+        this.canvas.addEventListener(eventName, handler, useCapture);
     }
 
     /**************************************/
     set(position) {
         /* Changes the visible state of the knob according to the position index */
-        let dc = this.element.getContext("2d");
-        let halfSize = Math.floor(this.size/2);
-        let quarterSize = Math.floor(this.size/4);
-        let silverSkirt;
+        let dc = this.canvas.getContext("2d");
+        let posTop = this.positions.length - 1;
+        let radius = Math.round(this.cupSize/2);
+        const fullCircle = 360*MARSelectorKnob.degrees;
 
         if (position < 0) {
-            this.position = 0;
-            this.direction = 1;
-        } else if (position < this.positions.length) {
+            this.position = posTop;
+        } else if (position <= posTop) {
             this.position = position;
         } else {
-            this.position = this.positions.length-1;
-            this.direction = -1;
+            this.position = 0;
         }
 
         dc.save();
-        dc.translate(halfSize+0.5, halfSize+0.5);   // move origin to the center
+        dc.translate(radius, radius);                   // move origin to the center
+        dc.fillStyle = MARSelectorKnob.canvasColor;     // fill in the panel background (aids antialiasing)
+        dc.clearRect(-radius, -radius, this.cupSize, this.cupSize);
 
-        dc.fillStyle = MARSelectorKnob.canvasColor;// fill in the panel background (aids antialiasing)
-        dc.fillRect(-halfSize, -halfSize, this.size, this.size);
+        // Compute the pointer wedge verticies.
+        radius -= 2;
+        let angle = this.positions[this.position];
+        let t0x = Math.sin(angle)*(radius-2);
+        let t0y = Math.cos(angle)*(radius-2);
 
-        silverSkirt = dc.createRadialGradient(0, 0, 1.0, 0, 0, 0.01);
-        silverSkirt.addColorStop(0.5, "#FFF");
-        silverSkirt.addColorStop(1, "#666");
+        let angle1 = angle + Math.PI + MARSelectorKnob.baseAngle;
+        let b1x = Math.sin(angle1)*radius;
+        let b1y = Math.cos(angle1)*radius;
+        let angle2 = angle + Math.PI - MARSelectorKnob.baseAngle;
+        let b2x = Math.sin(angle2)*radius;
+        let b2y = Math.cos(angle2)*radius;
 
-        dc.beginPath();                             // draw the outer skirt of the knob
-        dc.arc(0, 0, halfSize-1, 0, fullCircle, false);
-        dc.fillStyle = silverSkirt;
-        dc.fill();
+        let angle3 = angle - MARSelectorKnob.tipAngle;
+        let t1x = Math.sin(angle3)*radius;
+        let t1y = Math.cos(angle3)*radius;
+        let angle4 = angle + MARSelectorKnob.tipAngle;
+        let t2x = Math.sin(angle4)*radius;
+        let t2y = Math.cos(angle4)*radius;
 
-        dc.beginPath();                             // draw the central knob
-        dc.arc(0, 0, quarterSize, 0, fullCircle, false);
-        dc.fillStyle = "#000";
-        dc.fill();
-
-        dc.beginPath();                             // draw the inset on top of the knob
-        dc.arc(0, 0, quarterSize-4, 0, fullCircle, false);
-        dc.fillStyle = "#333";
-        dc.fill();
-
-        dc.save();                                  // draw the knob indicator
-        dc.rotate(this.positions[this.position].radians);
+        // Draw the pointer wedge.
         dc.beginPath();
-        dc.moveTo(0, 1-halfSize);
-        dc.lineTo(-quarterSize/4, -halfSize+quarterSize/2);
-        dc.lineTo(quarterSize/4, -halfSize+quarterSize/2);
-        dc.closePath();
-        dc.fillStyle = "#000";
+        dc.moveTo(t1x, t1y);
+        dc.fillStyle = "#333";
+        dc.shadowOffsetX = 8;
+        dc.shadowOffsetY = 8;
+        dc.shadowColor = "#444";
+        dc.shadowBlur = 8;
+        dc.lineTo(t2x, t2y);
+        dc.lineTo(b2x, b2y);
+        dc.lineTo(b1x, b1y);
         dc.fill();
-        dc.restore();                               // undo the rotation
-        dc.restore();                               // undo the translation
+
+        // Draw the pointer indicator
+        dc.beginPath();
+        dc.moveTo(0, 0);
+        dc.fillStyle = "white";
+        dc.arc(0, 0, 3, fullCircle, false);
+        dc.fill();
+        dc.beginPath();
+        dc.moveTo(0, 0);
+        dc.lineWidth = 2;
+        dc.strokeStyle = "white";
+        dc.lineTo(t0x, t0y);
+        dc.closePath();
+        dc.stroke();
+
+        dc.restore();                               // pop the outermost save()
     }
 
     /**************************************/
     step() {
         /* Steps the knob to its next position. If it is at the last position, steps it
         to the first position */
-        let position = this.position+this.direction;
 
-        if (position < 0) {
-            this.direction = 1;
-            this.set(1);
-        } else if (position < this.positions.length) {
-            this.set(position);
-        } else {
-            this.direction = -1;
-            this.set(this.positions.length-2);
+        this.set(this.position+this.direction);
+    }
+
+    /**************************************/
+    moveTo(position) {
+        /* Steps the knob to the specified position */
+        let steps = position - this.position;
+
+        const nextStep = () => {
+            this.step();
+            if (this.position != position) {
+                setTimeout(nextStep, 100);
+            }
+        };
+
+        if (steps) {
+            let dir = Math.sign(steps);
+            this.direction = (Math.abs(steps) <= this.positions.length/2 ? dir : -dir);
+            nextStep();
+        }
+    }
+
+    /**************************************/
+    captionClick(ev) {
+        /* Handles a click event on one of the position captions to move the
+        knob to the position of that caption */
+        let e = ev.target;
+
+        while (e.tagName != "DIV") {
+            e = e.parentElement;
+        }
+
+        let id = e.id;
+        let [prefix, suffix] = id.split("_");
+
+        if (prefix == "MARSelectorPos") {
+            if (suffix) {
+                let position = parseInt(suffix, 10);
+                if (!isNaN(position) && position < this.positions.length && position >= 0) {
+                    this.moveTo(position);
+                }
+            }
         }
     }
 
@@ -136,3 +211,8 @@ class MARSelectorKnob {
 
     MARSelectorKnob.className = "selectorKnob";
     MARSelectorKnob.canvasColor = "transparent";
+    MARSelectorKnob.cupClassName = "MARSelectorCup";
+    MARSelectorKnob.captionClassName = "MARSelectorCaption";
+    MARSelectorKnob.degrees = Math.PI/180;
+    MARSelectorKnob.baseAngle = 36*MARSelectorKnob.degrees/2;
+    MARSelectorKnob.tipAngle = 6*MARSelectorKnob.degrees/2;

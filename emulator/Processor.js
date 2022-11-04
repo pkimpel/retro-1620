@@ -238,6 +238,13 @@ class Processor {
     }
 
     /**************************************/
+    releaseIO() {
+        /* Cancels any pending I/O operation and returns to manual mode */
+
+        this.stop();
+    }
+
+    /**************************************/
     finishIO() {
         /* Terminates an I/O operation, resetting state and setting Ready */
 
@@ -316,12 +323,14 @@ class Processor {
     stop() {
         /* Stops running the processor on the Javascript thread */
 
+        /**********
         if (this.poweredOn && !this.CH.value) {
             this.CH.value = 1;          // set HALT FF
             this.CZ.value = 1;          // disable stepping
             this.CG.value = 0;          // reset Next from AR FF
             this.CQ.value = 0;          // reset TEST FF
         }
+        **********/
     }
 
     /**************************************/
@@ -388,7 +397,7 @@ class Processor {
         /* Powers down the processor */
 
         this.stop();
-        this.cancelIO();
+        this.releaseIO();
         this.poweredOn = false;
     }
 

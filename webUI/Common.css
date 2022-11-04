@@ -107,135 +107,6 @@ DIV.caption {
     line-height:        100%;
     text-align:         center}
 
-DIV.gateLamp {
-    position:           absolute;
-    z-index:            1;
-    width:              14px;
-    height:             14px;
-    font-size:          4px;
-    border-radius:      50%;
-    border:             2px solid #222;
-    background-color:   #777777}
-DIV.gateLit1 {
-    background-color:   #A09388}
-DIV.gateLit2 {
-    background-color:   #B3A696}
-DIV.gateLit3 {
-    background-color:   #C6B9A4}
-DIV.gateLit4 {
-    background-color:   #D9CCB2}
-DIV.gateLit5 {
-    background-color:   #ECDFC0}
-DIV.gateLit {
-    background-color:   #FFF2CE}
-/*****************
-    background-image:   radial-gradient(circle, #999, #999, #666)}
-DIV.gateLit1 {
-    background-image:   radial-gradient(circle, #AAA, #AAA, #666)}
-DIV.gateLit2 {
-    background-image:   radial-gradient(circle, #BBB, #BBB, #777)}
-DIV.gateLit3 {
-    background-image:   radial-gradient(circle, #CCC, #CCC, #777)}
-DIV.gateLit4 {
-    background-image:   radial-gradient(circle, #DDD, #DDD, #888)}
-DIV.gateLit5 {
-    background-image:   radial-gradient(circle, #EEE, #EEE, #888)}
-DIV.gateLit {
-    background-image:   radial-gradient(circle, #FFF, #FFF, #999)}
-******************/
-
-DIV.gateLampTopCaption {
-    position:           absolute;
-    width:              28px;
-    bottom:             17px;
-    left:               -7px;
-    line-height:        100%;
-    font-size:          7px;
-    text-align:         center}
-DIV.gateLampBottomCaption {
-    position:           absolute;
-    width:              28px;
-    top:                18px;
-    left:               -7px;
-    font-size:          7px;
-    text-align:         center}
-
-DIV.redLamp {
-    position:           absolute;
-    width:              24px;
-    height:             24px;
-    font-size:          4px;
-    border-radius:      50%;
-    background-image:   radial-gradient(circle, #900, #300)}
-DIV.redLit1 {
-    background-image:   radial-gradient(circle, #A00, #900, #400)}
-DIV.redLit2 {
-    background-image:   radial-gradient(circle, #B00, #A00, #500)}
-DIV.redLit3 {
-    background-image:   radial-gradient(circle, #C00, #B00, #600)}
-DIV.redLit4 {
-    background-image:   radial-gradient(circle, #D00, #C00, #700)}
-DIV.redLit5 {
-    background-image:   radial-gradient(circle, #E00, #D00, #800)}
-DIV.redLit {
-    background-image:   radial-gradient(circle, #F00, #E00, #900)}
-
-DIV.greenLamp {
-    position:           absolute;
-    width:              24px;
-    height:             24px;
-    font-size:          4px;
-    border-radius:      50%;
-    background-image:   radial-gradient(circle, #090, #030)}
-DIV.greenLit1 {
-    background-image:   radial-gradient(circle, #0A0, #090, #040)}
-DIV.greenLit2 {
-    background-image:   radial-gradient(circle, #0B0, #0A0, #050)}
-DIV.greenLit3 {
-    background-image:   radial-gradient(circle, #0C0, #0B0, #060)}
-DIV.greenLit4 {
-    background-image:   radial-gradient(circle, #0D0, #0C0, #070)}
-DIV.greenLit5 {
-    background-image:   radial-gradient(circle, #0E0, #0D0, #080)}
-DIV.greenLit {
-    background-image:   radial-gradient(circle, #0F0, #0E0, #090)}
-
-DIV.coloredLampTopCaption {
-    position:           absolute;
-    width:              80px;
-    top:                -13px;
-    left:               -28px;
-    line-height:        100%;
-    font-size:          5pt;
-    font-weight:        bold;
-    text-align:         center}
-DIV.coloredLampBottomCaption {
-    position:           absolute;
-    width:              80px;
-    bottom:             -15px;
-    left:               -28px;
-    font-size:          5pt;
-    font-weight:        bold;
-    text-align:         center}
-
-DIV.toggleSwitchTopCaption {
-    position:           absolute;
-    width:              64px;
-    top:                -13px;
-    left:               -20px;
-    line-height:        100%;
-    font-size:          5pt;
-    font-weight:        bold;
-    text-align:         center}
-DIV.toggleSwitchBottomCaption {
-    position:           absolute;
-    width:              64px;
-    bottom:             -15px;
-    left:               -20px;
-    font-size:          5pt;
-    font-weight:        bold;
-    text-align:         center}
-
 DIV.panelSurface {
     position:           relative;
     background-color:   #246;
@@ -247,6 +118,14 @@ DIV.panelRegister {
     color:              white;
     font-size:          6px;
     box-shadow:         4px 4px 4px black}
+
+DIV.panelSpacer {
+    position:           absolute;
+    width:              2px;
+    height:             52px;
+    background-color:   white;
+    border:             1px solid gray;
+    border-radius:      2px}
 
 DIV.panelDiv {
     position:           absolute;
@@ -309,88 +188,105 @@ SPAN.panelRegSpan {
     padding-right:      2px;
     background-color:   #67AAB2}
 
-DIV.greenButton1 {
+DIV.gateLamp {
     position:           absolute;
+    z-index:            1;
     width:              14px;
     height:             14px;
     font-size:          4px;
-    background-image:   radial-gradient(circle, #0C0, #090);
     border-radius:      50%;
-    border:             10px solid #CCC}
-DIV.redButton1 {
+    border:             2px solid #222;
+    background-color:   #777777}
+DIV.gateLit1 {
+    background-color:   #A09388}
+DIV.gateLit2 {
+    background-color:   #B3A696}
+DIV.gateLit3 {
+    background-color:   #C6B9A4}
+DIV.gateLit4 {
+    background-color:   #D9CCB2}
+DIV.gateLit5 {
+    background-color:   #ECDFC0}
+DIV.gateLit {
+    background-color:   #FFF2CE}
+
+DIV.gateLampTopCaption {
     position:           absolute;
-    width:              14px;
-    height:             14px;
-    font-size:          4px;
-    background-image:   radial-gradient(circle, #F00, #C00);
-    border-radius:      50%;
-    border:             10px solid #CCC}
-DIV.redButton3 {
+    width:              28px;
+    bottom:             17px;
+    left:               -7px;
+    line-height:        100%;
+    font-size:          7px;
+    text-align:         center}
+DIV.gateLampBottomCaption {
     position:           absolute;
-    width:              20px;
-    height:             20px;
-    font-size:          4px;
-    background-image:   radial-gradient(circle, #F00, #C00);
-    border-radius:      50%;
-    border:             2px solid #CCC}
-DIV.blackButton3 {
+    width:              28px;
+    top:                18px;
+    left:               -7px;
+    font-size:          7px;
+    text-align:         center}
+
+BUTTON.panel {
     position:           absolute;
-    width:              20px;
-    height:             20px;
-    font-size:          4px;
-    background-image:   radial-gradient(circle, #000, #333);
-    border-radius:      50%;
-    border:             2px solid #CCC}
-
-BUTTON {
-    font-family:        DejaVuSansWeb, sans-serif;
-    font-size:          10pt;
-    font-weight:        bold;
-    line-height:        120%;
-    width:              60px;
-    height:             32px;
-    padding-left:       0;
-    padding-right:      0;
-    border:             2px solid #DDD;
-    border-radius:      4px}
-
-BUTTON.large {
-    font-family:        DejaVuSansWeb, sans-serif;
-    font-size:          8pt;
-    font-weight:        normal;
-    line-height:        120%;
-    width:              60px;
-    height:             40px;
-    padding-left:       0;
-    padding-right:      0;
-    border:             1px solid #DDD;
-    border-radius:      4px}
-
-BUTTON.redButton {
-    background-image:   radial-gradient(circle, #900, #600);
-    color:              white}
-
-BUTTON.redLit {
-    color:              black;
-    background-image:   radial-gradient(circle, #F00, #F00, #C00)}
-
-BUTTON.blackBorder {
-    border:             1px solid black}
-
-BUTTON.silverBorder {
-    border:             1px solid #DDD}
-
-.annunciator {
-    visibility:         hidden;
-    white-space:        nowrap;
     font-family:        DejaVuSansWeb, sans-serif;
     font-size:          7pt;
-    line-height:        100%}
-.annunciatorLit {
-    visibility:         visible}
+    font-weight:        normal;
+    line-height:        120%;
+    width:              56px;
+    height:             48px;
+    padding-left:       0;
+    padding-right:      0;
+    border-top:         6px solid white;
+    border-bottom:      6px solid white;
+    border-left:        none;
+    border-right:       none}
 
-.active {
-    color:              #FFF}           /* white */
+BUTTON.blackButton {
+    color:              white;
+    background-image:   linear-gradient(#666, black, #666)}
+
+BUTTON.whiteLamp {
+    color:              black;
+    background-image:   linear-gradient(#B3A696, #D9CCB2, #B3A696)}
+BUTTON.whiteLit {
+    background-image:   radial-gradient(circle, #FFF2CE, #FFF2CE, #C6B9A4)}
+
+BUTTON.redLamp {
+    color:              black;
+    background-image:   linear-gradient(#600, #800, #600)}
+BUTTON.redLit {
+    background-image:   radial-gradient(circle, #F00, #F00, #C00)}
+
+BUTTON.greenLamp {
+    color:              black;
+    background-image:   linear-gradient(#060, #080, #060)}
+BUTTON.greenLit {
+    background-image:   radial-gradient(circle, #0F0, #0F0, #0C0)}
+
+DIV.toggleSwitchBox {
+    position:           absolute;
+    width:              24px;
+    height:             30px}
+DIV.toggleSwitchBox IMG {
+    width:              100%}
+DIV.toggleSwitchTopCaption {
+    position:           absolute;
+    width:              64px;
+    bottom:             32px;
+    left:               -20px;
+    line-height:        100%;
+    font-size:          5pt;
+    font-weight:        normal;
+    text-align:         center}
+DIV.toggleSwitchBottomCaption {
+    position:           absolute;
+    width:              64px;
+    top:                28px;
+    left:               -20px;
+    font-size:          5pt;
+    font-weight:        normal;
+    text-align:         center}
+
 .bold {
     font-weight:        bold}
 .center {
@@ -403,7 +299,7 @@ BUTTON.silverBorder {
 .ibmBlue {
     background-color:   #718DBD}
 .ibmGray {
-    background-color:   #443}
+    background-color:   #555}
 .number {
     font-family:        DejaVuSansMonoBookWeb, monospace;
     text-align:         right}

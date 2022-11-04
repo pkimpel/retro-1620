@@ -16,12 +16,13 @@ export {ControlPanel};
 
 import * as Util from "../emulator/Util.js";
 import * as Version from "../emulator/Version.js";
+import {openPopup} from "./PopupUtil.js";
 
 import {ColoredLamp} from "./ColoredLamp.js";
 import {GateLamp} from "./GateLamp.js";
+import {MARSelectorKnob} from "./MARSelectorKnob.js";
 import {PanelRegister} from "./PanelRegister.js";
 import {ToggleSwitch} from "./ToggleSwitch.js";
-import {openPopup} from "./PopupUtil.js";
 
 class ControlPanel {
 
@@ -33,7 +34,7 @@ class ControlPanel {
             processor is the Processor object
             systemShutDown() shuts down the emulator
         */
-        const h = 600;
+        const h = 560;
         const w = 1414;
 
         this.context = context;
@@ -43,6 +44,8 @@ class ControlPanel {
 
         this.boundUpdatePanel = this.updatePanel.bind(this);
         this.boundBeforeUnload = this.beforeUnload.bind(this);
+        this.boundControlSwitchClick = this.controlSwitchClick.bind(this);
+        this.boundShutDown = this.shutDown.bind(this);
 
         // Create the Control Panel window
         this.doc = null;
@@ -104,6 +107,15 @@ class ControlPanel {
         this.doc = ev.target;
         this.window = this.doc.defaultView;
         let body = this.doc.body;
+
+        // MAR Selector Switch
+        let captions = ["OR-3", "OR-4", "OR-5", "CR-1", "CR-2", "PR-2", "IR-1", "IR-2", "IR-3", "IR-4", "OR-1", "OR-2"];
+        let positions = [];
+        for (let a=15; a<360; a+=30) {
+            positions.push(a);
+        }
+
+        let marSelectorKnob = new MARSelectorKnob(this.$$("MARSelectorDiv"), "MARSelectorCupDiv", 10, positions, captions);
 
         // Memory Address Register
         panel = this.$$("Panel6Blue");
@@ -175,21 +187,100 @@ class ControlPanel {
         // Input-Output
         buildGatePanel("Panel2Blue", 7, [
             "RD", "WR", "CHAR|GATE", "RDR|FEED", "PCH|FEED", "I/O|FLAG", "RESP|GATE",
-            "R$I", "DISK|OP", "DISK LD|ZERO", "DISK|ADDR", "SCTR|COUNT", "MEM|ADDR", "SCTR|CYC",
-            null, null, null, "DISK|HUND", "DISK|UNIT", "SEND|HOLD", "SEND|3$",
+            "REL", "DISK|OP", "DISK LD|ZERO", "DISK|ADDR", "SCTR|COUNT", "MEM|ADDR", "SCTR|CYC",
+            null, null, null, "DISK|HUND", "DISK|UNIT", "SIMO|HOLD", "SIMO|30",
             null, null, null, null, null, null, null,
-            null, "PC|H/P", "PC|E/Z", "PC|OFLOW", "PC|TR $", "PC|IND", "PC|6XXX"]);
+            null, "PC|H/P", "PC|E/Z", "PC|OFLOW", "PC|TR 8", "PC|IND", "PC|6XXX"]);
 
         // Control Gates
         buildGatePanel("Panel1Gray", 12, [
-            "I CYC|ENT", "IX|ENT", "E CYC|ENT", "RA$", "1ST|CYC", "ADD|ENT", "RECOMP", "MASK", "INT|ENT", "CLR|MEM", null, "IA|SEL",
-            "BR|EXEC", "IX|EXEC", null, "FIELD|MK-1", "1ST CYC|DELAYD", "ADD|MODE", "CARRY|IN", "EXP|OFLOW", "INT|MODE", null, null, "IX|BAND 1",
-            "IA|ENT", "X-4", "EXMIT|ENT", "FIELD|MK-2", "1ST MPLY|CYCLE", "2 DIG|CNTRL", "CARRY|OUT", "EXP|OFLO", "BR|OUT", "RUN", "STOP", "IX|BAND 2",
+            "I CYC|ENT", "IX|ENT", "E CYC|ENT", "RM", "1ST|CYC", "ADD|ENT", "RECOMP", "MASK", "INT|ENT", "CLR|MEM", null, "IA|SEL",
+            "BR|EXEC", "IX|EXEC", null, "FIELD|MK-1", "1ST CYC|DELAYD", "ADD|MODE", "CARRY|IN", "EXP|OFLO", "INT|MODE", null, null, "IX|BAND 1",
+            "IA|ENT", "X-4", "EXMIT|ENT", "FIELD|MK-2", "1ST MPLY|CYCLE", "2 DIG|CNTRL", "CARRY|OUT", "EXP|UFLO", "BR|OUT", "RUN", "STOP", "IX|BAND 2",
             "IA|REQ", "X-2", "EXMIT|MODE", "FL-1", "DIV-1|CYC", "COMP", "MC-1", "DVD|SIGN", null, "$$$|OFLO", "LAST|CARD", "H/P",
-            "P", "X-1", null, "FL-2", "DVD|L-CYC", "P|COMP", "MC-2", "LAST|LD CYC", "", "EOR$", "", "E/Z"]);
+            "P", "X-1", null, "FL-2", "DVD|L-CYC", "P|COMP", "MC-2", "LAST|LD CYC", null, "EOR$", null, "E/Z"]);
+
+        // Check Stop Panel Switches & Lamps
+        panel = this.$$("CheckStopPanel");
+        this.dummy1Lamp = new GateLamp(panel, null, null, "Dummy1Lamp");
+        this.diskAddrCheckLamp = new GateLamp(panel, null, null, "DiskAddrCheckLamp");
+        this.diskAddrCheckLamp.setCaption("ADDR CHK", false);
+        this.parityMARCheckLamp = new GateLamp(panel, null, null, "ParityMARCheckLamp");
+        this.parityMARCheckLamp.setCaption("ADDR CHK", false);
+        this.IOPrinterCheckLamp = new GateLamp(panel, null, null, "IOPrinterCheckLamp");
+        this.IOPrinterCheckLamp.setCaption("PR CHK", false);
+        this.OflowDummyCheckLamp = new GateLamp(panel, null, null, "OflowDummyCheckLamp");
+
+        this.dummy2Lamp = new GateLamp(panel, null, null, "Dummy2Lamp");
+        this.diskWRLWBCCheckLamp = new GateLamp(panel, null, null, "DiskWRLWBCCheckLamp");
+        this.diskWRLWBCCheckLamp.setCaption("WRL WBC", false);
+        this.parityMBRECheckLamp = new GateLamp(panel, null, null, "ParityMBRECheckLamp");
+        this.parityMBRECheckLamp.setCaption("MBR-E CHK", false);
+        this.IOReadCheckLamp = new GateLamp(panel, null, null, "IOReadCheckLamp");
+        this.IOReadCheckLamp.setCaption("RD CHK", false);
+        this.OflowExpCheckLamp = new GateLamp(panel, null, null, "OflowExpCheckLamp");
+        this.OflowExpCheckLamp.setCaption("EXP CHK", false);
+
+        this.dummy3Lamp = new GateLamp(panel, null, null, "Dummy3Lamp");
+        this.diskCylOflowCheckLamp = new GateLamp(panel, null, null, "DiskCylOflowCheckLamp");
+        this.diskCylOflowCheckLamp.setCaption("|<br>|<br>CYL OFLO", false);
+        this.ParityMBROCheckLamp = new GateLamp(panel, null, null, "ParityMBROCheckLamp");
+        this.ParityMBROCheckLamp.setCaption("|<br>|<br>MBR-O CHK", false);
+        this.ioWriteCheckLamp = new GateLamp(panel, null, null, "IOWriteCheckLamp");
+        this.ioWriteCheckLamp.setCaption("|<br>|<br>WR CHK", false);
+        this.OflowArithCheckLamp = new GateLamp(panel, null, null, "OflowArithCheckLamp");
+        this.OflowArithCheckLamp.setCaption("ARITH CHK", false);
+
+        this.dummy1Switch = new ToggleSwitch(panel, null, null, "Dummy1Switch",
+                ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
+        this.diskStopSwitch = new ToggleSwitch(panel, null, null, "DiskStopSwitch",
+                ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
+        this.diskStopSwitch.setCaption("|<br>|<br>STOP", false);
+        this.diskStopSwitch.setCaption("PROGRAM", true);
+        this.parityStopSwitch = new ToggleSwitch(panel, null, null, "ParityStopSwitch",
+                ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
+        this.parityStopSwitch.setCaption("|<br>|<br>STOP", false);
+        this.parityStopSwitch.setCaption("PROGRAM", true);
+        this.ioStopSwitch = new ToggleSwitch(panel, null, null, "IOStopSwitch",
+                ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
+        this.ioStopSwitch.setCaption("|<br>|<br>STOP", false);
+        this.ioStopSwitch.setCaption("PROGRAM", true);
+        this.oflowStopSwitch = new ToggleSwitch(panel, null, null, "OflowStopSwitch",
+                ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
+        this.oflowStopSwitch.setCaption("|<br>|<br>STOP", false);
+        this.oflowStopSwitch.setCaption("PROGRAM", true);
+        this.program1Switch = new ToggleSwitch(panel, null, null, "Program1Switch",
+                ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
+        this.program1Switch.setCaption("1<br>ON", false);
+        this.program1Switch.setCaption("OFF", true);
+        this.program2Switch = new ToggleSwitch(panel, null, null, "Program2Switch",
+                ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
+        this.program2Switch.setCaption("2<br>ON", false);
+        this.program2Switch.setCaption("OFF", true);
+        this.program3Switch = new ToggleSwitch(panel, null, null, "Program3Switch",
+                ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
+        this.program3Switch.setCaption("3<br>ON", false);
+        this.program3Switch.setCaption("OFF", true);
+        this.program4Switch = new ToggleSwitch(panel, null, null, "Program4Switch",
+                ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
+        this.program4Switch.setCaption("4<br>ON", false);
+        this.program4Switch.setCaption("OFF", true);
 
         this.$$("EmulatorVersion").textContent = Version.i1620Version;
         this.window.addEventListener("beforeunload", this.boundBeforeUnload);
+        setTimeout(() => {
+            this.$$("PowerOnLamp").classList.add("greenLit");
+            setTimeout(() => {
+                this.$$("PowerReadyLamp").classList.add("whiteLit");
+                this.$$("OperatorContainer").addEventListener("click", this.boundControlSwitchClick);
+            }, 2000);
+        }, 1000);
+
+        /**********
+        if (!this.intervalToken) {
+            this.intervalToken = setInterval(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
+        }
+        **********/
     }
 
     /**************************************/
@@ -221,74 +312,47 @@ class ControlPanel {
     }
 
     /**************************************/
-    controlSwitchChange(ev) {
+    controlSwitchClick(ev) {
         /* Event handler for the pane's switch controls */
+        let e = ev.target;
         let p = this.context.processor; // local copy of Processor reference
 
-        switch (ev.target.id) {
-        case "EnableSwitchOff":
-            p.enableSwitchChange(0);
+        if (e.tagName == "IMG") {
+            e = e.parentElement;        // adjust for clicking image in ToggleSwitch objects
+        }
+
+        switch (e.id) {
+        case "PowerBtn":
+            this.shutDown();
             break;
-        }
-    }
-
-    /**************************************/
-    enablePanel() {
-        /* Enables events and periodic refresh for the Control */
-        let p = this.context.processor;
-
-        this.$$("EnableSwitchSet").addEventListener("click", this.boundControlSwitchChange, false);
-        this.$$("PunchSwitchSet").addEventListener("click", this.boundControlSwitchChange, false);
-        this.$$("ComputeSwitchSet").addEventListener("click", this.boundControlSwitchChange, false);
-        this.$$("I1620Version").addEventListener("dblclick", this.boundToggleTracing, false);
-        this.$$("PowerOffBtn").addEventListener("click", this.context.systemShutDown, false);
-        this.$$("ResetBtn").addEventListener("click", this.boundSystemReset, false);
-        this.$$("ViolationResetBtn").addEventListener("click", this.boundControlSwitchChange, false);
-        this.violationSwitch.addEventListener("click", this.boundControlSwitchChange, false);
-        if (p.tracing) {
-            this.$$("I1620Version").classList.add("active");
-        } else {
-            this.$$("I1620Version").classList.remove("active");
-        }
-
-        this.updatePanel();
-        this.panelEnabled = true;
-        this.$$("FrontPanel").style.visibility = "visible";
-        if (!this.intervalToken) {
-            this.intervalToken = setInterval(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
-        }
-    }
-
-    /**************************************/
-    disablePanel() {
-        /* Disables events and periodic refresh for the Control Panel */
-
-        this.dcPowerLamp.set(0);
-        this.readyLamp.set(0);
-        this.violationSwitch.set(0)
-        this.$$("EnableSwitchOn").checked = false;
-        this.$$("EnableSwitchOff").checked = true;
-        this.$$("PunchSwitchOn").checked = false;
-        this.$$("PunchSwitchRewind").checked = false;
-        this.$$("PunchSwitchOff").checked = true;
-        this.$$("ComputeSwitchGo").checked = false;
-        this.$$("ComputeSwitchBP").checked = false;
-        this.$$("ComputeSwitchOff").checked = true;
-
-        this.$$("EnableSwitchSet").removeEventListener("click", this.boundControlSwitchChange, false);
-        this.$$("PunchSwitchSet").removeEventListener("click", this.boundControlSwitchChange, false);
-        this.$$("ComputeSwitchSet").removeEventListener("click", this.boundControlSwitchChange, false);
-        this.$$("I1620Version").removeEventListener("dblclick", this.boundToggleTracing, false);
-        this.$$("PowerOffBtn").removeEventListener("click", this.context.systemShutDown, false);
-        this.$$("ResetBtn").removeEventListener("click", this.boundSystemReset, false);
-        this.$$("ViolationResetBtn").removeEventListener("click", this.boundControlSwitchChange, false);
-        this.violationSwitch.removeEventListener("click", this.boundControlSwitchChange, false);
-
-        this.panelEnabled = false;
-        this.$$("FrontPanel").style.visibility = "hidden";
-        if (this.intervalToken) {
-            clearInterval(this.intervalToken);
-            this.intervalToken = 0;
+        case "Dummy1Switch":            // non-functional, just turn it back off
+            this.dummy1Switch.flip();
+            setTimeout(() => {this.dummy1Switch.flip()}, 250);
+            break;
+        case "DiskStopSwitch":
+            this.diskStopSwitch.flip();
+            break;
+        case "ParityStopSwitch":
+            this.parityStopSwitch.flip();
+            break;
+        case "IOStopSwitch":
+            this.ioStopSwitch.flip();
+            break;
+        case "OflowStopSwitch":
+            this.oflowStopSwitch.flip();
+            break;
+        case "Program1Switch":
+            this.program1Switch.flip();
+            break;
+        case "Program2Switch":
+            this.program2Switch.flip();
+            break;
+        case "Program3Switch":
+            this.program3Switch.flip();
+            break;
+        case "Program4Switch":
+            this.program4Switch.flip();
+            break;
         }
     }
 
@@ -324,11 +388,16 @@ class ControlPanel {
     shutDown() {
         /* Shuts down the panel */
 
-        this.window.removeEventListener("beforeunload", this.bountBeforeUnload);
+        this.$$("OperatorContainer").removeEventListener("click", this.boundControlSwitchClick);
+        this.window.removeEventListener("beforeunload", this.boundBeforeUnload);
+        this.$$("PowerReadyLamp").classList.remove("whiteLit");
+        this.$$("PowerOnLamp").classList.remove("greenLit");
         if (this.intervalToken) {
             this.window.clearInterval(this.intervalToken);
+            this.intervalToken = 0;
         }
 
+        this.context.systemShutDown();
         this.window.close();
     }
 } // class ControlPanel
@@ -337,3 +406,5 @@ class ControlPanel {
 // Static class properties
 
 ControlPanel.displayRefreshPeriod = 50; // ms
+ControlPanel.offSwitchImage = "./resources/ToggleDown.png";
+ControlPanel.onSwitchImage = "./resources/ToggleUp.png";

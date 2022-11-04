@@ -26,62 +26,137 @@
 
 <body class=panelBody>
 
-<div id=LogoSurface>
-    <img id=IBMLogo src="./resources/IBM-logo-BW.png" alt="IBM Logo">
-    <img id=I1620IILogo src="./resources/1620-II-Logo.png" alt="IBM 1620 II Logo">
-    <div id=DPSLogo>
-        <span id=DPSLogoText>DATA PROCESSING SYSTEM</span>
-    </div>
-</div>
+<div id=LampPanel>
 
-<div id=PanelContainer>
-    <div id=PanelSurface class=panelSurface></div>
-
-    <div id=Panel1Gray class="panelRegister ibmGray">
-        <div id=ControlGatesCaption class=caption>CONTROL GATES</div>
+    <div id=LogoSurface>
+        <img id=IBMLogo src="./resources/IBM-logo-BW.png" alt="IBM Logo">
+        <img id=I1620IILogo src="./resources/1620-II-Logo.png" alt="IBM 1620 II Logo">
+        <div id=DPSLogo>
+            <span id=DPSLogoText>DATA PROCESSING SYSTEM</span>
+        </div>
     </div>
 
-    <div id=Panel2Blue class="panelRegister ibmBlue">
-        <div id=InputOutputCaption class=caption>INPUT-OUTPUT</div>
-    </div>
+    <div id=PanelGap></div>
 
-    <div id=Panel3Gray class="panelRegister ibmGray">
-        <div id=InstExecCycleCaption class=caption>INST & EXEC CYCLE</div>
-    </div>
+    <div id=PanelContainer>
+        <div id=PanelBase class=panelSurface></div>
 
-    <div id=Panel4Blue class="panelRegister ibmBlue">
-        <div id=OperationRegisterCaption class=caption>OPERATION REGISTER</div>
-        <div id=ORECaption class=evenOddCaption>E</div>
-        <div id=OROCaption class=evenOddCaption>O</div>
-        <div id=MQRegisterCaption class=caption>MULTIPLIER/QUOTIENT</div>
-        <div id=DataRegisterCaption class=caption>DATA REGISTER</div>
-        <div id=DRECaption class=evenOddCaption>E</div>
-        <div id=DROCaption class=evenOddCaption>O</div>
-    </div>
+        <div id=Panel1Gray class="panelRegister ibmGray">
+            <div id=ControlGatesCaption class=caption>CONTROL GATES</div>
+        </div>
 
-    <div id=Panel5Gray class="panelRegister ibmGray">
-        <div id=MemoryBufferRegisterCaption class=caption>MEMORY BUFFER REGISTER</div>
-        <div id=MBRECaption class=evenOddCaption>E</div>
-        <div id=MBROCaption class=evenOddCaption>O</div>
-        <div id=MemoryInhibitRegisterCaption class=caption>MEMORY INHIBIT REGISTER</div>
-        <div id=MIRECaption class=evenOddCaption>E</div>
-        <div id=MIROCaption class=evenOddCaption>O</div>
-    </div>
+        <div id=Panel2Blue class="panelRegister ibmBlue">
+            <div id=InputOutputCaption class=caption>INPUT-OUTPUT</div>
+        </div>
 
-    <div id=Panel6Blue class="panelRegister ibmBlue">
-        <div id=MemoryAddressRegisterCaption class=caption>MEMORY ADDRESS REGISTER</div>
-        <div id=MAR10000Caption class=rowCaption>TEN THOUSANDS</div>
-        <div id=MAR1000Caption  class=rowCaption>THOUSANDS</div>
-        <div id=MAR100Caption   class=rowCaption>HUNDREDS</div>
-        <div id=MAR10Caption    class=rowCaption>TENS</div>
-        <div id=MAR1Caption     class=rowCaption>UNITS</div>
-    </div>
+        <div id=Panel3Gray class="panelRegister ibmGray">
+            <div id=InstExecCycleCaption class=caption>INST & EXEC CYCLE</div>
+        </div>
 
-    <div id=Panel7Gray class="panelRegister ibmGray">
-        <div id=MemoryAddressDisplayCaption class=caption>MEMORY ADDRESS REGISTER<br>DISPLAY SELECTOR</div>
-        <div id=MARSelectorDiv></div>
-    </div>
-</div>
+        <div id=Panel4Blue class="panelRegister ibmBlue">
+            <div id=OperationRegisterCaption class=caption>OPERATION REGISTER</div>
+            <div id=ORECaption class=evenOddCaption>E</div>
+            <div id=OROCaption class=evenOddCaption>O</div>
+            <div id=MQRegisterCaption class=caption>MULTIPLIER/QUOTIENT</div>
+            <div id=DataRegisterCaption class=caption>DATA REGISTER</div>
+            <div id=DRECaption class=evenOddCaption>E</div>
+            <div id=DROCaption class=evenOddCaption>O</div>
+        </div>
+
+        <div id=Panel5Gray class="panelRegister ibmGray">
+            <div id=MemoryBufferRegisterCaption class=caption>MEMORY BUFFER REGISTER</div>
+            <div id=MBRECaption class=evenOddCaption>E</div>
+            <div id=MBROCaption class=evenOddCaption>O</div>
+            <div id=MemoryInhibitRegisterCaption class=caption>MEMORY INHIBIT REGISTER</div>
+            <div id=MIRECaption class=evenOddCaption>E</div>
+            <div id=MIROCaption class=evenOddCaption>O</div>
+        </div>
+
+        <div id=Panel6Blue class="panelRegister ibmBlue">
+            <div id=MemoryAddressRegisterCaption class=caption>MEMORY ADDRESS REGISTER</div>
+            <div id=MAR10000Caption class=rowCaption>TEN THOUSANDS</div>
+            <div id=MAR1000Caption  class=rowCaption>THOUSANDS</div>
+            <div id=MAR100Caption   class=rowCaption>HUNDREDS</div>
+            <div id=MAR10Caption    class=rowCaption>TENS</div>
+            <div id=MAR1Caption     class=rowCaption>UNITS</div>
+        </div>
+
+        <div id=Panel7Gray class="panelRegister ibmGray">
+            <div id=MemoryAddressDisplayCaption class=caption>MEMORY ADDRESS REGISTER<br>DISPLAY SELECTOR</div>
+            <div id=MARSelectorDiv></div>
+        </div>
+    </div> <!-- PanelContainer -->
+
+</div> <!-- LampPanel -->
+
+<div id=OperatorContainer>
+    <div id=IndicatorButtonPanel>
+        <div id=Row1LeftSpacer class=panelSpacer></div>
+        <button id=PowerOnLamp class="panel greenLamp">POWER<br>ON</button>
+        <div id=PowerOnLampSpacer class=panelSpacer></div>
+        <button id=PowerReadyLamp class="panel whiteLamp">POWER<br>READY</button>
+        <div id=PowerReadyLampSpacer class=panelSpacer></div>
+        <button id=ThermalLamp class="panel redLamp">THERMAL</button>
+        <div id=ThermalLampSpacer class=panelSpacer></div>
+        <button id=WriteInterlockLamp class="panel redLamp">WRITE<br>INTERLOCK</button>
+        <div id=WriteInterlockLampSpacer class=panelSpacer></div>
+        <button id=ReadInterlockLamp class="panel redLamp">READ<br>INTERLOCK</button>
+        <div id=ReadInterlockLampSpacer class=panelSpacer></div>
+        <button id=SaveLamp class="panel whiteLamp">SAVE</button>
+        <div id=SaveLampSpacer class=panelSpacer></div>
+        <button id=TypewriterSelectedLamp class="panel whiteLamp">TWPR<br>SELECTED</button>
+        <div id=TypewriterSelectedLampSpacer class=panelSpacer></div>
+        <button id=RFE1Lamp class="panel whiteLamp">&nbsp;</button>
+        <div id=RFE1LampSpacer class=panelSpacer></div>
+        <button id=RFE2Lamp class="panel whiteLamp">&nbsp;</button>
+        <div id=RFE2LampSpacer class=panelSpacer></div>
+        <button id=RFE3Lamp class="panel whiteLamp">&nbsp;</button>
+        <div id=RFE3LampSpacer class=panelSpacer></div>
+        <button id=AutomaticLamp class="panel whiteLamp">AUTOMATIC</button>
+        <div id=AutomaticLampSpacer class=panelSpacer></div>
+        <button id=ManualLamp class="panel whiteLamp">MANUAL</button>
+        <div id=ManualLampSpacer class=panelSpacer></div>
+        <button id=CheckStopLamp class="panel redLamp">CHECK<br>STOP</button>
+        <div id=Row1RightSpacer class=panelSpacer></div>
+
+        <div id=Row2LeftSpacer class=panelSpacer></div>
+        <button id=PowerBtn class="panel blackButton">POWER</button>
+        <div id=PowerBtnSpacer class=panelSpacer></div>
+        <button id=ResetBtn class="panel blackButton">RESET</button>
+        <div id=ResetBtnSpacer class=panelSpacer></div>
+        <button id=ModifyBtn class="panel blackButton">MODIFY</button>
+        <div id=ModifyBtnSpacer class=panelSpacer></div>
+        <button id=CheckResetBtn class="panel blackButton">CHECK<br>RESET</button>
+        <div id=CheckResetBtnSpacer class=panelSpacer></div>
+        <button id=DisplayMARBtn class="panel blackButton">DISPLAY<br>MAR</button>
+        <div id=DisplayMARBtnSpacer class=panelSpacer></div>
+        <button id=SaveBtn class="panel blackButton">SAVE</button>
+        <div id=SaveBtnSpacer class=panelSpacer></div>
+        <button id=InsertBtn class="panel blackButton">INSERT</button>
+        <div id=InsertBtnSpacer class=panelSpacer></div>
+        <button id=ReleaseBtn class="panel blackButton">RELEASE</button>
+        <div id=ReleaseBtnSpacer class=panelSpacer></div>
+        <button id=RFE1Btn class="panel blackButton">&nbsp;</button>
+        <div id=RFE1BtnSpacer class=panelSpacer></div>
+        <button id=RFE2Btn class="panel blackButton">&nbsp;</button>
+        <div id=DisplayMARBtnSpacer class=panelSpacer></div>
+        <button id=StartBtn class="panel blackButton">START</button>
+        <div id=StartBtnSpacer class=panelSpacer></div>
+        <button id=StopSIEBtn class="panel blackButton">STOP<br>SIE</button>
+        <div id=StopSIEBtnSpacer class=panelSpacer></div>
+        <button id=StopSCEBtn class="panel blackButton">INSTANT<br>STOP<br>SCE</button>
+        <div id=Row2RightSpacer class=panelSpacer></div>
+    </div> <!-- IndicatorButtonPanel -->
+
+    <div id=CheckStopPanel>
+        <div id=DiskCheckCaption class=caption>DISK</div>
+        <div id=ParityCheckCaption class=caption>PARITY</div>
+        <div id=IOCheckCaption class=caption>I/O</div>
+        <div id=OflowCheckCaption class=caption>O FLOW</div>
+        <div id=ProgramSwitchesCaption class=caption>PROGRAM<br>SWITCHES</div>
+    </div> <!-- CheckStopPanel>
+
+</div> <!-- OperatorContainer -->
 
 <div id=VersionDiv class=caption>
     retro-1620 <span id=EmulatorVersion>?.??</span>

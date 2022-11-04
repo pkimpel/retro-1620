@@ -15,7 +15,7 @@ BODY {
     position:           relative;
     height:             100%;
     width:              100%;
-    background-color:   #F4F0E5}
+    background-color:   white}
 
 DIV.rowCaption {
     position:           absolute;
@@ -32,10 +32,14 @@ DIV.evenOddCaption {
     font-size:          8px;
     text-align:         center}
 
-CANVAS.selectorKnob {
+#LampPanel {
     position:           absolute;
-    font-size:          4px}
-
+    top:                0;
+    height:             354px;
+    width:              100%;
+    z-index:            2;
+    overflow:           visible;
+    background-color:   #F4F0E5}
 
 #LogoSurface {
     position:           absolute;
@@ -78,7 +82,7 @@ CANVAS.selectorKnob {
     height:             282px;
     width:              1382px}
 
-#PanelSurface {
+#PanelBase {
     position:           absolute;
     left:               2px;
     right:              2px;
@@ -202,6 +206,351 @@ CANVAS.selectorKnob {
     left:               0;
     width:              186px;
     height:             186px}
+#MARSelectorDiv .MARSelectorCaption {
+    position:           absolute;
+    width:              22px;
+    height:             22px;
+    transform:          translate(calc(-100% - 5px), calc(-100% - 5px));
+    font-size:          9px;
+    text-align:         center;
+    color:              white;
+    border:             2px solid white;
+    border-radius:      50%}
+#MARSelectorDiv .MARSelectorCaption SPAN {
+    padding-top:        5px;            /* talk about a fudge factor... */
+    vertical-align:     middle}
+#MARSelectorDiv .MARSelectorCup {
+    position:           absolute;
+    top:                28px;           /* 15% of parent size, rounded */
+    bottom:             28px;
+    left:               28px;
+    right:              28px;
+    overflow:           hidden;
+    border:             3px solid white;
+    background-image:   radial-gradient(circle, #DDD, #CCC, #999, #666);
+    border-radius:      50%;
+    box-shadow:         inset 16px 16px 32px #444}
+
+#PanelGap {
+    position:           absolute;
+    bottom:             2px;
+    left:               0;
+    right:              0;
+    height:             6px;
+    background-color:   black}
+
+
+
+#OperatorContainer {
+    position:           absolute;
+    top:                354px;
+    bottom:             0;
+    width:              100%;
+    color:              black;
+    background-color:   #F7F7E9}
+
+#IndicatorButtonPanel {
+    position:           absolute;
+    top:                76px;
+    right:              114px;
+    width:              784px;
+    height:             106px;
+    background-color:   lightgray;
+    box-shadow:         2px 2px 2px gray}
+
+#Row1LeftSpacer {
+    top:                0;
+    left:               0}
+#PowerOnLamp {
+    top:                3px;
+    left:               4px}
+#PowerOnLampSpacer {
+    top:                0;
+    left:               60px}
+#PowerReadyLamp {
+    top:                3px;
+    left:               64px}
+#PowerReadyLampSpacer {
+    top:                0;
+    left:               120px}
+#ThermalLamp {
+    top:                3px;
+    left:               124px}
+#ThermalLampSpacer {
+    top:                0;
+    left:               180px}
+#WriteInterlockLamp {
+    top:                3px;
+    left:               184px}
+#WriteInterlockLampSpacer {
+    top:                0;
+    left:               240px}
+#ReadInterlockLamp {
+    top:                3px;
+    left:               244px}
+#ReadInterlockLampSpacer {
+    top:                0;
+    left:               300px}
+#SaveLamp {
+    top:                3px;
+    left:               304px}
+#SaveLampSpacer {
+    top:                0;
+    left:               360px}
+#TypewriterSelectedLamp {
+    top:                3px;
+    left:               364px}
+#TypewriterSelectedLampSpacer {
+    top:                0;
+    left:               420px}
+#RFE1Lamp {
+    top:                3px;
+    left:               424px}
+#RFE1LampSpacer {
+    top:                0;
+    left:               480px}
+#RFE2Lamp {
+    top:                3px;
+    left:               484px}
+#RFE2LampSpacer {
+    top:                0;
+    left:               540px}
+#RFE3Lamp {
+    top:                3px;
+    left:               544px}
+#RFE3LampSpacer {
+    top:                0;
+    left:               600px}
+#AutomaticLamp {
+    top:                3px;
+    left:               604px}
+#AutomaticLampSpacer {
+    top:                0;
+    left:               660px}
+#ManualLamp {
+    top:                3px;
+    left:               664px}
+#ManualLampSpacer {
+    top:                0;
+    left:               720px}
+#CheckStopLamp {
+    top:                3px;
+    left:               724px}
+#Row1RightSpacer {
+    top:                0;
+    left:               780px}
+
+#Row2LeftSpacer {
+    bottom:             0;
+    left:               0}
+#PowerBtn {
+    bottom:             3px;
+    left:               4px}
+#PowerBtnSpacer {
+    bottom:             0;
+    left:               60px}
+#ResetBtn {
+    bottom:             3px;
+    left:               64px}
+#ResetBtnSpacer {
+    bottom:             0;
+    left:               120px}
+#ModifyBtn {
+    bottom:             3px;
+    left:               124px}
+#ModifyBtnSpacer {
+    bottom:             0;
+    left:               180px}
+#CheckResetBtn {
+    bottom:             3px;
+    left:               184px}
+#CheckResetBtnSpacer {
+    bottom:             0;
+    left:               240px}
+#DisplayMARBtn {
+    bottom:             3px;
+    left:               244px}
+#DisplayMARBtnSpacer {
+    bottom:             0;
+    left:               300px}
+#SaveBtn {
+    bottom:             3px;
+    left:               304px}
+#SaveBtnSpacer {
+    bottom:             0;
+    left:               360px}
+#InsertBtn {
+    bottom:             3px;
+    left:               364px}
+#InsertBtnSpacer {
+    bottom:             0;
+    left:               420px}
+#ReleaseBtn {
+    bottom:             3px;
+    left:               424px}
+#ReleaseBtnSpacer {
+    bottom:             0;
+    left:               480px}
+#RFE1Btn {
+    bottom:             3px;
+    left:               484px}
+#RFE1BtnSpacer {
+    bottom:             0;
+    left:               540px}
+#RFE2Btn {
+    bottom:             3px;
+    left:               544px}
+#RFE2BtnSpacer {
+    bottom:             0;
+    left:               600px}
+#StartBtn {
+    bottom:             3px;
+    left:               604px}
+#StartBtnSpacer {
+    bottom:             0;
+    left:               660px}
+#StopSIEBtn {
+    bottom:             3px;
+    left:               664px}
+#StopSIEBtnSpacer {
+    bottom:             0;
+    left:               720px}
+#StopSCEBtn {
+    bottom:             3px;
+    left:               724px}
+#Row2RightSpacer {
+    bottom:             0;
+    left:               780px}
+
+
+#CheckStopPanel {
+    position:           absolute;
+    top:                0px;
+    bottom:             0;
+    left:               162px;
+    width:              320px;
+    color:              black}
+#CheckStopPanel .gateLampTopCaption,
+#CheckStopPanel .gateLampBottomCaption {
+    width:              42px;
+    left:               -14px}
+
+#DiskCheckCaption {
+    top:                8px;
+    left:               44px;
+    width:              42px}
+#ParityCheckCaption {
+    top:                8px;
+    left:               86px;
+    width:              42px}
+#IOCheckCaption {
+    top:                8px;
+    left:               128px;
+    width:              42px}
+#OflowCheckCaption {
+    top:                8px;
+    left:               170px;
+    width:              42px}
+#ProgramSwitchesCaption {
+    top:                8px;
+    left:               233px;
+    width:              42px}
+
+#Dummy1Lamp {
+    top:                34px;
+    left:               16px}
+#DiskAddrCheckLamp {
+    top:                34px;
+    left:               58px}
+#ParityMARCheckLamp {
+    top:                34px;
+    left:               100px}
+#IOPrinterCheckLamp {
+    top:                34px;
+    left:               142px}
+#OflowDummyCheckLamp {
+    top:                34px;
+    left:               184px}
+
+#Dummy2Lamp {
+    top:                74px;
+    left:               16px}
+#DiskWRLWBCCheckLamp {
+    top:                74px;
+    left:               58px}
+#ParityMBRECheckLamp {
+    top:                74px;
+    left:               100px}
+#IOReadCheckLamp {
+    top:                74px;
+    left:               142px}
+#OflowExpCheckLamp {
+    top:                74px;
+    left:               184px}
+
+#Dummy3Lamp {
+    top:                114px;
+    left:               16px}
+#DiskCylOflowCheckLamp {
+    top:                114px;
+    left:               58px}
+#ParityMBROCheckLamp {
+    top:                114px;
+    left:               100px}
+#IOWriteCheckLamp {
+    top:                114px;
+    left:               142px}
+#OflowArithCheckLamp {
+    top:                114px;
+    left:               184px}
+
+#Dummy1Switch {
+    position:           absolute;
+    top:                156px;
+    left:               13px;
+    width:              24px}
+#DiskStopSwitch {
+    position:           absolute;
+    top:                156px;
+    left:               55px;
+    width:              24px}
+#ParityStopSwitch {
+    position:           absolute;
+    top:                156px;
+    left:               97px;
+    width:              24px}
+#IOStopSwitch {
+    position:           absolute;
+    top:                156px;
+    left:               139px;
+    width:              24px}
+#OflowStopSwitch {
+    position:           absolute;
+    top:                156px;
+    left:               181px;
+    width:              24px}
+
+#Program1Switch {
+    position:           absolute;
+    top:                90px;
+    left:               223px;
+    width:              24px}
+#Program2Switch {
+    position:           absolute;
+    top:                90px;
+    left:               265px;
+    width:              24px}
+#Program3Switch {
+    position:           absolute;
+    top:                156px;
+    left:               223px;
+    width:              24px}
+#Program4Switch {
+    position:           absolute;
+    top:                156px;
+    left:               265px;
+    width:              24px}
+
 
 #VersionDiv {
     position:           absolute;

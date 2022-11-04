@@ -30,15 +30,19 @@ class ToggleSwitch {
         this.onImage = onImage;             // image used for the on state
 
         // visible DOM element
-        this.element = document.createElement("img");
+        this.element = document.createElement("div");
         this.element.id = id;
-        this.element.src = offImage;
+        this.element.className = ToggleSwitch.boxClass;
         if (x !== null) {
             this.element.style.left = x.toString() + "px";
         }
         if (y !== null) {
             this.element.style.top = y.toString() + "px";
         }
+
+        this.elementImage = document.createElement("img");
+        this.elementImage.src = offImage;
+        this.element.appendChild(this.elementImage);
 
         if (parent) {
             parent.appendChild(this.element);
@@ -67,7 +71,7 @@ class ToggleSwitch {
 
         if (this.state ^ newState) {         // the state has changed
             this.state = newState;
-            this.element.src = (newState ? this.onImage : this.offImage);
+            this.elementImage.src = (newState ? this.onImage : this.offImage);
         }
     }
 
@@ -77,7 +81,7 @@ class ToggleSwitch {
         let newState = this.state ^ 1;
 
         this.state = newState;
-        this.element.src = (newState ? this.onImage : this.offImage);
+        this.elementImage.src = (newState ? this.onImage : this.offImage);
     }
 
     /**************************************/
@@ -86,9 +90,7 @@ class ToggleSwitch {
         Returns the caption element */
         let e = (atBottom ? this.bottomCaptionDiv : this.topCaptionDiv);
 
-        if (e) {
-            e.textContent = caption;
-        } else {
+        if (!e) {
             e = document.createElement("div");
             if (atBottom) {
                 this.bottomCaptionDiv = e;
@@ -97,9 +99,10 @@ class ToggleSwitch {
                 this.topCaptionDiv = e;
                 e.className = ToggleSwitch.topCaptionClass;
             }
-            e.appendChild(document.createTextNode(caption));
             this.element.appendChild(e);
         }
+
+        e.innerHTML = caption;
         return e;
     }
 
@@ -108,5 +111,6 @@ class ToggleSwitch {
 
 // Static class properties
 
+ToggleSwitch.boxClass = "toggleSwitchBox";
 ToggleSwitch.topCaptionClass = "toggleSwitchTopCaption";
 ToggleSwitch.bottomCaptionClass = "toggleSwitchBottomCaption";

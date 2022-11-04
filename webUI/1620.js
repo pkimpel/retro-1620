@@ -25,7 +25,6 @@ let globalLoad = (ev) => {
     let statusMsgTimer = 0;             // status message timer control cookie
 
     const context = {
-        $$,
         systemShutDown,
         window
     };
@@ -99,6 +98,7 @@ let globalLoad = (ev) => {
         /* Powers down the Processor and shuts down all of the panels and I/O devices */
         let processor = context.processor;
 
+        /**********
         while (processor.CH.value == 0 || processor.OC.value & 0b1111) {
             processor.stop();
             processor.cancelIO();
@@ -115,6 +115,7 @@ let globalLoad = (ev) => {
         }
 
         context.controlPanel.disablePanel();
+        **********/
 
         processor.powerDown();
         context.devices = null;
@@ -159,7 +160,7 @@ let globalLoad = (ev) => {
     $$("EmulatorVersion").textContent = Version.i1620Version;
     if (checkBrowser()) {
         $$("StartUpBtn").disabled = false;
-        $$("StartUpBtn").addEventListener("click", systemStartup, {once: true});
+        $$("StartUpBtn").addEventListener("click", systemStartup, false);
         $$("StartUpBtn").focus();
         //$$("ConfigureBtn").disabled = false;
         //$$("ConfigureBtn").addEventListener("click", configureSystem, false);
