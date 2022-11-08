@@ -48,7 +48,7 @@ DIV.evenOddCaption {
     height:             48px;
     width:              1382px;
     background-color:   #DDD;
-    box-shadow:         4px 4px 4px black}
+    box-shadow:         6px 6px 8px #333}
 #IBMLogo{
     position:           absolute;
     left:               0;
@@ -210,14 +210,14 @@ DIV.evenOddCaption {
     position:           absolute;
     width:              22px;
     height:             22px;
-    transform:          translate(calc(-100% - 5px), calc(-100% - 5px));
+    transform:          translate(-50%, -50%);
     font-size:          9px;
     text-align:         center;
     color:              white;
     border:             2px solid white;
     border-radius:      50%}
 #MARSelectorDiv .MARSelectorCaption SPAN {
-    padding-top:        5px;            /* talk about a fudge factor... */
+    line-height:        2.375;          /* talk about a fudge factor... */
     vertical-align:     middle}
 #MARSelectorDiv .MARSelectorCup {
     position:           absolute;
@@ -244,7 +244,7 @@ DIV.evenOddCaption {
 #OperatorContainer {
     position:           absolute;
     top:                354px;
-    bottom:             0;
+    height:             206px;
     width:              100%;
     color:              black;
     background-color:   #F7F7E9}
@@ -256,7 +256,7 @@ DIV.evenOddCaption {
     width:              784px;
     height:             106px;
     background-color:   lightgray;
-    box-shadow:         2px 2px 2px gray}
+    box-shadow:         3px 3px 3px #666}
 
 #Row1LeftSpacer {
     top:                0;
@@ -425,7 +425,7 @@ DIV.evenOddCaption {
 
 #CheckStopPanel {
     position:           absolute;
-    top:                0px;
+    top:                0;
     bottom:             0;
     left:               162px;
     width:              320px;

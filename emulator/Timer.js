@@ -1,36 +1,20 @@
 /***********************************************************************
-* retro-1620/emulator Util.js
+* retro-1620/emulator Timer.js
 ************************************************************************
 * Copyright (c) 2022, Paul Kimpel.
 * Licensed under the MIT License, see
 *       http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* General constants and utilities for the 1620 emulator.
+* Timer class that wraps the native JavaScript setTimeout() method with
+* a Promise interface.
 ************************************************************************
-* 2022-07-19  P.Kimpel
+* 2022-11-05  P.Kimpel
 *   Original version, from retro-g15 Util.js.
 ***********************************************************************/
 
-export const wordBits = 29;                     // bits per 1620 word
-export const wordMagBits = 28;                  // magnitude bits in a 1620 word
-export const wordBytes = 4;                     // bytes per 1620 word (32 bits holding 29 bits)
-export const longLineSize = 108;                // words per long drum line
-export const fastLineSize = 4;                  // words per fast drum line
+export {Timer};
 
-export const wordMask = 0x1FFFFFFF;             // 29 bits
-export const absWordMask = 0x1FFFFFFE;          // all but the sign bit
-export const wordSignMask = 0x01;               // sign bit mask
-export const two28 = 0x10000000;                // 2**28 for complementing word magnitude values
-
-export const wordTime = 60000/1800/124;         // one word time on the drum [1800 RPM, 124 words/rev], ms
-export const bitTime = wordTime/wordBits;       // one bit time on the drum, ms
-export const drumCycleTime = wordTime*longLineSize;
-                                                // one drum cycle (108 words), ms
-export const minTimeout = 4;                    // browsers will do setTimeout for at least 4ms
-
-
-/**************************************/
-export class Timer {
+class Timer {
 
     constructor() {
         /* Constructor for a Timer object that wraps setTimeout() */
@@ -40,7 +24,18 @@ export class Timer {
         this.value = null;
     }
 
-    set(delay, value) {
+    clear() {
+        /* Clears the timer if it is set */
+
+        if (this.timerHandle !== 0) {
+            clearTimeout(this.timerHandle);
+            this.rejector = null;
+            this.value = null;
+            this.timerHandle = 0;
+        }
+    }
+
+    delayFor(delay, value) {
         /* Initiates the timer for "delay" milliseconds and returns a Promise that
         will resolve when the timer expires. The "value" parameter is optional and
         will become the value returned by the Promise */
@@ -69,17 +64,6 @@ export class Timer {
         return this.set(then - performance.now(), value);
     }
 
-    clear() {
-        /* Clears the timer if it is set */
-
-        if (this.timerHandle !== 0) {
-            clearTimeout(this.timerHandle);
-            this.rejector = null;
-            this.value = null;
-            this.timerHandle = 0;
-        }
-    }
-
     reject() {
         /* Clears the timer if it is set and rejects the Promise */
 
@@ -89,3 +73,7 @@ export class Timer {
         }
     }
 }
+
+// Static properties
+
+Timer.minTimeout = 4;                   // browsers will do setTimeout for at least 4ms

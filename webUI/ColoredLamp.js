@@ -15,11 +15,12 @@ export {ColoredLamp}
 
 class ColoredLamp {
 
-    constructor(parent, x, y, id, offClass, onClass) {
+    constructor(parent, x, y, id, caption, offClass, onClass) {
         /* Parameters:
             parent      the DOM container element for this lamp object.
             x & y       coordinates of the lamp within its containing element.
             id          the DOM id for the lamp object.
+            caption     text to be displayed on the lamp
             offClass    CSS class name supplying the color of the lamp when it is off.
             onClass     CSS class name supplying the color of the lamp when it is fully lit */
 
@@ -39,9 +40,10 @@ class ColoredLamp {
                 this.litClass];
 
         // visible DOM element
-        this.element = document.createElement("div");
+        this.element = document.createElement("button");
         this.element.id = id;
         this.element.className = offClass;
+        this.element.innerHTML = caption;
         if (x !== null) {
             this.element.style.left = x.toString() + "px";
         }

@@ -81,8 +81,8 @@ let globalLoad = (ev) => {
 
         window.addEventListener("beforeunload", beforeUnload);
 
-        context.controlPanel = new ControlPanel(context);
         context.processor = new Processor(context);
+        context.controlPanel = new ControlPanel(context);
         //context.devices = {
         //    "paperTapeReader":          new PaperTapeReader(context),
         //    "paperTapePunch":           new PaperTapePunch(context),
@@ -98,14 +98,14 @@ let globalLoad = (ev) => {
         /* Powers down the Processor and shuts down all of the panels and I/O devices */
         let processor = context.processor;
 
-        /**********
-        while (processor.CH.value == 0 || processor.OC.value & 0b1111) {
+        while (processor.gateSTOP.value == 0) {
             processor.stop();
-            processor.cancelIO();
+            processor.releaseIO();
             setTimeout(systemShutDown, 1000);
             return;
         }
 
+        /**********
         let devices = context.devices;
         for (const e in devices) {
             if (devices[e]) {

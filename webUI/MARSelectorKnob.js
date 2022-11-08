@@ -33,6 +33,7 @@ class MARSelectorKnob {
 
         this.boundStep = this.step.bind(this);
         this.boundCaptionClick = this.captionClick.bind(this);
+        this.changeListener = null;     // listener function to report knob changes -- only one allowed
 
         // visible DOM element
         this.size = parent.clientWidth;
@@ -77,10 +78,21 @@ class MARSelectorKnob {
     }
 
     /**************************************/
-    addEventListener(eventName, handler, useCapture) {
-        /* Sets an event handler whenever the canvas element is clicked */
+    setChangeListener(listener) {
+        /* Sets an event handler whenever the knob position is changed. Note
+        that this is not a JavaScript event mechanism. It only sets a call-back
+        function, and only one function at a time is supported. When the knob
+        position is change and has reached its destination, the listener will
+        be called with the new 0-relative position as its only parameter */
 
-        this.canvas.addEventListener(eventName, handler, useCapture);
+        this.changeListener = listener;
+    }
+
+    /**************************************/
+    removeChangeListener() {
+        /* Removes any event handler for knob position changes */
+
+        this.changeListener = null;
     }
 
     /**************************************/
@@ -160,6 +172,9 @@ class MARSelectorKnob {
         to the first position */
 
         this.set(this.position+this.direction);
+        if (this.changeListener) {
+            this.changeListener(this.position);
+        }
     }
 
     /**************************************/
@@ -168,9 +183,13 @@ class MARSelectorKnob {
         let steps = position - this.position;
 
         const nextStep = () => {
-            this.step();
+            this.set(this.position+this.direction);
             if (this.position != position) {
                 setTimeout(nextStep, 100);
+             } else {
+               if (this.changeListener) {
+                    this.changeListener(this.position);
+                }
             }
         };
 
