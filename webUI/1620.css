@@ -12,6 +12,7 @@
 ***********************************************************************/
 
 BODY {
+    cursor:             default;
     position:           relative}
 
 H1 {
@@ -62,6 +63,7 @@ H1 {
     width:              auto;
     height:             auto;
     padding:            0.5em;
+    cursor:             pointer;
     border-radius:      16px;
     border:             2px solid #999}
 #StartUpBtn[disabled],

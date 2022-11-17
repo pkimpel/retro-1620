@@ -51,7 +51,8 @@ BODY.panelBody {
     position:           relative;
     font-size:          8pt;
     margin:             0;
-    padding:            0}
+    padding:            0;
+    cursor:             default}
 
 BODY.deviceBody {
     font-size:          7pt;
@@ -243,7 +244,12 @@ BUTTON.panel {
 
 BUTTON.blackButton {
     color:              white;
+    cursor:             pointer;
     background-image:   linear-gradient(#555, black, #555)}
+BUTTON.blackButtonDown {
+    color:              #CCC;
+    background-image:   none;
+    background-color:   black}
 
 BUTTON.whiteLamp {
     color:              black;
@@ -266,13 +272,14 @@ BUTTON.greenLit {
 DIV.toggleSwitchBox {
     position:           absolute;
     width:              24px;
-    height:             30px}
+    /*height:             30px;*/
+    cursor:             pointer}
 DIV.toggleSwitchBox IMG {
     width:              100%}
 DIV.toggleSwitchTopCaption {
     position:           absolute;
     width:              64px;
-    bottom:             32px;
+    bottom:             44px;
     left:               -20px;
     line-height:        100%;
     font-size:          5pt;
@@ -281,7 +288,7 @@ DIV.toggleSwitchTopCaption {
 DIV.toggleSwitchBottomCaption {
     position:           absolute;
     width:              64px;
-    top:                28px;
+    top:                38px;
     left:               -20px;
     font-size:          5pt;
     font-weight:        normal;

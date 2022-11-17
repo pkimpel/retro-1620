@@ -22,6 +22,7 @@ import {openPopup} from "./PopupUtil.js";
 import {ColoredLamp} from "./ColoredLamp.js";
 import {GateLamp} from "./GateLamp.js";
 import {MARSelectorKnob} from "./MARSelectorKnob.js";
+import {PanelButton} from "./PanelButton.js";
 import {PanelRegister} from "./PanelRegister.js";
 import {ToggleSwitch} from "./ToggleSwitch.js";
 
@@ -115,13 +116,13 @@ class ControlPanel {
         let body = this.doc.body;
 
         // MAR Selector Switch
-        let captions = ["OR-1", "OR-2", "OR-3", "OR-4", "OR-5", "CR-1", "CR-2", "PR-2", "IR-1", "IR-2", "IR-3", "IR-4"];
-        let positions = [];
+        let marCaptions = ["OR-1", "OR-2", "OR-3", "OR-4", "OR-5", "CR-1", "CR-2", "PR-2", "IR-1", "IR-2", "IR-3", "IR-4"];
+        let marPositions = [];
         for (let a=0; a<360; a+=30) {
-            positions.push((a+315)%360);
+            marPositions.push((a+315)%360);
         }
 
-        this.marSelectorKnob = new MARSelectorKnob(this.$$("MARSelectorDiv"), "MARSelectorCupDiv", 0, positions, captions);
+        this.marSelectorKnob = new MARSelectorKnob(this.$$("MARSelectorDiv"), "MARSelectorCupDiv", 0, marPositions, marCaptions);
         p.marSelectorKnob = this.marSelectorKnob.position;
 
         // Memory Address Register
@@ -222,6 +223,20 @@ class ControlPanel {
         this.automaticLamp = new ColoredLamp(panel, null, null, "AutomaticLamp", "AUTOMATIC", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.manualLamp = new ColoredLamp(panel, null, null, "ManualLamp", "MANUAL", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.checkStopLamp = new ColoredLamp(panel, null, null, "CheckStopLamp", "CHECK<br>STOP", "panel redLamp", "panel redLamp redLit");
+
+        this.powerBtn = new PanelButton(panel, null, null, "PowerBtn", "POWER", "panel blackButton", "blackButtonDown");
+        this.resetBtn = new PanelButton(panel, null, null, "ResetBtn", "RESET", "panel blackButton", "blackButtonDown");
+        this.modifyBtn = new PanelButton(panel, null, null, "ModifyBtn", "MODIFY", "panel blackButton", "blackButtonDown");
+        this.checkResetBtn = new PanelButton(panel, null, null, "CheckResetBtn", "CHECK<br>RESET", "panel blackButton", "blackButtonDown");
+        this.displayMARBtn = new PanelButton(panel, null, null, "DisplayMARBtn", "DISPLAY<br>MAR", "panel blackButton", "blackButtonDown");
+        this.saveBtn = new PanelButton(panel, null, null, "SaveBtn", "SAVE", "panel blackButton", "blackButtonDown");
+        this.releaseBtn = new PanelButton(panel, null, null, "ReleaseBtn", "RELEASE", "panel blackButton", "blackButtonDown");
+        this.insertBtn = new PanelButton(panel, null, null, "InsertBtn", "INSERT", "panel blackButton", "blackButtonDown");
+        this.rfe1Btn = new PanelButton(panel, null, null, "RFE1Btn", "&nbsp;", "panel blackButton", "blackButtonDown");
+        this.rfe2Btn = new PanelButton(panel, null, null, "RFE2Btn", "&nbsp;", "panel blackButton", "blackButtonDown");
+        this.startBtn = new PanelButton(panel, null, null, "StartBtn", "START", "panel blackButton", "blackButtonDown");
+        this.stopSIEBtn = new PanelButton(panel, null, null, "StopSIEBtn", "STOP<br>SIE", "panel blackButton", "blackButtonDown");
+        this.stopSCEBtn = new PanelButton(panel, null, null, "StopSCEBtn", "INSTANT<br>STOP<br>SCE", "panel blackButton", "blackButtonDown");
 
         // Check Stop Panel Switches & Lamps
         panel = this.$$("CheckStopPanel");
@@ -598,5 +613,5 @@ class ControlPanel {
 // Static class properties
 
 ControlPanel.displayRefreshPeriod = 50; // ms
-ControlPanel.offSwitchImage = "./resources/ToggleDown.png";
-ControlPanel.onSwitchImage = "./resources/ToggleUp.png";
+ControlPanel.offSwitchImage = "./resources/ToggleLargeDown.png";
+ControlPanel.onSwitchImage = "./resources/ToggleLargeUp.png";

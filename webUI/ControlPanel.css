@@ -214,6 +214,7 @@ DIV.evenOddCaption {
     font-size:          9px;
     text-align:         center;
     color:              white;
+    cursor:             pointer;
     border:             2px solid white;
     border-radius:      50%}
 #MARSelectorDiv .MARSelectorCaption SPAN {
@@ -226,6 +227,7 @@ DIV.evenOddCaption {
     left:               28px;
     right:              28px;
     overflow:           hidden;
+    cursor:             pointer;
     border:             3px solid white;
     background-image:   radial-gradient(circle, #DDD, #CCC, #999, #666);
     border-radius:      50%;
@@ -506,48 +508,48 @@ DIV.evenOddCaption {
 
 #Dummy1Switch {
     position:           absolute;
-    top:                156px;
+    top:                149px;
     left:               13px;
     width:              24px}
 #DiskStopSwitch {
     position:           absolute;
-    top:                156px;
+    top:                149px;
     left:               55px;
     width:              24px}
 #ParityStopSwitch {
     position:           absolute;
-    top:                156px;
+    top:                149px;
     left:               97px;
     width:              24px}
 #IOStopSwitch {
     position:           absolute;
-    top:                156px;
+    top:                149px;
     left:               139px;
     width:              24px}
 #OflowStopSwitch {
     position:           absolute;
-    top:                156px;
+    top:                149px;
     left:               181px;
     width:              24px}
 
 #Program1Switch {
     position:           absolute;
-    top:                90px;
+    top:                83px;
     left:               223px;
     width:              24px}
 #Program2Switch {
     position:           absolute;
-    top:                90px;
+    top:                83px;
     left:               265px;
     width:              24px}
 #Program3Switch {
     position:           absolute;
-    top:                156px;
+    top:                149px;
     left:               223px;
     width:              24px}
 #Program4Switch {
     position:           absolute;
-    top:                156px;
+    top:                149px;
     left:               265px;
     width:              24px}
 
