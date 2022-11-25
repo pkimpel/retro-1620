@@ -161,13 +161,13 @@ class ControlPanel {
 
         // Operation, Multiplier/Quotient, and Data Registers
         panel = this.$$("Panel4Blue");
-        this.regOREven = new PanelRegister(panel, 1, false, 0, "ORE_");
-        this.regOROdd =  new PanelRegister(panel, 1, false, 1, "ORO_");
-        this.regOROdd.lamps[0].setCaption("|<br>1<br>|", false);
-        this.regOROdd.lamps[1].setCaption("|<br>2<br>|", false);
-        this.regOROdd.lamps[2].setCaption("|<br>4<br>|", false);
-        this.regOROdd.lamps[3].setCaption("|<br>8<br>|", false);
-        this.regOROdd.lamps[5].setCaption("|<br>C<br>|", false);        // no lamp[4] for flag
+        this.regOPEven = new PanelRegister(panel, 1, false, 0, "ORE_");
+        this.regOPOdd =  new PanelRegister(panel, 1, false, 1, "ORO_");
+        this.regOPOdd.lamps[0].setCaption("|<br>1<br>|", false);
+        this.regOPOdd.lamps[1].setCaption("|<br>2<br>|", false);
+        this.regOPOdd.lamps[2].setCaption("|<br>4<br>|", false);
+        this.regOPOdd.lamps[3].setCaption("|<br>8<br>|", false);
+        this.regOPOdd.lamps[5].setCaption("|<br>C<br>|", false);        // no lamp[4] for flag
 
         this.regMQ = new PanelRegister(panel, 1, false, 2, "MQ_");
         this.regMQ.lamps[0].setCaption("1", false);
@@ -250,10 +250,10 @@ class ControlPanel {
         this.oflowDummyCheckLamp = new GateLamp(panel, null, null, "OflowDummyCheckLamp");
 
         this.dummy2Lamp = new GateLamp(panel, null, null, "Dummy2Lamp");
-        this.diskWRLWBCCheckLamp = new GateLamp(panel, null, null, "DiskWRLWBCCheckLamp");
-        this.diskWRLWBCCheckLamp.setCaption("WRL WBC", false);
-        this.parityMBRECheckLamp = new GateLamp(panel, null, null, "ParityMBRECheckLamp");
-        this.parityMBRECheckLamp.setCaption("MBR-E CHK", false);
+        this.diskWRLRBCCheckLamp = new GateLamp(panel, null, null, "DiskWRLRBCCheckLamp");
+        this.diskWRLRBCCheckLamp.setCaption("WRL RBC", false);
+        this.parityMBREvenCheckLamp = new GateLamp(panel, null, null, "ParityMBREvenCheckLamp");
+        this.parityMBREvenCheckLamp.setCaption("MBR-E CHK", false);
         this.ioReadCheckLamp = new GateLamp(panel, null, null, "IOReadCheckLamp");
         this.ioReadCheckLamp.setCaption("RD CHK", false);
         this.oflowExpCheckLamp = new GateLamp(panel, null, null, "OflowExpCheckLamp");
@@ -262,8 +262,8 @@ class ControlPanel {
         this.dummy3Lamp = new GateLamp(panel, null, null, "Dummy3Lamp");
         this.diskCylOflowCheckLamp = new GateLamp(panel, null, null, "DiskCylOflowCheckLamp");
         this.diskCylOflowCheckLamp.setCaption("|<br>|<br>CYL OFLO", false);
-        this.parityMBROCheckLamp = new GateLamp(panel, null, null, "ParityMBROCheckLamp");
-        this.parityMBROCheckLamp.setCaption("|<br>|<br>MBR-O CHK", false);
+        this.parityMBROddCheckLamp = new GateLamp(panel, null, null, "ParityMBROddCheckLamp");
+        this.parityMBROddCheckLamp.setCaption("|<br>|<br>MBR-O CHK", false);
         this.ioWriteCheckLamp = new GateLamp(panel, null, null, "IOWriteCheckLamp");
         this.ioWriteCheckLamp.setCaption("|<br>|<br>WR CHK", false);
         this.oflowArithCheckLamp = new GateLamp(panel, null, null, "OflowArithCheckLamp");
@@ -314,6 +314,7 @@ class ControlPanel {
             p.powerUp();
             this.powerOnLamp.set(1);
             setTimeout(() => {
+                p.powerReady.value = 1;
                 this.powerReadyLamp.set(1);
                 this.intervalToken = this.window.setInterval(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
             }, 2000);
@@ -373,7 +374,7 @@ class ControlPanel {
         //this.gatePanel1Gray_1_10.set(p.gatePanel1Gray_1_10.glow);
         this.gateIX_BAND_1.set(p.gateIX_BAND_1.glow);
         this.gateIA_ENT.set(p.gateIA_ENT.glow);
-        this.gateX_4.set(p.gateX_4.glow);
+        this.gateX_4.set(p.regXR.glow[2]);
         this.gateEXMIT_ENT.set(p.gateEXMIT_ENT.glow);
         this.gateFIELD_MK_2.set(p.gateFIELD_MK_2.glow);
         this.gate1ST_MPLY_CYCLE.set(p.gate1ST_MPLY_CYCLE.glow);
@@ -385,7 +386,7 @@ class ControlPanel {
         this.gateSTOP.set(p.gateSTOP.glow);
         this.gateIX_BAND_2.set(p.gateIX_BAND_2.glow);
         this.gateIA_REQ.set(p.gateIA_REQ.glow);
-        this.gateX_2.set(p.gateX_2.glow);
+        this.gateX_2.set(p.regXR.glow[1]);
         this.gateEXMIT_MODE.set(p.gateEXMIT_MODE.glow);
         this.gateFL_1.set(p.gateFL_1.glow);
         this.gateDIV_1_CYC.set(p.gateDIV_1_CYC.glow);
@@ -397,7 +398,7 @@ class ControlPanel {
         this.gateLAST_CARD.set(p.gateLAST_CARD.glow);
         this.gateHP.set(p.gateHP.glow);
         this.gateP.set(p.gateP.glow);
-        this.gateX_1.set(p.gateX_1.glow);
+        this.gateX_1.set(p.regXR.glow[0]);
         //this.gatePanel1Gray_4_2.set(p.gatePanel1Gray_4_2.glow);
         this.gateFL_2.set(p.gateFL_2.glow);
         this.gateDVD_L_CYC.set(p.gateDVD_L_CYC.glow);
@@ -439,12 +440,15 @@ class ControlPanel {
         //this.gatePanel2Blue_3_5.set(p.gatePanel2Blue_3_5.glow);
         //this.gatePanel2Blue_3_6.set(p.gatePanel2Blue_3_6.glow);
         //this.gatePanel2Blue_4_0.set(p.gatePanel2Blue_4_0.glow);
-        this.gatePC_HP.set(p.gatePC_HP.glow);
-        this.gatePC_EZ.set(p.gatePC_EZ.glow);
-        this.gatePC_OFLOW.set(p.gatePC_OFLOW.glow);
-        this.gatePC_TR_8.set(p.gatePC_TR_8.glow);
-        this.gatePC_IND.set(p.gatePC_IND.glow);
-        this.gatePC_6XXX.set(p.gatePC_6XXX.glow);
+
+        /********** PC_* registers used on IBM 1710 only **********
+        //this.gatePC_HP.set(p.gatePC_HP.glow);
+        //this.gatePC_EZ.set(p.gatePC_EZ.glow);
+        //this.gatePC_OFLOW.set(p.gatePC_OFLOW.glow);
+        //this.gatePC_TR_8.set(p.gatePC_TR_8.glow);
+        //this.gatePC_IND.set(p.gatePC_IND.glow);
+        //this.gatePC_6XXX.set(p.gatePC_6XXX.glow);
+        **********************************************************/
 
         // Instruction & Execution Cycle panel
         this.gateI_1.set(p.gateI_1.glow);
@@ -464,8 +468,8 @@ class ControlPanel {
         this.gateE_5.set(p.gateE_5.glow);
 
         // Register Panels
-        this.regOREven.updateLampGlow(p.regOREven.glow);
-        this.regOROdd.updateLampGlow(p.regOROdd.glow);
+        this.regOPEven.updateLampGlow(p.regOPEven.glow);
+        this.regOPOdd.updateLampGlow(p.regOPOdd.glow);
         this.regMQ.updateLampGlow(p.regMQ.glow);
         this.regDREven.updateLampGlow(p.regDREven.glow);
         this.regDROdd.updateLampGlow(p.regDROdd.glow);
@@ -477,6 +481,7 @@ class ControlPanel {
         this.regMAR.updateLampGlow(p.regMAR.glow);
 
         // Operator Control Panel lamps
+        // Note: this.powerOnLamp and this.powerReadyLamp are not updated, since they are on constantly
         this.thermalLamp.set(p.thermal.glow);
         this.writeInterlockLamp.set(p.writeInterlock.glow);
         this.readInterlockLamp.set(p.readInterlock.glow);
@@ -496,13 +501,13 @@ class ControlPanel {
         this.ioPrinterCheckLamp.set(p.ioPrinterCheck.glow);
         //this.oflowDummyCheckLamp.set(p.oflowDummyCheck.glow);
         //this.dummy2Lamp.set(p.dummy2Lamp.glow);
-        this.diskWRLWBCCheckLamp.set(p.diskWRLWBCCheck.glow);
-        this.parityMBRECheckLamp.set(p.parityMBRECheck.glow);
+        this.diskWRLRBCCheckLamp.set(p.diskWRLRBCCheck.glow);
+        this.parityMBREvenCheckLamp.set(p.parityMBREvenCheck.glow);
         this.ioReadCheckLamp.set(p.ioReadCheck.glow);
         this.oflowExpCheckLamp.set(p.oflowExpCheck.glow);
         //this.dummy3Lamp.set(p.dummy3Lamp.glow);
         this.diskCylOflowCheckLamp.set(p.diskCylOflowCheck.glow);
-        this.parityMBROCheckLamp.set(p.parityMBROCheck.glow);
+        this.parityMBROddCheckLamp.set(p.parityMBROddCheck.glow);
         this.ioWriteCheckLamp.set(p.ioWriteCheck.glow);
         this.oflowArithCheckLamp.set(p.oflowArithCheck.glow);
     }

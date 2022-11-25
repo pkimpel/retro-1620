@@ -477,10 +477,10 @@ DIV.evenOddCaption {
 #Dummy2Lamp {
     top:                74px;
     left:               16px}
-#DiskWRLWBCCheckLamp {
+#DiskWRLRBCCheckLamp {
     top:                74px;
     left:               58px}
-#ParityMBRECheckLamp {
+#ParityMBREvenCheckLamp {
     top:                74px;
     left:               100px}
 #IOReadCheckLamp {
@@ -496,7 +496,7 @@ DIV.evenOddCaption {
 #DiskCylOflowCheckLamp {
     top:                114px;
     left:               58px}
-#ParityMBROCheckLamp {
+#ParityMBROddCheckLamp {
     top:                114px;
     left:               100px}
 #IOWriteCheckLamp {

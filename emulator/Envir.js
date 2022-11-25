@@ -29,7 +29,7 @@ class Envir {
         // Main system timing variables
         this.eTime = 0;                 // current emulation time, ms
         this.eTimeSliceEnd = 0;         // current timeslice end emulation time, ms
-        this.envirTimer = new Timer();
+        this.governor = new Timer();
     }
 
     /**************************************/
@@ -40,6 +40,15 @@ class Envir {
 
         this.eTime = Math.max(performance.now(), this.eTime);
         this.eTimeSliceEnd = this.eTime + Envir.minSliceTime;
+    }
+
+    /**************************************/
+    tick() {
+        /* Increments the emulation clock by one memory cycle time. Returns true
+        if the time slice has expired */
+
+        this.eTime += Envir.cycleTime;
+        return (this.eTime >= this.eTimeSliceEnd);
     }
 
     /**************************************/
@@ -56,15 +65,15 @@ class Envir {
             return Promise.resolve(null);       // i.e., don't wait at all
         } else {
             this.eTimeSliceEnd += Envir.minSliceTime;
-            return this.envirTimer.delayUntil(this.eTime);
+            return this.governor.delayUntil(this.eTime);
         }
     }
 } // class Envir
 
 // Static properties
 
-Envir.clockTime = 0.0005;               // 1620 clock period, ms (2Mhz frequency)
-Envir.cycleTime = 0.01;                 // 1620 memory cycle time, ms (10µs period)
+Envir.clockTime = 0.0005;               // 1620 clock period, ms (0.5µs period, 2Mhz frequency)
+Envir.cycleTime = 0.010;                // 1620 memory cycle time, ms ()
 Envir.minSliceTime = 8;                 // minimum time slice before throttling, ms
 
 Envir.maxMemorySize = 60000;            // maximum allowable memory on a 1620 Mod 2, digits

@@ -19,7 +19,7 @@ import {Envir} from "./Envir.js";
 
 class FlipFlop {
 
-    constructor(clock, invisible) {
+    constructor(clock, visible) {
         /* Constructor for the generic FlipFlop class. "clock" is a reference to
         the object that maintains the emulation clock, which must support the
         property "eTime". That property reports the current emulation time in
@@ -35,7 +35,7 @@ class FlipFlop {
         intensity to be computed based on the amount of time a bit was actually in
         that state */
 
-        this.visible = (invisible ? false : true);
+        this.visible = (visible ? true : false);
         this.lastETime = 0;             // time flip-flop was last set
         this.clock = clock;             // processor instance
         this.intVal = 0;                // binary value of flip-flop: read-only externally
@@ -47,7 +47,20 @@ class FlipFlop {
     }
 
     set value(value) {
-        return this.set(value);
+        /* Set the value of the FF. Use this rather than setting the intVal member
+        directly so that average lamp glow can be computed. Returns the new value */
+
+        this.intVal = (value ? 1 : 0);
+        if (this.visible) {
+            this.updateLampGlow(0);
+        }
+    }
+
+    /**************************************/
+    flip() {
+        /* Complement the value of the FF. Returns the new value */
+
+        return this.value = 1-this.intVal;
     }
 
     /**************************************/
@@ -74,26 +87,6 @@ class FlipFlop {
         }
 
         this.lastETime = eTime;
-    }
-
-    /**************************************/
-    set(value) {
-        /* Set the value of the FF. Use this rather than setting the intVal member
-        directly so that average lamp glow can be computed. Returns the new value */
-
-        this.intVal = (value ? 1 : 0);
-        if (this.visible) {
-            this.updateLampGlow(0);
-        }
-
-        return this.intVal;
-    }
-
-    /**************************************/
-    flip() {
-        /* Complement the value of the FF. Returns the new value */
-
-        return this.set(1-this.intVal);
     }
 
 } // class FlipFlop
