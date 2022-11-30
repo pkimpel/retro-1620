@@ -88,9 +88,6 @@ let globalLoad = (ev) => {
         //    "paperTapePunch":           new PaperTapePunch(context),
         //    "typewriter":               new Typewriter(context)
         //}
-
-        //context.processor.powerUp();
-        //context.controlPanel.enablePanel();
     }
 
     /**************************************/
@@ -98,8 +95,8 @@ let globalLoad = (ev) => {
         /* Powers down the Processor and shuts down all of the panels and I/O devices */
         let processor = context.processor;
 
-        while (processor.gateSTOP.value == 0) {
-            processor.stop();
+        while (!processor.gateMANUAL.value) {
+            processor.setManual();
             processor.releaseIO();
             setTimeout(systemShutDown, 1000);
             return;
@@ -114,11 +111,11 @@ let globalLoad = (ev) => {
             }
         }
 
-        context.controlPanel.disablePanel();
         **********/
 
         processor.powerDown();
         context.devices = null;
+        context.controlPanel = null;
         context.processor = null;
 
         $$("StartUpBtn").disabled = false;

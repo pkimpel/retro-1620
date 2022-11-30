@@ -19,8 +19,8 @@ import {Envir} from "./Envir.js";
 
 class FlipFlop {
 
-    constructor(clock, visible) {
-        /* Constructor for the generic FlipFlop class. "clock" is a reference to
+    constructor(envir, visible) {
+        /* Constructor for the generic FlipFlop class. "envir" is a reference to
         the object that maintains the emulation clock, which must support the
         property "eTime". That property reports the current emulation time in
         milliseconds. Emulation time is used to compute lamp glow decay and a
@@ -30,14 +30,14 @@ class FlipFlop {
         presence in the UI -- this will inhibit computing average lamp glow
         values for the register.
 
-        Note that it is important to increment clock.eTime in the caller AFTER
+        Note that it is important to increment envir.eTime in the caller AFTER
         setting new values in registers and flip-flops. This allows the average
         intensity to be computed based on the amount of time a bit was actually in
         that state */
 
         this.visible = (visible ? true : false);
         this.lastETime = 0;             // time flip-flop was last set
-        this.clock = clock;             // processor instance
+        this.envir = envir;             // processor instance
         this.intVal = 0;                // binary value of flip-flop: read-only externally
         this.glow = 0;                  // average lamp glow value
     }
@@ -68,18 +68,13 @@ class FlipFlop {
         /* Updates the average glow for the flip flop. Note that the glow is
         always aged by at least one clock tick. Beta is a bias in the
         range (0,1). For normal update, use 0; to freeze the current state, use 1 */
-        let eTime = this.clock.eTime;
+        let eTime = this.envir.eTime;
 
         if (this.visible) {
-            /**********
-            let alpha = Math.min(Math.max(eTime-this.lastETime, Envir.clockTime)/
-                                 FlipFlop.lampPersistence + beta, 1.0);
-            **********/
-
             let delta = eTime - this.lastETime;
-            if (delta < Envir.clockTime) {
-                delta = Envir.clockTime;
-                eTime += Envir.clockTime;
+            if (delta < Envir.cycleTime) {
+                delta += Envir.tickTime;
+                eTime += Envir.tickTime;
             }
 
             let alpha = Math.min(delta/FlipFlop.lampPersistence + beta, 1.0);
@@ -94,4 +89,4 @@ class FlipFlop {
 
 // Static class properties
 
-FlipFlop.lampPersistence = 300;         // persistence of incandescent bulb glow [ms]
+FlipFlop.lampPersistence = 7;           // persistence of incandescent bulb glow [ms]

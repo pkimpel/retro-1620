@@ -42,6 +42,7 @@ class ControlPanel {
         this.context = context;
         this.systemShutdown = context.systemShutdown
         this.intervalToken = 0;         // interval timer cancel token
+        this.modifyLatch = 0;           // MODIFY key was pressed, awaiting CHECK RESET key
 
         this.boundUpdatePanel = this.updatePanel.bind(this);
         this.boundMARSelectorChange = this.marSelectorChange.bind(this);
@@ -216,10 +217,10 @@ class ControlPanel {
         this.writeInterlockLamp = new ColoredLamp(panel, null, null, "WriteInterlockLamp", "WRITE<br>INTERLOCK", "panel redLamp", "panel redLamp redLit");
         this.readInterlockLamp = new ColoredLamp(panel, null, null, "ReadInterlockLamp", "READ<br>INTERLOCK", "panel redLamp", "panel redLamp redLit");
         this.saveLamp = new ColoredLamp(panel, null, null, "SaveLamp", "SAVE", "panel whiteLamp", "panel whiteLamp whiteLit");
-        this.typewriterSelectedLamp = new ColoredLamp(panel, null, null, "TypewriterSelectedLamp", "TWPR<br>SELECTED", "panel whiteLamp", "panel whiteLamp whiteLit");
-        this.rfe1Lamp = new ColoredLamp(panel, null, null, "RFE1Lamp", "&nbsp;", "panel whiteLamp", "panel whiteLamp whiteLit");
-        this.rfe2Lamp = new ColoredLamp(panel, null, null, "RFE2Lamp", "&nbsp;", "panel whiteLamp", "panel whiteLamp whiteLit");
-        this.rfe3Lamp = new ColoredLamp(panel, null, null, "RFE3Lamp", "&nbsp;", "panel whiteLamp", "panel whiteLamp whiteLit");
+        this.twprSelectedLamp = new ColoredLamp(panel, null, null, "TypewriterSelectedLamp", "TWPR<br>SELECTED", "panel whiteLamp", "panel whiteLamp whiteLit");
+        this.RFE1Lamp = new ColoredLamp(panel, null, null, "RFE1Lamp", "&nbsp;", "panel whiteLamp", "panel whiteLamp whiteLit");
+        this.RFE2Lamp = new ColoredLamp(panel, null, null, "RFE2Lamp", "&nbsp;", "panel whiteLamp", "panel whiteLamp whiteLit");
+        this.RFE3Lamp = new ColoredLamp(panel, null, null, "RFE3Lamp", "&nbsp;", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.automaticLamp = new ColoredLamp(panel, null, null, "AutomaticLamp", "AUTOMATIC", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.manualLamp = new ColoredLamp(panel, null, null, "ManualLamp", "MANUAL", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.checkStopLamp = new ColoredLamp(panel, null, null, "CheckStopLamp", "CHECK<br>STOP", "panel redLamp", "panel redLamp redLit");
@@ -232,8 +233,8 @@ class ControlPanel {
         this.saveBtn = new PanelButton(panel, null, null, "SaveBtn", "SAVE", "panel blackButton", "blackButtonDown");
         this.releaseBtn = new PanelButton(panel, null, null, "ReleaseBtn", "RELEASE", "panel blackButton", "blackButtonDown");
         this.insertBtn = new PanelButton(panel, null, null, "InsertBtn", "INSERT", "panel blackButton", "blackButtonDown");
-        this.rfe1Btn = new PanelButton(panel, null, null, "RFE1Btn", "&nbsp;", "panel blackButton", "blackButtonDown");
-        this.rfe2Btn = new PanelButton(panel, null, null, "RFE2Btn", "&nbsp;", "panel blackButton", "blackButtonDown");
+        this.RFE1Btn = new PanelButton(panel, null, null, "RFE1Btn", "&nbsp;", "panel blackButton", "blackButtonDown");
+        this.RFE2Btn = new PanelButton(panel, null, null, "RFE2Btn", "&nbsp;", "panel blackButton", "blackButtonDown");
         this.startBtn = new PanelButton(panel, null, null, "StartBtn", "START", "panel blackButton", "blackButtonDown");
         this.stopSIEBtn = new PanelButton(panel, null, null, "StopSIEBtn", "STOP<br>SIE", "panel blackButton", "blackButtonDown");
         this.stopSCEBtn = new PanelButton(panel, null, null, "StopSCEBtn", "INSTANT<br>STOP<br>SCE", "panel blackButton", "blackButtonDown");
@@ -314,7 +315,7 @@ class ControlPanel {
             p.powerUp();
             this.powerOnLamp.set(1);
             setTimeout(() => {
-                p.powerReady.value = 1;
+                p.gatePOWER_READY.value = 1;
                 this.powerReadyLamp.set(1);
                 this.intervalToken = this.window.setInterval(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
             }, 2000);
@@ -482,17 +483,17 @@ class ControlPanel {
 
         // Operator Control Panel lamps
         // Note: this.powerOnLamp and this.powerReadyLamp are not updated, since they are on constantly
-        this.thermalLamp.set(p.thermal.glow);
-        this.writeInterlockLamp.set(p.writeInterlock.glow);
-        this.readInterlockLamp.set(p.readInterlock.glow);
-        this.saveLamp.set(p.save.glow);
-        this.typewriterSelectedLamp.set(p.typewriterSelected.glow);
-        //this.rfe1Lamp.set(p.rfe1Lamp.glow);
-        //this.rfe2Lamp.set(p.rfe2Lamp.glow);
-        //this.rfe3Lamp.set(p.rfe3Lamp.glow);
-        this.automaticLamp.set(p.automatic.glow);
-        this.manualLamp.set(p.manual.glow);
-        this.checkStopLamp.set(p.checkStop.glow);
+        this.thermalLamp.set(p.gateTHERMAL.glow);
+        this.writeInterlockLamp.set(p.gateWRITE_INTERLOCK.glow);
+        this.readInterlockLamp.set(p.gateREAD_INTERLOCK.glow);
+        this.saveLamp.set(p.gateSAVE.glow);
+        this.twprSelectedLamp.set(p.gateINSERT.glow);
+        //this.RFE1Lamp.set(p.gateRFE1Lamp.glow);
+        //this.RFE2Lamp.set(p.gateRFE2Lamp.glow);
+        //this.RFE3Lamp.set(p.gateRFE3Lamp.glow);
+        this.automaticLamp.set(p.gateAUTOMATIC.glow);
+        this.manualLamp.set(p.gateMANUAL.glow);
+        this.checkStopLamp.set(p.gateCHECK_STOP.glow);
 
         // Check Indicators panel
         //this.dummy1Lamp.set(p.dummy1Lamp.glow);
@@ -516,6 +517,7 @@ class ControlPanel {
     controlSwitchClick(ev) {
         /* Event handler for the pane's switch controls */
         let e = ev.target;
+        let modified = false;           // MODIFY button was pressed this time
         let p = this.context.processor;
 
         if (e.tagName == "IMG") {
@@ -526,34 +528,81 @@ class ControlPanel {
         case "PowerBtn":
             this.shutDown();
             break;
+        case "ResetBtn":
+            p.manualReset();
+            break;
+        case "ModifyBtn":
+            modified = true;
+            this.modifyLatch = 1;
+            break;
+        case "CheckResetBtn":
+            if (this.modifyLatch) {
+                p.enableMemoryClear();
+            } else {
+                p.checkReset();
+            }
+            break;
+        case "DisplayMARBtn":
+            p.displayMAR();
+            break;
+        case "SaveBtn":
+            p.saveIR1();
+            break;
+        case "InsertBtn":
+            p.insert();
+            break;
+        case "ReleaseBtn":
+            p.releaseIO();
+            break;
+        case "StartBtn":
+            p.start();
+            break;
+        case "StopSIEBtn":
+            p.stopSIE();
+            break;
+        case "StopSCEBtn":
+            p.stopSCE();
+            break;
         case "Dummy1Switch":            // non-functional, just turn it back off
             this.dummy1Switch.flip();
             setTimeout(() => {this.dummy1Switch.flip()}, 250);
             break;
         case "DiskStopSwitch":
             this.diskStopSwitch.flip();
+            p.diskStopSwitch = this.diskStopSwitch.state;
             break;
         case "ParityStopSwitch":
             this.parityStopSwitch.flip();
+            p.parityStopSwitch = this.parityStopSwitch.state;
             break;
         case "IOStopSwitch":
             this.ioStopSwitch.flip();
+            p.ioStopSwitch = this.ioStopSwitch.state;
             break;
         case "OflowStopSwitch":
             this.oflowStopSwitch.flip();
+            p.oflowStopSwitch = this.oflowStopSwitch.state;
             break;
         case "Program1Switch":
             this.program1Switch.flip();
+            p.program1Switch = this.program1Switch.state;
             break;
         case "Program2Switch":
             this.program2Switch.flip();
+            p.program2Switch = this.program2Switch.state;
             break;
         case "Program3Switch":
             this.program3Switch.flip();
+            p.program3Switch = this.program3Switch.state;
             break;
         case "Program4Switch":
             this.program4Switch.flip();
+            p.program4Switch = this.program4Switch.state;
             break;
+        }
+
+        if (!modified) {                // reset latch if any key other than MODIFY was pressed
+            this.modifyLatch = 0;
         }
     }
 
@@ -562,25 +611,6 @@ class ControlPanel {
         /* Handler for changes in the MARS Selector knob position */
 
         this.context.processor.marSelectorKnob = position;
-        this.context.processor.regMAR.binaryValue = position;   // **DEBUG ** //
-    }
-
-    /**************************************/
-    async systemReset(ev) {
-        /* Event handler for the RESET button */
-        let timer = new Timer();
-
-        if (this.context.processor.STOP.value) {  // system halted
-            this.readyLamp.set(0);
-            this.dcPowerLamp.set(0);
-            await timer.set(1500);          // wait for the DC power supplies...
-            this.dcPowerLamp.set(1);
-            await this.context.processor.systemReset();
-            this.readyLamp.set(1);
-            if (!this.panelEnabled) {
-                this.enablePanel();
-            }
-        }
     }
 
     /**************************************/
@@ -599,6 +629,7 @@ class ControlPanel {
 
         this.$$("OperatorContainer").removeEventListener("click", this.boundControlSwitchClick);
         this.marSelectorKnob.removeChangeListener(this.boundMARSelectorChange);
+        this.context.processor.powerDown();
         this.powerReadyLamp.set(0);
         this.powerOnLamp.set(0);
         if (this.intervalToken) {

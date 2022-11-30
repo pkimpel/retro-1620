@@ -209,7 +209,7 @@ DIV.gateLit4 {
 DIV.gateLit5 {
     background-color:   #ECDFC0}
 DIV.gateLit {
-    background-color:   #FFF2CE}
+    background-color:   #FFF2CE}        /* try FFDD99 as a base ?? */
 
 DIV.gateLampTopCaption {
     position:           absolute;
@@ -255,19 +255,19 @@ BUTTON.whiteLamp {
     color:              black;
     background-image:   linear-gradient(#B3A696, #D9CCB2, #B3A696)}
 BUTTON.whiteLit {
-    background-image:   radial-gradient(circle, #FFF2CE, #FFF2CE, #C6B9A4)}
+    background-image:   radial-gradient(circle, #FFF2CE 67%, #C6B9A4)}
 
 BUTTON.redLamp {
     color:              black;
     background-image:   linear-gradient(#600, #800, #600)}
 BUTTON.redLit {
-    background-image:   radial-gradient(circle, #F00, #F00, #C00)}
+    background-image:   radial-gradient(circle, #F00 67%, #C00)}
 
 BUTTON.greenLamp {
     color:              black;
     background-image:   linear-gradient(#060, #080, #060)}
 BUTTON.greenLit {
-    background-image:   radial-gradient(circle, #0F0, #0F0, #0C0)}
+    background-image:   radial-gradient(circle, #0F0 67%, #0C0)}
 
 DIV.toggleSwitchBox {
     position:           absolute;

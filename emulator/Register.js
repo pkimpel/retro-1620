@@ -20,7 +20,7 @@ import {FlipFlop} from "./FlipFlop.js";
 
 class Register {
 
-    constructor(digits, clock, visible, parity, flagged) {
+    constructor(digits, envir, visible, parity, flagged) {
         /* Constructor for the generic Register class. Defines a binary register
         of "digits" 6-bit digits. The bits in each digit are arranged, from high-
         to low-order, as C F 8 4 2 1 (C= odd parity).
@@ -29,7 +29,7 @@ class Register {
         fits in a 32-bit 2s-complement value, we can use Javascript bit
         operators to maniuplate the values.
 
-        "clock" is a reference to the object that maintains the emulation clock,
+        "envir" is a reference to the object that maintains the emulation clock,
         which must support the property "eTime". That property reports the
         current emulation time in milliseconds. Emulation time is used to compute
         lamp glow decay and a time-weighted exponential average intensity.
@@ -47,13 +47,13 @@ class Register {
         incoming flag (F) bits will be unconditionally reset and will not
         contribute to the parity sum.
 
-        Note that it is important to increment clock.eTime in the caller AFTER
+        Note that it is important to increment envir.eTime in the caller AFTER
         setting new values in registers and flip-flops. This allows the average
         intensity to be computed based on the amount of time a bit was actually in
         that state */
 
         this.digits = digits;           // number of 6-bit digits in register
-        this.clock = clock;             // local copy of clock object
+        this.envir = envir;             // local copy of clock object
         this.visible = (visible ? true : false);
         this.parity = (parity ? true : false);
         this.flagged = (flagged ? true : false);
@@ -108,13 +108,15 @@ class Register {
 
     get binaryValue() {
         /* Returns the value of the register as a binary integer */
-        let val = this.intVal;
+        let val = this.intVal & Register.bcdValueMask;
         let binary = Envir.bcdBinary[val & Register.bcdMask];
+        let power = 1;
 
         let d = 1;
-        while (d < this.digits) {
+        while (val && d < this.digits) {
             val >>= Register.digitBits;
-            binary = binary*10 + Envir.bcdBinary[val & Register.bcdMask];
+            power *= 10;
+            binary += Envir.bcdBinary[val & Register.bcdMask]*power;
             ++d;
         }
 
@@ -133,7 +135,7 @@ class Register {
         do {
             let bcd = bin % 10;
             let digit = Envir.oddParity5[(val & Register.parityFlagMask) | bcd];
-            newVal |= digit << bits;
+            newVal |= (digit << bits);
             val >>= Register.digitBits;
             bin = (bin-bcd)/10;
             bits += Register.digitBits;
@@ -145,10 +147,10 @@ class Register {
         }
     }
 
-    get isZero() {
-        /* Returns 1 if the register is zero, 0 otherwise */
+    get isntZero() {
+        /* Returns 0 if the register is zero, 1 otherwise */
 
-        return ((this.intVal & Register.bcdValue) ? 0 : 1);
+        return ((this.intVal & Register.bcdValueMask) ? 1 : 0);
     }
 
     /**************************************/
@@ -173,7 +175,10 @@ class Register {
     /**************************************/
     incr(increment) {
         /* Increments the register by "count", which must be in the range 1-9.
-        This is designed to minimize the number of digits changed */
+        If this is a 5-digit register, it is assumed to be an address register,
+        and the result will be modulo the system memory size. Otherwise, overflow
+        is ignored.
+        This routine is designed to minimize the number of digits changed */
         let carry = increment;
         let d = 0;
         let digit = 0;
@@ -190,30 +195,47 @@ class Register {
 
             this.setDigit(d, digit);
             val >>= Register.digitBits;
-        } while (carry && d < this.digits);
+        } while (carry && ++d < this.digits);
+
+        if (this.digits > 4) {
+            val = this.binaryValue;
+            if (val >= this.envir.memorySize) {
+                this.binaryValue = val - this.envir.memorySize;
+            }
+        }
     }
 
     /**************************************/
     decr(decrement) {
         /* Decrements the register by "count", which must be in the range 1-9.
-        This is designed to minimize the number of digits changed */
-        let carry = decrement;
+        If this is a 5-digit register, it is assumed to be an address register,
+        and the result will be modulo the system memory size. Otherwise,
+        underflow is ignored and the result will be in 10s-complement form.
+        This routine is designed to minimize the number of digits changed */
+        let borrow = decrement;
         let d = 0;
         let digit = 0;
         let val = this.intVal;
 
         do {
-            digit = Envir.bcdBinary[val & Register.bcdMask] - carry;
+            digit = Envir.bcdBinary[val & Register.bcdMask] - borrow;
             if (digit >= 0) {
-                carry = 0;
+                borrow = 0;
             } else {
                 digit = digit+10;
-                carry = 1;
+                borrow = 1;
             }
 
             this.setDigit(d, digit);
             val >>= Register.digitBits;
-        } while (carry && d < this.digits);
+        } while (borrow && ++d < this.digits);
+
+        if (this.digits > 4) {
+            val = this.binaryValue;
+            if (val >= this.envir.memorySize) {
+                this.binaryValue = this.memorySize + val - 100000;
+            }
+        }
     }
 
     /**************************************/
@@ -289,37 +311,39 @@ class Register {
 
     /**************************************/
     updateLampGlow(beta=0) {
-        /* Updates the lamp glow averages based on this.clock.eTime. Note that the
+        /* Updates the lamp glow averages based on this.envir.eTime. Note that the
         glow is always aged by at least one clock tick. Beta is a bias in the
         range (0,1). For normal update, use 0; to freeze the current state, use 1.
         MUST NOT BE CALLED UNLESS this.visible IS TRUE */
-        let eTime = this.clock.eTime;
+        let eTime = this.envir.eTime;
 
+        if (this.visible) {
         let delta = eTime - this.lastETime;
-        if (delta < Envir.clockTime) {
-            delta = Envir.clockTime;
-            eTime += Envir.clockTime;
+            if (delta < Envir.cycleTime) {
+                delta += Envir.tickTime;
+                eTime += Envir.tickTime;
+            }
+
+            let alpha = Math.min(delta/FlipFlop.lampPersistence + beta, 1.0);
+            let alpha1 = 1.0-alpha;
+            let b = 0;
+            let bit = 0;
+            let v = this.intVal;
+
+            while (v) {
+                bit = v & 1;
+                v >>= 1;
+                this.glow[b] = this.glow[b]*alpha1 + bit*alpha;
+                ++b;
+            }
+
+            while (b < this.bits) {
+                this.glow[b] *= alpha1;
+                ++b;
+            }
+
+            this.lastETime = eTime;
         }
-
-        let alpha = Math.min(delta/FlipFlop.lampPersistence + beta, 1.0);
-        let alpha1 = 1.0-alpha;
-        let b = 0;
-        let bit = 0;
-        let v = this.intVal;
-
-        while (v) {
-            bit = v & 1;
-            v >>= 1;
-            this.glow[b] = this.glow[b]*alpha1 + bit*alpha;
-            ++b;
-        }
-
-        while (b < this.bits) {
-            this.glow[b] *= alpha1;
-            ++b;
-        }
-
-        this.lastETime = eTime;
     }
 
 } // class Register
@@ -338,4 +362,4 @@ Register.parityFlagMask=0b110000;
 Register.bcdMask =      0b001111;
 Register.notFlagMask =  0b101111;
 Register.notParityMask =0b011111;
-Register.bcdValue =     0b001111_001111_001111_001111_001111;
+Register.bcdValueMask = 0b001111_001111_001111_001111_001111;

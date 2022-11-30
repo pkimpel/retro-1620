@@ -1,0 +1,49 @@
+retro-1620 Project Notes
+------------------------
+References:
+
+Mod2 Ref -- "IBM 1620 Central Processing Unit Model 2," Form A26-5781-2,
+        ca 1966.
+
+Intermediate Diagrams -- "IBM Data Processing System Model 2 Customer
+        Engineering Intermediate Level Diagrams," Form 227-5857-0 (includes
+        Supplement S27-0500), 1964-04-29. Germain --  "Programming the IBM
+        1620," Second Edition, Clarence B. Germain, Prentice-Hall, 1965.
+
+
+1. 1443 printer check is reset by BI/BNI, but only if not a sync check?
+
+2. When op code 00 is detected in I-1, should STOP be set, or should the
+processor be halted immediately by setting MANUAL? Germain p.27 indicates that
+it stops like an H (48) instruction, but pressing the START key after that
+results in a MAR check stop.
+
+3. What action should be taken for undefined op codes? NOP? Check Stop?
+Germain p.27 indicates invalid op codes cause a MAR check stop.
+
+4. How should "undigits" (hex A-F) be handled? Germain p.27 indicates that
+arithmetic on such digits results in a MAR check stop, or on the Mod2, sometimes
+an MBR (MIR?) check.
+
+5. What happens when a BB (42) is executed with no prior BT* (07/17/27) or SAVE
+key to set the return address? Mod 2 Ref p.38 indicates that causes a MAR check
+stop, but Germain p.97 states that IR2 remains valid after a BB and can be used
+again.
+
+6. Should XBR be cleared in I-5? Intermediate Diagrams don't indicate this, but
+it's done in I-1 in preparation for indexing the P address.
+
+7. How are the Q10/Q11 digits handled in I-6 for I/O ops?
+
+8. Is the START key effective only in MANUAL mode? Intermediate Diagrams don't
+appear to indicate that, but Mod2 Ref p.75 says so.
+
+9. Gate DISPLAY_MAR is turned on by the DISPLAY MAR key, but what turns it off,
+other than the RESET key?
+
+10. In I-5, OR1 is not written if it's an "S/B op" or an immediate op. Exactly
+what are the "S/B ops"? Assume that includes BI/BNI. What about SB (60), I/O
+ops?
+
+11. In I-6, same question.
+

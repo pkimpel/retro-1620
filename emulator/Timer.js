@@ -40,7 +40,7 @@ class Timer {
         will resolve when the timer expires. The "value" parameter is optional and
         will become the value returned by the Promise */
 
-        if (delay <= minTimeout) {
+        if (delay <= Timer.minTimeout) {
             return Promise.resolve(value);
         } else {
             return new Promise((resolve, reject) => {
@@ -61,7 +61,7 @@ class Timer {
         "value" is the same as for set(). Returns a Promise that resolves when
         the time is reached */
 
-        return this.set(then - performance.now(), value);
+        return this.delayFor(then - performance.now(), value);
     }
 
     reject() {

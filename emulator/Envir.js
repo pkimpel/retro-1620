@@ -72,7 +72,7 @@ class Envir {
 
 // Static properties
 
-Envir.clockTime = 0.0005;               // 1620 clock period, ms (0.5µs period, 2Mhz frequency)
+Envir.tickTime = 0.0005;                // 1620 clock period, ms (0.5µs period, 2Mhz frequency)
 Envir.cycleTime = 0.010;                // 1620 memory cycle time, ms ()
 Envir.minSliceTime = 8;                 // minimum time slice before throttling, ms
 
@@ -100,3 +100,8 @@ Envir.oddParity5 = [
     0b001000, 0b101001, 0b101010, 0b001011, 0b101100, 0b001101, 0b001110, 0b101111,     // 40-47
     0b010000, 0b110001, 0b110010, 0b010011, 0b110100, 0b010101, 0b010110, 0b110111,     // 48-55
     0b111000, 0b011001, 0b011010, 0b111011, 0b011100, 0b111101, 0b111110, 0b011111];    // 56-63
+
+// Undigit codes
+Envir.numRecMark =      0xA;
+Envir.numBlank =        0xC;
+Envir.numGropMark =     0xF;

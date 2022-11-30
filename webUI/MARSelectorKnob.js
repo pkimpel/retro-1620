@@ -16,7 +16,7 @@ export {MARSelectorKnob};
 class MARSelectorKnob {
 
     constructor(parent, id, initial, positions, captions) {
-        /* Constructor for the black control knob objects used within panels.
+        /* Constructor for the 1620 Control Panel MARS Register Selector knob.
             parent      the containing DOM element; the control will be sized to fill
                         this element
             id          the DOM id for the knob element (i.e., its canvas)
@@ -82,7 +82,7 @@ class MARSelectorKnob {
         /* Sets an event handler whenever the knob position is changed. Note
         that this is not a JavaScript event mechanism. It only sets a call-back
         function, and only one function at a time is supported. When the knob
-        position is change and has reached its destination, the listener will
+        position is changed and has reached its destination, the listener will
         be called with the new 0-relative position as its only parameter */
 
         this.changeListener = listener;
@@ -168,8 +168,8 @@ class MARSelectorKnob {
 
     /**************************************/
     step() {
-        /* Steps the knob to its next position. If it is at the last position, steps it
-        to the first position */
+        /* Steps the knob to its next position. If it is at the last position,
+        steps it to the first position */
 
         this.set(this.position+this.direction);
         if (this.changeListener) {
@@ -228,10 +228,10 @@ class MARSelectorKnob {
 
 // Static class properties
 
-    MARSelectorKnob.className = "selectorKnob";
-    MARSelectorKnob.canvasColor = "transparent";
-    MARSelectorKnob.cupClassName = "MARSelectorCup";
-    MARSelectorKnob.captionClassName = "MARSelectorCaption";
-    MARSelectorKnob.degrees = Math.PI/180;
-    MARSelectorKnob.baseAngle = 36*MARSelectorKnob.degrees/2;
-    MARSelectorKnob.tipAngle = 6*MARSelectorKnob.degrees/2;
+MARSelectorKnob.className = "selectorKnob";
+MARSelectorKnob.canvasColor = "transparent";
+MARSelectorKnob.cupClassName = "MARSelectorCup";
+MARSelectorKnob.captionClassName = "MARSelectorCaption";
+MARSelectorKnob.degrees = Math.PI/180;
+MARSelectorKnob.baseAngle = 36*MARSelectorKnob.degrees/2;
+MARSelectorKnob.tipAngle = 6*MARSelectorKnob.degrees/2;

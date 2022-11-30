@@ -5,9 +5,15 @@
 * Licensed under the MIT License, see
 *       http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* JavaScript class module for the 1620 processor.
+* JavaScript class module for the 1620 Model 2 processor.
 *
-*
+* Primary references:
+*   "IBM 1620 Central Processing Unit Model 2," Form A26-5781-2, ca 1966.
+*   "IBM Data Processing System Model 2 Customer Engineering Intermediate
+*       Level Diagrams," Form 227-5857-0 (includes Supplement S27-0500),
+*       1964-04-29.
+*   "Programming the IBM 1620," Second Edition, Clarence B. Germain,
+*       Prentice-Hall, 1965.
 ************************************************************************
 * 2022-07-19  P.Kimpel
 *   Original version, from retro-g15 Processor.js.
@@ -134,7 +140,7 @@ class Processor {
         this.gateIA_1 =             new FlipFlop(this.envir, true);
         this.gateIA_2 =             new FlipFlop(this.envir, true);
         this.gateIA_3 =             new FlipFlop(this.envir, true);
-        this.gateIX =               new FlipFlop(this.envir, true);
+        this.gateIX =               new FlipFlop(this.envir, true);     // INDEXING in the CE docs
         this.gateI_1 =              new FlipFlop(this.envir, true);
         this.gateI_2 =              new FlipFlop(this.envir, true);
         this.gateI_3 =              new FlipFlop(this.envir, true);
@@ -144,23 +150,23 @@ class Processor {
 
         this.procStateGates = [null,
             this.gateI_1, this.gateI_2, this.gateI_3, this.gateI_4, this.gateI_5, this.gateI_6,
-            this.gateINDEXING, this.gateIA_1, this.gateIA_2, this.gateIA_3,
+            this.gateIX, this.gateIA_1, this.gateIA_2, this.gateIA_3,
             this.gateE_1, this.gateE_2, this.gateE_3, this.gateE_4, this.gateE_5];
 
         // Operator Control Panel Indicators
-        this.powerOn =              new FlipFlop(this.envir, true);
-        this.powerReady =           new FlipFlop(this.envir, true);
-        this.thermal =              new FlipFlop(this.envir, true);
-        this.writeInterlock =       new FlipFlop(this.envir, true);
-        this.readInterlock =        new FlipFlop(this.envir, true);
-        this.save =                 new FlipFlop(this.envir, true);
-        this.typewriterSelected =   new FlipFlop(this.envir, true);
-        this.rfe1 =                 new FlipFlop(this.envir, true);
-        this.rfe2 =                 new FlipFlop(this.envir, true);
-        this.rfe3 =                 new FlipFlop(this.envir, true);
-        this.automatic =            new FlipFlop(this.envir, true);
-        this.manual =               new FlipFlop(this.envir, true);
-        this.checkStop =            new FlipFlop(this.envir, true);
+        this.gatePOWER_ON =         new FlipFlop(this.envir, true);
+        this.gatePOWER_READY =      new FlipFlop(this.envir, true);
+        this.gateTHERMAL =          new FlipFlop(this.envir, true);
+        this.gateWRITE_INTERLOCK =  new FlipFlop(this.envir, true);
+        this.gateREAD_INTERLOCK =   new FlipFlop(this.envir, true);
+        this.gateSAVE =             new FlipFlop(this.envir, true);
+        this.gateINSERT =           new FlipFlop(this.envir, true);     // typewriter selected latch
+        this.gateRFE1 =             new FlipFlop(this.envir, true);
+        this.gateRFE2 =             new FlipFlop(this.envir, true);
+        this.gateRFE3 =             new FlipFlop(this.envir, true);
+        this.gateAUTOMATIC =        new FlipFlop(this.envir, true);
+        this.gateMANUAL =           new FlipFlop(this.envir, true);
+        this.gateCHECK_STOP =       new FlipFlop(this.envir, true);
 
         // Check Indicators
         this.diskAddrCheck =        new FlipFlop(this.envir, true);
@@ -182,12 +188,6 @@ class Processor {
         this.ioPrinterChannel9 =    new FlipFlop(this.envir, false);
         this.ioPrinterChannel12 =   new FlipFlop(this.envir, false);
         this.ioPrinterBusy =        new FlipFlop(this.envir, false);
-
-        // Internal Control Gates & Registers
-        this.gateSCE =              new FlipFlop(this.envir, false);    // single-cycle execute
-        this.gateINDEXING =         new FlipFlop(this.envir, false);    // indexing P/Q in progress
-
-        this.regXBR =               new Register(5, this.envir, false, true,  true);
 
         // Console Registers
         this.regDREven =            new Register(1, this.envir, true,  true,  false);
@@ -216,6 +216,21 @@ class Processor {
         this.regPR1 =               new Register(5, this.envir, false, true,  false);
         this.regPR2 =               new Register(5, this.envir, false, true,  false);
 
+        this.marsRegisters = [
+            this.regOR1, this.regOR2, this.regOR3, this.regOR4, this.regOR5, this.regPR1,
+            this.regPR2, this.regCR1, this.regIR1, this.regIR2, this.regIR3, this.regIR4];
+
+        // Internal Control Gates & Registers
+        this.gateCLR_CTRL =         new FlipFlop(this.envir, false);    // clear memory control latch
+        this.gateCONSOLE_CTRL_SS =  new FlipFlop(this.envir, false);    // console control single-shot(?)
+        this.gateDISPLAY_MAR =      new FlipFlop(this.envir, false);    // display MAR latch
+        this.gateEND_OF_MODULE =    new FlipFlop(this.envir, false);    // termination latch (clear memory, etc.)
+        this.gateLOAD =             new FlipFlop(this.envir, false);    // load latch
+        this.gateSAVE_CTRL =        new FlipFlop(this.envir, false);    // SAVE control latch
+        this.gateSCE =              new FlipFlop(this.envir, false);    // single-cycle execute
+
+        this.regXBR =               new Register(5, this.envir, false, true,  true);
+
         // Console Switches
         this.marSelectorKnob = 0;
         this.diskStopSwitch = 0;
@@ -229,7 +244,7 @@ class Processor {
         this.program4Switch = 0;
 
         // Core Memory
-        this.MM = new Uint16Array(new ArrayBuffer(Envir.memorySize));
+        this.MM = new Uint16Array(new ArrayBuffer(this.envir.memorySize));
 
         // Op Code Attributes
         this.opBinary = 0;                              // binary value of current op code
@@ -247,9 +262,6 @@ class Processor {
         // Bound Methods
 
         // Initialization
-        this.gateIA_SEL.value = 1;                      // enable indirect addressing at power-on
-
-
         let buildOpAtts = (opValid, pAddr, qAddr, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4, opCode) => {
             this.opAtts[opCode] = {
                 opValid, pAddr, qAddr, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4};
@@ -304,7 +316,7 @@ class Processor {
         buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 45);      // 45 BNR
         buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 46);      // 46 BI
         buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 47);      // 47 BNI
-        buildOpAtts(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 48);      // 48 H
+        buildOpAtts(1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 48);      // 48 H         ?? TEMP ENABLE IA & IX on P & Q
         buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 49);      // 49 B
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50);      // 50
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 51);      // 51
@@ -370,7 +382,7 @@ class Processor {
         /* Updates the lamp glow for all registers and flip-flops in the
         system. Beta is a bias in the range (0,1). For normal update use 0;
         to freeze the current state in the lamps use 1 */
-        let gamma = (this.gateSTOP ? 1 : beta || 0);
+        let gamma = (this.gateSTOP.value ? 1 : beta || 0);
 
         // Control Gates
         this.gate$$$_OFLO.updateLampGlow(gamma);
@@ -467,17 +479,18 @@ class Processor {
         this.gateI_6.updateLampGlow(gamma);
 
         // Operator Control Panel Indicators
-        this.thermal.updateLampGlow(gamma);
-        this.writeInterlock.updateLampGlow(gamma);
-        this.readInterlock.updateLampGlow(gamma);
-        this.save.updateLampGlow(gamma);
-        this.typewriterSelected.updateLampGlow(gamma);
-        this.rfe1.updateLampGlow(gamma);
-        this.rfe2.updateLampGlow(gamma);
-        this.rfe3.updateLampGlow(gamma);
-        this.automatic.updateLampGlow(gamma);
-        this.manual.updateLampGlow(gamma);
-        this.checkStop.updateLampGlow(gamma);
+        // this.gatePOWER_ON and this.gatePOWER_READY are not updated since they are on constantly.
+        this.gateTHERMAL.updateLampGlow(gamma);
+        this.gateWRITE_INTERLOCK.updateLampGlow(gamma);
+        this.gateREAD_INTERLOCK.updateLampGlow(gamma);
+        this.gateSAVE.updateLampGlow(gamma);
+        this.gateINSERT.updateLampGlow(gamma);
+        //this.gateRFE1.updateLampGlow(gamma);
+        //this.gateRFE2.updateLampGlow(gamma);
+        //this.gateRFE3.updateLampGlow(gamma);
+        this.gateAUTOMATIC.updateLampGlow(gamma);
+        this.gateMANUAL.updateLampGlow(gamma);
+        this.gateCHECK_STOP.updateLampGlow(gamma);
 
         // Check Indicators
         this.diskAddrCheck.updateLampGlow(gamma);
@@ -521,7 +534,7 @@ class Processor {
         into MBR */
         let addr = this.regMAR.binaryValue;
 
-        if (addr >= Envir.memorySize) {
+        if (addr >= this.envir.memorySize) {
             this.parityMARCheck.value = 1;
             this.checkStop();
         } else {
@@ -536,7 +549,7 @@ class Processor {
 
             this.regMBROdd.value = pair & Register.digitMask;
             if (this.regMBROdd.parityError) {
-                this.parityMBROCheck.value = 1;
+                this.parityMBROddCheck.value = 1;
                 if (this.parityStopSwitch) {
                     this.checkStop();
                 }
@@ -549,12 +562,40 @@ class Processor {
         /* Stores the double-digit pair in MIR to memory at the MAR address */
         let addr = this.regMAR.binaryValue;
 
-        if (addr >= Envir.memorySize) {
+        if (addr >= this.envir.memorySize) {
             this.parityMARCheck.value = 1;
             this.checkStop();
         } else {
-            this.MM[addr >> 1] = (this.regMIRE.value << 8) | (this.regMIRO.value);
+            this.MM[addr >> 1] = (this.regMIREven.value << 8) | (this.regMIROdd.value);
         }
+    }
+
+    /**************************************/
+    async clearMemory() {
+        /* Clears all of memory to zeroes */
+
+        this.regMAR.clear();
+        this.regMIREven.clear();
+        this.regMIROdd.clear();
+
+        let a = 0;
+        do {
+            this.store();
+            this.regMAR.incr(2);
+            a += 2;
+            if (a % 20000 == 0) {
+                this.gateCLR_CTRL.value = 1;
+            }
+
+            if (this.envir.tick()) {
+                await this.envir.throttle();
+            }
+        } while (a < Envir.maxMemorySize);
+
+        this.gateEND_OF_MODULE.value = 1;
+        this.gateCLR_MEM.value = 0;
+        this.enterManual();
+        this.updateLampGlow(1);         // freeze the lamp states
     }
 
 
@@ -724,74 +765,29 @@ class Processor {
     }
 
     /**************************************/
-    releaseIO() {
-        /* Cancels any pending I/O operation and returns to manual mode */
-
-        this.stop();
-    }
-
-    /**************************************/
     finishIO() {
         /* Terminates an I/O operation, resetting state and setting Ready */
 
-        this.OC.value = IOCodes.ioCmdReady;     // set I/O Ready state
-        this.AS.value = 0;
-        this.OS.value = 0;
-        this.ioBitCount = 0;
-        this.activeIODevice = null;
-        this.duplicateIO = false;
+        //this.OC.value = IOCodes.ioCmdReady;     // set I/O Ready state
+        //this.AS.value = 0;
+        //this.OS.value = 0;
+        //this.ioBitCount = 0;
+        //this.activeIODevice = null;
+        //this.duplicateIO = false;
     }
 
 
     /*******************************************************************
-    *  Processor Control                                               *
+    *  Instruction Cycle                                               *
     *******************************************************************/
-
-    /*************************************/
-    setProcState(state) {
-        /* Sets the current processor state and resets the previous state */
-
-        if (this.procState != procStateNone) {
-            this.procStateGates[this.procState].value = 0;
-        }
-
-        this.procState = state;
-        if (state != procStateNone) {
-            this.procStateGates[state].value = 1;
-        }
-    }
-
-    /**************************************/
-    enterICycle() {
-        /* Initiates the start of the next instruction I-cycles */
-
-        this.gateI_CYC_ENT.value = 1;
-    }
-
-    /**************************************/
-    enterECycle() {
-        /* Initiates the start of the current instruction E-cycles */
-
-        this.gateE_CYC_ENT.value = 1;
-    }
-
-    /**************************************/
-    enterManual() {
-        /* Places the processor in Manual mode */
-
-        this.oflowArithCheck.value = 0;
-        this.automatic.value = 0;       // ??
-        this.manual.value = 1;
-        this.gateRUN.value = 0;
-    }
 
     /**************************************/
     testIndicator() {
         /* Tests the indicator specified by DR. Resets those indicators that
-        are reset when tested. Returns the original status of the indicator */
+        get reset when tested. Returns the original status of the indicator */
         let isSet = 0;
 
-        switch (this.DREven.binaryValue*10 + this.DROdd.binaryValue) {
+        switch (this.regDREven.binaryValue*10 + this.regDROdd.binaryValue) {
         case  1:        // Program Switch 1
             isSet = this.program1Switch;
             break;
@@ -888,11 +884,78 @@ class Processor {
             break;
         }
 
+        if (!(this.diskAddrCheck.value || this.diskCylOflowCheck.value || this.diskWRLRBCCheck.value ||
+                this.ioPrinterCheck.value  || this.ioReadCheck.value || this.ioWriteCheck.value ||
+                this.parityMARCheck.value || this.parityMBREvenCheck.value || this.parityMBROddCheck.value)) {
+            this.gateCHECK_STOP.value = 0;
+        }
+
         return isSet;
     }
 
     /**************************************/
-    stepCycleI1() {
+    enterICycle() {
+        /* Initiates the start of the next instruction I-cycles */
+
+        this.gateI_CYC_ENT.value = 1;
+        this.resetICycle();
+        this.gateAUTOMATIC.value = 0;
+        this.gateRUN.value = 0;
+        if (this.gateSTOP.value) {
+            this.enterManual();
+            this.gateSTOP.value = 0;
+        }
+
+        if (this.gateEZ.value) {
+            this.gateHP.value = 0;
+        }
+
+        if (!(this.gateSAVE_CTRL.value || this.gateDISPLAY_MAR.value ||
+                this.gateINSERT.value || this.gateCLR_MEM.value)) {
+            this.setProcState(procStateI1);
+        }
+    }
+
+    /**************************************/
+    resetICycle() {
+        /* Resets processor state at the beginning of an I-Cycle,  */
+
+        this.gate1ST_MPLY_CYCLE.value = 0;
+        this.gate2_DIG_CNTRL.value = 0;
+        this.gateADD_ENT.value = 0;
+        this.gateADD_MODE.value = 0;
+        this.gateDIV_1_CYC.value = 0;
+        this.gateDVD_L_CYC.value = 0;
+        this.gateDVD_SIGN.value = 0;
+        this.gateEXMIT_ENT.value = 0;
+        this.gateEXMIT_MODE.value = 0;
+        this.gateFIELD_MK_1.value = 0;
+        this.gateFIELD_MK_2.value = 0;
+        this.gateIX.value = 0;
+        this.gateIX_EXEC.value = 0;
+        this.gateLAST_LD_CYC.value = 0;
+        this.gateMC_1.value = 0;
+        this.gateMC_2.value = 0;
+        this.gateP_COMP.value = 0;
+        this.gateRECOMP.value = 0;
+
+        this.gateE_1.value = 0;
+        this.gateE_2.value = 0;
+        this.gateE_3.value = 0;
+        this.gateE_4.value = 0;
+        this.gateE_5.value = 0;
+        this.gateIA_3.value = 0;
+        this.gateI_2.value = 0;
+        this.gateI_3.value = 0;
+        this.gateI_4.value = 0;
+        this.gateI_5.value = 0;
+
+        this.gateEND_OF_MODULE.value = 0;
+        this.gateREL.value = 0;
+    }
+
+    /**************************************/
+    stepICycle1() {
         /* Executes I-Cycle 1. If the last instruction effected a branch, loads
         the next instruction using OR2 instead of IR1. Clears registers, sets
         P gate to process the P address, and loads the op code digits. As an
@@ -920,28 +983,38 @@ class Processor {
         this.regPR2.clear();
         this.regXBR.clear();
         this.regXR.clear();
-        if (this.opBinary == 0) {
-            this.STOP.value = 1;
-        }
+        this.gateAUTOMATIC.value = 1;
 
-        this.opBinary = (mbrEven & Register.bcdMask)*10 + (mbrOdd & Register.bcdMask);
         this.regIR1.incr(2);
-        this.setProcState(procStateI2);
+        this.opBinary = (mbrEven & Register.bcdMask)*10 + (mbrOdd & Register.bcdMask);
+
+        // If the op code is 0, go immediately into MANUAL and enter E-Cycle.
+        // If START is then pressed, this will cause a MAR check stop due to
+        // the invalid op code.  Not sure the 1620-2 actually worked this way,
+        // but the result is what's expected.
+        if (this.opBinary == 0) {
+            this.enterManual();
+            this.enterECycle();
+        } else {
+            this.setProcState(procStateI2);
+        }
     }
 
     /**************************************/
-    stepCycleI2(atts) {
+    stepICycle2() {
         /* Executes I-Cycle 2. If the op code is 42 (BB), sets IR1 based on the
-        SAVE gate and terminates the instruction to effect the branch. Loads the
-        P2, P3 digits to the MARS registers. Sets the 4-bit in XR from the P3
-        flag as necessary. Steps to I-Cycle 3 */
+        SAVE gate and terminates the instruction to effect the branch. Otherwise,
+        loads the P2/P3 digits to the MARS registers. Sets the 4-bit in XR from
+        the P3 flag as necessary. Steps to I-Cycle 3 */
 
+        // ?? MAR Check Stop if no prior BT instruction or SAVE control ?? Mod2 Ref p.38 vs Germain p.97
         if (this.opBinary == 42) {              // 42=BB, Branch Back
-            if (this.save.value) {
-                this.save.value = 0;
+            if (this.gateSAVE.value) {
+                this.gateSAVE.value = 0;
                 this.regIR1.value = this.regPR1.value;
             } else {
-                this.regIR1.value = this.regIR2.value
+                this.regIR1.value = this.regIR2.value;
+                this.regIR2.clear();
             }
             enterICycle();
         } else {
@@ -965,7 +1038,7 @@ class Processor {
     }
 
     /**************************************/
-    stepCycleI3(atts) {
+    stepICycle3() {
         /* Executes I-Cycle 3. Loads the P4, P5 digits to the MARS registers. Sets
         the 2- and 1-bits in XR from P4, P5 flags as necessary.
         Steps to I-Cycle 4 */
@@ -994,7 +1067,7 @@ class Processor {
     }
 
     /**************************************/
-    stepCycleI4(atts) {
+    stepICycle4() {
         /* Executes I-Cycle 4. Loads the P6 digit to the MARS registers. Stashes
         the Q7 digit in DR-even until the next cycle and clears DR-odd. Sets the
         IA latch from the P6 4-bit as necessary. Starts the chain of indexing
@@ -1013,14 +1086,15 @@ class Processor {
         this.regDREven.value = mbrOdd;
         this.regDROdd.clear();
         this.regPR1.clear();
-        if (mbrEven & Register.flagMask && atts.pIA && this.gateIA_SEL) {
+        if ((mbrEven & Register.flagMask) &&
+                this.opAtts[this.opBinary].pIA && this.gateIA_SEL.value) {
             this.gateIA_REQ.value = 1;          // set the IA latch
         }
 
         this.regIR1.incr(2);
-        if (!this.regXR.isZero) {
+        if (this.regXR.isntZero) {
             this.enterIndexing();
-        } else if (this.gateIA_REQ) {
+        } else if (this.gateIA_REQ.value) {
             this.enterIndirecting();
         } else {
             this.exitAddressing();
@@ -1028,7 +1102,7 @@ class Processor {
     }
 
     /**************************************/
-    stepCycleI5(atts) {
+    stepICycle5() {
         /* Executes I-Cycle 5. Resets the P gate to process the Q address and
         clears registers. Sets the 4- and 2-bits in XR from Q8, Q9 flags as
         necessary. For immediate ops and 60 (BS), does nothing else.
@@ -1043,6 +1117,7 @@ class Processor {
         let mbrEven = this.regMBREven.value;
         let mbrOdd = this.regMBROdd.value;
         this.gateP.value = 0;                   // now working on the Q address
+        this.gateIX.value = 0;
         this.regOR1.clear();
         this.regXBR.clear();                    // ??
         this.regXR.clear();
@@ -1059,15 +1134,15 @@ class Processor {
         case 47:        // BNI, Branch No Indicator
         case 90:        // BBT, Branch on Bit
         case 91:        // BMK, Branch on Mask
-            this.DREven.value = mbrEven;        // set up DR for S/B decode
-            this.DROdd.value = mbrOdd;          // don't load OR-1 for S/B ops
+            this.regDREven.value = mbrEven;     // set up DR for S/B decode
+            this.regDROdd.value = mbrOdd;       // don't load OR-1 for S/B ops
             break;
 
         case 60:        // BS, Branch and Select
-            break;                              // do nothing in I5
+            break;                              // do nothing in I-5
 
         default:
-            if (!att.immed) {                   // don't load OR-1 for immediate ops
+            if (!this.opAtts[this.opBinary].immed) {    // don't load OR-1 for immediate ops in I-5
                 this.regDROdd.value = this.regDREven.value;
                 this.regOR1.setDigit(4, this.regDROdd.value);
                 this.regOR1.setDigit(3, mbrEven);
@@ -1075,7 +1150,6 @@ class Processor {
                 this.regXBR.setDigit(4, this.regDROdd.value);
                 this.regXBR.setDigit(3, mbrEven);
                 this.regXBR.setDigit(2, mbrOdd);
-                // ?? Gate 8-bit in XBR(4) ?? see 10.00.31.1 ??
             }
             break;
         }
@@ -1094,7 +1168,7 @@ class Processor {
     }
 
     /**************************************/
-    stepCycleI6(atts) {
+    stepICycle6() {
         /* Executes I-Cycle 6.
         Sets the 1-bit in XR from the Q10 flag and the IA latch from the Q11
         flag as necessary. Takes the following special actions:
@@ -1119,22 +1193,16 @@ class Processor {
 
         switch (this.opBinary) {
         case 34:        // K, Control I/O device
+            // ?? do device control function ??
+            this.enterICycle();
+            break;
         case 35:        // DN, Dump Numerically
         case 36:        // RN, Read Numerically
         case 37:        // RA, Read Alphanumerically
         case 38:        // WN, Write Numerically
         case 39:        // WA, Write Alphanumerically
             // ?? What happens to Q10, ?? needed for I/O function
-            this.MQ.value = mbrOdd;
-            break;
-
-        case 41:        // NOP, No Operation
-            this.enterICycle();
-            break;
-
-        case 48:
-            this.gateSTOP.value = 1;
-            this.enterICycle();
+            this.regMQ.value = mbrOdd;
             break;
 
         case 46:        // BI, Branch Indicator
@@ -1164,18 +1232,18 @@ class Processor {
                 this.gateIA_SEL.value = mbrOdd & 1;
                 break;
             }
-            this.gateBRANCH_EXEC.value = 1;
+            this.gateBR_EXEC.value = 1;
             this.enterICycle();
             break;
 
-        case  7:        // BTFL, Branch and Transmit Floating
-        case 17:        // BTM, Branch and Transmit Immediaate
-        case 27:        // BT, Branch and Transmit
-            this.regIR2.clear();
-            //--no break
-
+            case  7:        // BTFL, Branch and Transmit Floating
+            case 17:        // BTM, Branch and Transmit Immediaate
+            case 27:        // BT, Branch and Transmit
+                this.regIR2.value = this.regIR1.value;
+                this.regIR2.incr(2);                // address of next instruction
+                //--no break
         default:
-            if (att.immed) {                    // set OR-1 to Q11 addr for immediate ops
+            if (this.opAtts[this.opBinary].immed) {     // set OR-1 to Q11 addr for immediate ops
                 this.regOR1.value = this.regMAR.value |= 1;
             } else {
                 this.regOR1.setDigit(1, mbrEven);
@@ -1190,14 +1258,15 @@ class Processor {
             this.regXR.incr(1);
         }
 
-        if (mbrOdd & Register.flagMask && atts.qIA && this.gateIA_SEL) {
+        if ((mbrOdd & Register.flagMask) &&
+                this.opAtts[this.opBinary].qIA && this.gateIA_SEL.value) {
             this.gateIA_REQ.value = 1;          // set the IA latch
         }
 
         this.regIR1.incr(2);
-        if (!this.regXR.isZero) {
+        if (this.regXR.isntZero) {
             this.enterIndexing();
-        } else if (this.gateIA_REQ) {
+        } else if (this.gateIA_REQ.value) {
             this.enterIndirecting();
         } else {
             this.exitAddressing();
@@ -1220,7 +1289,8 @@ class Processor {
             this.regOR1.clear();
         }
 
-        this.regMAR.binaryValue = this.gateIX_BAND_2*40 + this.regXR.binaryValue*5 + 304;
+        this.gateIX.value = 1;
+        this.regMAR.binaryValue = this.gateIX_BAND_2.value*40 + this.regXR.binaryValue*5 + 304;
         this.setProcState(procStateIX);
     }
 
@@ -1228,26 +1298,28 @@ class Processor {
     stepIndexing() {
         /* Executes the steps for indexing an address register. On the first
         call, the address of the index register digit is in MAR; subsequently it
-        is in PR-2. Note that if the resulting address is negative, it is left
-        in complement form */
+        is in PR-2. Note that the base address to be indexed is already in XBR
+        from state I-4 or I-6. Also note that if the resulting address is
+        negative, it is left in complement form */
         let addend = 0;                 // local copy of DR-odd
         let mq = 0;                     // local copy of MQ
 
         if (this.gateIX_ENT.value) {
             this.gateIX_ENT.value = 0;
-            this.fetch();
+            this.fetch();               // first IX cycle: MAR was initially set in enterIndexing()
             addend = (this.regMAR.value & 1 ? this.regMBROdd.value : this.regMBREven.value);
             this.gateCOMP.value = this.gateCARRY_IN.value = addend & Register.flagMask;
             addend &= Register.bcdMask;
         } else {
             this.regMAR.value = this.regPR2.value;
-            this.fetch();
+            this.fetch();               // non-first IX cycle: use address in PR2
             addend = (this.regMAR.value & 1 ? this.regMBROdd.value : this.regMBREven.value) & Register.bcdMask;
-            this.regMQ.incr(1);
+            this.regMQ.incr(1);         // use MQ as the digit counter
             mq = this.regMQ.binaryValue;
         }
 
-        let sum = (this.XBR.getDigit(0) & Register.bcdMask) + this.CARRY_IN.value +
+        // Compute the sum of the address and index register digits.
+        let sum = (this.regXBR.getDigit(mq) & Register.bcdMask) + this.gateCARRY_IN.value +
                 (this.gateCOMP.value ? 9-addend : addend);
         if (sum < 10) {
             this.gateCARRY_OUT.value = 0;
@@ -1256,13 +1328,14 @@ class Processor {
             this.gateCARRY_OUT.value = 1;
         }
 
-        this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+        // Store the digit sum back into XBR and propagate any carry.
         this.regDROdd.value = sum;
+        this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
         this.regXBR.setDigit(mq, sum);
-        if (mq < 4) {
+        if (mq < 4) {                   // if there are more digits, decrement PR2
             this.regPR2.value = this.regMAR.value;
             this.regPR2.decr(1);
-        } else {
+        } else {                        // otherwise, set the appropriate address registers and finish
             if (this.gateP.value) {
                 this.regOR2.value = this.regOR3.value = this.regXBR.value;
             } else {
@@ -1290,10 +1363,12 @@ class Processor {
         /* Handles the indirect addressing IA-1 state */
 
         this.regXR.clear();
+        this.gateIA_ENT.value = 0;      // (not sure this is correct: it resets at T603)
+        this.gateIX.value = 0;
         if (this.gateP.value) {         // set PR-2 to step thru the indirect address
-            this.MAR.value = this.PR2.value = this.OR2.value;
+            this.regMAR.value = this.regPR2.value = this.regOR2.value;
         } else {
-            this.MAR.value = this.PR2.value = this.OR1.value;
+            this.regMAR.value = this.regPR2.value = this.regOR1.value;
         }
 
         this.fetch();
@@ -1387,9 +1462,9 @@ class Processor {
             this.regOR1.value = this.regXBR.value;
         }
 
-        if (!this.regXR.isZero) {
+        if (this.regXR.isntZero) {
             this.enterIndexing();
-        } else if (this.gateIA_REQ) {
+        } else if (this.gateIA_REQ.value) {
             this.enterIndirecting();
         } else {
             this.exitAddressing();
@@ -1401,16 +1476,87 @@ class Processor {
         /* Handles the details of state advancement and the end of setting up
         the P or Q addresses */
 
-        if (this.gateP.value) {
-            if (this.opBinary == 49) {  // 49 = Branch (B)
+        if (this.gateP.value) {         // finish with P address
+            if (this.opBinary == 49) {  // 49 = Branch (B) early exit
                 this.gateBR_EXEC.value = 1;
                 this.enterICycle();
             } else {
                 this.setProcState(procStateI5);
             }
-        } else {
-            this.enterECycle();
+        } else {                        // finish with Q address
+            switch(this.opBinary) {
+            case 41:        // NOP, No Operation
+                this.enterICycle();
+                break;
+            case 48:        // H, Halt
+                this.enterICycle();
+                this.enterManual();
+                break;
+            default:
+                this.enterECycle();
+                break;
+            }
         }
+    }
+
+
+    /*******************************************************************
+    *  Execution Cycle                                                 *
+    *******************************************************************/
+
+    /**************************************/
+    enterECycle() {
+        /* Initiates the start of the current instruction E-cycles */
+
+        this.gateE_CYC_ENT.value = 1;
+        this.gateIX.value = 0;
+        if (!this.opAtts[this.opBinary].opValid) {
+            this.parityMARCheck.value = 1;      // invalid op code
+            this.checkStop();
+            return;
+        }
+
+        // ?? DEBUG ?? For now, just go back to I-Cycles.
+        this.gateE_CYC_ENT.value = 0;
+        this.enterICycle();
+    }
+
+
+    /*******************************************************************
+    *  Processor Control                                               *
+    *******************************************************************/
+
+    /*************************************/
+    setProcState(state) {
+        /* Sets the current processor state and resets the previous state */
+
+        let gate = this.procStateGates[this.procState];
+        if (gate) {
+            gate.value = 0;
+        }
+
+        this.procState = state;
+        gate = this.procStateGates[state];
+        if (gate) {
+            gate.value = 1;
+        }
+    }
+
+    /**************************************/
+    enterManual() {
+        /* Places the processor in Manual mode */
+
+        this.gateMANUAL.value = 1;
+        this.gateRUN.value = 0;
+        this.gateCLR_CTRL.value = 0;
+    }
+
+    /**************************************/
+    checkStop() {
+        /* Stops running the processor as a result of a check indication */
+
+        this.gateCHECK_STOP.value = 1;
+        this.enterManual();
     }
 
     /**************************************/
@@ -1420,49 +1566,35 @@ class Processor {
         Executes memory cycles until some sort of stop condition is detected */
         let mbrEven = 0;                // local copy of MBREven
         let mbrOdd = 0;                 // local copy of MBROdd
-        let atts = null;                // local copy of this.opAtts[this.opBinary]
 
         do {
-            if (this.gateI_CYC_ENT) {
-                if (this.STOP.value) {
-                    // If at end of instruction and stopped, exit
-                    this.setManual();
-                    break; // out of run loop
-                }
-
-                if (this.gateEZ.value) {
-                    this.gateHP.value = 0;
-                }
-
-                setProcState(procStateI1);
-            }
-
             switch (this.procState) {
             case procStateI1:
-                this.stepCycleI1()
-                atts = this.opAtts[this.opBinary];
-                this.opIndexable = atts.pIX && (this.gateIX_BAND_1.value || this.gateIX_BAND_2.value);
+                this.stepICycle1()
+                this.opIndexable = this.opAtts[this.opBinary].pIX &&
+                        (this.gateIX_BAND_1.value || this.gateIX_BAND_2.value);
                 break;
 
             case procStateI2:
-                this.stepCycleI2(atts);
+                this.stepICycle2();
                 break;
 
             case procStateI3:
-                this.stepCycleI3(atts);
+                this.stepICycle3();
                 break;
 
             case procStateI4:
-                this.stepCycleI4(atts);
+                this.stepICycle4();
                 break;
 
             case procStateI5:
-                this.opIndexable = atts.qIX && (this.gateIX_BAND_1.value || this.gateIX_BAND_2.value);
-                this.stepCycleI5(atts);
+                this.opIndexable = this.opAtts[this.opBinary].qIX &&
+                        (this.gateIX_BAND_1.value || this.gateIX_BAND_2.value);
+                this.stepICycle5();
                 break;
 
             case procStateI6:
-                this.stepCycleI6(atts);
+                this.stepICycle6();
                 break;
 
             case procStateIX:
@@ -1506,10 +1638,155 @@ class Processor {
             if (this.envir.tick()) {
                 await this.envir.throttle();
             }
-
-        } while (!this.manual.value);
+        } while (!this.gateMANUAL.value);
 
         this.updateLampGlow(1);
+    }
+
+
+    /*******************************************************************
+    *  Operator Interface                                              *
+    *******************************************************************/
+
+    /**************************************/
+    manualReset() {
+        /* Resets the internal processor state after power-on or the MANUAL key.
+        It can only be performed in manual mode */
+
+        if (!(this.gatePOWER_ON.value && this.gateMANUAL.value)) {
+            return;
+        }
+
+        this.gateIA_REQ.value = 0;
+        this.gateIA_ENT.value = 0;
+        this.gateLAST_CARD.value = 0;
+        this.gateHP.value = 0;
+        this.gateEZ.value = 0;
+        this.gateBR_EXEC.value = 0;
+        this.gateE_CYC_ENT.value = 0;
+        this.gateRD.value = 0;
+        this.gateWR.value = 0;
+
+        this.gateIA_1.value = 0;
+        this.gateI_1.value = 0;
+        this.gateI_6.value = 0;
+        this.gateE_1.value = 0;
+        this.gateE_2.value = 0;
+        this.gateE_3.value = 0;
+        this.gateE_4.value = 0;
+        this.gateE_5.value = 0;
+
+        this.gateCLR_CTRL.value = 0;
+        this.gateCLR_MEM.value = 0;
+        this.gateCONSOLE_CTRL_SS.value = 0;
+        this.gateDISPLAY_MAR.value = 0;
+        this.gateINSERT.value = 0;
+        this.gateLOAD.value = 0;
+        this.gateSAVE.value = 0;
+        this.gateSAVE_CTRL.value = 0;
+        this.gateSCE.value = 0;
+
+        this.regXR.clear();
+        this.regXBR.clear();
+
+        this.checkReset();
+        this.ioPrinterChannel9.value = 0;
+        this.ioPrinterChannel12.value = 0;
+
+        this.gateSTOP.value = 0;
+        this.enterICycle();
+        this.enterManual();             // will turn off this.gateRUN
+        this.updateLampGlow(1);
+    }
+
+    /**************************************/
+    checkReset() {
+        /* Resets the internal processor state by the CHECK RESET key */
+
+        this.diskAddrCheck.value = 0;
+        this.diskCylOflowCheck.value = 0;
+        this.diskWRLRBCCheck.value = 0;
+        this.ioPrinterCheck.value = 0;
+        this.ioReadCheck.value = 0;
+        this.ioWriteCheck.value = 0;
+        this.parityMARCheck.value = 0;
+        this.parityMBREvenCheck.value = 0;
+        this.parityMBROddCheck.value = 0;
+        this.gateCHECK_STOP.value = 0;
+    }
+
+    /**************************************/
+    enableMemoryClear() {
+        /* Enables a clear-memory operation to take place the next time the
+        START key is pressed. On a real 1620-2 this was activated by pressing
+        MODIFY and CHECK RESET simultaneously, but that's not feasible with a
+        pointer-based UI, so in retro-1620 it's activated by pressing MODIFY and
+        then CHECK RESET without activating any other keys or switches on the
+        lower Control Panel in between. To cancel the clear before pressing
+        START, click CHECK RESET twice, or click any other key except START
+        (well, maybe not POWER, either) */
+
+        if (this.gatePOWER_ON.value && this.gateMANUAL.value) {
+            this.gateCLR_MEM.value = 1;
+            this.updateLampGlow(1);
+        }
+    }
+
+    /**************************************/
+    displayMAR() {
+        /* Displays the value of the MARS register selected by the big MARS
+        selector switch in the MAR lamps */
+
+        if (this.gatePOWER_ON.value && this.gateMANUAL.value  && !this.gateAUTOMATIC.value) {
+            // ?? also gated by this.gateCONSOLE_CTRL_SS ??
+            this.gateDISPLAY_MAR.value = 1;
+            this.gateRUN.value = 1;
+            this.regMAR.value = this.marsRegisters[this.marSelectorKnob].value;
+            this.updateLampGlow(1);
+
+            // ?? Not sure how DISPLAY_MAR gets reset, other than the RESET key,
+            // so for now just reset it immediately here.
+            this.gateDISPLAY_MAR.value = 0;
+        }
+    }
+
+    /**************************************/
+    saveIR1() {
+        /* Saves the value of IR1 in PR1 and turns on the SAVE lamp */
+
+        if (this.gatePOWER_ON.value && this.gateMANUAL.value && !this.gateAUTOMATIC.value) {
+            this.gateSAVE_CTRL.value = 1;
+            this.gateSAVE.value = 1;
+            this.gateRUN.value = 1;
+            this.regPR1.value = this.regIR1.value;
+            this.updateLampGlow(1);
+        }
+    }
+
+    /**************************************/
+    insert() {
+        /* Initiates typewriter entry into memory */
+
+        if (this.gatePOWER_ON.value && this.gateMANUAL.value && !this.gateAUTOMATIC.value) {
+            this.gateINSERT.value = 1;
+            this.gateREL.value = 0;
+            this.resetICycle();
+            this.updateLampGlow(1);
+            // ?? The rest TBD ??
+        }
+    }
+
+    /**************************************/
+    releaseIO() {
+        /* Releases any currently-active I/O operation */
+
+        if (this.gatePOWER_ON.value /* && IO SEL active ?? */) {
+           this.gateREL.value = 1;
+           this.gateINSERT.value = 0;
+           this.gateSTOP.value = 1;
+           this.updateLampGlow(1);
+           // ?? The rest TBD ??
+        }
     }
 
     /**************************************/
@@ -1517,45 +1794,37 @@ class Processor {
         /* Initiates the processor on the Javascript thread */
 
         // also enabled by INSERT, SAVE, DISPLAY MAR, not AUTO, RELEASE, SCE ??
-        if (this.powerOn.value && this.manual.value) {
+        if (this.gatePOWER_ON.value /* ?? && this.gateMANUAL.value ?? */) {
+            this.envir.startTiming();
             this.gateSCE.value = 0;     // reset single-cycle mode
-            // reset SAVE CTRL ??
-            this.gate1ST_CYC.value = 1;
-            this.manual.value = 0;
+            this.gateSAVE_CTRL.value = 0;
+            this.gateMANUAL.value = 0;
             this.gateRUN.value = 1;
             // gate 1621 read cluch
             // gate I/O resp
             // gate run clock
-            this.run();                 // async -- returns immediately
-        }
-    }
-
-    /**************************************/
-    stop() {
-        /* Stops running the processor on the Javascript thread */
-
-        if (this.powerOn.value && !this.manual.value) {
-            this.gateSTOP.value = 1;
-            if (this.gateI_CYC_ENT.value) {
-                this.enterManual();
+            if (this.gateCLR_MEM.value) {
+                this.clearMemory();     // async -- returns immediately
+            } else {
+                this.run();             // async -- returns immediately
             }
         }
     }
 
     /**************************************/
     stopSIE() {
-        /* If the processor is running, stops it. If the processor is already
+        /* If the processor is running, stops it at the end of the current
+        instruction. If the processor is already
         in manual mode, executes the next instruction, then stops the processor.
-        only, then stop the processor. Note that this.manual remains set during
-        the step execution */
+        only, then stop the processor. Note that this.gateMANUAL remains set
+        during the step execution */
 
-        if (this.powerOn.value) {
-            // also enabled by INSERT, SAVE, DISPLAY MAR, not AUTO, RELEASE, SCE ??
-            if (this.manual.value) {
-                this.gateSTOP.value = 1;
-                this.run();             // singe-step one instruction
-            } else {
-                this.stop();            // halt the processor
+        // also enabled by INSERT, SAVE, DISPLAY MAR, not AUTO, RELEASE, SCE ??
+        if (this.gatePOWER_ON.value) {
+            this.gateSTOP.value = 1;    // stop processor at end of current instruction
+            if (this.gateMANUAL.value) {
+                this.gateMANUAL.value = 0;
+                this.run();             // async - singe-step one instruction
             }
         }
     }
@@ -1566,95 +1835,36 @@ class Processor {
         memory cycle, but leaves it in automatic mode, even though Manual is also
         set. Otherwise, executes the next memory cycle, then stops the processor */
 
-        if (this.powerOn.value) {
+        if (this.gatePOWER_ON.value) {
             // also enabled by INSERT, SAVE, DISPLAY MAR, not AUTO, RELEASE, SCE ??
-            this.manual.value = 1;      // stops the processor at the next memory cycle
-            if (this.gateSCE.value) {
+            this.gateSCE.value = 1;     // single memory-cycle latch
+            if (this.gateMANUAL.value) {
                 this.run();             // singe-step one memory cycle
             } else {
-                this.gateSCE = 1;
+                this.gateMANUAL.value = 1;      // stop processor after next memory cycle
+                this.updateLampGlow(1); // ??
             }
         }
     }
 
-    /**************************************/
-    checkStop() {
-        /* Stops running the processor as a result of a check indication */
 
-        this.gateCheckStop.value = 1;
-        this.stop();
-    }
-
-    /**************************************/
-    reset() {
-        /* Resets the internal processor state after power-on or a manual reset */
-
-        this.gateIA_REQ.value = 0;
-        this.gateIA_ENT.value = 0;
-        this.gateRUN.value = 0;
-        this.gateSTOP.value = 1;
-        this.gateLAST_CARD.value = 0;
-        this.gateHP.value = 0;
-        this.gateEZ.value = 0;
-
-        this.gateIA_1.value = 0;
-        this.gateI_1.value = 0;
-        this.gateI_2.value = 0;
-        this.gateI_3.value = 0;
-        this.gateI_4.value = 0;
-        this.gateI_5.value = 0;
-        this.gateI_6.value = 0;
-        this.gateE_1.value = 0;
-        this.gateE_2.value = 0;
-        this.gateE_3.value = 0;
-        this.gateE_4.value = 0;
-        this.gateE_5.value = 0;
-
-        this.regXR.clear();
-        this.regXBR.clear();
-
-        this.diskAddrCheck.value = 0;
-        this.diskCylOFlowCheck.value = 0;
-        this.diskWRLRBCCheck.value = 0;
-        this.ioPrinterCheck.value = 0;
-        this.ioReadCheck.value = 0;
-        this.ioWriteCheck.value = 0;
-        this.oflowArithCheck.value = 0;
-        this.oflowExpCheck.value = 0;
-        this.parityMARCheck.value = 0;
-        this.parityMBREvenCheck.value = 0;
-        this.parityMBROddCheck.value = 0;
-
-        this.ioPrinterChannel9.value = 0;
-        this.ioPrinterChannel12.value = 0;
-    }
-
-    /**************************************/
-    checkReset() {
-        /* Resets the internal processor state after pressing CHECK RESET */
-
-        this.diskAddrCheck.value = 0;
-        this.diskCylOFlowCheck.value = 0;
-        this.diskWRLRBCCheck.value = 0;
-        this.ioReadCheck.value = 0;
-        this.ioWriteCheck.value = 0;
-        this.parityMARCheck.value = 0;
-        this.parityMBREvenCheck.value = 0;
-        this.parityMBROddCheck.value = 0;
-
-    }
+    /*******************************************************************
+    *  Initialization & Termination                                    *
+    *******************************************************************/
 
     /**************************************/
     powerUp() {
         /* Powers up and initializes the processor */
 
-        if (!this.powerOn.value) {
-            this.gateRUN.value = 0;
-            this.gateSTOP.value = 1;
-            this.automatic.value = 0;
-            this.manual.value = 1;
+        if (!this.gatePOWER_ON.value) {
+            this.envir.startTiming();
+            this.gatePOWER_ON.value = 1;
+            this.gateMANUAL.value = 1;                  // must be set for manualReset()
+            this.manualReset();
+            this.gateIA_SEL.value = 1;                  // enable indirect addressing
             this.devices = this.context.devices;        // I/O device objects
-            //this.loadMemory();                        // >>> DEBUG ONLY <<<
+            this.loadMemory();                          // >>> DEBUG ONLY <<<
+            this.updateLampGlow(1);
         }
     }
 
@@ -1662,17 +1872,91 @@ class Processor {
     powerDown() {
         /* Powers down the processor */
 
-        this.stop();
+        this.gateMANUAL.value = 1;                      // stop immediately
         this.releaseIO();
-        this.powerOn.value = false;
-        this.powerReady.value = false;
+        this.gatePOWER_ON.value = false;
+        this.gatePOWER_READY.value = false;
     }
 
     /**************************************/
     loadMemory() {
-        /* Loads debugging code into the initial memory image. The routine
-        should be enabled in this.powerUp() only temporarily for demo and
-        debugging purposes */
+        /* Loads the multiply table and any optional debugging code into the
+        initial memory image. The routine should be enabled in this.powerUp()
+        only temporarily for demo and debugging purposes */
+
+        const loadMemory = (addr, digits) => {
+            const numRex = /[0-9]/;
+            const flagRex = /[@-I]/;
+            const zero = ("0").charCodeAt(0);
+            const flagZero = ("@").charCodeAt(0);
+
+            let d = 0;
+            let odd = addr & 1;
+
+            this.regMIREven.clear();
+            this.regMIROdd.clear();
+            this.regMAR.binaryValue = addr;
+
+            for (let c of digits.toUpperCase()) {
+                if (c != " ") {
+                    if (numRex.test(c)) {
+                        d = c.charCodeAt(0) - zero;
+                    } else if (flagRex.test(c)) {
+                        d = (c.charCodeAt(0) - flagZero) | Register.flagMask;
+                    } else {
+                        d = 0xF;            // Group Mark
+                    }
+
+                    if (odd) {
+                        this.regMIROdd.value = Envir.oddParity5[d];
+                        this.store();
+                        this.regMAR.incr(2);
+                    } else {
+                        this.regMIREven.value = Envir.oddParity5[d];
+                    }
+
+                    odd = 1-odd;
+                }
+            }
+
+            if (odd) {
+                this.regMIROdd.binaryValue = Envir.oddParity5[0];
+                this.store();
+            }
+        };
+
+        // Multiplication table
+        loadMemory(100,
+            "0000000000001020304000204060800030609021004080216100500151020060218142007041128200806142230090817263" +    // 100-199
+            "0000000000506070809001214161815181124272024282236352035304540363248445532494653604846546275445362718");    // 200-299
+
+        // ?? DEBUG ?? I-Cycle testing
+        loadMemory(0,
+            "60 01000 00008");  //  0000 BS     1000,8          branch to 1000, reset IA mode
+
+        loadMemory(300,         // load index registers
+            "88888 00000 00000 00000 00000 00000 00000 00000" +         // Band 1: IX 0-7
+            "99999 1010A 00015 00010 00000 00000 00000 00000");         // Band 2: IX 0-7
+
+        loadMemory(900,         // Indirect Addresses
+            "01084 0091D 01084 00IBD 99999 88888 77777 66666 55555 44444 33333 22222 11111");
+
+        loadMemory(1000,
+            "41 23456 78901" +  //  1000 NOP    23456,78901     no-op
+            "32 00099 99999" +  //  1012 SF     99,99999        set flag
+            "33 00099 77777" +  //  1024 CF     99,77777        clear flag
+            "60 0104H 00002" +  //  1036 BS     1048*,2         set IX band 2 (IA disabled)
+            "60 01060 00009" +  //  1048 BS     1060,8          set IA mode
+            "46 0090D 01100" +  //  1060 BI     900*,11         branch on H/P, indirect through 904 => 1084
+            "47 0090I 01100" +  //  1072 BNI    7,11            branch on not H/P, indirect through 909 to 914 => 1084
+            "48 222B2 00I0D" +  //  1084 H      22222,66666     halt: P=22222+IX1(-10101) => 12121, Q=(see below)
+            "49 00000 33333"    //  1096 B      0,33333         branch to beginning
+        );
+                        // @1084: Q = 904+IX2(15) = 919 indirect to 924+IX3(10) = 934 indirect => 77777
+
+        this.regMAR.clear();
+        this.regMIREven.clear();
+        this.regMIROdd.clear();
     }
 
 } // class Processor
