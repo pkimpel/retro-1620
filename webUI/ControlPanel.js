@@ -117,7 +117,9 @@ class ControlPanel {
         let body = this.doc.body;
 
         // MAR Selector Switch
-        let marCaptions = ["OR-1", "OR-2", "OR-3", "OR-4", "OR-5", "CR-1", "CR-2", "PR-2", "IR-1", "IR-2", "IR-3", "IR-4"];
+        let marCaptions = [
+                "OR-1", "OR-2", "OR-3", "OR-4", "OR-5", "CR-1", 
+                "PR-1", "PR-2", "IR-1", "IR-2", "IR-3", "IR-4"];
         let marPositions = [];
         for (let a=0; a<360; a+=30) {
             marPositions.push((a+315)%360);
@@ -140,35 +142,32 @@ class ControlPanel {
 
         // Memory Buffer and Inhibit Registers
         panel = this.$$("Panel5Gray");
-        this.regMBREven = new PanelRegister(panel, 1, true, 0, "MBRE_");
-        this.regMBROdd =  new PanelRegister(panel, 1, true, 1, "MBRO_");
-        this.regMBROdd.lamps[0].setCaption("|<br>1<br>|", false);
-        this.regMBROdd.lamps[1].setCaption("|<br>2<br>|", false);
-        this.regMBROdd.lamps[2].setCaption("|<br>4<br>|", false);
-        this.regMBROdd.lamps[3].setCaption("|<br>8<br>|", false);
-        this.regMBROdd.lamps[4].setCaption("|<br>F<br>|", false);
-        this.regMBROdd.lamps[5].setCaption("|<br>C<br>|", false);
+        this.regMBR = new PanelRegister(panel, 2, true, 0, "MBR_");
+        this.regMBR.lamps[0].setCaption("|<br>1<br>|", false);
+        this.regMBR.lamps[1].setCaption("|<br>2<br>|", false);
+        this.regMBR.lamps[2].setCaption("|<br>4<br>|", false);
+        this.regMBR.lamps[3].setCaption("|<br>8<br>|", false);
+        this.regMBR.lamps[4].setCaption("|<br>F<br>|", false);
+        this.regMBR.lamps[5].setCaption("|<br>C<br>|", false);
 
         this.regDummy1 = new PanelRegister(panel, 1, true, 2, "DUMMY1_");
 
-        this.regMIREven = new PanelRegister(panel, 1, true, 3, "MIRE_");
-        this.regMIROdd =  new PanelRegister(panel, 1, true, 4, "MIRO_");
-        this.regMIROdd.lamps[0].setCaption("|<br>1<br>|", false);
-        this.regMIROdd.lamps[1].setCaption("|<br>2<br>|", false);
-        this.regMIROdd.lamps[2].setCaption("|<br>4<br>|", false);
-        this.regMIROdd.lamps[3].setCaption("|<br>8<br>|", false);
-        this.regMIROdd.lamps[4].setCaption("|<br>F<br>|", false);
-        this.regMIROdd.lamps[5].setCaption("|<br>C<br>|", false);
+        this.regMIR = new PanelRegister(panel, 2, true, 3, "MIR_");
+        this.regMIR.lamps[0].setCaption("|<br>1<br>|", false);
+        this.regMIR.lamps[1].setCaption("|<br>2<br>|", false);
+        this.regMIR.lamps[2].setCaption("|<br>4<br>|", false);
+        this.regMIR.lamps[3].setCaption("|<br>8<br>|", false);
+        this.regMIR.lamps[4].setCaption("|<br>F<br>|", false);
+        this.regMIR.lamps[5].setCaption("|<br>C<br>|", false);
 
         // Operation, Multiplier/Quotient, and Data Registers
         panel = this.$$("Panel4Blue");
-        this.regOPEven = new PanelRegister(panel, 1, false, 0, "ORE_");
-        this.regOPOdd =  new PanelRegister(panel, 1, false, 1, "ORO_");
-        this.regOPOdd.lamps[0].setCaption("|<br>1<br>|", false);
-        this.regOPOdd.lamps[1].setCaption("|<br>2<br>|", false);
-        this.regOPOdd.lamps[2].setCaption("|<br>4<br>|", false);
-        this.regOPOdd.lamps[3].setCaption("|<br>8<br>|", false);
-        this.regOPOdd.lamps[5].setCaption("|<br>C<br>|", false);        // no lamp[4] for flag
+        this.regOP = new PanelRegister(panel, 2, false, 0, "OR_");
+        this.regOP.lamps[0].setCaption("|<br>1<br>|", false);
+        this.regOP.lamps[1].setCaption("|<br>2<br>|", false);
+        this.regOP.lamps[2].setCaption("|<br>4<br>|", false);
+        this.regOP.lamps[3].setCaption("|<br>8<br>|", false);
+        this.regOP.lamps[5].setCaption("|<br>C<br>|", false);           // no lamp[4] for flag
 
         this.regMQ = new PanelRegister(panel, 1, false, 2, "MQ_");
         this.regMQ.lamps[0].setCaption("1", false);
@@ -177,13 +176,12 @@ class ControlPanel {
         this.regMQ.lamps[3].setCaption("8", false);
         this.regMQ.lamps[5].setCaption("C", false);                     // no lamp[4] for flag
 
-        this.regDREven = new PanelRegister(panel, 1, false, 3, "DRE_");
-        this.regDROdd =  new PanelRegister(panel, 1, false, 4, "DRO_");
-        this.regDROdd.lamps[0].setCaption("|<br>1<br>|", false);
-        this.regDROdd.lamps[1].setCaption("|<br>2<br>|", false);
-        this.regDROdd.lamps[2].setCaption("|<br>4<br>|", false);
-        this.regDROdd.lamps[3].setCaption("|<br>8<br>|", false);
-        this.regDROdd.lamps[5].setCaption("|<br>C<br>|", false);        // no lamp[4] for flag
+        this.regDR = new PanelRegister(panel, 2, false, 3, "DR_");
+        this.regDR.lamps[0].setCaption("|<br>1<br>|", false);
+        this.regDR.lamps[1].setCaption("|<br>2<br>|", false);
+        this.regDR.lamps[2].setCaption("|<br>4<br>|", false);
+        this.regDR.lamps[3].setCaption("|<br>8<br>|", false);
+        this.regDR.lamps[5].setCaption("|<br>C<br>|", false);           // no lamp[4] for flag
 
         // Instruction & Execution Cycle
         buildGatePanel("Panel3Gray", 3, [
@@ -245,7 +243,7 @@ class ControlPanel {
         this.diskAddrCheckLamp = new GateLamp(panel, null, null, "DiskAddrCheckLamp");
         this.diskAddrCheckLamp.setCaption("ADDR CHK", false);
         this.parityMARCheckLamp = new GateLamp(panel, null, null, "ParityMARCheckLamp");
-        this.parityMARCheckLamp.setCaption("ADDR CHK", false);
+        this.parityMARCheckLamp.setCaption("MAR CHK", false);
         this.ioPrinterCheckLamp = new GateLamp(panel, null, null, "IOPrinterCheckLamp");
         this.ioPrinterCheckLamp.setCaption("PR CHK", false);
         this.oflowDummyCheckLamp = new GateLamp(panel, null, null, "OflowDummyCheckLamp");
@@ -469,16 +467,12 @@ class ControlPanel {
         this.gateE_5.set(p.gateE_5.glow);
 
         // Register Panels
-        this.regOPEven.updateLampGlow(p.regOPEven.glow);
-        this.regOPOdd.updateLampGlow(p.regOPOdd.glow);
+        this.regOP.updateLampGlow(p.regOP.glow);
         this.regMQ.updateLampGlow(p.regMQ.glow);
-        this.regDREven.updateLampGlow(p.regDREven.glow);
-        this.regDROdd.updateLampGlow(p.regDROdd.glow);
-        this.regMBREven.updateLampGlow(p.regMBREven.glow);
-        this.regMBROdd.updateLampGlow(p.regMBROdd.glow);
+        this.regDR.updateLampGlow(p.regDR.glow);
+        this.regMBR.updateLampGlow(p.regMBR.glow);
         //this.regDummy1.updateLampGlow(p.regDummy1.glow);
-        this.regMIREven.updateLampGlow(p.regMIREven.glow);
-        this.regMIROdd.updateLampGlow(p.regMIROdd.glow);
+        this.regMIR.updateLampGlow(p.regMIR.glow);
         this.regMAR.updateLampGlow(p.regMAR.glow);
 
         // Operator Control Panel lamps
@@ -511,6 +505,22 @@ class ControlPanel {
         this.parityMBROddCheckLamp.set(p.parityMBROddCheck.glow);
         this.ioWriteCheckLamp.set(p.ioWriteCheck.glow);
         this.oflowArithCheckLamp.set(p.oflowArithCheck.glow);
+
+        // Register View Table **DEBUG**
+        this.$$("ViewMAR").textContent = p.regMAR.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewOR1").textContent = p.regOR1.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewOR2").textContent = p.regOR2.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewOR3").textContent = p.regOR3.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewOR4").textContent = p.regOR4.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewOR5").textContent = p.regOR5.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewXBR").textContent = p.regXBR.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewIR1").textContent = p.regIR1.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewIR2").textContent = p.regIR2.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewIR3").textContent = p.regIR3.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewIR4").textContent = p.regIR4.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewCR1").textContent = p.regCR1.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewPR1").textContent = p.regPR1.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewPR2").textContent = p.regPR2.binaryValue.toString().padStart(5, "0");
     }
 
     /**************************************/

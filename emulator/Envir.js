@@ -104,4 +104,7 @@ Envir.oddParity5 = [
 // Undigit codes
 Envir.numRecMark =      0xA;
 Envir.numBlank =        0xC;
-Envir.numGropMark =     0xF;
+Envir.numGroupMark =    0xF;
+
+Envir.undigitMask =     0b1110;         // (digit & undigitMask) > undigitFalse => it's an undigit
+Envir.undigitFalse =    0b1001;

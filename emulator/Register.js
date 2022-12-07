@@ -83,7 +83,6 @@ class Register {
             let val = value;
             let newVal = 0;
             let bits = 0;
-            let d = 0;
             this.parityError = false;
 
             do {
@@ -96,7 +95,7 @@ class Register {
                 newVal |= (this.parity ? corr : digit) << bits;
                 val >>= Register.digitBits;
                 bits += Register.digitBits;
-            } while (++d < this.digits);
+            } while (bits < this.bits);
 
             this.intVal = newVal;
         }
@@ -151,6 +150,49 @@ class Register {
         /* Returns 0 if the register is zero, 1 otherwise */
 
         return ((this.intVal & Register.bcdValueMask) ? 1 : 0);
+    }
+
+    get isOdd() {
+        /* Returns 1 if the register is an odd value, 0 otherwise */
+
+        return this.intVal & 1;
+    }
+
+    get odd() {
+        /* Returns the value of digit 0 from a register. This is useful and more
+        efficient than getDigit() for the 2-digit even/odd registers */
+
+        return this.intVal & Register.digitMask;
+    }
+
+    set odd(value) {
+        /* Sets the value of digit 0 in a register. This is useful for the
+        2-digit even/odd registers. Unconditionally recomputes parity for the
+        digit */
+
+        this.setDigit(0, value);
+    }
+
+    get isEven() {
+        /* Returns 1 if the register is an even value, 0 otherwise */
+
+        return 1 - (this.intVal & 1);
+    }
+
+    get even() {
+        /* Returns the value of digit 1 from a register. This is useful and
+        more efficient than getDigit() for the 2-digit even/odd registers.
+        If a register has only one digit, returns zero */
+
+        return (this.intVal >> Register.digitBits) & Register.digitMask;
+    }
+
+    set even(value) {
+        /* Sets the value of digit 1 in a register. This is useful for the
+        2-digit even/odd registers. Unconditionally recomputes parity for the
+        digit. If the register has only one digit, does nothing */
+
+        this.setDigit(1, value);
     }
 
     /**************************************/
@@ -265,9 +307,6 @@ class Register {
             this.value = BitField.fieldInsert(this.intVal, (d+1)*Register.digitBits-1, Register.digitBits,
                      this.parity ? corr : digit);
             this.parityError = (corr != digit);         // do after this.value= since it checks parity, too
-            if (this.visible) {
-               this.updateLampGlow(0);
-            }
        }
 
         return this.intVal;
@@ -279,13 +318,10 @@ class Register {
         recomputes parity for the digit. Returns the new register value */
 
         if (d < this.digits) {
-            let digit = (this.getDigit(d) & Register.notFlagMask) | (value & 1);
+            let digit = (this.getDigit(d) & Register.notFlagMask) | ((value & 1)*Register.flagMask);
             let corr = Envir.oddParity5[digit];
 
             this.value = BitField.fieldInsert(this.intVal, (d+1)*Register.digitBits-1, Register.digitBits, corr);
-            if (this.visible) {
-               this.updateLampGlow(0);
-            }
        }
 
         return this.intVal;
@@ -301,9 +337,6 @@ class Register {
             let comp = 9 - Envir.bcdBinary[digit];
             digit = Envir.oddParity5[(digit & Register.parityFlagMask) | comp];
             this.value = BitField.fieldInsert(this.intVal, (d+1)*Register.digitBits-1, Register.digitBits, digit);
-            if (this.visible) {
-               this.updateLampGlow(0);
-            }
         }
 
         return this.intVal;

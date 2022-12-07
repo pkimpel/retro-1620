@@ -39,7 +39,7 @@ DIV.evenOddCaption {
     width:              100%;
     z-index:            2;
     overflow:           visible;
-    background-color:   #F4F0E5}
+    background-color:   #EBDFCE}        /* was F4F0E5 */
 
 #LogoSurface {
     position:           absolute;
@@ -250,6 +250,17 @@ DIV.evenOddCaption {
     width:              100%;
     color:              black;
     background-color:   #F7F7E9}
+
+#RegisterViewTable {                    /* **DEBUG** */
+    position:           absolute;
+    top:                16px;
+    right:              114px;
+    background-color:   #FFC;
+    box-shadow:         3px 3px 3px #666}
+#RegisterViewTable TR {
+    vertical-align:     middle}
+#RegisterViewTable TR TD {
+    font-size:          12px}
 
 #IndicatorButtonPanel {
     position:           absolute;

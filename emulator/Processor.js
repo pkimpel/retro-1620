@@ -190,16 +190,12 @@ class Processor {
         this.ioPrinterBusy =        new FlipFlop(this.envir, false);
 
         // Console Registers
-        this.regDREven =            new Register(1, this.envir, true,  true,  false);
-        this.regDROdd =             new Register(1, this.envir, true,  true,  false);
+        this.regDR =                new Register(2, this.envir, true,  true,  false);
         this.regMAR =               new Register(5, this.envir, true,  true,  false);
-        this.regMBREven =           new Register(1, this.envir, true,  false, true);
-        this.regMBROdd =            new Register(1, this.envir, true,  false, true);
-        this.regMIREven =           new Register(1, this.envir, true,  true,  true);
-        this.regMIROdd =            new Register(1, this.envir, true,  true,  true);
+        this.regMBR =               new Register(2, this.envir, true,  false, true);
+        this.regMIR =               new Register(2, this.envir, true,  true,  true);
         this.regMQ =                new Register(1, this.envir, true,  true,  false);
-        this.regOPEven =            new Register(1, this.envir, true,  true,  false);
-        this.regOPOdd =             new Register(1, this.envir, true,  true,  false);
+        this.regOP =                new Register(2, this.envir, true,  true,  false);
         this.regXR =                new Register(1, this.envir, true,  false, false);   // indexing bits X-1, X-2, X-3
 
         // MARS Registers
@@ -217,8 +213,8 @@ class Processor {
         this.regPR2 =               new Register(5, this.envir, false, true,  false);
 
         this.marsRegisters = [
-            this.regOR1, this.regOR2, this.regOR3, this.regOR4, this.regOR5, this.regPR1,
-            this.regPR2, this.regCR1, this.regIR1, this.regIR2, this.regIR3, this.regIR4];
+            this.regOR1, this.regOR2, this.regOR3, this.regOR4, this.regOR5, this.regCR1,
+            this.regPR1, this.regPR2, this.regIR1, this.regIR2, this.regIR3, this.regIR4];
 
         // Internal Control Gates & Registers
         this.gateCLR_CTRL =         new FlipFlop(this.envir, false);    // clear memory control latch
@@ -243,8 +239,8 @@ class Processor {
         this.program3Switch = 0;
         this.program4Switch = 0;
 
-        // Core Memory
-        this.MM = new Uint16Array(new ArrayBuffer(this.envir.memorySize));
+        // Core Memory - 2 digits are stored in the low-order 12 bits of each element
+        this.MM = new Uint16Array(new ArrayBuffer(this.envir.memorySize >> 1));
 
         // Op Code Attributes
         this.opBinary = 0;                              // binary value of current op code
@@ -262,62 +258,67 @@ class Processor {
         // Bound Methods
 
         // Initialization
-        let buildOpAtts = (opValid, pAddr, qAddr, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4, opCode) => {
+        let buildOpAtts = (opValid, eState, rfe1, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4, opCode) => {
             this.opAtts[opCode] = {
-                opValid, pAddr, qAddr, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4};
+                opValid, eState, rfe1, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4};
         };
 
-        //          v pa qa pi qi px qx im br fp ix bi ed q4  op
+        //          v es ?1 pi qi px qx im br fp ix bi ed q4  op
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0);      // 00
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  1);      // 01 FADD
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  2);      // 02 FSUB
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  3);      // 03 FMUL
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  1);      // 01 FADD
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  2);      // 02 FSUB
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  3);      // 03 FMUL
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  4);      // 04
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  5);      // 05 FSL
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  6);      // 06 TFL
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0,  7);      // 07 BTFL
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  8);      // 08 FSR
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  9);      // 09 FDIV
-        buildOpAtts(1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 10);      // 10 BTAM
-        buildOpAtts(1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 11);      // 11 AM
-        buildOpAtts(1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 12);      // 12 SM
-        buildOpAtts(1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 13);      // 13 MM
-        buildOpAtts(1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 14);      // 14 CM
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  5);      // 05 FSL
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  6);      // 06 TFL
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0,  7);      // 07 BTFL
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  8);      // 08 FSR
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  9);      // 09 FDIV
+
+        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 10);      // 10 BTAM
+        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 11);      // 11 AM
+        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 12);      // 12 SM
+        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 13);      // 13 MM
+        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 14);      // 14 CM
         buildOpAtts(1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 15);      // 15 TDM
-        buildOpAtts(1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 16);      // 16 TFM
-        buildOpAtts(1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 17);      // 17 BTM
-        buildOpAtts(1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 18);      // 18 LDM
-        buildOpAtts(1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 19);      // 19 DM
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 20);      // 20 BTA
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 21);      // 21 A
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 22);      // 22 S
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 23);      // 23 M
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 24);      // 24 C
+        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 16);      // 16 TFM
+        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 17);      // 17 BTM
+        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 18);      // 18 LDM
+        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 19);      // 19 DM
+
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 20);      // 20 BTA
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 21);      // 21 A
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 22);      // 22 S
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 23);      // 23 M
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 24);      // 24 C
         buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 25);      // 25 TD
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 26);      // 26 TF
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 27);      // 27 BT
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 28);      // 28 LD
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 29);      // 29 D
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 30);      // 30 TRNM
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 31);      // 31 TR
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 32);      // 32 SF
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 33);      // 33 CF
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 34);      // 34 K
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 35);      // 35 DN
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 36);      // 36 RN
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 37);      // 37 RA
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 38);      // 38 WN
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 39);      // 39 WA
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 26);      // 26 TF
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 27);      // 27 BT
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 28);      // 28 LD
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 29);      // 29 D
+
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 30);      // 30 TRNM
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 31);      // 31 TR
+        buildOpAtts(1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 32);      // 32 SF
+        buildOpAtts(1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 33);      // 33 CF
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 34);      // 34 K
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 35);      // 35 DN
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 36);      // 36 RN
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 37);      // 37 RA
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 38);      // 38 WN
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 39);      // 39 WA
+
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40);      // 40
         buildOpAtts(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41);      // 41 NOP
         buildOpAtts(1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 42);      // 42 BB
         buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 43);      // 43 BD
         buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 44);      // 44 BNF
         buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 45);      // 45 BNR
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 46);      // 46 BI
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 47);      // 47 BNI
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 46);      // 46 BI
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 47);      // 47 BNI
         buildOpAtts(1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 48);      // 48 H         ?? TEMP ENABLE IA & IX on P & Q
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 49);      // 49 B
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 49);      // 49 B
+
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50);      // 50
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 51);      // 51
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52);      // 52
@@ -328,26 +329,29 @@ class Processor {
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 57);      // 57
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 58);      // 58
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 59);      // 59
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 60);      // 60 BS
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 61);      // 61 BX
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 62);      // 62 BXM
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 63);      // 63 BCX
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 64);      // 64 BCXM
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 65);      // 65 BLX
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 66);      // 66 BLXM
-        buildOpAtts(1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 67);      // 67 BSX
+
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 60);      // 60 BS
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 61);      // 61 BX
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 62);      // 62 BXM
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 63);      // 63 BCX
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 64);      // 64 BCXM
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 65);      // 65 BLX
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 66);      // 66 BLXM
+        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 67);      // 67 BSX
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 68);      // 68
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 69);      // 69
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 70);      // 70 MA
+
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 70);      // 70 MA
         buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 71);      // 71 MF
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 72);      // 72 TNS
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 73);      // 73 TNF
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 72);      // 72 TNS
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 73);      // 73 TNF
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 74);      // 74
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 75);      // 75
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 76);      // 76
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 77);      // 77
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 78);      // 78
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 79);      // 79
+
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 80);      // 80
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 81);      // 81
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 82);      // 82
@@ -358,14 +362,15 @@ class Processor {
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 87);      // 87
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 88);      // 88
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 89);      // 89
-        buildOpAtts(1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 90);      // 90 BBT
-        buildOpAtts(1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 91);      // 91 BMK
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 92);      // 92 ORF
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 93);      // 93 ANDF
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 94);      // 94 CPFL
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 95);      // 95 EORF
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 96);      // 96 OTD
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 97);      // 97 DTO
+
+        buildOpAtts(1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 90);      // 90 BBT
+        buildOpAtts(1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 91);      // 91 BMK
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 92);      // 92 ORF
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 93);      // 93 ANDF
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 94);      // 94 CPFL
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 95);      // 95 EORF
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 96);      // 96 OTD
+        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 97);      // 97 DTO
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 98);      // 98
         buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 99);      // 99
 
@@ -376,6 +381,35 @@ class Processor {
     /*******************************************************************
     *  Utility Methods                                                 *
     *******************************************************************/
+
+    /**************************************/
+    addDigits(addend) {
+        /* Adds two digits and yields their sum. The augend must be in regDR.odd.
+        If gateCOMP is set, the 9s-complement of the augend is added instead.
+        gateCARRY_IN is added to the sum, which is then decimal-adjusted before
+        storing it in regDR.odd. gateCARRY_OUT is set to the carry from the sum */
+        let augend = this.regDR.odd;
+        let sum = 0;
+
+        if ((augend & Envir.undigitMask) > Envir.undigitFalse ||
+                (addend & Envir.undigitMask) > Envir.undigitFalse) {
+            this.parityMARCheck.value = 1;      // not valid decimal digit
+            this.checkStop(`addDigits invalid BCD code: aug=${augend.toString(2)}, add=${addend.toString(2)}`);
+        } else {
+            sum = (augend & Register.bcdMask) + this.gateCARRY_IN.value +
+                    ((this.gateCOMP.value ? 9-addend : addend) & Register.bcdMask);
+            if (sum < 10) {
+                this.gateCARRY_OUT.value = 0;
+            } else {
+                sum -= 10;
+                this.gateCARRY_OUT.value = 1;
+            }
+
+            this.regDR.odd = Envir.oddParity5[sum];
+        }
+
+        return sum;
+    }
 
     /**************************************/
     updateLampGlow(beta) {
@@ -510,16 +544,12 @@ class Processor {
         this.parityMBROddCheck.updateLampGlow(gamma);
 
         // Console Registers
-        this.regDREven.updateLampGlow(gamma);
-        this.regDROdd.updateLampGlow(gamma);
+        this.regDR.updateLampGlow(gamma);
         this.regMAR.updateLampGlow(gamma);
-        this.regMBREven.updateLampGlow(gamma);
-        this.regMBROdd.updateLampGlow(gamma);
-        this.regMIREven.updateLampGlow(gamma);
-        this.regMIROdd.updateLampGlow(gamma);
+        this.regMBR.updateLampGlow(gamma);
+        this.regMIR.updateLampGlow(gamma);
         this.regMQ.updateLampGlow(gamma);
-        this.regOPEven.updateLampGlow(gamma);
-        this.regOPOdd.updateLampGlow(gamma);
+        this.regOP.updateLampGlow(gamma);
         this.regXR.updateLampGlow(gamma);
     }
 
@@ -536,22 +566,25 @@ class Processor {
 
         if (addr >= this.envir.memorySize) {
             this.parityMARCheck.value = 1;
-            this.checkStop();
+            this.checkStop(`fetch invalid memory address=${addr}`);
         } else {
             let pair = this.MM[addr >> 1];   // div 2
-            this.regMBREven.value = (pair >> 8) & Register.digitMask;
-            if (this.regMBREven.parityError) {
-                this.parityMBREvenCheck.value = 1;
-                if (this.parityStopSwitch) {
-                    this.checkStop();
-                }
-            }
+            this.regMIR.value = this.regMBR.value = pair;
 
-            this.regMBROdd.value = pair & Register.digitMask;
-            if (this.regMBROdd.parityError) {
-                this.parityMBROddCheck.value = 1;
+            // Set indicators for parity errors.
+            if (this.regMBR.parityError) {
+                let digit = (pair >> Register.digitBits) & this.digitMask;
+                let corr = Envir.oddParity5[digit];
+                if (corr != digit) {
+                    this.parityMBREvenCheck.value = 1;
+                }
+                digit = pair & this.digitMask;
+                corr = Envir.oddParity5[digit];
+                if (corr != digit) {
+                    this.parityMBROddCheck.value = 1;
+                }
                 if (this.parityStopSwitch) {
-                    this.checkStop();
+                    this.checkStop(`fetch MBR parity error @${addr}`);
                 }
             }
         }
@@ -564,9 +597,9 @@ class Processor {
 
         if (addr >= this.envir.memorySize) {
             this.parityMARCheck.value = 1;
-            this.checkStop();
+            this.checkStop(`store invalid memory address=${addr}`);
         } else {
-            this.MM[addr >> 1] = (this.regMIREven.value << 8) | (this.regMIROdd.value);
+            this.MM[addr >> 1] = this.regMIR.value;
         }
     }
 
@@ -575,8 +608,7 @@ class Processor {
         /* Clears all of memory to zeroes */
 
         this.regMAR.clear();
-        this.regMIREven.clear();
-        this.regMIROdd.clear();
+        this.regMIR.clear();
 
         let a = 0;
         do {
@@ -787,7 +819,7 @@ class Processor {
         get reset when tested. Returns the original status of the indicator */
         let isSet = 0;
 
-        switch (this.regDREven.binaryValue*10 + this.regDROdd.binaryValue) {
+        switch (this.regDR.binaryValue) {
         case  1:        // Program Switch 1
             isSet = this.program1Switch;
             break;
@@ -972,10 +1004,8 @@ class Processor {
         }
 
         this.fetch();
-        let mbrEven = this.regMBREven.value;
-        let mbrOdd = this.regMBROdd.value;
-        this.regOPEven.value = mbrEven;
-        this.regOPOdd.value = mbrOdd;
+
+        this.regOP.value = this.regMBR.value;
         this.gateP.value = 1;                   // now working on the P address
         this.regOR1.clear();
         this.regOR2.clear();
@@ -986,18 +1016,18 @@ class Processor {
         this.gateAUTOMATIC.value = 1;
 
         this.regIR1.incr(2);
-        this.opBinary = (mbrEven & Register.bcdMask)*10 + (mbrOdd & Register.bcdMask);
+        this.opBinary = this.regMBR.binaryValue;
 
-        // If the op code is 0, go immediately into MANUAL and enter E-Cycle.
-        // If START is then pressed, this will cause a MAR check stop due to
-        // the invalid op code.  Not sure the 1620-2 actually worked this way,
-        // but the result is what's expected.
+        // If the op code is 0, go immediately into MANUAL to halt at the end of
+        // this cycle. The state will advance to I-2. If START is then pressed,
+        // this will cause a MAR check stop in I-2 due to the invalid op code.
+        // Not sure the 1620-2 actually worked this way, but the result is
+        // what's expected.
         if (this.opBinary == 0) {
             this.enterManual();
-            this.enterECycle();
-        } else {
-            this.setProcState(procStateI2);
         }
+
+        this.setProcState(procStateI2);
     }
 
     /**************************************/
@@ -1007,8 +1037,17 @@ class Processor {
         loads the P2/P3 digits to the MARS registers. Sets the 4-bit in XR from
         the P3 flag as necessary. Steps to I-Cycle 3 */
 
-        // ?? MAR Check Stop if no prior BT instruction or SAVE control ?? Mod2 Ref p.38 vs Germain p.97
-        if (this.opBinary == 42) {              // 42=BB, Branch Back
+        this.opIndexable = this.opAtts[this.opBinary].pIX &&
+                (this.gateIX_BAND_1.value || this.gateIX_BAND_2.value);
+
+        switch (this.opBinary) {
+        case 0:                                 // 00=(invalid op code from I-1)
+            this.parityMARCheck.value = 1;
+            this.checkStop(`I-2 invalid op code 00 @${this.regIR1.binaryValue-2}`);
+            brak;
+
+        case 42:                                // 42=BB, Branch Back
+            // ?? MAR Check Stop if no prior BT instruction or SAVE control ?? Mod2 Ref p.38 vs Germain p.97
             if (this.gateSAVE.value) {
                 this.gateSAVE.value = 0;
                 this.regIR1.value = this.regPR1.value;
@@ -1017,11 +1056,14 @@ class Processor {
                 this.regIR2.clear();
             }
             enterICycle();
-        } else {
+            break;
+
+        default:                                // everything else
             this.regMAR.value = this.regIR1.value;
             this.fetch();
-            let mbrEven = this.regMBREven.value;
-            let mbrOdd = this.regMBROdd.value;
+            let mbrEven = this.regMBR.even;
+            let mbrOdd = this.regMBR.odd;
+
             this.regOR2.setDigit(4, mbrEven);
             this.regOR2.setDigit(3, mbrOdd);
             this.regOR3.setDigit(4, mbrEven);
@@ -1034,6 +1076,7 @@ class Processor {
 
             this.regIR1.incr(2);
             this.setProcState(procStateI3);
+            break;
         }
     }
 
@@ -1045,8 +1088,9 @@ class Processor {
 
         this.regMAR.value = this.regIR1.value;
         this.fetch();
-        let mbrEven = this.regMBREven.value;
-        let mbrOdd = this.regMBROdd.value;
+        let mbrEven = this.regMBR.even;
+        let mbrOdd = this.regMBR.odd;
+
         this.regOR2.setDigit(2, mbrEven);
         this.regOR2.setDigit(1, mbrOdd);
         this.regOR3.setDigit(2, mbrEven);
@@ -1078,13 +1122,14 @@ class Processor {
 
         this.regMAR.value = this.regIR1.value;
         this.fetch();
-        let mbrEven = this.regMBREven.value;
-        let mbrOdd = this.regMBROdd.value;
+        let mbrEven = this.regMBR.even;
+        let mbrOdd = this.regMBR.odd;
+
         this.regOR2.setDigit(0, mbrEven);
         this.regOR3.setDigit(0, mbrEven);
         this.regXBR.setDigit(0, mbrEven);
-        this.regDREven.value = mbrOdd;
-        this.regDROdd.clear();
+        this.regDR.even = mbrOdd;
+        this.regDR.odd = 0;
         this.regPR1.clear();
         if ((mbrEven & Register.flagMask) &&
                 this.opAtts[this.opBinary].pIA && this.gateIA_SEL.value) {
@@ -1114,14 +1159,17 @@ class Processor {
 
         this.regMAR.value = this.regIR1.value;
         this.fetch();
-        let mbrEven = this.regMBREven.value;
-        let mbrOdd = this.regMBROdd.value;
+        let mbrEven = this.regMBR.even;
+        let mbrOdd = this.regMBR.odd;
+
         this.gateP.value = 0;                   // now working on the Q address
         this.gateIX.value = 0;
         this.regOR1.clear();
         this.regXBR.clear();                    // ??
         this.regXR.clear();
         this.regMQ.clear();
+        this.opIndexable = this.opAtts[this.opBinary].qIX &&
+                (this.gateIX_BAND_1.value || this.gateIX_BAND_2.value);
 
         switch (this.opBinary) {
         case 34:        // K, Control I/O device
@@ -1134,8 +1182,8 @@ class Processor {
         case 47:        // BNI, Branch No Indicator
         case 90:        // BBT, Branch on Bit
         case 91:        // BMK, Branch on Mask
-            this.regDREven.value = mbrEven;     // set up DR for S/B decode
-            this.regDROdd.value = mbrOdd;       // don't load OR-1 for S/B ops
+            // Set up DR for S/B decode, don't load OR1 for S/B ops.
+            this.regDR.value = this.regMBR.value;
             break;
 
         case 60:        // BS, Branch and Select
@@ -1143,11 +1191,11 @@ class Processor {
 
         default:
             if (!this.opAtts[this.opBinary].immed) {    // don't load OR-1 for immediate ops in I-5
-                this.regDROdd.value = this.regDREven.value;
-                this.regOR1.setDigit(4, this.regDROdd.value);
+                let drOdd = this.regDR.odd = this.regDR.even;   // shift DR even to DR odd
+                this.regOR1.setDigit(4, drOdd);
                 this.regOR1.setDigit(3, mbrEven);
                 this.regOR1.setDigit(2, mbrOdd);
-                this.regXBR.setDigit(4, this.regDROdd.value);
+                this.regXBR.setDigit(4, drOdd);
                 this.regXBR.setDigit(3, mbrEven);
                 this.regXBR.setDigit(2, mbrOdd);
             }
@@ -1188,8 +1236,8 @@ class Processor {
 
         this.regMAR.value = this.regIR1.value;
         this.fetch();
-        let mbrEven = this.regMBREven.value;
-        let mbrOdd = this.regMBROdd.value;
+        let mbrEven = this.regMBR.even;
+        let mbrOdd = this.regMBR.odd;
 
         switch (this.opBinary) {
         case 34:        // K, Control I/O device
@@ -1307,29 +1355,19 @@ class Processor {
         if (this.gateIX_ENT.value) {
             this.gateIX_ENT.value = 0;
             this.fetch();               // first IX cycle: MAR was initially set in enterIndexing()
-            addend = (this.regMAR.value & 1 ? this.regMBROdd.value : this.regMBREven.value);
+            addend = this.regMBR.getDigit(this.regMAR.isEven);
             this.gateCOMP.value = this.gateCARRY_IN.value = addend & Register.flagMask;
-            addend &= Register.bcdMask;
         } else {
             this.regMAR.value = this.regPR2.value;
             this.fetch();               // non-first IX cycle: use address in PR2
-            addend = (this.regMAR.value & 1 ? this.regMBROdd.value : this.regMBREven.value) & Register.bcdMask;
+            addend = this.regMBR.getDigit(this.regMAR.isEven);
             this.regMQ.incr(1);         // use MQ as the digit counter
             mq = this.regMQ.binaryValue;
         }
 
-        // Compute the sum of the address and index register digits.
-        let sum = (this.regXBR.getDigit(mq) & Register.bcdMask) + this.gateCARRY_IN.value +
-                (this.gateCOMP.value ? 9-addend : addend);
-        if (sum < 10) {
-            this.gateCARRY_OUT.value = 0;
-        } else {
-            sum -= 10;
-            this.gateCARRY_OUT.value = 1;
-        }
-
-        // Store the digit sum back into XBR and propagate any carry.
-        this.regDROdd.value = sum;
+        // Compute the sum of the address and index register digits, propagating any carry.
+        this.regDR.odd = this.regXBR.getDigit(mq);
+        let sum = this.addDigits(addend);       // leaves the sum in DR odd
         this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
         this.regXBR.setDigit(mq, sum);
         if (mq < 4) {                   // if there are more digits, decrement PR2
@@ -1362,9 +1400,9 @@ class Processor {
     stepIndirecting1() {
         /* Handles the indirect addressing IA-1 state */
 
-        this.regXR.clear();
         this.gateIA_ENT.value = 0;      // (not sure this is correct: it resets at T603)
         this.gateIX.value = 0;
+        this.regXR.clear();
         if (this.gateP.value) {         // set PR-2 to step thru the indirect address
             this.regMAR.value = this.regPR2.value = this.regOR2.value;
         } else {
@@ -1372,9 +1410,9 @@ class Processor {
         }
 
         this.fetch();
-        let mbrEven = this.regMBREven.value;
-        if (this.regMAR.value & 1) {
-            let mbrOdd = this.regMBROdd.value;
+        let mbrEven = this.regMBR.even;
+        if (this.regMAR.isOdd) {
+            let mbrOdd = this.regMBR.odd;
             this.regXBR.setDigit(0, mbrOdd);
             this.regXBR.setDigit(1, mbrEven);
             this.gateIA_REQ.value = mbrOdd & Register.flagMask;
@@ -1402,9 +1440,9 @@ class Processor {
 
         this.regMAR.value = this.regPR2.value;
         this.fetch();
-        let mbrEven = this.regMBREven.value;
-        let mbrOdd = this.regMBROdd.value;
-        if (this.regMAR.value & 1) {
+        let mbrEven = this.regMBR.even;
+        let mbrOdd = this.regMBR.odd;
+        if (this.regMAR.isOdd) {
             this.regXBR.setDigit(2, mbrOdd);
             this.regXBR.setDigit(3, mbrEven);
             if (this.opIndexable) {
@@ -1444,11 +1482,11 @@ class Processor {
 
         this.regMAR.value = this.regPR2.value;
         this.fetch();
-        let mbrOdd = this.regMBROdd.value;
-        if (this.regMAR.value & 1) {
+        let mbrOdd = this.regMBR.odd;
+        if (this.regMAR.isOdd) {
             this.regXBR.setDigit(4, mbrOdd);
         } else {
-            let mbrEven = this.regMBREven.value;
+            let mbrEven = this.regMBR.even;
             this.regXBR.setDigit(3, mbrOdd);
             this.regXBR.setDigit(4, mbrEven);
             if (this.opIndexable && (mbrOdd & Register.flagMask)) {
@@ -1505,20 +1543,185 @@ class Processor {
     *******************************************************************/
 
     /**************************************/
+    enterTransmit() {
+        /* Sets up execution for the transmit-like ops: TF, TFM, TD, TDM, TR,
+        TRNM, ADD, SUB */
+
+        // ?? reset false xmit entry ??
+        // ?? reset LD clear exit ??
+        // ?? reset P scan to result xmit ??
+        this.gateEXMIT_ENT.value = 1;
+        this.gateEXMIT_MODE.value = 1;
+        this.gate1ST_CYC.value = 1;
+        this.gateFM_1.value = 0;
+        this.gateFM_2.value = 0;
+        this.gateRECOMP.value = 0;
+    }
+
+    /**************************************/
     enterECycle() {
         /* Initiates the start of the current instruction E-cycles */
+        let atts = this.opAtts[this.opBinary];
 
         this.gateE_CYC_ENT.value = 1;
         this.gateIX.value = 0;
-        if (!this.opAtts[this.opBinary].opValid) {
+        if (!atts.opValid) {
             this.parityMARCheck.value = 1;      // invalid op code
-            this.checkStop();
+            this.checkStop(`enterECycle invalid op code=${this.opBinary} @${this.regIR1.binaryValue-12}`);
             return;
         }
 
-        // ?? DEBUG ?? For now, just go back to I-Cycles.
+        switch (this.opBinary) {
+        case 15:        // TDM - Transmit Digit Immediate
+        case 25:        // TD - Transmit Digit
+            enterTransmit();
+            setProcState(procStateE1);
+            break;
+
+        default:
+            let initialEState = atts.eState
+            if (initialEState) {
+                this.setProcState(procStateE1 + initialEState - 1);
+            } else {
+                // ?? DEBUG ?? For now, just go back to I-Cycles.
+                this.gateE_CYC_ENT.value = 0;
+                this.enterICycle();
+            }
+            break;
+        }
+    }
+
+    /**************************************/
+    stepECycle1() {
+        /* Executes E-Cycle 1 - processes data at the Q address*/
+        let digit = 0;
+        let dx = this.regMAR.isEven;    // digit index: 0/1
+
         this.gateE_CYC_ENT.value = 0;
-        this.enterICycle();
+        this.regMAR.value = this.regOR1.value;
+        this.fetch();
+
+        switch (this.opBinary) {
+        case 15:        // TDM - Transmit Digit Immediate
+        case 25:        // TD - Transmit Digit
+            this.regDR.even = this.regMBR.even;
+            if (!dx) {
+                this.gate2_DIG_CTRL.value = 1;  // process 2 digits at a time
+                this.regDR.odd = this.regMBR.odd;
+            }
+            this.setProcState(procStateE2);
+            break;
+
+        case 43:        // BD - Branch on Digit (!= zero)
+            if (this.regMBR.getDigit(dx) & Register.bcdMask) {
+                this.gateBR_EXEC.value = 1;
+            }
+            this.enterICycle();
+            break;
+
+        case 44:        // BNF - Branch No Flag
+            if (!(this.regMBR.getDigit(dx) & Register.flagMask)) {
+                this.gateBR_EXEC.value = 1;
+            }
+            this.enterICycle();
+            break;
+
+        case 45:        // BNR - Branch No Record Mark
+            if ((this.regMBR.getDigit(dx) & Envir.numRecMark) != numRecMark) {
+                this.gateBR_EXEC.value = 1;
+            }
+            this.enterICycle();
+            break;
+
+        case 55:        // BNG - Branch No Group Mark
+            if ((this.regMBR.getDigit(dx) & Envir.bcdMask) != numGroupMark) {
+                this.gateBR_EXEC.value = 1;
+            }
+            this.enterICycle();
+            break;
+
+        case 71:        // MF - Move Flag
+            digit = this.regMBR.getDigit(dx);
+            if (digit & Register.flagMask) {
+                this.gateFIELD_MARK_1.value = 1;
+                this.regMIR.setDigitFlag(dx, 0);
+                this.store();
+            }
+            this.regOR1.decr(1);
+            this.setProcState(procStateE2);
+            break;
+
+        default:
+            this.checkStop(`E-2 op not implemented ${this.opBinary}`);
+            break;
+        }
+    }
+
+    /**************************************/
+    stepECycle2() {
+        /* Executes E-Cycle 2 - processes data at the P address*/
+        let dx = this.regMAR.isEven;    // digit index: 0/1
+
+        this.gateE_CYC_ENT.value = 0;
+        this.regMAR.value = this.regOR2.value;
+        this.fetch();
+
+        switch (this.opBinary) {
+        case 15:        // TDM - Transmit Digit Immediate
+        case 25:        // TD - Transmit Digit
+            if (!this.gate2_DIG_CTRL.value) {
+                this.regDR.odd = this.regDR.even;
+            }
+            this.regMIR.setDigit(dx, this.regDR.odd);
+            this.enterICycle();
+            break;
+
+        case 32:        // SF - Set Flag
+            this.regMIR.setDigitFlag(dx, 1);
+            this.store();
+            this.enterICycle();
+            break;
+
+        case 33:        // CF - Clear Flag
+            this.regMIR.setDigitFlag(dx, 0);
+            this.store();
+            this.enterICycle();
+            break;
+
+        case 71:        // MF - Move Flag
+            if (this.regMBR.getDigitFlag(dx) ^ this.gateFIELD_MK_1.value) {
+                this.regMIR.setDigitFlag(dx, this.gateFIELD_MK_1.value);
+                this.store();
+            }
+            this.regOR2.decr(1);
+            this.setProcState(procStateE2);
+            break;
+
+        default:
+            this.checkStop(`E-2 op not implemented ${this.opBinary}`);
+            break;
+        }
+    }
+
+    /**************************************/
+    stepECycle3() {
+        /* Executes E-Cycle 3 */
+
+        this.checkStop("E-3 not implemented");
+    }
+
+    /**************************************/
+    stepECycle4() {
+        /* Executes E-Cycle 4 */
+
+        this.checkStop("E-4 not implemented");
+    }
+
+    /**************************************/
+    stepECycle5() {
+        /* Executes E-Cycle 5 */
+
+        this.checkStop("E-5 not implemented");
     }
 
 
@@ -1539,6 +1742,9 @@ class Processor {
         gate = this.procStateGates[state];
         if (gate) {
             gate.value = 1;
+        } else {
+            this.checkStop(`>>EMULATOR INVALID PROC STATE: ${state}`);
+            debugger;
         }
     }
 
@@ -1552,9 +1758,10 @@ class Processor {
     }
 
     /**************************************/
-    checkStop() {
+    checkStop(msg) {
         /* Stops running the processor as a result of a check indication */
 
+        console.info(`>>CHECK STOP: ${msg}`);
         this.gateCHECK_STOP.value = 1;
         this.enterManual();
     }
@@ -1564,15 +1771,11 @@ class Processor {
         /* Main execution control loop for the processor. Attempts to throttle
         performance to approximate that of a real 1620.
         Executes memory cycles until some sort of stop condition is detected */
-        let mbrEven = 0;                // local copy of MBREven
-        let mbrOdd = 0;                 // local copy of MBROdd
 
         do {
             switch (this.procState) {
             case procStateI1:
                 this.stepICycle1()
-                this.opIndexable = this.opAtts[this.opBinary].pIX &&
-                        (this.gateIX_BAND_1.value || this.gateIX_BAND_2.value);
                 break;
 
             case procStateI2:
@@ -1588,8 +1791,6 @@ class Processor {
                 break;
 
             case procStateI5:
-                this.opIndexable = this.opAtts[this.opBinary].qIX &&
-                        (this.gateIX_BAND_1.value || this.gateIX_BAND_2.value);
                 this.stepICycle5();
                 break;
 
@@ -1614,23 +1815,28 @@ class Processor {
                 break;
 
             case procStateE1:
+                this.stepECycle1();
                 break;
 
             case procStateE2:
+                this.stepECycle2();
                 break;
 
             case procStateE3:
+                this.stepECycle3();
                 break;
 
             case procStateE4:
+                this.stepECycle4();
                 break;
 
             case procStateE5:
+                this.stepECycle5();
                 break;
 
             default:
-                this.checkStop();
-                console.log("INVALID PROC STATE: %d", this.procState);
+                this.checkStop(`>>INVALID PROC STATE: ${this.procState}`);
+                console.log();
                 break;
             }
 
@@ -1713,6 +1919,7 @@ class Processor {
         this.parityMBREvenCheck.value = 0;
         this.parityMBROddCheck.value = 0;
         this.gateCHECK_STOP.value = 0;
+        this.updateLampGlow(1);
     }
 
     /**************************************/
@@ -1814,10 +2021,8 @@ class Processor {
     /**************************************/
     stopSIE() {
         /* If the processor is running, stops it at the end of the current
-        instruction. If the processor is already
-        in manual mode, executes the next instruction, then stops the processor.
-        only, then stop the processor. Note that this.gateMANUAL remains set
-        during the step execution */
+        instruction. If the processor is already in manual mode, executes the
+        next instruction, then stops the processor */
 
         // also enabled by INSERT, SAVE, DISPLAY MAR, not AUTO, RELEASE, SCE ??
         if (this.gatePOWER_ON.value) {
@@ -1832,7 +2037,7 @@ class Processor {
     /**************************************/
     stopSCE() {
         /* If the processor is running, stops it at the end of the current
-        memory cycle, but leaves it in automatic mode, even though Manual is also
+        memory cycle, but leaves it in automatic mode, even though MANUAL is also
         set. Otherwise, executes the next memory cycle, then stops the processor */
 
         if (this.gatePOWER_ON.value) {
@@ -1842,7 +2047,7 @@ class Processor {
                 this.run();             // singe-step one memory cycle
             } else {
                 this.gateMANUAL.value = 1;      // stop processor after next memory cycle
-                this.updateLampGlow(1); // ??
+                this.updateLampGlow(1);
             }
         }
     }
@@ -1893,8 +2098,7 @@ class Processor {
             let d = 0;
             let odd = addr & 1;
 
-            this.regMIREven.clear();
-            this.regMIROdd.clear();
+            this.regMIR.clear();
             this.regMAR.binaryValue = addr;
 
             for (let c of digits.toUpperCase()) {
@@ -1908,11 +2112,11 @@ class Processor {
                     }
 
                     if (odd) {
-                        this.regMIROdd.value = Envir.oddParity5[d];
+                        this.regMIR.odd = Envir.oddParity5[d];
                         this.store();
                         this.regMAR.incr(2);
                     } else {
-                        this.regMIREven.value = Envir.oddParity5[d];
+                        this.regMIR.even = Envir.oddParity5[d];
                     }
 
                     odd = 1-odd;
@@ -1920,7 +2124,7 @@ class Processor {
             }
 
             if (odd) {
-                this.regMIROdd.binaryValue = Envir.oddParity5[0];
+                this.regMIR.odd = Envir.oddParity5[0];
                 this.store();
             }
         };
@@ -1943,20 +2147,19 @@ class Processor {
 
         loadMemory(1000,
             "41 23456 78901" +  //  1000 NOP    23456,78901     no-op
-            "32 00099 99999" +  //  1012 SF     99,99999        set flag
-            "33 00099 77777" +  //  1024 CF     99,77777        clear flag
-            "60 0104H 00002" +  //  1036 BS     1048*,2         set IX band 2 (IA disabled)
+            "32 00950 99999" +  //  1012 SF     99,99999        set flag
+            "33 00950 77777" +  //  1024 CF     99,77777        clear flag
+            "60 0104H 00002" +  //  1036 BS     -1048,2         set IX band 2 (IA disabled)
             "60 01060 00009" +  //  1048 BS     1060,8          set IA mode
-            "46 0090D 01100" +  //  1060 BI     900*,11         branch on H/P, indirect through 904 => 1084
-            "47 0090I 01100" +  //  1072 BNI    7,11            branch on not H/P, indirect through 909 to 914 => 1084
-            "48 222B2 00I0D" +  //  1084 H      22222,66666     halt: P=22222+IX1(-10101) => 12121, Q=(see below)
+            "46 0090D 01100" +  //  1060 BI     -900,11         branch on H/P, indirect through 904 => 1084
+            "47 0090I 01100" +  //  1072 BNI    -909,11         branch on not H/P, indirect through 909 to 914 => 1084
+            "48 222B2 00I0D" +  //  1084 H      22222(B1),-904(B2) halt: P=22222+(-10101) => 12121, Q=(see below)
             "49 00000 33333"    //  1096 B      0,33333         branch to beginning
         );
-                        // @1084: Q = 904+IX2(15) = 919 indirect to 924+IX3(10) = 934 indirect => 77777
+                        // @1084: Q = -904(B2=15) = -919 indirect to -924(B3=10) = -934 indirect => 77777
 
         this.regMAR.clear();
-        this.regMIREven.clear();
-        this.regMIROdd.clear();
+        this.regMIR.clear();
     }
 
 } // class Processor
