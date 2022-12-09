@@ -1,0 +1,108 @@
+/***********************************************************************
+* retro-1620/webUI SystemConfig.css
+************************************************************************
+* Copyright (c) 2022, Paul Kimpel.
+* Licensed under the MIT License, see
+*        http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 Model 2 Emulator System Configuration web interface style sheet.
+************************************************************************
+* 2022-12-08  P.Kimpel
+*   Original version, from retro-220 webUI/B220SystemConfig.css.
+***********************************************************************/
+
+
+BUTTON.greenButton {
+    background-color:   #060;
+    color:              white;
+    height:             24px;
+    border-radius:      4px}
+
+BUTTON.redButton {
+    background-color:   #900;
+    color:              white;
+    height:             24px;
+    border-radius:      4px}
+
+.heading {
+    margin-top:         1em;
+    margin-bottom:      0.25em;
+    font-family:        DejaVuSansWeb, sans-serif;
+    font-size:          18px}
+.details {
+    margin-top:         1ex;
+    margin-left:        3em}
+
+#configBody {
+    height:             100%;
+    min-height:         100%;
+    overflow:           auto;
+    padding:            0;
+    font-size:          10pt;
+    margin:             0;
+    padding:            0;
+    background-color:   #246;
+    color:              white}
+
+#configDiv {
+    position:           absolute;
+    top:                0;
+    bottom:             0;
+    left:               0;
+    right:              0;
+    margin:             4px}
+
+#PageHeading {
+    position:           relative;
+    height:             40px;
+    width:              100%}
+
+#MessageArea {
+    position:           absolute;
+    text-align:         right;
+    top:                48px;
+    left:               90px;
+    right:              8px;
+    width:              auto;
+    font-size:          8pt}
+
+#SaveBtn {
+    position:           absolute;
+    top:                68px;
+    right:              8px;
+    height:             20px}
+
+#CancelBtn {
+    position:           absolute;
+    top:                68px;
+    right:              80px;
+    height:             20px}
+
+#DefaultsBtn {
+    position:           absolute;
+    top:                68px;
+    right:              200px;
+    width:              100px;
+    height:             20px}
+
+#SysConfigHeading {
+    position:           absolute;
+    top:                8px;
+    left:               8px;
+    font-family:        DejaVuSansWeb, sans-serif;
+    font-size:          18px}
+
+#retro1620Logo {
+    position:           absolute;
+    top:                8px;
+    right:              8px;
+    font-size:          6pt;
+    padding-left:       4px;
+    padding-right:      4px}
+
+#RetroLogoImage {
+    vertical-align:     bottom;
+    margin:             4px}
+
+#SystemMemorySize {
+    text-align:         center}

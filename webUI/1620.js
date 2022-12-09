@@ -12,19 +12,19 @@
 ***********************************************************************/
 
 import * as Version from "../emulator/Version.js";
-
-import {ControlPanel} from "./ControlPanel.js";
 import {Processor} from "../emulator/Processor.js";
 
-//import {PaperTapeReader} from "./PaperTapeReader.js";
-//import {PaperTapePunch} from "./PaperTapePunch.js";
+import {ControlPanel} from "./ControlPanel.js";
+import {SystemConfig} from "./SystemConfig.js";
+
 //import {Typewriter} from "./Typewriter.js";
 
 let globalLoad = (ev) => {
-    //let config = new I1620SystemConfig(); // system configuration object
+    let config = new SystemConfig();    // system configuration object
     let statusMsgTimer = 0;             // status message timer control cookie
 
     const context = {
+        config,
         systemShutDown,
         window
     };
@@ -36,17 +36,10 @@ let globalLoad = (ev) => {
     }
 
     /**************************************/
-    function showConfigName() {
-        /* Displays the name of the current system configuration */
-
-        $$("ConfigName").textContent = config.getConfigName();
-    }
-
-    /**************************************/
     function configureSystem(ev) {
         /* Opens the system configuration UI */
 
-        config.openConfigUI(showConfigName);
+        config.openConfigUI();
     }
 
     /**************************************/
@@ -77,15 +70,13 @@ let globalLoad = (ev) => {
         /* Establishes the system components */
 
         $$("StartUpBtn").disabled = true;
-        //$$("ConfigureBtn").disabled = true;
+        $$("ConfigureBtn").disabled = true;
 
         window.addEventListener("beforeunload", beforeUnload);
 
         context.processor = new Processor(context);
         context.controlPanel = new ControlPanel(context);
         //context.devices = {
-        //    "paperTapeReader":          new PaperTapeReader(context),
-        //    "paperTapePunch":           new PaperTapePunch(context),
         //    "typewriter":               new Typewriter(context)
         //}
     }
@@ -121,8 +112,8 @@ let globalLoad = (ev) => {
         $$("StartUpBtn").disabled = false;
         $$("StartUpBtn").focus();
         window.removeEventListener("beforeunload", beforeUnload);
-        //$$("ConfigureBtn").disabled = false;
-        //config.flush();
+        $$("ConfigureBtn").disabled = false;
+        config.flush();
     }
 
     /**************************************/
@@ -154,13 +145,13 @@ let globalLoad = (ev) => {
     /***** globalLoad() outer block *****/
 
     $$("StartUpBtn").disabled = true;
-    $$("EmulatorVersion").textContent = Version.i1620Version;
+    $$("EmulatorVersion").textContent = Version.retro1620Version;
     if (checkBrowser()) {
         $$("StartUpBtn").disabled = false;
         $$("StartUpBtn").addEventListener("click", systemStartup, false);
         $$("StartUpBtn").focus();
-        //$$("ConfigureBtn").disabled = false;
-        //$$("ConfigureBtn").addEventListener("click", configureSystem, false);
+        $$("ConfigureBtn").disabled = false;
+        $$("ConfigureBtn").addEventListener("click", configureSystem, false);
 
         //$$("StatusMsg").textContent = "??";
         //clearStatusMsg(30);

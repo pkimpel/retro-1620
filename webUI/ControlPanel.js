@@ -40,8 +40,9 @@ class ControlPanel {
         const w = 1414;
 
         this.context = context;
-        this.systemShutdown = context.systemShutdown
-        this.intervalToken = 0;         // interval timer cancel token
+        this.config = context.config;
+        this.systemShutdown = context.systemShutdown;
+        this.intervalToken = 0;         // panel refresh timer cancel token
         this.modifyLatch = 0;           // MODIFY key was pressed, awaiting CHECK RESET key
 
         this.boundUpdatePanel = this.updatePanel.bind(this);
@@ -118,15 +119,16 @@ class ControlPanel {
 
         // MAR Selector Switch
         let marCaptions = [
-                "OR-1", "OR-2", "OR-3", "OR-4", "OR-5", "CR-1", 
+                "OR-1", "OR-2", "OR-3", "OR-4", "OR-5", "CR-1",
                 "PR-1", "PR-2", "IR-1", "IR-2", "IR-3", "IR-4"];
         let marPositions = [];
         for (let a=0; a<360; a+=30) {
             marPositions.push((a+315)%360);
         }
 
-        this.marSelectorKnob = new MARSelectorKnob(this.$$("MARSelectorDiv"), "MARSelectorCupDiv", 0, marPositions, marCaptions);
-        p.marSelectorKnob = this.marSelectorKnob.position;
+        p.marSelectorKnob = this.config.getNode("ControlPanel.MARSelSW");
+        this.marSelectorKnob = new MARSelectorKnob(this.$$("MARSelectorDiv"),
+                "MARSelectorCupDiv", p.marSelectorKnob, marPositions, marCaptions);
 
         // Memory Address Register
         panel = this.$$("Panel6Blue");
@@ -185,11 +187,11 @@ class ControlPanel {
 
         // Instruction & Execution Cycle
         buildGatePanel("Panel3Gray", 3, [
-            "I_1", "I_6",  "E_1",
-            "I_2", "IA_1", "E_2",
-            "I_3", "IA_2", "E_3",
-            "I_4", "IA_3", "E_4",
-            "I_5", "IX",   "E_5"]);
+            "I-1", "I-6",  "E-1",
+            "I-2", "IA-1", "E-2",
+            "I-3", "IA-2", "E-3",
+            "I-4", "IA-3", "E-4",
+            "I-5", "IX",   "E-5"]);
 
         // Input-Output
         buildGatePanel("Panel2Blue", 7, [
@@ -270,40 +272,65 @@ class ControlPanel {
 
         this.dummy1Switch = new ToggleSwitch(panel, null, null, "Dummy1Switch",
                 ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
+
         this.diskStopSwitch = new ToggleSwitch(panel, null, null, "DiskStopSwitch",
                 ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
         this.diskStopSwitch.setCaption("|<br>|<br>STOP", false);
         this.diskStopSwitch.setCaption("PROGRAM", true);
+        this.diskStopSwitch.set(this.config.getNode("ControlPanel.DiskStopSW"));
+        p.diskStopSwitch = this.diskStopSwitch.state;
+
         this.parityStopSwitch = new ToggleSwitch(panel, null, null, "ParityStopSwitch",
                 ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
         this.parityStopSwitch.setCaption("|<br>|<br>STOP", false);
         this.parityStopSwitch.setCaption("PROGRAM", true);
+        this.parityStopSwitch.set(this.config.getNode("ControlPanel.ParityStopSW"));
+        p.parityStopSwitch = this.parityStopSwitch.state;
+
         this.ioStopSwitch = new ToggleSwitch(panel, null, null, "IOStopSwitch",
                 ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
         this.ioStopSwitch.setCaption("|<br>|<br>STOP", false);
         this.ioStopSwitch.setCaption("PROGRAM", true);
+        this.ioStopSwitch.set(this.config.getNode("ControlPanel.IOStopSW"));
+        p.ioStopSwitch = this.ioStopSwitch.state;
+
         this.oflowStopSwitch = new ToggleSwitch(panel, null, null, "OflowStopSwitch",
                 ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
         this.oflowStopSwitch.setCaption("|<br>|<br>STOP", false);
         this.oflowStopSwitch.setCaption("PROGRAM", true);
+        this.oflowStopSwitch.set(this.config.getNode("ControlPanel.OflowStopSW"));
+        p.oflowStopSwitch = this.oflowStopSwitch.state;
+
         this.program1Switch = new ToggleSwitch(panel, null, null, "Program1Switch",
                 ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
         this.program1Switch.setCaption("1<br>ON", false);
         this.program1Switch.setCaption("OFF", true);
+        this.program1Switch.set(this.config.getNode("ControlPanel.Program1SW"));
+        p.program1Switch = this.program1Switch.state;
+
         this.program2Switch = new ToggleSwitch(panel, null, null, "Program2Switch",
                 ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
         this.program2Switch.setCaption("2<br>ON", false);
         this.program2Switch.setCaption("OFF", true);
+        this.program2Switch.set(this.config.getNode("ControlPanel.Program2SW"));
+        p.program2Switch = this.program2Switch.state;
+
         this.program3Switch = new ToggleSwitch(panel, null, null, "Program3Switch",
                 ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
         this.program3Switch.setCaption("3<br>ON", false);
         this.program3Switch.setCaption("OFF", true);
+        this.program3Switch.set(this.config.getNode("ControlPanel.Program3SW"));
+        p.program3Switch = this.program3Switch.state;
+
         this.program4Switch = new ToggleSwitch(panel, null, null, "Program4Switch",
                 ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
         this.program4Switch.setCaption("4<br>ON", false);
         this.program4Switch.setCaption("OFF", true);
+        this.program4Switch.set(this.config.getNode("ControlPanel.Program3SW"));
+        p.program4Switch = this.program4Switch.state;
 
-        this.$$("EmulatorVersion").textContent = Version.i1620Version;
+
+        this.$$("EmulatorVersion").textContent = Version.retro1620Version;
         this.window.addEventListener("beforeunload", this.boundBeforeUnload);
         this.$$("OperatorContainer").addEventListener("click", this.boundControlSwitchClick);
         this.marSelectorKnob.setChangeListener(this.boundMARSelectorChange);
@@ -315,7 +342,7 @@ class ControlPanel {
             setTimeout(() => {
                 p.gatePOWER_READY.value = 1;
                 this.powerReadyLamp.set(1);
-                this.intervalToken = this.window.setInterval(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
+                this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
             }, 2000);
         }, 1000);
 
@@ -521,6 +548,8 @@ class ControlPanel {
         this.$$("ViewCR1").textContent = p.regCR1.binaryValue.toString().padStart(5, "0");
         this.$$("ViewPR1").textContent = p.regPR1.binaryValue.toString().padStart(5, "0");
         this.$$("ViewPR2").textContent = p.regPR2.binaryValue.toString().padStart(5, "0");
+
+        this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
     }
 
     /**************************************/
@@ -575,38 +604,46 @@ class ControlPanel {
             break;
         case "Dummy1Switch":            // non-functional, just turn it back off
             this.dummy1Switch.flip();
-            setTimeout(() => {this.dummy1Switch.flip()}, 250);
+            this.window.setTimeout(() => {this.dummy1Switch.flip()}, 250);
             break;
         case "DiskStopSwitch":
             this.diskStopSwitch.flip();
+            this.config.putNode("ControlPanel.DiskStopSW", this.diskStopSwitch.state);
             p.diskStopSwitch = this.diskStopSwitch.state;
             break;
         case "ParityStopSwitch":
             this.parityStopSwitch.flip();
+            this.config.putNode("ControlPanel.ParityStopSW", this.parityStopSwitch.state);
             p.parityStopSwitch = this.parityStopSwitch.state;
             break;
         case "IOStopSwitch":
             this.ioStopSwitch.flip();
+            this.config.putNode("ControlPanel.IOStopSW", this.ioStopSwitch.state);
             p.ioStopSwitch = this.ioStopSwitch.state;
             break;
         case "OflowStopSwitch":
             this.oflowStopSwitch.flip();
+            this.config.putNode("ControlPanel.OflowStopSW", this.oflowStopSwitch.state);
             p.oflowStopSwitch = this.oflowStopSwitch.state;
             break;
         case "Program1Switch":
             this.program1Switch.flip();
+            this.config.putNode("ControlPanel.Program1SW", this.program1Switch.state);
             p.program1Switch = this.program1Switch.state;
             break;
         case "Program2Switch":
             this.program2Switch.flip();
+            this.config.putNode("ControlPanel.Program2SW", this.program2Switch.state);
             p.program2Switch = this.program2Switch.state;
             break;
         case "Program3Switch":
             this.program3Switch.flip();
+            this.config.putNode("ControlPanel.Program3SW", this.program3Switch.state);
             p.program3Switch = this.program3Switch.state;
             break;
         case "Program4Switch":
             this.program4Switch.flip();
+            this.config.putNode("ControlPanel.Program4SW", this.program4Switch.state);
             p.program4Switch = this.program4Switch.state;
             break;
         }
@@ -621,6 +658,7 @@ class ControlPanel {
         /* Handler for changes in the MARS Selector knob position */
 
         this.context.processor.marSelectorKnob = position;
+        this.config.putNode("ControlPanel.MARSelSW", position);
     }
 
     /**************************************/
@@ -643,11 +681,11 @@ class ControlPanel {
         this.powerReadyLamp.set(0);
         this.powerOnLamp.set(0);
         if (this.intervalToken) {
-            this.window.clearInterval(this.intervalToken);
+            this.window.clearTimeout(this.intervalToken);
             this.intervalToken = 0;
         }
 
-        setTimeout(() => {
+        this.window.setTimeout(() => {
             this.context.systemShutDown();
             this.window.removeEventListener("beforeunload", this.boundBeforeUnload);
             this.window.close();

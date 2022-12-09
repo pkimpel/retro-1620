@@ -199,15 +199,15 @@ DIV.gateLamp {
     border:             2px solid #222;
     background-color:   #777777}
 DIV.gateLit1 {
-    background-color:   #A09388}
+    background-color:   #A09388}        /* try 8C8878 ?? */
 DIV.gateLit2 {
-    background-color:   #B3A696}
+    background-color:   #B3A696}        /* try A39981 ?? */
 DIV.gateLit3 {
-    background-color:   #C6B9A4}
+    background-color:   #C6B9A4}        /* try BAAA87 ?? */
 DIV.gateLit4 {
-    background-color:   #D9CCB2}
+    background-color:   #D9CCB2}        /* try D1BB8D ?? */
 DIV.gateLit5 {
-    background-color:   #ECDFC0}
+    background-color:   #ECDFC0}        /* try E8CC93 ?? */
 DIV.gateLit {
     background-color:   #FFF2CE}        /* try FFDD99 as a base ?? */
 

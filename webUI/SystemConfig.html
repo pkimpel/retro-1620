@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>retro-1620 Emulator System Configuration</title>
+<!--
+/***********************************************************************
+* retro-1620/webUI SystemConfig.html
+************************************************************************
+* Copyright (c) 2022, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 Model 2 Emulator System Configuration page.
+*
+* Implements the system configuration user interface for the 1620 emulator.
+*
+************************************************************************
+* 2022-12-08  P.Kimpel
+*   Original version, from retro-220/webUI/B220SystemConfig.html.
+***********************************************************************/
+-->
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link id=defaultStyleSheet rel=stylesheet type="text/css" href="Common.css">
+<link id=configStyleSheet rel=stylesheet type="text/css" href="SystemConfig.css">
+</head>
+
+<body id=configBody class=configBody>
+
+<div id=configDiv class=devicePanel>
+    <div id=PageHeading>
+        <span id=SysConfigHeading>IBM 1620-2 System Configuration</span>
+        <div id=retro1620Logo>
+            <img id=RetroLogoImage src="./resources/retro-1620-Logo.png" alt="retro-1620 logo">
+        </div>
+    </div>
+    <hr>
+
+    <div id=MessageArea></div>
+    <button id=CancelBtn class="redButton">CANCEL</button>
+    <button id=SaveBtn class="greenButton">SAVE</button>
+    <button id=DefaultsBtn class="redButton" title="Set configurartion to original defaults">SET DEFAULTS</button>
+
+
+    <div class=heading>System Properties:</div>
+    <div class=details>
+        <select id=SystemMemorySize>
+            <option          value=20000>20000
+            <option          value=40000>40000
+            <option          value=60000>60000
+        </select> Digit Memory Size
+    </div>
+
+
+    <div class=heading>731 Typewriter: [change on device panel]</div>
+    <div class=details>
+        Margin Left=<span id=MarginLeft></span>, Right=<span id=MarginRight></span>, Columns=<span id=Columns></span><br>
+        Tab Stops: <span id=TabStops></span>
+    </div>
+
+
+    <div class=heading>1622 Card Reader/Punch:</div>
+    <div class=details>
+        <input id=CardInstalled type=checkbox value=1> <label for=CardInstalled>Installed</label><br>
+        Reader/Punch Speed <select id=CardSpeed>
+            <option value=250>250/125 CPM
+            <option value=500>500/250 CPM
+        </select>
+    </div>
+
+
+    <div class=heading>1443 Printer:</div>
+    <div class=details>
+        <input id=PrinterInstalled type=checkbox value=1> <label for=PrinterInstalled>Installed</label><br>
+        Printer Speed <select id=PrinterSpeed>
+            <option value=240>240 LPM, 52-character set
+            <option value=300>300 LPM, 39-character set
+            <option value=600>600 LPM, 13-character set
+        </select>
+    </div>
+
+
+    <div class=heading>1311 Disk:</div>
+    <div class=details>
+        <input id=DiskInstalled type=checkbox value=1> <label for=DiskInstalled>Installed</label><br>
+        <br>
+        <input id=Disk0Enabled type=checkbox value=1> <label for=Disk0Enabled>Disk 0 Enabled (required)</label><br>
+        <input id=Disk1Enabled type=checkbox value=1> <label for=Disk1Enabled>Disk 1 Enabled</label><br>
+        <input id=Disk2Enabled type=checkbox value=1> <label for=Disk2Enabled>Disk 2 Enabled</label><br>
+        <input id=Disk3Enabled type=checkbox value=1> <label for=Disk3Enabled>Disk 3 Enabled</label><br>
+    </div>
+</div>
+
+<p>&nbsp;</p>
+
+</body>
+</html>
