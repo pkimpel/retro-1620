@@ -24,6 +24,7 @@ class SystemConfig {
     constructor() {
         /* Constructor for the SystemConfig configuration management object */
 
+        this.configData = null;         // the configuration properties
         this.flushTimerToken = 0;       // timer token for flushing configuration to localStorage
         this.window = null;             // configuration UI window object
         this.alertWin = window;         // current base window for alert/confirm/prompt
@@ -53,6 +54,32 @@ class SystemConfig {
     }
 
     /**************************************/
+    sortaDeepMerge(destNode, sourceNode) {
+        /* Both destNode and sourceNode must be non-null Objects and not Arrays
+        or Functions. Recursively merges into destNode any properties of
+        sourceNode missing in destNode. Does not alter any existing elementary
+        properties of destNode or its sub-objects. If either parameter is not
+        an object, does nothing. This isn't a complete recursive merge, but
+        it's good enough for SystemConfig data */
+
+        for (let key in sourceNode) {
+            if (!(key in destNode)) {
+                destNode[key] = structuredClone(sourceNode[key]);
+            } else {
+                let d = destNode[key];
+                if (typeof d == "object" && d !== null && !Array.isArray(d) &&
+                        Object.isExtensible(d) &&
+                        !(Object.isSealed(d) || Object.isFrozen(d))) {
+                    let s = sourceNode[key];
+                    if (typeof s == "object" && s !== null && !Array.isArray(s)) {
+                        this.sortaDeepMerge(d, s);
+                    }
+                }
+            }
+        }
+    }
+
+    /**************************************/
     loadConfigData(jsonConfig) {
         /* Attempts to parse the JSON configuration data string and store it in
         this.configData. If the parse is unsuccessful, recreates the default configuration.
@@ -66,16 +93,13 @@ class SystemConfig {
             this.createConfigData();
         }
 
-        // Apply updates if necessary
+        // Apply structural updates if necessary
         if (SystemConfig.configVersion != this.configData.version) {
             // Reserved for future use
         }
 
-        for (let key in SystemConfig.defaultConfig) {
-            if (!(key in this.configData)) {
-                this.configData[key] = SystemConfig.defaultConfig[key];
-            }
-        }
+        // Recursively merge any new properties from defaults
+        this.sortaDeepMerge(this.configData, SystemConfig.defaultConfig);
     }
 
     /**************************************/
