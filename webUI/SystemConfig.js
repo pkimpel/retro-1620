@@ -227,6 +227,9 @@ class SystemConfig {
 
         // System Properties
         this.setListValue("SystemMemorySize", cd.memorySize.toString());
+        this.$$("SystemIndexRegisters").checked = cd.indexRegisters;
+        this.$$("SystemFloatingPoint").checked = cd.floatingPoint;
+        this.$$("SystemBinaryCaps").checked = cd.binaryCapabilities;
 
         // Typewriter
         this.$$("MarginLeft").textContent = x = cd.Typewriter.marginLeft;
@@ -284,6 +287,10 @@ class SystemConfig {
         e = this.$$("SystemMemorySize");
         x = parseInt(e.options[e.selectedIndex].value, 10);
         cd.memorySize = (isNaN(x) ? 20000 : x);
+
+        cd.indexRegisters =     (this.$$("SystemIndexRegisters").checked ? 1 : 0);
+        cd.floatingPoint =      (this.$$("SystemFloatingPoint").checked ? 1 : 0);
+        cd.binaryCapabilities = (this.$$("SystemBinaryCaps").checked ? 1 : 0);
 
         // Typewriter
             // (nothing to do here -- changed on device)
@@ -371,6 +378,9 @@ SystemConfig.defaultConfig = {
     configName: "Default",
     version: SystemConfig.configVersion,
     memorySize: 40000,                  // digits
+    indexRegisters: 1,
+    floatingPoint: 0,                   // for now...
+    binaryCapabilities: 0,
 
     ControlPanel: {
         Program1SW: 0,                  // Program Switches 0/1
