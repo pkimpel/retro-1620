@@ -24,9 +24,11 @@
 export {openPopup};
 
 // Private variables
-let popupOpenDelayIncrement = 250;      // increment for pop-up open delay adjustment, ms
+const popupOpenDelayIncrement = 250;    // increment for pop-up open delay adjustment, ms
+const popupOpenDelayLimit = 10000;      // max wait for the popup to succeed
 let popupOpenDelay = 500;               // current pop-up open delay, ms
 let popupOpenQueue = [];                // queue of pop-up open argument objects
+let popupsBlocked = false;              // true if popups are just not working
 
 
 /**************************************/
@@ -51,6 +53,7 @@ function openPopup(parent, url, windowName, options, context, onload) {
         windowName: windowName,
         options: options,
         context: context,
+        delay: 0,
         onload: onload});
     if (popupOpenQueue.length == 1) { // queue was empty
         dequeuePopup();
@@ -71,7 +74,7 @@ function dequeuePopup() {
     let loader2 = null;
     let win = null;
 
-    if (entry) {
+    if (entry && !popupsBlocked) {
         try {
             win = entry.parent.open(entry.url, entry.windowName, entry.options);
         } catch (e) {
@@ -79,10 +82,17 @@ function dequeuePopup() {
         }
 
         if (!win) {                     // window open failed, requeue
-            popupOpenQueue.unshift(entry);
-            popupOpenDelay += popupOpenDelayIncrement;
-            setTimeout(dequeuePopup, popupOpenDelay);
-            //console.log("Pop-up open failed: " + entry.windowName + ", new delay=" + popupOpenDelay + "ms");
+            if (entry.delay > popupOpenDelayLimit) {
+                popupsBlocked = true;
+                entry.parent.alert("Sub-windows are not opening.\n" +
+                        "You may need to enable \"popups\" for this site in your browser.");
+            } else {
+                popupOpenQueue.unshift(entry);
+                popupOpenDelay += popupOpenDelayIncrement;
+                entry.delay += popupOpenDelay;
+                setTimeout(dequeuePopup, popupOpenDelay);
+                console.log("Pop-up open for %s failed, new delay=%dms", entry.windowName, popupOpenDelay);
+            }
         } else {                        // window open was successful
             if (entry.onload) {
                 loader1 = entry.onload.bind(entry.context);
