@@ -256,7 +256,7 @@ DIV.evenOddCaption {
     top:                16px;
     right:              114px;
     background-color:   #FFC;
-    box-shadow:         3px 3px 3px #666}
+    box-shadow:         inset 3px 3px 3px #666}
 #RegisterViewTable TR {
     vertical-align:     middle}
 #RegisterViewTable TR TD {
@@ -449,23 +449,23 @@ DIV.evenOddCaption {
     left:               -14px}
 
 #DiskCheckCaption {
-    top:                8px;
-    left:               44px;
+    top:                12px;
+    left:               46px;
     width:              42px}
 #ParityCheckCaption {
-    top:                8px;
-    left:               86px;
+    top:                12px;
+    left:               88px;
     width:              42px}
 #IOCheckCaption {
-    top:                8px;
-    left:               128px;
+    top:                12px;
+    left:               130px;
     width:              42px}
 #OflowCheckCaption {
-    top:                8px;
-    left:               170px;
+    top:                12px;
+    left:               172px;
     width:              42px}
 #ProgramSwitchesCaption {
-    top:                8px;
+    top:                12px;
     left:               233px;
     width:              42px}
 

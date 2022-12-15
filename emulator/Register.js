@@ -365,8 +365,8 @@ class Register {
 
             while (v) {
                 bit = v & 1;
-                v >>= 1;
                 this.glow[b] = this.glow[b]*alpha1 + bit*alpha;
+                v >>= 1;
                 ++b;
             }
 

@@ -48,4 +48,14 @@ ops?
 
 11. In I-6, same question as #10.
 
+12. Consider setting CLR MEM by mouse-down on the MODIFY key, drag to the CHECK
+RESET key, and then mouse-up to simulate a simultaneous press of the two keys
+(Dave Babcock's idea).
+
+13. Consider having the MARS Selector switch detect clicks on either side of the
+knob pointer and moving the pointer one step in the direction towards the click
+rather than one step in the "current" direction.
+
+14. Need more 1620-like toggle switches for the Control Panel.
+
 

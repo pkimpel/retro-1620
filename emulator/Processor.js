@@ -27,7 +27,7 @@ import {Register} from "./Register.js";
 import {Timer} from "./Timer.js";
 
 // Processor states
-const procStateNone = 0;
+const procStateLimbo = 0;
 const procStateI1 = 1;
 const procStateI2 = 2;
 const procStateI3 = 3;
@@ -52,6 +52,7 @@ class Processor {
         supplies references for objects from the 1620 emulator global environment */
 
         this.context = context;
+        this.devices = null;            // initialized in this.powerUp()
         this.envir = new Envir();
         this.envir.memorySize = context.config.getNode("memorySize");
 
@@ -241,141 +242,161 @@ class Processor {
         this.program4Switch = 0;
 
         // Core Memory - 2 digits are stored in the low-order 12 bits of each element
-        this.MM = new Uint16Array(new ArrayBuffer(this.envir.memorySize >> 1));
+        this.MM = new Uint16Array(this.envir.memorySize >> 1);
 
         // Op Code Attributes
         this.opBinary = 0;                              // binary value of current op code
         this.opIndexable = 0;                           // op code is valid for indexing addresses
         this.opAtts = new Array(100);                   // op code attributes table
 
+        this.xrInstalled = (context.config.getNode("indexRegisters") ? 1 : 0);
+        this.fpInstalled = (context.config.getNode("floatingPoint") ? 1 : 0);
+        this.bcInstalled = (context.config.getNode("binaryCapabilities") ? 1 : 0);
+
         // General emulator state
-        this.procState = procStateNone;                 // processor instruction load/execute state
+        this.procState = procStateLimbo;                // processor instruction load/execute state
         this.tracing = false;                           // trace command debugging
 
         // I/O Subsystem
         this.ioTimer = new Timer();                     // general timer for I/O operations
         this.ioPromise = Promise.resolve();             // general Promise for I/O operations
+        this.ioDevice = null;                           // I/O device object
+        this.ioSelectNr = 0;                            // I/O channel from Q8/Q9
+        this.ioVariant = 0;                             // I/O function variant from Q10/Q11
 
         // Bound Methods
 
         // Initialization
-        let buildOpAtts = (opValid, eState, rfe1, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4, opCode) => {
+        let buildOpAtts = (opCode, opValid, eState, rfe1, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4) => {
             this.opAtts[opCode] = {
                 opValid, eState, rfe1, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4};
         };
 
-        //          v es ?1 pi qi px qx im br fp ix bi ed q4  op
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0);      // 00
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  1);      // 01 FADD
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  2);      // 02 FSUB
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  3);      // 03 FMUL
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  4);      // 04
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  5);      // 05 FSL
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  6);      // 06 TFL
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0,  7);      // 07 BTFL
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  8);      // 08 FSR
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0,  9);      // 09 FDIV
+        //          op  v es ?1 pi qi px qx im br fp ix bi ed q4
+        buildOpAtts( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 00
+        buildOpAtts( 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 01 FADD
+        buildOpAtts( 2, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 02 FSUB
+        buildOpAtts( 3, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 03 FMUL
+        buildOpAtts( 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 04
+        buildOpAtts( 5, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 05 FSL
+        buildOpAtts( 6, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 06 TFL
+        buildOpAtts( 7, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 07 BTFL
+        buildOpAtts( 8, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 08 FSR
+        buildOpAtts( 9, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 09 FDIV
 
-        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 10);      // 10 BTAM
-        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 11);      // 11 AM
-        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 12);      // 12 SM
-        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 13);      // 13 MM
-        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 14);      // 14 CM
-        buildOpAtts(1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 15);      // 15 TDM
-        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 16);      // 16 TFM
-        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 17);      // 17 BTM
-        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 18);      // 18 LDM
-        buildOpAtts(1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 19);      // 19 DM
+        buildOpAtts(10, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0);      // 10 BTAM
+        buildOpAtts(11, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 11 AM
+        buildOpAtts(12, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 12 SM
+        buildOpAtts(13, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 13 MM
+        buildOpAtts(14, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 14 CM
+        buildOpAtts(15, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 15 TDM
+        buildOpAtts(16, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 16 TFM
+        buildOpAtts(17, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0);      // 17 BTM
+        buildOpAtts(18, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 18 LDM
+        buildOpAtts(19, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 19 DM
 
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 20);      // 20 BTA
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 21);      // 21 A
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 22);      // 22 S
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 23);      // 23 M
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 24);      // 24 C
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 25);      // 25 TD
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 26);      // 26 TF
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 27);      // 27 BT
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 28);      // 28 LD
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 29);      // 29 D
+        buildOpAtts(20, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 20 BTA
+        buildOpAtts(21, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 21 A
+        buildOpAtts(22, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 22 S
+        buildOpAtts(23, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 23 M
+        buildOpAtts(24, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 24 C
+        buildOpAtts(25, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 25 TD
+        buildOpAtts(26, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 26 TF
+        buildOpAtts(27, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 27 BT
+        buildOpAtts(28, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 28 LD
+        buildOpAtts(29, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 29 D
 
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 30);      // 30 TRNM
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 31);      // 31 TR
-        buildOpAtts(1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 32);      // 32 SF
-        buildOpAtts(1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 33);      // 33 CF
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 34);      // 34 K
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 35);      // 35 DN
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 36);      // 36 RN
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 37);      // 37 RA
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 38);      // 38 WN
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 39);      // 39 WA
+        buildOpAtts(30, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 30 TRNM
+        buildOpAtts(31, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 31 TR
+        buildOpAtts(32, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 32 SF
+        buildOpAtts(33, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 33 CF
+        buildOpAtts(34, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 34 K
+        buildOpAtts(35, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 35 DN
+        buildOpAtts(36, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 36 RN
+        buildOpAtts(37, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 37 RA
+        buildOpAtts(38, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 38 WN
+        buildOpAtts(39, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 39 WA
 
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40);      // 40
-        buildOpAtts(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41);      // 41 NOP
-        buildOpAtts(1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 42);      // 42 BB
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 43);      // 43 BD
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 44);      // 44 BNF
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 45);      // 45 BNR
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 46);      // 46 BI
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 47);      // 47 BNI
-        buildOpAtts(1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 48);      // 48 H         ?? TEMP ENABLE IA & IX on P & Q
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 49);      // 49 B
+        buildOpAtts(40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 40
+        buildOpAtts(41, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 41 NOP
+        buildOpAtts(42, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0);      // 42 BB
+        buildOpAtts(43, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 43 BD
+        buildOpAtts(44, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 44 BNF
+        buildOpAtts(45, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 45 BNR
+        buildOpAtts(46, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0);      // 46 BI
+        buildOpAtts(47, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0);      // 47 BNI
+        buildOpAtts(48, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 48 H         ?? TEMP enable IA & IX on P & Q for testing ??
+        buildOpAtts(49, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0);      // 49 B
 
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50);      // 50
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 51);      // 51
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52);      // 52
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53);      // 53
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54);      // 54
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 55);      // 55 BNG
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 55);      // 55
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 57);      // 57
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 58);      // 58
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 59);      // 59
+        buildOpAtts(50, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 50
+        buildOpAtts(51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 51
+        buildOpAtts(52, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 52
+        buildOpAtts(53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 53
+        buildOpAtts(54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 54
+        buildOpAtts(55, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 55 BNG
+        buildOpAtts(56, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 56
+        buildOpAtts(57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 57
+        buildOpAtts(58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 58
+        buildOpAtts(59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 59
 
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 60);      // 60 BS
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 61);      // 61 BX
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 62);      // 62 BXM
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 63);      // 63 BCX
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 64);      // 64 BCXM
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 65);      // 65 BLX
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 66);      // 66 BLXM
-        buildOpAtts(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 67);      // 67 BSX
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 68);      // 68
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 69);      // 69
+        buildOpAtts(60, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 60 BS
+        buildOpAtts(61, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 61 BX
+        buildOpAtts(62, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0);      // 62 BXM
+        buildOpAtts(63, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 63 BCX
+        buildOpAtts(64, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0);      // 64 BCXM
+        buildOpAtts(65, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 65 BLX
+        buildOpAtts(66, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0);      // 66 BLXM
+        buildOpAtts(67, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 67 BSX
+        buildOpAtts(68, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 68
+        buildOpAtts(69, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 69
 
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 70);      // 70 MA
-        buildOpAtts(1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 71);      // 71 MF
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 72);      // 72 TNS
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 73);      // 73 TNF
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 74);      // 74
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 75);      // 75
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 76);      // 76
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 77);      // 77
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 78);      // 78
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 79);      // 79
+        buildOpAtts(70, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 70 MA
+        buildOpAtts(71, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 71 MF
+        buildOpAtts(72, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 72 TNS
+        buildOpAtts(73, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 73 TNF
+        buildOpAtts(74, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 74
+        buildOpAtts(75, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 75
+        buildOpAtts(76, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 76
+        buildOpAtts(77, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 77
+        buildOpAtts(78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 78
+        buildOpAtts(79, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 79
 
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 80);      // 80
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 81);      // 81
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 82);      // 82
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83);      // 83
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 84);      // 84
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85);      // 85
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 86);      // 86
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 87);      // 87
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 88);      // 88
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 89);      // 89
+        buildOpAtts(80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 80
+        buildOpAtts(81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 81
+        buildOpAtts(82, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 82
+        buildOpAtts(83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 83
+        buildOpAtts(84, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 84
+        buildOpAtts(85, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 85
+        buildOpAtts(86, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 86
+        buildOpAtts(87, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 87
+        buildOpAtts(88, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 88
+        buildOpAtts(89, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 89
 
-        buildOpAtts(1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 90);      // 90 BBT
-        buildOpAtts(1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 91);      // 91 BMK
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 92);      // 92 ORF
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 93);      // 93 ANDF
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 94);      // 94 CPFL
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 95);      // 95 EORF
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 96);      // 96 OTD
-        buildOpAtts(1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 97);      // 97 DTO
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 98);      // 98
-        buildOpAtts(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 99);      // 99
+        buildOpAtts(90, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1);      // 90 BBT
+        buildOpAtts(91, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1);      // 91 BMK
+        buildOpAtts(92, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1);      // 92 ORF
+        buildOpAtts(93, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1);      // 93 ANDF
+        buildOpAtts(94, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1);      // 94 CPFL
+        buildOpAtts(95, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1);      // 95 EORF
+        buildOpAtts(96, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1);      // 96 OTD
+        buildOpAtts(97, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1);      // 97 DTO
+        buildOpAtts(98, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 98
+        buildOpAtts(99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 99
 
+        // Configure op code attributes for special features.
+        for (let att of this.opAtts) {
+            // Don't allow indexing of P & Q if indexing not available
+            att.pIX &= this.xrInstalled;
+            att.qIX &= this.xrInstalled;
 
+            if (att.fp) {
+                att.opValid = this.fpInstalled;
+            } else if (att.index) {
+                att.opValid = this.xrInstalled;
+            } else if (att.binary) {
+                att.opValid = this.bcInstalled;
+            }
+        }
     }
 
 
@@ -610,6 +631,7 @@ class Processor {
 
         this.regMAR.clear();
         this.regMIR.clear();
+        this.envir.startTiming();
 
         let a = 0;
         do {
@@ -618,6 +640,7 @@ class Processor {
             a += 2;
             if (a % 20000 == 0) {
                 this.gateCLR_CTRL.value = 1;
+                this.gateEND_OF_MODULE.value = 1;
             }
 
             if (this.envir.tick()) {
@@ -625,8 +648,8 @@ class Processor {
             }
         } while (a < Envir.maxMemorySize);
 
-        this.gateEND_OF_MODULE.value = 1;
         this.gateCLR_MEM.value = 0;
+        this.regMAR.clear();
         this.enterManual();
         this.updateLampGlow(1);         // freeze the lamp states
     }
@@ -635,6 +658,101 @@ class Processor {
     /*******************************************************************
     *  Input/Output Subsystem                                          *
     *******************************************************************/
+
+    /**************************************/
+    ioSelect(device, variant) {
+        /* Sets up this.ioDevice and this.ioVariant from the parameters */
+
+        this.gateIO_FLAG.value = 1;     // not sure about this...
+
+        this.ioSelectNr = device;
+        switch (device) {
+        case 1:         // Typewriter
+            this.ioDevice = this.devices.typewriter;
+            this.ioVariant = variant;
+            break;
+        case 2:         // Paper Tape Punch / Plotter
+            //break;
+        case 3:         // Paper Tape Reader
+            //break;
+        case 4:         // Card Punch
+            //break;
+        case 5:         // Card Reader
+            //break;
+        case 7:         // Disk Drive
+            //break;
+        case 9:         // Printer
+            //break;
+        case 33:        // Binary Paper Tape Reader
+            // break;
+        default:
+            this.ioDevice = null;
+            this.ioVariant = 0;
+            break;
+        }
+
+        if (!this.ioDevice) {
+            this.gateWRITE_INTERLOCK.value = 1;
+            this.enterLimbo();
+        }
+    }
+
+    /**************************************/
+    async dumpNumerically(digit) {
+        /* Executes one digit cycle of Dump Numerically (DN, 35). If the device
+        returns an end-of-block indication and we're at END OF MODULE, or
+        RELEASE occurs, terminate the I/O */
+
+        this.gateRESP_GATE.value = 0;
+        this.gateCHAR_GATE.value = 1;
+
+        let eob = await this.ioDevice.dumpNumeric(digit);
+        this.gateCHAR_GATE.value = 0;
+        this.gateRESP_GATE.value = 1;
+
+        if (this.regOR2.binaryValue % 20000 == 19999) {
+            this.gateEND_OF_MODULE.value = 1;
+        }
+
+        if (eob && this.gateEND_OF_MODULE.value) {
+            this.ioRelease();
+        }
+    }
+
+    /**************************************/
+    async writeNumerically(digit) {
+        /* Executes one digit cycle of Write Numerically (WN, 38). If the digit
+        matches a record mark or RELEASE occurs, terminate the I/O */
+
+        if ((digit & Envir.numRecMark) == Envir.numRecMark) { // it's more complicated than this for cards...
+            this.ioRelease();
+        } else {
+            this.gateRESP_GATE.value = 0;
+            this.gateCHAR_GATE.value = 1;
+
+            let eob = await this.ioDevice.writeNumeric(digit);
+            this.gateCHAR_GATE.value = 0;
+            this.gateRESP_GATE.value = 1;
+        }
+    }
+
+    /**************************************/
+    async writeAlphanumerically(digitPair) {
+        /* Executes one character cycle of Write Numerically (WN, 38). If the
+        character matches a record or group mark, or RELEASE occurs, terminate
+        the I/O */
+
+        if ((digitPair & Envir.numRecMark) == Envir.numRecMark) { // it's more complicated than this for cards...
+            this.ioRelease();
+        } else {
+            this.gateRESP_GATE.value = 0;
+            this.gateCHAR_GATE.value = 1;
+
+            let eob = await this.ioDevice.writeAlpha(digitPair);
+            this.gateCHAR_GATE.value = 0;
+            this.gateRESP_GATE.value = 1;
+        }
+    }
 
     /**************************************/
     async receiveInputCode(code) {
@@ -693,120 +811,30 @@ class Processor {
     }
 
     /**************************************/
-    async receiveKeyboardCode(code) {
-        /* Processes a keyboard code sent from ControlPanel. If the code is
-        negative, it is the ASCII code for a control command used with the ENABLE
-        switch. Otherwise it is an I/O data/control code to be processed as
-        TYPE IN (D=31, S=12) input . Note that an "S" key can be used for
-        both purposes depending on the state of this.enableSwitch */
+    ioExit() {
+        /* Terminates an I/O operation, resetting state */
 
-        if (this.enableSwitch) {                                // Control command
-            await this.executeKeyboardCommand(code);
-        } else if (this.OC.value == IOCodes.ioCmdTypeIn) {      // Input during TYPE IN
-            await this.receiveInputCode(code);
-            if (code == IOCodes.ioCodeStop && this.OC.value == IOCodes.ioCmdTypeIn) { // check for cancel
-                this.finishIO();
-            }
-        }
+        this.gateIO_FLAG.value = 0;     // not sure about this...
+        this.gateRESP_GATE.value = 0;   // not sure about this, either...
+        this.gateRD.value = 0;
+        this.gateWR.value = 0;
+        this.gateCHAR_GATE.value = 0;
+        this.ioDevice = null;
+        this.ioSelectNr = 0;
+        this.ioVariant = 0;
+        this.envir.startTiming();       // reset the emulation clock
     }
 
     /**************************************/
-    async typeLine19() {
-        /* Types the contents of line 19, starting with the four high-order
-        bits of word 107, and precessing the line with each character until
-        the line is all zeroes. One character is output every four word times */
-        let code = 0;                   // output character code
-        let fmt = 0;                    // format code
-        let line19Empty = false;        // line 19 is now all zeroes
-        let printing = true;            // true until STOP or I/O cancel
-        let suppressing = false;        // zero suppression in force
-        let zeroed = false;             // precessor function reports line 19 all zeroes
+    ioRelease() {
+        /* Releases any currently-active I/O operation */
 
-        const printPeriod = Util.drumCycleTime*4;
-
-        this.OC.value = IOCodes.ioCmdType19;
-        this.activeIODevice = this.devices.typewriter;
-
-        this.drum.ioStartTiming();
-        let outTime = this.drum.ioTime + printPeriod;
-
-        // Start a MZ reload cycle.
-        do {
-            fmt = await this.drum.ioPrecessLongLineToMZ(2, 3);  // get initial format code
-            suppressing = (this.punchSwitch != 1);
-
-            // The character cycle.
-            do {
-                this.OS.value = this.drum.ioDetect19Sign107();
-                [code, zeroed] = await this.formatOutputCharacter(fmt, this.boundIOPrecess19ToCode);
-                if (zeroed) {
-                    line19Empty = true;
-                }
-
-                switch (code) {
-                case IOCodes.ioDataMask:        // digit zero
-                    if (suppressing) {
-                        code = IOCodes.ioCodeSpace;
-                    }
-                    break;
-                case IOCodes.ioCodeCR:
-                case IOCodes.ioCodeTab:
-                    suppressing = (this.punchSwitch != 1);      // establish suppression for next word
-                    break;
-                case IOCodes.ioCodeSpace:
-                case IOCodes.ioCodeMinus:
-                case IOCodes.ioCodeReload:
-                case IOCodes.ioCodeWait:
-                    // does not affect suppression
-                    break;
-                case IOCodes.ioCodeStop:
-                    if (line19Empty) {
-                        printing = false;
-                    } else {
-                        code = IOCodes.ioCodeReload;
-                    }
-                    break;
-                default:                        // all non-zero digit codes and
-                    suppressing = false;        // Period turn off suppression
-                    break;
-                }
-
-                // Pause printing while the ENABLE switch is on
-                while (this.enableSwitch && this.OC.value == IOCodes.ioCmdType19) {
-                    await this.ioTimer.delayUntil(outTime);
-                    outTime += printPeriod;
-                }
-
-                if (this.OC.value != IOCodes.ioCmdType19) {
-                    printing = false;   // I/O canceled
-                } else {
-                    this.devices.typewriter.write(code);        // no await
-                    if (this.punchSwitch == 1) {
-                        this.devices.paperTapePunch.write(code);
-                    }
-
-                    await this.ioTimer.delayUntil(outTime);
-                    outTime += printPeriod;
-                    fmt = await this.drum.ioPrecessMZToCode(3); // get next 3-bit format code
-                }
-            } while (code != IOCodes.ioCodeReload && printing);
-        } while (printing);
-
-        if (this.OC.value == IOCodes.ioCmdType19) {     // check for cancel
-            this.finishIO();
+        if (this.gateIO_FLAG.value) {
+           this.gateREL.value = 1;
+           this.gateINSERT.value = 0;
+           this.ioExit();
+           this.enterICycle();
         }
-    }
-
-    /**************************************/
-    finishIO() {
-        /* Terminates an I/O operation, resetting state and setting Ready */
-
-        //this.OC.value = IOCodes.ioCmdReady;     // set I/O Ready state
-        //this.AS.value = 0;
-        //this.OS.value = 0;
-        //this.ioBitCount = 0;
-        //this.activeIODevice = null;
-        //this.duplicateIO = false;
     }
 
 
@@ -1045,7 +1073,7 @@ class Processor {
         case 0:                                 // 00=(invalid op code from I-1)
             this.parityMARCheck.value = 1;
             this.checkStop(`I-2 invalid op code 00 @${this.regIR1.binaryValue-2}`);
-            brak;
+            break;
 
         case 42:                                // 42=BB, Branch Back
             // ?? MAR Check Stop if no prior BT instruction or SAVE control ?? Mod2 Ref p.38 vs Germain p.97
@@ -1241,17 +1269,22 @@ class Processor {
         let mbrOdd = this.regMBR.odd;
 
         switch (this.opBinary) {
-        case 34:        // K, Control I/O device
-            // ?? do device control function ??
-            this.enterICycle();
+        case 34:        // K, Control I/O device [handled in exitAddressing()]
+            this.gateWR.value = 1;
+            this.ioSelect(this.regDR.binaryValue, this.regMBR.odd & Register.bcdMask);
             break;
-        case 35:        // DN, Dump Numerically
         case 36:        // RN, Read Numerically
         case 37:        // RA, Read Alphanumerically
+            this.gateRD.value = 1;
+            this.regMQ.value = mbrOdd;
+            this.ioSelect(this.regDR.binaryValue, this.regMBR.odd & Register.bcdMask);
+            break;
+        case 35:        // DN, Dump Numerically
         case 38:        // WN, Write Numerically
         case 39:        // WA, Write Alphanumerically
-            // ?? What happens to Q10, ?? needed for I/O function
+            this.gateWR.value = 1;
             this.regMQ.value = mbrOdd;
+            this.ioSelect(this.regDR.binaryValue, this.regMBR.odd & Register.bcdMask);
             break;
 
         case 46:        // BI, Branch Indicator
@@ -1524,6 +1557,13 @@ class Processor {
             }
         } else {                        // finish with Q address
             switch(this.opBinary) {
+            case 34:        // K, Control
+                this.enterLimbo();      // stop run() while control() runs async
+                this.ioDevice.control(this.ioVariant).then(() => {
+                    this.ioRelease();
+                    this.run();         // exit from Limbo
+                });
+                break;
             case 41:        // NOP, No Operation
                 this.enterICycle();
                 break;
@@ -1554,8 +1594,8 @@ class Processor {
         this.gateEXMIT_ENT.value = 1;
         this.gateEXMIT_MODE.value = 1;
         this.gate1ST_CYC.value = 1;
-        this.gateFM_1.value = 0;
-        this.gateFM_2.value = 0;
+        this.gateFIELD_MK_1.value = 0;
+        this.gateFIELD_MK_2.value = 0;
         this.gateRECOMP.value = 0;
     }
 
@@ -1575,8 +1615,8 @@ class Processor {
         switch (this.opBinary) {
         case 15:        // TDM - Transmit Digit Immediate
         case 25:        // TD - Transmit Digit
-            enterTransmit();
-            setProcState(procStateE1);
+            this.enterTransmit();
+            this.setProcState(procStateE1);
             break;
 
         default:
@@ -1594,9 +1634,9 @@ class Processor {
 
     /**************************************/
     stepECycle1() {
-        /* Executes E-Cycle 1 - processes data at the Q address*/
+        /* Executes E-Cycle 1 - processes data at the OR1 (Q) address */
         let digit = 0;
-        let dx = this.regMAR.isEven;    // digit index: 0/1
+        let dx = this.regOR1.isEven;    // digit index: 0/1
 
         this.gateE_CYC_ENT.value = 0;
         this.regMAR.value = this.regOR1.value;
@@ -1607,7 +1647,7 @@ class Processor {
         case 25:        // TD - Transmit Digit
             this.regDR.even = this.regMBR.even;
             if (!dx) {
-                this.gate2_DIG_CTRL.value = 1;  // process 2 digits at a time
+                this.gate2_DIG_CNTRL.value = 1; // process 2 digits at a time
                 this.regDR.odd = this.regMBR.odd;
             }
             this.setProcState(procStateE2);
@@ -1659,9 +1699,9 @@ class Processor {
     }
 
     /**************************************/
-    stepECycle2() {
-        /* Executes E-Cycle 2 - processes data at the P address*/
-        let dx = this.regMAR.isEven;    // digit index: 0/1
+    async stepECycle2() {
+        /* Executes E-Cycle 2 - processes data at the OR2 (P) address */
+        let dx = this.regOR2.isEven;    // digit index: 0/1
 
         this.gateE_CYC_ENT.value = 0;
         this.regMAR.value = this.regOR2.value;
@@ -1670,10 +1710,11 @@ class Processor {
         switch (this.opBinary) {
         case 15:        // TDM - Transmit Digit Immediate
         case 25:        // TD - Transmit Digit
-            if (!this.gate2_DIG_CTRL.value) {
+            if (!this.gate2_DIG_CNTRL.value) {
                 this.regDR.odd = this.regDR.even;
             }
             this.regMIR.setDigit(dx, this.regDR.odd);
+            this.store();
             this.enterICycle();
             break;
 
@@ -1687,6 +1728,21 @@ class Processor {
             this.regMIR.setDigitFlag(dx, 0);
             this.store();
             this.enterICycle();
+            break;
+
+        case 35:        // DN - Dump Numerically
+            await this.dumpNumerically(this.regMBR.getDigit(dx));
+            this.regOR2.incr(1);
+            break;
+
+        case 38:        // WN - Write Numerically
+            await this.writeNumerically(this.regMBR.getDigit(dx));
+            this.regOR2.incr(2);
+            break;
+
+        case 39:        // WA - Write Alphanumerically
+            await this.writeAlphanumerically(this.regMBR.value);
+            this.regOR2.incr(2);
             break;
 
         case 71:        // MF - Move Flag
@@ -1743,10 +1799,21 @@ class Processor {
         gate = this.procStateGates[state];
         if (gate) {
             gate.value = 1;
-        } else {
+        } else if (state != procStateLimbo) {
             this.checkStop(`>>EMULATOR INVALID PROC STATE: ${state}`);
             debugger;
         }
+    }
+
+    /**************************************/
+    enterLimbo() {
+        /* Stops processing by setting this.procState to procStateLimbo. This
+        will exit this.run() but leave the Processor in AUTOMATIC and not MANUAL
+        mode. Typically used for read/write interlock conditions. To get out of
+        this, you'll usually need to RELEASE and RESET, then manually restart
+        the program */
+
+        this.setProcState(procStateLimbo);
     }
 
     /**************************************/
@@ -1769,10 +1836,12 @@ class Processor {
 
     /**************************************/
     async run() {
-        /* Main execution control loop for the processor. Attempts to throttle
-        performance to approximate that of a real 1620.
-        Executes memory cycles until some sort of stop condition is detected */
+        /* Main execution control loop for the processor. Does one iteration per
+        memory cycle until the Processor is put in MANUAL mode. Attempts to
+        throttle performance to approximate that of a real 1620. Executes memory
+        cycles until some sort of stop condition is detected */
 
+        this.envir.startTiming();
         do {
             switch (this.procState) {
             case procStateI1:
@@ -1820,7 +1889,7 @@ class Processor {
                 break;
 
             case procStateE2:
-                this.stepECycle2();
+                await this.stepECycle2();
                 break;
 
             case procStateE3:
@@ -1835,19 +1904,28 @@ class Processor {
                 this.stepECycle5();
                 break;
 
+            case procStateLimbo:
+                this.updateLampGlow(1);
+                return;             // exit into Limbo
+                break;
+
             default:
                 this.checkStop(`>>INVALID PROC STATE: ${this.procState}`);
-                console.log();
                 break;
             }
 
-            // Increment emulated time and throttle performance
-            if (this.envir.tick()) {
+            // Increment the emulation clock and note whether it's time to
+            // throttle performance. We need to increment after the register and
+            // flip-flop states have been set so that register their glow values
+            // will be computed properly.
+            if (this.gateIO_FLAG.value) {
+                this.envir.startTiming();
+            } else if (this.envir.tick()) {
                 await this.envir.throttle();
             }
         } while (!this.gateMANUAL.value);
 
-        this.updateLampGlow(1);
+        this.updateLampGlow(1);         // freeze current state in the lamps
     }
 
 
@@ -1871,8 +1949,11 @@ class Processor {
         this.gateEZ.value = 0;
         this.gateBR_EXEC.value = 0;
         this.gateE_CYC_ENT.value = 0;
-        this.gateRD.value = 0;
-        this.gateWR.value = 0;
+
+        this.ioExit();
+        this.gateRESP_GATE.value = 0;
+        this.gateWRITE_INTERLOCK.value = 0;
+        this.gateREAD_INTERLOCK.value = 0;
 
         this.gateIA_1.value = 0;
         this.gateI_1.value = 0;
@@ -1976,24 +2057,35 @@ class Processor {
         /* Initiates typewriter entry into memory */
 
         if (this.gatePOWER_ON.value && this.gateMANUAL.value && !this.gateAUTOMATIC.value) {
+            this.gateRD.value = 1;
             this.gateINSERT.value = 1;
             this.gateREL.value = 0;
-            this.resetICycle();
+            this.gateMANUAL.value = 0;
+            this.gateAUTOMATIC.value = 1;
+            this.gate1ST_CYC.value = 1;
+            this.regOP.binaryValue = 36; // RN, Read Numerically
+            this.setProcState(procStateE2);
+            this.gateRUN.value = 1;
             this.updateLampGlow(1);
-            // ?? The rest TBD ??
+            this.run();                 // async, returns immediately
+
+            // The rest is to be done during insert 1st cycle
+            this.gateBR_EXEC.value = 0;
+            this.regIR1.clear();
+            this.regOR2.clear();
+            this.regMAR.clear();
         }
     }
 
     /**************************************/
-    releaseIO() {
+    release() {
         /* Releases any currently-active I/O operation */
 
-        if (this.gatePOWER_ON.value /* && IO SEL active ?? */) {
-           this.gateREL.value = 1;
-           this.gateINSERT.value = 0;
-           this.gateSTOP.value = 1;
-           this.updateLampGlow(1);
-           // ?? The rest TBD ??
+        if (this.gatePOWER_ON.value && this.gateIO_FLAG.value) {
+            this.gateSTOP.value = 1;
+            // this.enterManual();      // STOP will do this in I-Cycle Entry
+            this.ioRelease();
+            this.updateLampGlow(1);
         }
     }
 
@@ -2003,7 +2095,6 @@ class Processor {
 
         // also enabled by INSERT, SAVE, DISPLAY MAR, not AUTO, RELEASE, SCE ??
         if (this.gatePOWER_ON.value /* ?? && this.gateMANUAL.value ?? */) {
-            this.envir.startTiming();
             this.gateSCE.value = 0;     // reset single-cycle mode
             this.gateSAVE_CTRL.value = 0;
             this.gateMANUAL.value = 0;
@@ -2078,8 +2169,8 @@ class Processor {
     powerDown() {
         /* Powers down the processor */
 
-        this.gateMANUAL.value = 1;                      // stop immediately
-        this.releaseIO();
+        this.ioRelease();
+        this.enterManual();                             // stop immediately
         this.gatePOWER_ON.value = false;
         this.gatePOWER_READY.value = false;
     }
@@ -2099,8 +2190,8 @@ class Processor {
             let d = 0;
             let odd = addr & 1;
 
-            this.regMIR.clear();
             this.regMAR.binaryValue = addr;
+            this.regMIR.value = this.MM[addr >> 1];
 
             for (let c of digits.toUpperCase()) {
                 if (c != " ") {
@@ -2109,7 +2200,26 @@ class Processor {
                     } else if (flagRex.test(c)) {
                         d = (c.charCodeAt(0) - flagZero) | Register.flagMask;
                     } else {
-                        d = 0xF;            // Group Mark
+                        switch (c) {
+                        case "#":
+                            d = 0xA;    // record mark
+                            break;
+                        case "$":
+                            d = 0xB;    // (unassigned)
+                            break;
+                        case "_":
+                            d = 0xC;    // numeric blank
+                            break;
+                        case "%":
+                            d = 0xD;    // (unassigned)
+                            break;
+                        case "&":
+                            d = 0xE;    // (unassigned)
+                            break;
+                        default:
+                            d = 0xF;    // Group Mark
+                            break;
+                        }
                     }
 
                     if (odd) {
@@ -2130,6 +2240,10 @@ class Processor {
             }
         };
 
+        // First, clear memory to zeroes.
+        this.regMIR.clear();
+        this.MM.fill(this.regMIR.value);
+
         // Multiplication table
         loadMemory(100,
             "00000000000010203040002040608000306090210040802161" +      // 100-149
@@ -2140,6 +2254,9 @@ class Processor {
         // ?? DEBUG ?? I-Cycle testing
         loadMemory(0,
             "60 01000 00008");  //  0000 BS     1000,8          branch to 1000, reset IA mode
+
+        loadMemory(200,
+            "0@1A2B3C4D5E6F7G8H9I #$_%&|");
 
         loadMemory(300,         // load index registers
             "88888 00000 00000 00000 00000 00000 00000 00000" +         // Band 1: IX 0-7
@@ -2157,7 +2274,27 @@ class Processor {
             "46 0090D 01100" +  //  1060 BI     -900,11         branch on H/P, indirect through 904 => 1084
             "47 0090I 01100" +  //  1072 BNI    -909,11         branch on not H/P, indirect through 909 to 914 => 1084
             "48 222B2 00I0D" +  //  1084 H      22222(B1),-904(B2) halt: P=22222+(-10101) => 12121, Q=(see below)
-            "49 00000 33333"    //  1096 B      0,33333         branch to beginning
+            "35 00000 00100" +  //  1096 DNTY   0,100           dump numerically 00000 to typewriter
+            "34 00000 00104" +  //  1108 K      0,104           index carriage
+            "35 19990 00100" +  //  1120 DNTY   19990,102       dump numerically 19990 to typewriter
+            "34 00000 00102" +  //  1132 K      0,102           carriage return
+            "34 00000 00108" +  //  1144 K      0,108           tabulate
+            "34 00000 00102" +  //  1156 K      0,102           carriage return
+            "38 00200 00100" +  //  1168 WNTY   200,100         write numerically
+            "34 00000 00108" +  //  1180 K      0,108           tabulate
+            "39 00200 00100" +  //  1192 WATY   200,100         write alphanumerically
+            "34 00000 00102" +  //  1204 K      0,102           carriage return
+            "34 00000 00102" +  //  1216 K      0,102           carriage return
+
+            // The Brent Marsh Memorial Group Mark Challenge of 1968
+
+            "15 19999 0000|" +  //  1228 TDM    19999,GM        transmit group mark to 19999
+            "35 19999 00100" +  //  1240 DNTY   19999,100       dump the group mark
+            "47 01240 00100" +  //  1252 BNI    1240,1          branch unless PS1 is on
+            "34 00000 00102" +  //  1264 K      0,102           carriage return
+
+            "48 77777 99999" +  //  1276 H      77777,99999     halt again
+            "49 00000 33333"    //  1288 B      0,33333         branch to beginning
         );
                         // @1084: Q = -904(B2=15) = -919 indirect to -924(B3=10) = -934 indirect => 77777
 

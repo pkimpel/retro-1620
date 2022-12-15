@@ -84,6 +84,8 @@ function dequeuePopup() {
         if (!win) {                     // window open failed, requeue
             if (entry.delay > popupOpenDelayLimit) {
                 popupsBlocked = true;
+                console.log("Sub-windows are not opening after %fs delay. ABORT", entry.delay/1000);
+                entry.parent.focus();
                 entry.parent.alert("Sub-windows are not opening.\n" +
                         "You may need to enable \"popups\" for this site in your browser.");
             } else {

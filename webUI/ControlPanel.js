@@ -55,9 +55,9 @@ class ControlPanel {
         this.doc = null;
         this.window = null;
         openPopup(window, "../webUI/ControlPanel.html", "ControlPanel",
-                "location=no,scrollbars,resizable,width=" + w + ",height=" + h +
-                    ",top=0,left=" + (screen.availWidth - w),
-                this, this.panelOnLoad.bind(this));
+                `location=no,scrollbars,resizable,width=${w},height=${h}` +
+                    `,top=0,left=${screen.availWidth - w}`,
+                this, this.panelOnLoad);
     }
 
     /**************************************/
@@ -213,9 +213,9 @@ class ControlPanel {
         panel = this.$$("IndicatorButtonPanel");
         this.powerOnLamp = new ColoredLamp(panel, null, null, "PowerOnLamp", "POWER<br>ON", "panel greenLamp", "panel greenLamp greenLit");
         this.powerReadyLamp = new ColoredLamp(panel, null, null, "PowerReadyLamp", "POWER<br>READY", "panel whiteLamp", "panel whiteLamp whiteLit");
-        this.thermalLamp = new ColoredLamp(panel, null, null, "ThermalLamp", "THERMAL", "panel redLamp", "panel redLamp redLit");
-        this.writeInterlockLamp = new ColoredLamp(panel, null, null, "WriteInterlockLamp", "WRITE<br>INTERLOCK", "panel redLamp", "panel redLamp redLit");
-        this.readInterlockLamp = new ColoredLamp(panel, null, null, "ReadInterlockLamp", "READ<br>INTERLOCK", "panel redLamp", "panel redLamp redLit");
+        this.thermalLamp = new ColoredLamp(panel, null, null, "ThermalLamp", "THERMAL", "panel orangeLamp", "panel orangeLamp orangeLit");
+        this.writeInterlockLamp = new ColoredLamp(panel, null, null, "WriteInterlockLamp", "WRITE<br>INTERLOCK", "panel orangeLamp", "panel orangeLamp orangeLit");
+        this.readInterlockLamp = new ColoredLamp(panel, null, null, "ReadInterlockLamp", "READ<br>INTERLOCK", "panel orangeLamp", "panel orangeLamp orangeLit");
         this.saveLamp = new ColoredLamp(panel, null, null, "SaveLamp", "SAVE", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.twprSelectedLamp = new ColoredLamp(panel, null, null, "TypewriterSelectedLamp", "TWPR<br>SELECTED", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.RFE1Lamp = new ColoredLamp(panel, null, null, "RFE1Lamp", "&nbsp;", "panel whiteLamp", "panel whiteLamp whiteLit");
@@ -223,21 +223,21 @@ class ControlPanel {
         this.RFE3Lamp = new ColoredLamp(panel, null, null, "RFE3Lamp", "&nbsp;", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.automaticLamp = new ColoredLamp(panel, null, null, "AutomaticLamp", "AUTOMATIC", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.manualLamp = new ColoredLamp(panel, null, null, "ManualLamp", "MANUAL", "panel whiteLamp", "panel whiteLamp whiteLit");
-        this.checkStopLamp = new ColoredLamp(panel, null, null, "CheckStopLamp", "CHECK<br>STOP", "panel redLamp", "panel redLamp redLit");
+        this.checkStopLamp = new ColoredLamp(panel, null, null, "CheckStopLamp", "CHECK<br>STOP", "panel orangeLamp", "panel orangeLamp orangeLit");
 
-        this.powerBtn = new PanelButton(panel, null, null, "PowerBtn", "POWER", "panel blackButton", "blackButtonDown");
-        this.resetBtn = new PanelButton(panel, null, null, "ResetBtn", "RESET", "panel blackButton", "blackButtonDown");
-        this.modifyBtn = new PanelButton(panel, null, null, "ModifyBtn", "MODIFY", "panel blackButton", "blackButtonDown");
-        this.checkResetBtn = new PanelButton(panel, null, null, "CheckResetBtn", "CHECK<br>RESET", "panel blackButton", "blackButtonDown");
-        this.displayMARBtn = new PanelButton(panel, null, null, "DisplayMARBtn", "DISPLAY<br>MAR", "panel blackButton", "blackButtonDown");
-        this.saveBtn = new PanelButton(panel, null, null, "SaveBtn", "SAVE", "panel blackButton", "blackButtonDown");
-        this.releaseBtn = new PanelButton(panel, null, null, "ReleaseBtn", "RELEASE", "panel blackButton", "blackButtonDown");
-        this.insertBtn = new PanelButton(panel, null, null, "InsertBtn", "INSERT", "panel blackButton", "blackButtonDown");
-        this.RFE1Btn = new PanelButton(panel, null, null, "RFE1Btn", "&nbsp;", "panel blackButton", "blackButtonDown");
-        this.RFE2Btn = new PanelButton(panel, null, null, "RFE2Btn", "&nbsp;", "panel blackButton", "blackButtonDown");
-        this.startBtn = new PanelButton(panel, null, null, "StartBtn", "START", "panel blackButton", "blackButtonDown");
-        this.stopSIEBtn = new PanelButton(panel, null, null, "StopSIEBtn", "STOP<br>SIE", "panel blackButton", "blackButtonDown");
-        this.stopSCEBtn = new PanelButton(panel, null, null, "StopSCEBtn", "INSTANT<br>STOP<br>SCE", "panel blackButton", "blackButtonDown");
+        this.powerBtn = new PanelButton(panel, null, null, "PowerBtn", "POWER", "panel darkBlueButton", "darkBlueButtonDown");
+        this.resetBtn = new PanelButton(panel, null, null, "ResetBtn", "RESET", "panel darkBlueButton", "darkBlueButtonDown");
+        this.modifyBtn = new PanelButton(panel, null, null, "ModifyBtn", "MODIFY", "panel darkBlueButton", "darkBlueButtonDown");
+        this.checkResetBtn = new PanelButton(panel, null, null, "CheckResetBtn", "CHECK<br>RESET", "panel darkBlueButton", "darkBlueButtonDown");
+        this.displayMARBtn = new PanelButton(panel, null, null, "DisplayMARBtn", "DISPLAY<br>MAR", "panel darkBlueButton", "darkBlueButtonDown");
+        this.saveBtn = new PanelButton(panel, null, null, "SaveBtn", "SAVE", "panel darkBlueButton", "darkBlueButtonDown");
+        this.releaseBtn = new PanelButton(panel, null, null, "ReleaseBtn", "RELEASE", "panel darkBlueButton", "darkBlueButtonDown");
+        this.insertBtn = new PanelButton(panel, null, null, "InsertBtn", "INSERT", "panel darkBlueButton", "darkBlueButtonDown");
+        this.RFE1Btn = new PanelButton(panel, null, null, "RFE1Btn", "&nbsp;", "panel darkBlueButton", "darkBlueButtonDown");
+        this.RFE2Btn = new PanelButton(panel, null, null, "RFE2Btn", "&nbsp;", "panel darkBlueButton", "darkBlueButtonDown");
+        this.startBtn = new PanelButton(panel, null, null, "StartBtn", "START", "panel darkBlueButton", "darkBlueButtonDown");
+        this.stopSIEBtn = new PanelButton(panel, null, null, "StopSIEBtn", "STOP<br>SIE", "panel darkBlueButton", "darkBlueButtonDown");
+        this.stopSCEBtn = new PanelButton(panel, null, null, "StopSCEBtn", "INSTANT<br>STOP<br>SCE", "panel darkBlueButton", "darkBlueButtonDown");
 
         // Check Stop Panel Switches & Lamps
         panel = this.$$("CheckStopPanel");
@@ -344,10 +344,10 @@ class ControlPanel {
                 this.powerReadyLamp.set(1);
                 this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
             }, 2000);
-        }, 1000);
 
-        // Resize the window to take into account the difference between inner and outer heights (Safari).
-        this.window.resizeBy(0, this.doc.body.scrollHeight-this.doc.body.offsetHeight);
+            // Resize the window to take into account the difference between inner and outer heights (Safari).
+            this.window.resizeBy(0, this.doc.body.scrollHeight-this.doc.body.offsetHeight);
+        }, 1000);
     }
 
     /**************************************/
@@ -591,7 +591,7 @@ class ControlPanel {
             p.insert();
             break;
         case "ReleaseBtn":
-            p.releaseIO();
+            p.release();
             break;
         case "StartBtn":
             p.start();
@@ -677,7 +677,6 @@ class ControlPanel {
 
         this.$$("OperatorContainer").removeEventListener("click", this.boundControlSwitchClick);
         this.marSelectorKnob.removeChangeListener(this.boundMARSelectorChange);
-        this.context.processor.powerDown();
         this.powerReadyLamp.set(0);
         this.powerOnLamp.set(0);
         if (this.intervalToken) {

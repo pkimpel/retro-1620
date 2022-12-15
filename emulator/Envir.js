@@ -108,3 +108,8 @@ Envir.numGroupMark =    0xF;
 
 Envir.undigitMask =     0b1110;         // (digit & undigitMask) > undigitFalse => it's an undigit
 Envir.undigitFalse =    0b1001;
+
+// Unicode codepoints for special 1620 characters
+Envir.glyphPillow = "\u25AE";
+Envir.glyphRecMark = "\u2021";
+Envir.glyphGroupMark = "\u2262";

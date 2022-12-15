@@ -52,6 +52,7 @@ BODY.panelBody {
     font-size:          8pt;
     margin:             0;
     padding:            0;
+    user-select:        none;
     cursor:             default}
 
 BODY.deviceBody {
@@ -60,7 +61,9 @@ BODY.deviceBody {
     margin:             0;
     padding:            0;
     background-color:   #246;
-    color:              white}
+    color:              white;
+    user-select:        none;
+    cursor:             default}
 
 H1 {
     margin-top:         2em;
@@ -242,32 +245,32 @@ BUTTON.panel {
     border-left:        none;
     border-right:       none}
 
-BUTTON.blackButton {
+BUTTON.darkBlueButton {
     color:              white;
     cursor:             pointer;
-    background-image:   linear-gradient(#555, black, #555)}
-BUTTON.blackButtonDown {
+    background-image:   linear-gradient(#0C2340, #061120, #0C2340)}       /* #0C2340=Pantone 289C */
+BUTTON.darkBlueButtonDown {
     color:              #CCC;
     background-image:   none;
-    background-color:   black}
+    background-color:   #061120}
 
 BUTTON.whiteLamp {
     color:              black;
     background-image:   linear-gradient(#B3A696, #D9CCB2, #B3A696)}
 BUTTON.whiteLit {
-    background-image:   radial-gradient(circle, #FFF2CE 67%, #C6B9A4)}
+    background-image:   radial-gradient(circle, #FFF2CE 33%, #EEE2DE 67%, #C6B9A4)}
 
-BUTTON.redLamp {
+BUTTON.orangeLamp {
     color:              black;
-    background-image:   linear-gradient(#600, #800, #600)}
-BUTTON.redLit {
-    background-image:   radial-gradient(circle, #F00 67%, #C00)}
+    background-image:   linear-gradient(#8E3A22, #B14A2A, #8E3A22)}
+BUTTON.orangeLit {
+    background-image:   radial-gradient(circle, #F90 50%, #F70 80%, #F50)}
 
 BUTTON.greenLamp {
     color:              black;
-    background-image:   linear-gradient(#060, #080, #060)}
+    background-image:   linear-gradient(#00664F, #008869, #00664F)}
 BUTTON.greenLit {
-    background-image:   radial-gradient(circle, #0F0 67%, #0C0)}
+    background-image:   radial-gradient(circle, #0F0 33%, #0E0 67%, #0C0)}
 
 DIV.toggleSwitchBox {
     position:           absolute;
@@ -301,12 +304,11 @@ DIV.toggleSwitchBottomCaption {
 .rj {
     text-align:         right}
 .data {
-    font-family:        DejaVuSansMonoBookWeb, monospace;
-    text-align:         left}
+    font-family:        DejaVuSansMonoBookWeb, monospace}
 .ibmBlue {
-    background-color:   #718DBD}
+    background-color:   #718DBD}        /* supposed to be Pantone 116-16 U (#147599), but that's UGLY */
 .ibmGray {
-    background-color:   #555}
+    background-color:   #4A4B4D}        /* Pantone 19-3906 TCX */
 .number {
     font-family:        DejaVuSansMonoBookWeb, monospace;
     text-align:         right}

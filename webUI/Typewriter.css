@@ -1,0 +1,102 @@
+/***********************************************************************
+* retro-1620/webUI Typewriter.css
+************************************************************************
+* Copyright (c) 2017, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* Burroughs 220 Console Printer Unit.
+************************************************************************
+* 2017-03-17  P.Kimpel
+*   Original version, from retro-205 D205ConsoleOutput.css.
+***********************************************************************/
+
+SPAN.flag {
+    white-space:        pre;
+    text-decoration:    overline}
+SPAN.strike {
+    white-space:        pre;
+    text-decoration:    line-through}
+SPAN.flagstrike {
+    white-space:        pre;
+    text-decoration:    overline line-through}
+
+#PrinterBody {
+    height:             100%;
+    min-height:         100%;
+    overflow:           hidden;
+    padding:            0}
+
+#Printer {
+    position:           absolute;
+    top:                0;
+    bottom:             0;
+    left:               0;
+    right:              0;
+    margin:             0}
+
+#PrinterPlaten {
+    position:           absolute;
+    left:               4px;
+    right:              4px;
+    top:                4px;
+    bottom:             24px;
+    min-height:         64px;
+    min-width:          120px;
+    overflow-x:         hidden;
+    overflow-y:         scroll;
+    color:              black;
+    background-color:   white;
+    padding:            4px;
+    border:             1px solid gray}
+
+#Paper {
+    margin-left:        0;
+    margin-right:       0;
+    margin-top:         0;
+    margin-bottom:      0;
+    padding:            0;
+    white-space:        pre}
+
+#EndOfPaper {
+    display:            block;
+    margin:             0;
+    padding:            0;
+    opacity:            0}
+#EndOfPaper.hidden {
+    display:            none}
+
+/***** Typewriter Control Panel *****/
+
+#FormatControlsDiv {
+    position:           absolute;
+    overflow:           visible;
+    left:               0;
+    bottom:             0;
+    height:             24px;
+    width:              100%}
+
+#MarginsDiv {
+    position:           absolute;
+    left:               4px;
+    top:                50%;
+    transform:          translate(0, -50%)}
+#SelectricLogo {
+    position:           absolute;
+    left:               50%;
+    top:                2px;
+    height:             calc(100% - 4px);
+    transform:          translate(-50%, 0)}
+#TabStopsDiv {
+    position:           absolute;
+    right:              4px;
+    width:              calc(50% - 70px);
+    min-width:          200px;
+    top:                50%;
+    transform:          translate(0, -50%)}
+#TabStops {
+    position:           absolute;
+    right:              0;
+    width:              calc(100% - 60px);
+    top:                50%;
+    transform:          translate(0, -50%)}

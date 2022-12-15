@@ -16,6 +16,7 @@ import {Processor} from "../emulator/Processor.js";
 
 import {ControlPanel} from "./ControlPanel.js";
 import {SystemConfig} from "./SystemConfig.js";
+import {Typewriter} from "./Typewriter.js";
 
 //import {Typewriter} from "./Typewriter.js";
 
@@ -76,9 +77,9 @@ let globalLoad = (ev) => {
 
         context.processor = new Processor(context);
         context.controlPanel = new ControlPanel(context);
-        //context.devices = {
-        //    "typewriter":               new Typewriter(context)
-        //}
+        context.devices = {
+            "typewriter":               new Typewriter(context)
+        }
     }
 
     /**************************************/
@@ -86,14 +87,13 @@ let globalLoad = (ev) => {
         /* Powers down the Processor and shuts down all of the panels and I/O devices */
         let processor = context.processor;
 
-        while (!processor.gateMANUAL.value) {
-            processor.setManual();
-            processor.releaseIO();
+        if (!processor.gateMANUAL.value) {
+            processor.enterManual();
+            processor.ioRelease();
             setTimeout(systemShutDown, 1000);
             return;
         }
 
-        /**********
         let devices = context.devices;
         for (const e in devices) {
             if (devices[e]) {
@@ -102,8 +102,6 @@ let globalLoad = (ev) => {
             }
         }
 
-        **********/
-
         processor.powerDown();
         context.devices = null;
         context.controlPanel = null;
@@ -111,9 +109,9 @@ let globalLoad = (ev) => {
 
         $$("StartUpBtn").disabled = false;
         $$("StartUpBtn").focus();
-        window.removeEventListener("beforeunload", beforeUnload);
         $$("ConfigureBtn").disabled = false;
         config.flush();
+        window.removeEventListener("beforeunload", beforeUnload);
     }
 
     /**************************************/

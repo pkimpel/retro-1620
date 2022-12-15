@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>1620 Emulator Console Printer</title>
+<!--
+/***********************************************************************
+* retro-1620/webUI Typewriter.html
+************************************************************************
+* Copyright (c) 2022, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 Model 2 Emulator Console typewriter window.
+************************************************************************
+* 2017-12-09  P.Kimpel
+*   Original version, from retro-220 B220ConsolePrinter.html.
+***********************************************************************/
+-->
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link id=defaultStyleSheet rel=stylesheet type="text/css" href="Common.css">
+<link id=printerStyleSheet rel=stylesheet type="text/css" href="Typewriter.css">
+</head>
+
+<body id=PrinterBody class=deviceBody>
+
+<div id=Printer class="ibmGray">
+    <div id=PrinterPlaten>
+        <div id=Paper class=paper title="Double-click to copy all text">&nbsp;</div>
+        <div id=EndOfPaper>&nbsp;</div>
+    </div>
+
+    <div id=FormatControlsDiv>
+        <div id=MarginsDiv>
+            Margin Left <input id=MarginLeft class="data center" type=text size=3 maxLength=2>
+            Right <input id=MarginRight class="data center" type=text size=3 maxLength=2>
+        </div>
+
+        <img id=SelectricLogo src="resources/IBM-Selectric-Nameplate.jpg" alt="IBM Selectric nameplate">
+
+        <div id=TabStopsDiv>
+            Tab Stops <input id=TabStops class="data center" type=text size=30 maxLength=127>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
