@@ -26,7 +26,6 @@ class MARSelectorKnob {
             captions    an arrays of caption labels corresponding to each position
         */
 
-        this.direction = 1;             // rotate knob clockwise(1), counter-clockwise(-1)
         this.parent = parent;           // the parent div
         this.position = 0;              // current knob position
         this.positions = [];            // knob position angles
@@ -97,7 +96,8 @@ class MARSelectorKnob {
 
     /**************************************/
     set(position) {
-        /* Changes the visible state of the knob according to the position index */
+        /* Changes the visible state of the knob according to the position index
+        and sets this.position to the new position */
         let dc = this.canvas.getContext("2d");
         let posTop = this.positions.length - 1;
         let radius = Math.round(this.cupSize/2);
@@ -163,17 +163,42 @@ class MARSelectorKnob {
         dc.closePath();
         dc.stroke();
 
-        dc.restore();                               // pop the outermost save()
+        dc.restore();                   // pop the outermost save()
     }
 
     /**************************************/
-    step() {
-        /* Steps the knob to its next position. If it is at the last position,
-        steps it to the first position */
+    step(ev) {
+        /* Event handler for clicks within the "cup" (this.canvas). Steps the
+        tip of the knob to its next position in the direction of the click. If
+        it is at the last position, steps it to the first position, and vice
+        versa. This approach was suggested by Dave Babcock */
+        let rect = this.canvas.getBoundingClientRect();
 
-        this.set(this.position+this.direction);
-        if (this.changeListener) {
-            this.changeListener(this.position);
+        // Get the click coordinates and transform to "cup" coordinates.
+        let x = ev.clientX - rect.left - rect.width/2;
+        let y = ev.clientY - rect.top  - rect.height/2;
+        let hypotenuse = Math.sqrt(x*x + y*y);
+
+        if (hypotenuse > 0) {           // if it's at dead center, we can't do anything
+            // Compute the radial angle of the click point and adjust for its quadrant.
+            let angle = Math.asin(x/hypotenuse);
+            if (y > 0) {
+                angle = Math.PI - angle;
+            } else if (x < 0) {
+                angle = Math.PI*2 + angle;
+            }
+
+            // Compute the angle between click and knob tip, check for origin crossover.
+            let knobAngle = Math.PI - this.positions[this.position];
+            let delta = angle - knobAngle;
+            if (Math.abs(delta) > Math.PI) {
+                delta = -delta;
+            }
+
+            this.set(this.position + Math.sign(delta));
+            if (this.changeListener) {
+                this.changeListener(this.position);
+            }
         }
     }
 
@@ -181,9 +206,10 @@ class MARSelectorKnob {
     moveTo(position) {
         /* Steps the knob to the specified position */
         let steps = position - this.position;
+        let dir = Math.sign(steps);
 
         const nextStep = () => {
-            this.set(this.position+this.direction);
+            this.set(this.position+dir);
             if (this.position != position) {
                 setTimeout(nextStep, 100);
              } else {
@@ -194,8 +220,9 @@ class MARSelectorKnob {
         };
 
         if (steps) {
-            let dir = Math.sign(steps);
-            this.direction = (Math.abs(steps) <= this.positions.length/2 ? dir : -dir);
+            if (Math.abs(steps) > this.positions.length/2) {
+                dir = -dir;
+            }
             nextStep();
         }
     }

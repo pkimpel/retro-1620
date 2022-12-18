@@ -49,18 +49,32 @@ class PanelButton {
         }
 
         this.element.addEventListener("mousedown", (ev) => {
-            ev.target.classList.add(this.buttonDownClass);
+            this.setDown();
         }, false);
         this.element.addEventListener("mouseup", (ev) => {
-            ev.target.classList.remove(this.buttonDownClass);
+            this.setUp();
         }, false);
     }
 
     /**************************************/
     addEventListener(eventName, handler, useCapture) {
-        /* Sets an event handler whenever the image element is clicked */
+        /* Sets an event handler whenever the button element is clicked */
 
         this.element.addEventListener(eventName, handler, useCapture);
+    }
+
+    /**************************************/
+    setDown() {
+        /* Sets the styling on the button to make it appear "down" */
+
+        this.element.classList.add(this.buttonDownClass);
+    }
+
+    /**************************************/
+    setUp() {
+        /* Removes the styling on the button that makes it appear "down" */
+
+        this.element.classList.remove(this.buttonDownClass);
     }
 
     /**************************************/

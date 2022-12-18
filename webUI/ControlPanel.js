@@ -49,6 +49,7 @@ class ControlPanel {
         this.boundMARSelectorChange = this.marSelectorChange.bind(this);
         this.boundBeforeUnload = this.beforeUnload.bind(this);
         this.boundControlSwitchClick = this.controlSwitchClick.bind(this);
+        this.boundModifyResetDrag = this.modifyResetDrag.bind(this);
         this.boundShutDown = this.shutDown.bind(this);
 
         // Create the Control Panel window
@@ -333,6 +334,10 @@ class ControlPanel {
         this.$$("EmulatorVersion").textContent = Version.retro1620Version;
         this.window.addEventListener("beforeunload", this.boundBeforeUnload);
         this.$$("OperatorContainer").addEventListener("click", this.boundControlSwitchClick);
+        this.$$("OperatorContainer").addEventListener("mouseover", this.boundModifyResetDrag);
+        this.$$("OperatorContainer").addEventListener("mouseout", this.boundModifyResetDrag);
+        this.$$("OperatorContainer").addEventListener("mousedown", this.boundModifyResetDrag);
+        this.$$("OperatorContainer").addEventListener("mouseup", this.boundModifyResetDrag);
         this.marSelectorKnob.setChangeListener(this.boundMARSelectorChange);
 
         // Power up and initialize the system.
@@ -573,10 +578,12 @@ class ControlPanel {
         case "ModifyBtn":
             modified = true;
             this.modifyLatch = 1;
+            this.modifyBtn.setDown();   // show that it's now armed
             break;
         case "CheckResetBtn":
             if (this.modifyLatch) {
                 p.enableMemoryClear();
+                this.modifyBtn.setUp(); // clear the armed appearance
             } else {
                 p.checkReset();
             }
@@ -654,6 +661,54 @@ class ControlPanel {
     }
 
     /**************************************/
+    modifyResetDrag(ev) {
+        /* Event handler simulating the simultaneous press of the MODIFY and
+        CHECK RESET keys to initiate a clear-memory operation. If there is a
+        mouse-down on the MODIFY button, and the very next mouse-up on the lower
+        panel is on the CHECK RESET button, then that is interpreted as a
+        simultaneous press of the two buttons. This works independently of the
+        original method, clicking MODIFY and then clicking CHECK RESET, which
+        still works. The approach was suggested by Dave Babcock */
+        let e = ev.target;
+
+        switch (e.id) {
+        case "ModifyBtn":
+            if (ev.type == "mousedown") {
+                this.modifyLatch = 1;
+            }
+            break;
+        case "CheckResetBtn":
+            if (this.modifyLatch) {
+                switch (ev.type) {
+                case "mousedown":
+                    break;
+                case "mouseup":
+                    this.modifyBtn.setUp(); // cancel the effect of its mousedown
+                    this.context.processor.enableMemoryClear();
+                    break;
+                case "mouseover":
+                    this.checkResetBtn.setDown();
+                    break;
+                case "mouseout":
+                    this.checkResetBtn.setUp();
+                    break;
+                }
+            }
+            break;
+        default:
+            switch (ev.type) {
+            case "mousedown":
+            case "mouseup":
+                if (this.modifyLatch) {
+                    this.modifyBtn.setUp();
+                    this.modifyLatch = 0;
+                }
+                break;
+            }
+        }
+    }
+
+    /**************************************/
     marSelectorChange(position) {
         /* Handler for changes in the MARS Selector knob position */
 
@@ -676,6 +731,10 @@ class ControlPanel {
         /* Shuts down the panel */
 
         this.$$("OperatorContainer").removeEventListener("click", this.boundControlSwitchClick);
+        this.$$("OperatorContainer").removeEventListener("mouseover", this.boundModifyResetDrag);
+        this.$$("OperatorContainer").removeEventListener("mouseout", this.boundModifyResetDrag);
+        this.$$("OperatorContainer").removeEventListener("mousedown", this.boundModifyResetDrag);
+        this.$$("OperatorContainer").removeEventListener("mouseup", this.boundModifyResetDrag);
         this.marSelectorKnob.removeChangeListener(this.boundMARSelectorChange);
         this.powerReadyLamp.set(0);
         this.powerOnLamp.set(0);
