@@ -306,9 +306,9 @@ DIV.toggleSwitchBottomCaption {
 .data {
     font-family:        DejaVuSansMonoBookWeb, monospace}
 .ibmBlue {
-    background-color:   #718DBD}        /* supposed to be Pantone 116-16 U (#147599), but that's UGLY */
+    background-color:   #3576BA}        /* was 718DBD, supposed to be Pantone 116-16 U (#147599), but that's UGLY */
 .ibmGray {
-    background-color:   #4A4B4D}        /* Pantone 19-3906 TCX */
+    background-color:   #4A4B4D}        /* was 555555, now Pantone 19-3906 TCX */
 .number {
     font-family:        DejaVuSansMonoBookWeb, monospace;
     text-align:         right}

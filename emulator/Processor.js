@@ -162,7 +162,7 @@ class Processor {
         this.gateWRITE_INTERLOCK =  new FlipFlop(this.envir, true);
         this.gateREAD_INTERLOCK =   new FlipFlop(this.envir, true);
         this.gateSAVE =             new FlipFlop(this.envir, true);
-        this.gateINSERT =           new FlipFlop(this.envir, true);     // typewriter selected latch
+        this.gateTWPR_SELECT =      new FlipFlop(this.envir, true);
         this.gateRFE1 =             new FlipFlop(this.envir, true);
         this.gateRFE2 =             new FlipFlop(this.envir, true);
         this.gateRFE3 =             new FlipFlop(this.envir, true);
@@ -223,7 +223,8 @@ class Processor {
         this.gateCONSOLE_CTRL_SS =  new FlipFlop(this.envir, false);    // console control single-shot(?)
         this.gateDISPLAY_MAR =      new FlipFlop(this.envir, false);    // display MAR latch
         this.gateEND_OF_MODULE =    new FlipFlop(this.envir, false);    // termination latch (clear memory, etc.)
-        this.gateLOAD =             new FlipFlop(this.envir, false);    // load latch
+        this.gateINSERT =           new FlipFlop(this.envir, false);    // insert latch
+        this.gateLOAD =             new FlipFlop(this.envir, false);    // load latch (same as INSERT latch ??)
         this.gateSAVE_CTRL =        new FlipFlop(this.envir, false);    // SAVE control latch
         this.gateSCE =              new FlipFlop(this.envir, false);    // single-cycle execute
 
@@ -263,6 +264,7 @@ class Processor {
         this.ioDevice = null;                           // I/O device object
         this.ioSelectNr = 0;                            // I/O channel from Q8/Q9
         this.ioVariant = 0;                             // I/O function variant from Q10/Q11
+        this.flaggedInput = false;                      // latch for flagged input from typewriter
 
         // Bound Methods
 
@@ -415,8 +417,7 @@ class Processor {
 
         if ((augend & Envir.undigitMask) > Envir.undigitFalse ||
                 (addend & Envir.undigitMask) > Envir.undigitFalse) {
-            this.parityMARCheck.value = 1;      // not valid decimal digit
-            this.checkStop(`addDigits invalid BCD code: aug=${augend.toString(2)}, add=${addend.toString(2)}`);
+            this.marCheck(`addDigits invalid BCD code: aug=${augend.toString(2)}, add=${addend.toString(2)}`);
         } else {
             sum = (augend & Register.bcdMask) + this.gateCARRY_IN.value +
                     ((this.gateCOMP.value ? 9-addend : addend) & Register.bcdMask);
@@ -540,7 +541,7 @@ class Processor {
         this.gateWRITE_INTERLOCK.updateLampGlow(gamma);
         this.gateREAD_INTERLOCK.updateLampGlow(gamma);
         this.gateSAVE.updateLampGlow(gamma);
-        this.gateINSERT.updateLampGlow(gamma);
+        this.gateTWPR_SELECT.updateLampGlow(gamma);
         //this.gateRFE1.updateLampGlow(gamma);
         //this.gateRFE2.updateLampGlow(gamma);
         //this.gateRFE3.updateLampGlow(gamma);
@@ -587,8 +588,7 @@ class Processor {
         let addr = this.regMAR.binaryValue;
 
         if (addr >= this.envir.memorySize) {
-            this.parityMARCheck.value = 1;
-            this.checkStop(`fetch invalid memory address=${addr}`);
+            this.marCheck(`fetch invalid memory address=${addr}`);
         } else {
             let pair = this.MM[addr >> 1];   // div 2
             this.regMIR.value = this.regMBR.value = pair;
@@ -596,17 +596,13 @@ class Processor {
             // Set indicators for parity errors.
             if (this.regMBR.parityError) {
                 let digit = (pair >> Register.digitBits) & this.digitMask;
-                let corr = Envir.oddParity5[digit];
-                if (corr != digit) {
-                    this.parityMBREvenCheck.value = 1;
+                if (Envir.oddParity5[digit] != digit) {
+                    this.mbrCheck(0, `fetch MBR-Even parity error @${addr}`);
                 }
+
                 digit = pair & this.digitMask;
-                corr = Envir.oddParity5[digit];
-                if (corr != digit) {
-                    this.parityMBROddCheck.value = 1;
-                }
-                if (this.parityStopSwitch) {
-                    this.checkStop(`fetch MBR parity error @${addr}`);
+                if (Envir.oddParity5[digit] != digit) {
+                    this.mbrCheck(1, `fetch MBR-Odd parity error @${addr}`);
                 }
             }
         }
@@ -618,8 +614,7 @@ class Processor {
         let addr = this.regMAR.binaryValue;
 
         if (addr >= this.envir.memorySize) {
-            this.parityMARCheck.value = 1;
-            this.checkStop(`store invalid memory address=${addr}`);
+            this.marCheck(`store invalid memory address=${addr}`);
         } else {
             this.MM[addr >> 1] = this.regMIR.value;
         }
@@ -670,6 +665,7 @@ class Processor {
         case 1:         // Typewriter
             this.ioDevice = this.devices.typewriter;
             this.ioVariant = variant;
+            this.gateTWPR_SELECT.value = 1;
             break;
         case 2:         // Paper Tape Punch / Plotter
             //break;
@@ -738,7 +734,7 @@ class Processor {
 
     /**************************************/
     async writeAlphanumerically(digitPair) {
-        /* Executes one character cycle of Write Numerically (WN, 38). If the
+        /* Executes one character cycle of Write Numerically (WN, 39). If the
         character matches a record or group mark, or RELEASE occurs, terminate
         the I/O */
 
@@ -755,59 +751,121 @@ class Processor {
     }
 
     /**************************************/
-    async receiveInputCode(code) {
-        /* Receives the next I/O code from an input device and either stores
-        it onto the drum or acts on its control function */
-        let eob = false;                // end-of-block flag
+    receiveKeystroke(code) {
+        /* Receives the next keystroke code from the Typewriter. Determines
+        whether input is being accepted (i.e., keyboard is unlocked), and if so
+        either stores the character or performs the special function. Code can be:
+            (>=0) the ASCII code for the key pressed.
+            (-1) indicates the R/S (Enter) key was pressed.
+            (-2) indicates the CORR (Backspace) key was pressed.
+            (-3) indicates the FLG (` [grave accent] or ~ [tilde] key was pressed.
+            (-4) indicates the INSERT (ESC) key was pressed.
+        For numeric input (RN, 36)
+            only the decimal digits, record mark (|), and numeric blank (@) are
+            accepted. CORR causes OR2 to be decremented by 1.
+        For alphanumeric input (RA, 37)
+            only the valid 1620 characters and record mark are accepted. Other
+            ASCII characters and FLG are ignored.
+        The method returns:
+            0 if the keystroke is to be ignored and not echoed (keyboard locked).
+            (-1) if an R/S code is accepted and should be echoed to the paper.
+            (-2) if a CORR code is accepted and should be printed.
+            (-3) if a FLG code is accepted and a flagged echo should be set up.
+            (-4) if an INSERT code is accepted.
+            otherwise, the 1620 internal code for the character to be echoed.
+        Note that the Typewriter will call this routine whenever the Typewriter
+        window has the focus and the user presses a keyboard key. It's the job
+        of this routine to figure out whether that keystroke should be accepted.
+        Thus, keyboard lock is enforced here, not in the Typewriter */
+        let reply = 0;                  // ignore keystrokes by default
 
-        this.drum.ioStartTiming();
+        if (this.gateRD.value && this.ioSelectNr == 1) { // must be waiting for typewriter input
+            const readNumeric = (this.opBinary == 36);
 
-        if ((this.OC.value & 0b01111) == 0) {
-            eob = true;                         // canceled or invalid call
-        } else {
-            if (code & IOCodes.ioDataMask) {    // it's a data frame
-                await this.drum.ioPrecessCodeTo23(code, 4);
-                this.ioBitCount += 4;
-            } else {
-                switch(code & 0b00111) {
-                case IOCodes.ioCodeMinus:       // minus: set sign FF
-                    this.OS.value = 1;
-                    break;
-                case IOCodes.ioCodeCR:          // carriage return: shift sign into word
-                case IOCodes.ioCodeTab:         // tab: shift sign into word
-                    await this.drum.ioPrecessCodeTo23(this.OS.value, 1);
-                    this.OS.value = 0;
-                    ++this.ioBitCount;
-                    break;
-                case IOCodes.ioCodeStop:        // end/stop
-                    eob = true;
-                    // no break: Stop implies Reload
-                case IOCodes.ioCodeReload:      // reload
-                    await this.ioPromise;
-                    await this.drum.ioCopy23ToMZ();
-                    this.ioPromise = this.drum.ioPrecessMZTo19();
-                    this.ioBitCount = 0;
-                    break;
-                case IOCodes.ioCodePeriod:      // period: ignored
-                    break;
-                case IOCodes.ioCodeWait:        // wait: insert a 0 digit on input
-                    await this.drum.ioPrecessCodeTo23(0, 4);
-                    this.ioBitCount += 4;
-                    break;
-                default:                        // treat everything else as space & ignore
-                    break;
+            if (this.gate1ST_CYC.value) {
+                this.gate1ST_CYC.value = 0;
+                this.inputFlagged = false;
+                if (this.gateINSERT.value) {
+                    this.gateBR_EXEC.value = 0;
+                    this.regIR1.clear();
+                    this.regOR2.clear();
+                    this.regMAR.clear();
                 }
             }
 
-            // Check if automatic reload is enabled
-            if (this.AS.value && this.ioBitCount >= Util.fastLineSize*Util.wordBits) {
-                await this.drum.ioCopy23ToMZ();
-                await this.drum.ioPrecessMZTo19();
-                this.ioBitCount = 0;
+            switch (code) {
+            case -1:    // R/S key
+                reply = code;
+                this.release();
+                this.start();
+                break;
+
+            case -2:    // CORR key
+                reply = code;
+                this.regOR2.decr(readNumeric ? 1 : 2);
+                break;
+
+            case -3:    // FLG key
+                if (readNumeric) {
+                    reply = code;
+                    this.inputFlagged = true;
+                }
+                break;
+
+            case -4:    // INSERT key -- can't be used while I/O in progress
+                break;
+
+            default:    // some character
+                this.gateRESP_GATE.value = 1;
+                if (readNumeric) {
+                    let char = Processor.twprASCIInumeric1620[String.fromCharCode(code)];
+                    if (char !== undefined) {
+                        if (this.inputFlagged) {
+                            this.inputFlagged = false;
+                            reply = Envir.oddParity5[char | Register.flagMask];
+                        } else {
+                            reply = Envir.oddParity5[char];
+                        }
+
+                        this.regMAR.value = this.regOR2.value;
+                        this.fetch();
+                        this.regMIR.setDigit(this.regMAR.isEven, reply);
+                        this.store();
+                        if (this.gateINSERT.value && this.regMAR.binaryValue == 99) {
+                            this.ioRelease();
+                            this.enterManual();
+                        }
+
+                        this.regOR2.incr(1);
+                    }
+                } else {
+                    let char = Processor.twprASCIIalpha1620[String.fromCharCode(code)];
+                    if (char !== undefined) {
+                        reply = Envir.oddParity5[char & Register.digitMask] |
+                                (Envir.oddParity5[char >> Register.digitBits] << Register.digitBits);
+                        this.regMAR.value = this.regOR2.value;
+                        this.fetch();
+                        this.regMIR.value = reply;
+                        this.store();
+                        if (this.gateINSERT.value && this.regMAR.binaryValue == 99) {
+                            this.ioRelease();
+                            this.enterManual();
+                        }
+
+                        this.regOR2.incr(2);
+                    }
+                }
+                break;
             }
+
+            this.envir.startTiming();
+            this.gateRESP_GATE.value = 0;
+        } else if (code == -4) {        // INSERT key
+            reply = code;
+            this.insert();              // will check for MANUAL mode, etc.
         }
 
-        return eob;
+        return reply;
     }
 
     /**************************************/
@@ -822,6 +880,7 @@ class Processor {
         this.ioDevice = null;
         this.ioSelectNr = 0;
         this.ioVariant = 0;
+        this.gateTWPR_SELECT.value = 0;
         this.envir.startTiming();       // reset the emulation clock
     }
 
@@ -832,6 +891,7 @@ class Processor {
         if (this.gateIO_FLAG.value) {
            this.gateREL.value = 1;
            this.gateINSERT.value = 0;
+           this.gateLOAD.value = 0;
            this.ioExit();
            this.enterICycle();
         }
@@ -945,12 +1005,7 @@ class Processor {
             break;
         }
 
-        if (!(this.diskAddrCheck.value || this.diskCylOflowCheck.value || this.diskWRLRBCCheck.value ||
-                this.ioPrinterCheck.value  || this.ioReadCheck.value || this.ioWriteCheck.value ||
-                this.parityMARCheck.value || this.parityMBREvenCheck.value || this.parityMBROddCheck.value)) {
-            this.gateCHECK_STOP.value = 0;
-        }
-
+        this.verifyCheckStop();
         return isSet;
     }
 
@@ -1071,8 +1126,7 @@ class Processor {
 
         switch (this.opBinary) {
         case 0:                                 // 00=(invalid op code from I-1)
-            this.parityMARCheck.value = 1;
-            this.checkStop(`I-2 invalid op code 00 @${this.regIR1.binaryValue-2}`);
+            this.marCheck(`I-2 invalid op code 00 @${this.regIR1.binaryValue-2}`);
             break;
 
         case 42:                                // 42=BB, Branch Back
@@ -1275,7 +1329,6 @@ class Processor {
             break;
         case 36:        // RN, Read Numerically
         case 37:        // RA, Read Alphanumerically
-            this.gateRD.value = 1;
             this.regMQ.value = mbrOdd;
             this.ioSelect(this.regDR.binaryValue, this.regMBR.odd & Register.bcdMask);
             break;
@@ -1564,6 +1617,13 @@ class Processor {
                     this.run();         // exit from Limbo
                 });
                 break;
+            case 36:        // RN - Read Numerically (first cycle only)
+            case 37:        // RA - Read Alphanumerically (first cycle only)
+                this.enterLimbo();      // release will restart normal execution
+                this.gateRD.value = 1;
+                this.inputFlagged = false;
+                this.ioDevice.enableInput();
+                break;
             case 41:        // NOP, No Operation
                 this.enterICycle();
                 break;
@@ -1607,8 +1667,7 @@ class Processor {
         this.gateE_CYC_ENT.value = 1;
         this.gateIX.value = 0;
         if (!atts.opValid) {
-            this.parityMARCheck.value = 1;      // invalid op code
-            this.checkStop(`enterECycle invalid op code=${this.opBinary} @${this.regIR1.binaryValue-12}`);
+            this.marCheck(`enterECycle invalid op code=${this.opBinary} @${this.regIR1.binaryValue-12}`);
             return;
         }
 
@@ -1693,7 +1752,7 @@ class Processor {
             break;
 
         default:
-            this.checkStop(`E-2 op not implemented ${this.opBinary}`);
+            this.panic(`E-1 op not implemented ${this.opBinary}`);
             break;
         }
     }
@@ -1737,7 +1796,7 @@ class Processor {
 
         case 38:        // WN - Write Numerically
             await this.writeNumerically(this.regMBR.getDigit(dx));
-            this.regOR2.incr(2);
+            this.regOR2.incr(1);
             break;
 
         case 39:        // WA - Write Alphanumerically
@@ -1755,7 +1814,7 @@ class Processor {
             break;
 
         default:
-            this.checkStop(`E-2 op not implemented ${this.opBinary}`);
+            this.panic(`E-2 op not implemented ${this.opBinary}`);
             break;
         }
     }
@@ -1764,21 +1823,21 @@ class Processor {
     stepECycle3() {
         /* Executes E-Cycle 3 */
 
-        this.checkStop("E-3 not implemented");
+        this.panic("E-3 not implemented");
     }
 
     /**************************************/
     stepECycle4() {
         /* Executes E-Cycle 4 */
 
-        this.checkStop("E-4 not implemented");
+        this.panic("E-4 not implemented");
     }
 
     /**************************************/
     stepECycle5() {
         /* Executes E-Cycle 5 */
 
-        this.checkStop("E-5 not implemented");
+        this.panic("E-5 not implemented");
     }
 
 
@@ -1800,7 +1859,7 @@ class Processor {
         if (gate) {
             gate.value = 1;
         } else if (state != procStateLimbo) {
-            this.checkStop(`>>EMULATOR INVALID PROC STATE: ${state}`);
+            this.panic(`>>EMULATOR INVALID PROC STATE: ${state}`);
             debugger;
         }
     }
@@ -1827,11 +1886,58 @@ class Processor {
 
     /**************************************/
     checkStop(msg) {
-        /* Stops running the processor as a result of a check indication */
+        /* Turns on the CHECK STOP lamp, enters MANUALmode, and logs "msg" */
 
-        console.info(`>>CHECK STOP: ${msg}`);
         this.gateCHECK_STOP.value = 1;
+        this.gateAUTOMATIC.value = 0;
         this.enterManual();
+        console.info(`>>CHECK STOP: ${msg}`);
+    }
+
+    /**************************************/
+    verifyCheckStop() {
+        /* Examines all of the conditions that can cause a check stop and turns
+        off the lamp if none exist any longer */
+
+        let disk = this.diskAddrCheck.value || this.diskCylOflowCheck.value || this.diskWRLRBCCheck.value;
+        let parity = this.parityMARCheck.value || this.parityMBREvenCheck.value || this.parityMBROddCheck.value;
+        let io = this.ioPrinterCheck.value || this.ioReadCheck.value || this.ioWriteCheck.value;
+        let oflow = this.oflowArithCheck.value || this.oflowExpCheck.value;
+
+        if (!(disk && this.diskStopSwitch) && !(parity && this.parityStopSwitch) &&
+                !(io && this.ioStopSwitch) && !(oflow && this.oflowStopSwitch)) {
+            this.gateCHECK_STOP.value = 0;
+        }
+    }
+
+    /**************************************/
+    panic(msg) {
+        /* Forces a CHECK STOP and immediate MANUAL mode. Used internally */
+
+        this.checkStop(msg);
+    }
+
+    /**************************************/
+    marCheck(msg) {
+        /* Stops the processor for MAR addressing errors */
+
+        this.parityMARCheck.value = 1;
+        this.checkStop(msg);
+    }
+
+    /**************************************/
+    mbrCheck(which, msg) {
+        /* Sets one of the MBR parity lamps based on "which" (0=Even, 1=Odd) */
+
+        if (which) {
+            this.parityMBROddCheck.value = 1;
+        } else {
+            this.parityMBREvenCheck.value = 1;
+        }
+
+        if (this.parityStopSwitch.value) {
+            this.checkStop(msg);
+        }
     }
 
     /**************************************/
@@ -1910,7 +2016,7 @@ class Processor {
                 break;
 
             default:
-                this.checkStop(`>>INVALID PROC STATE: ${this.procState}`);
+                this.panic(`>>INVALID PROC STATE: ${this.procState}`);
                 break;
             }
 
@@ -1942,35 +2048,70 @@ class Processor {
             return;
         }
 
-        this.gateIA_REQ.value = 0;
-        this.gateIA_ENT.value = 0;
-        this.gateLAST_CARD.value = 0;
-        this.gateHP.value = 0;
-        this.gateEZ.value = 0;
+        this.gate$$$_OFLO.value = 0;
+        this.gate1ST_CYC.value = 0;
+        this.gate1ST_CYC_DELAYD.value = 0;
         this.gateBR_EXEC.value = 0;
+        this.gateBR_OUT.value = 0;
+        this.gateCARRY_IN.value = 0;
+        this.gateCARRY_OUT.value = 0;
+        this.gateCLR_MEM.value = 0;
+        this.gateCOMP.value = 0;
+        this.gateEOR$.value = 0;
+        this.gateEXP_OFLO.value = 0;
+        this.gateEXP_UFLO.value = 0;
+        this.gateEZ.value = 0;
         this.gateE_CYC_ENT.value = 0;
+        this.gateFL_1.value = 0;
+        this.gateFL_2.value = 0;
+        this.gateHP.value = 0;
+        this.gateIA_ENT.value = 0;
+        this.gateIA_REQ.value = 0;
+        this.gateINT_ENT.value = 0;
+        this.gateINT_MODE.value = 0;
+        this.gateIX_ENT.value = 0;
+        this.gateLAST_CARD.value = 0;
+        this.gateMASK.value = 0;
+        this.gateP.value = 0;
+        this.gateRM.value = 0;
 
+        // Input-Output Gates
+        this.gateDISK_ADDR.value = 0;
+        this.gateDISK_HUND.value = 0;
+        this.gateDISK_LD_ZERO.value = 0;
+        this.gateDISK_OP.value = 0;
+        this.gateDISK_UNIT.value = 0;
+        this.gateMEM_ADDR.value = 0;
+        this.gatePCH_FEED.value = 0;
+        this.gatePC_6XXX.value = 0;
+        this.gatePC_EZ.value = 0;
+        this.gatePC_HP.value = 0;
+        this.gatePC_IND.value = 0;
+        this.gatePC_OFLOW.value = 0;
+        this.gatePC_TR_8.value = 0;
+        this.gateRDR_FEED.value = 0;
+        this.gateREL.value = 0;
+        this.gateSCTR_COUNT.value = 0;
+        this.gateSCTR_CYC.value = 0;
+        this.gateSIMO_30.value = 0;
+        this.gateSIMO_HOLD.value = 0;
         this.ioExit();
-        this.gateRESP_GATE.value = 0;
+
         this.gateWRITE_INTERLOCK.value = 0;
         this.gateREAD_INTERLOCK.value = 0;
 
         this.gateIA_1.value = 0;
         this.gateI_1.value = 0;
         this.gateI_6.value = 0;
-        this.gateE_1.value = 0;
-        this.gateE_2.value = 0;
-        this.gateE_3.value = 0;
-        this.gateE_4.value = 0;
-        this.gateE_5.value = 0;
 
         this.gateCLR_CTRL.value = 0;
         this.gateCLR_MEM.value = 0;
         this.gateCONSOLE_CTRL_SS.value = 0;
         this.gateDISPLAY_MAR.value = 0;
+        this.gateSAVE.value = 0;
         this.gateINSERT.value = 0;
         this.gateLOAD.value = 0;
-        this.gateSAVE.value = 0;
+        this.gateREL.value = 0;
         this.gateSAVE_CTRL.value = 0;
         this.gateSCE.value = 0;
 
@@ -2054,26 +2195,25 @@ class Processor {
 
     /**************************************/
     insert() {
-        /* Initiates typewriter entry into memory */
+        /* Initiates typewriter via the INSERT key */
 
         if (this.gatePOWER_ON.value && this.gateMANUAL.value && !this.gateAUTOMATIC.value) {
-            this.gateRD.value = 1;
             this.gateINSERT.value = 1;
-            this.gateREL.value = 0;
-            this.gateMANUAL.value = 0;
             this.gateAUTOMATIC.value = 1;
-            this.gate1ST_CYC.value = 1;
-            this.regOP.binaryValue = 36; // RN, Read Numerically
-            this.setProcState(procStateE2);
-            this.gateRUN.value = 1;
-            this.updateLampGlow(1);
-            this.run();                 // async, returns immediately
+            this.gateREL.value = 0;
+            this.regOP.binaryValue = this.opBinary = 36; // RN, Read Numerically
+            this.ioSelect(1, 0);        // select typewriter
+            this.inputFlagged = false;
+            this.ioDevice.enableInput();
+            if (!this.gateRD.value) {
+                this.gateRD.value = 1;
+                this.gate1ST_CYC.value = 1;
+                this.gateMANUAL.value = 0;
+                this.gateRUN.value = 1;
+            }
 
-            // The rest is to be done during insert 1st cycle
-            this.gateBR_EXEC.value = 0;
-            this.regIR1.clear();
-            this.regOR2.clear();
-            this.regMAR.clear();
+            this.enterLimbo();
+            this.updateLampGlow(1);
         }
     }
 
@@ -2094,7 +2234,7 @@ class Processor {
         /* Initiates the processor on the Javascript thread */
 
         // also enabled by INSERT, SAVE, DISPLAY MAR, not AUTO, RELEASE, SCE ??
-        if (this.gatePOWER_ON.value /* ?? && this.gateMANUAL.value ?? */) {
+        if (this.gatePOWER_ON.value && this.gateMANUAL.value) {
             this.gateSCE.value = 0;     // reset single-cycle mode
             this.gateSAVE_CTRL.value = 0;
             this.gateMANUAL.value = 0;
@@ -2253,7 +2393,7 @@ class Processor {
 
         // ?? DEBUG ?? I-Cycle testing
         loadMemory(0,
-            "60 01000 00008");  //  0000 BS     1000,8          branch to 1000, reset IA mode
+            "49 00988 99999");  //  0000 B      988,99999       branch to 988 to start test
 
         loadMemory(200,
             "0@1A2B3C4D5E6F7G8H9I #$_%&|");
@@ -2265,7 +2405,8 @@ class Processor {
         loadMemory(900,         // Indirect Addresses
             "01084 0091D 01084 00IBD 99999 88888 77777 66666 55555 44444 33333 22222 11111");
 
-        loadMemory(1000,
+        loadMemory(988,
+            "60 01000 00008" +  //  0988 BS     1000,8          branch to 1000, reset IA mode
             "41 23456 78901" +  //  1000 NOP    23456,78901     no-op
             "32 00950 99999" +  //  1012 SF     99,99999        set flag
             "33 00950 77777" +  //  1024 CF     99,77777        clear flag
@@ -2274,27 +2415,28 @@ class Processor {
             "46 0090D 01100" +  //  1060 BI     -900,11         branch on H/P, indirect through 904 => 1084
             "47 0090I 01100" +  //  1072 BNI    -909,11         branch on not H/P, indirect through 909 to 914 => 1084
             "48 222B2 00I0D" +  //  1084 H      22222(B1),-904(B2) halt: P=22222+(-10101) => 12121, Q=(see below)
-            "35 00000 00100" +  //  1096 DNTY   0,100           dump numerically 00000 to typewriter
-            "34 00000 00104" +  //  1108 K      0,104           index carriage
-            "35 19990 00100" +  //  1120 DNTY   19990,102       dump numerically 19990 to typewriter
-            "34 00000 00102" +  //  1132 K      0,102           carriage return
-            "34 00000 00108" +  //  1144 K      0,108           tabulate
+            "34 00000 00102" +  //  1096 K      0,102           carriage return
+            "34 00000 00102" +  //  1108 K      0,102           carriage return again
+            "35 00000 00100" +  //  1120 DNTY   0,100           dump numerically 00000 to typewriter
+            "34 00000 00104" +  //  1132 K      0,104           index carriage
+            "35 19990 00100" +  //  1144 DNTY   19990,102       dump numerically 19990 to typewriter
             "34 00000 00102" +  //  1156 K      0,102           carriage return
-            "38 00200 00100" +  //  1168 WNTY   200,100         write numerically
-            "34 00000 00108" +  //  1180 K      0,108           tabulate
-            "39 00200 00100" +  //  1192 WATY   200,100         write alphanumerically
-            "34 00000 00102" +  //  1204 K      0,102           carriage return
+            "34 00000 00108" +  //  1168 K      0,108           tabulate
+            "38 00200 00100" +  //  1180 WNTY   200,100         write numerically
+            "34 00000 00108" +  //  1192 K      0,108           tabulate
+            "39 00200 00100" +  //  1204 WATY   200,100         write alphanumerically
             "34 00000 00102" +  //  1216 K      0,102           carriage return
+            "34 00000 00102" +  //  1228 K      0,102           carriage return again
 
             // The Brent Marsh Memorial Group Mark Challenge of 1968
 
-            "15 19999 0000|" +  //  1228 TDM    19999,GM        transmit group mark to 19999
-            "35 19999 00100" +  //  1240 DNTY   19999,100       dump the group mark
-            "47 01240 00100" +  //  1252 BNI    1240,1          branch unless PS1 is on
-            "34 00000 00102" +  //  1264 K      0,102           carriage return
+            "15 19999 0000|" +  //  1240 TDM    19999,GM        transmit group mark to 19999
+            "35 19999 00100" +  //  1252 DNTY   19999,100       dump the group mark
+            "47 01240 00100" +  //  1264 BNI    1252,1          branch unless PS1 is on
+            "34 00000 00102" +  //  1276 K      0,102           carriage return
 
-            "48 77777 99999" +  //  1276 H      77777,99999     halt again
-            "49 00000 33333"    //  1288 B      0,33333         branch to beginning
+            "48 77777 99999" +  //  1288 H      77777,99999     halt again
+            "49 00988 33333"    //  1300 B      988,33333       branch to beginning
         );
                         // @1084: Q = -904(B2=15) = -919 indirect to -924(B3=10) = -934 indirect => 77777
 
@@ -2307,3 +2449,72 @@ class Processor {
 
 // Static class properties
 
+// Typewriter numeric input keystroke digit codes
+Processor.twprASCIInumeric1620 = {
+    " ": 0,
+    "0": 0,
+    "1": 1,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5,
+    "6": 6,
+    "7": 7,
+    "8": 8,
+    "9": 9,
+    "@": Envir.numBlank,
+    "|": Envir.numRecMark,
+    "\\":Envir.numRecMark};
+
+// Typewriter alphanumeric input keystroke character codes
+Processor.twprASCIIalpha1620 = {
+    " ": 0o00_00,
+    "$": 0o01_03,
+    "(": 0o02_04,
+    ")": 0o00_04,
+    "*": 0o01_04,
+    "+": 0o01_00,
+    ",": 0o02_03,
+    "-": 0o02_00,
+    ".": 0o00_03,
+    "/": 0o02_01,
+    "0": 0o07_00,
+    "1": 0o07_01,
+    "2": 0o07_02,
+    "3": 0o07_03,
+    "4": 0o07_04,
+    "5": 0o07_05,
+    "6": 0o07_06,
+    "7": 0o07_07,
+    "8": 0o07_10,
+    "9": 0o07_11,
+    "=": 0o03_03,
+    "@": 0o03_04,
+    "A": 0o04_01,
+    "B": 0o04_02,
+    "C": 0o04_03,
+    "D": 0o04_04,
+    "E": 0o04_05,
+    "F": 0o04_06,
+    "G": 0o04_07,
+    "H": 0o04_10,
+    "I": 0o04_11,
+    "J": 0o05_01,
+    "K": 0o05_02,
+    "L": 0o05_03,
+    "M": 0o05_04,
+    "N": 0o05_05,
+    "O": 0o05_06,
+    "P": 0o05_07,
+    "Q": 0o05_10,
+    "R": 0o05_11,
+    "S": 0o06_02,
+    "T": 0o06_03,
+    "U": 0o06_04,
+    "V": 0o06_05,
+    "W": 0o06_06,
+    "X": 0o06_07,
+    "Y": 0o06_10,
+    "Z": 0o06_11,
+    "|": 0o00_12,
+    "\\":0o00_12};

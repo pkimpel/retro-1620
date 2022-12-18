@@ -44,11 +44,11 @@ class Typewriter {
         this.marginRight = Typewriter.maxCols;  // right margin stop
         this.printerCol = 0;                    // current print position
         this.scrollLines = 0;                   // lines in scroll buffer
+        this.flagPending = false;               // FLG key has been pressed, awaiting next char
         this.tabStops = [];                     // tab stop columns
         this.timer = new Timer();
 
-        this.boundKbdKeydown = this.kbdKeydown.bind(this);
-        this.boundKbdKeyup = this.kbdKeyup.bind(this);
+        this.boundKeydown = this.keydown.bind(this);
         this.boundResizeWindow = this.resizeWindow.bind(this);
         this.boundUnloadPaperClick = this.unloadPaperClick.bind(this);
         this.boundTextOnChange = this.textOnChange.bind(this);
@@ -142,8 +142,7 @@ class Typewriter {
         this.window.addEventListener("beforeunload", this.beforeUnload, false);
         this.window.addEventListener("resize", this.boundResizeWindow, false);
         this.paper.addEventListener("dblclick", this.boundUnloadPaperClick, false);
-        //this.window.addEventListener("keydown", this.boundKbdKeydown, false);
-        //this.window.addEventListener("keyup", this.boundKbdKeyup, false);
+        this.window.addEventListener("keydown", this.boundKeydown, false);
         this.$$("FormatControlsDiv").addEventListener("change", this.boundTextOnChange);
     }
 
@@ -153,89 +152,145 @@ class Typewriter {
     *******************************************************************/
 
     /**************************************/
-    kbdKeydown(ev) {
+    enableInput() {
+        /* Called by Processor to prepare the device for input */
+
+        this.window.focus();
+    }
+
+    /**************************************/
+    indicateKeyboardLock() {
+        /* Temporarily flashes the cursor character to indicate the keyboard
+        is locked */
+        const paper = this.paper;
+
+        paper.lastChild.nodeValue =
+                paper.lastChild.nodeValue.slice(0, -1) + Typewriter.lockoutChar;
+        setTimeout(() => {
+            paper.lastChild.nodeValue =
+                    paper.lastChild.nodeValue.slice(0, -1) + Typewriter.cursorChar;
+        }, Typewriter.lockoutFlashTime);
+    }
+
+    /**************************************/
+    async resetFlagPending(key) {
+        /* If this.flagPending is set, supplies the character to be flagged,
+        reinstates the cursor, and resets this.flagPending */
+
+        if (this.flagPending) {
+            this.flagPending = false;
+            let lastChild = this.paper.lastChild;       // should be the cursor char
+            if (lastChild && lastChild.nodeType == Node.TEXT_NODE) {
+                lastChild.nodeValue += Typewriter.cursorChar;   // reinstate the cursor
+                let priorChild = lastChild.previousSibling;     // should be the <span>
+                if (priorChild && priorChild.nodeType == Node.ELEMENT_NODE) {
+                    priorChild.textContent = key;       // fill in the current keystroke under the flag
+                } else {
+                    await this.printChar(key, false, false);
+                }
+            } else {
+                await this.printChar(key, false, false);
+            }
+        }
+    }
+
+    /**************************************/
+    async keydown(ev) {
         /* Handles the keydown event from Typewriter window. Processes data
-        input from the keyboard */
-        let code = ev.key.charCodeAt(0) & 0x7F;
-        let key = ev.key;
-        let p = this.processor;         // local copy of Processor reference
+        input from the keyboard and sends it to Processor.receiveKeystroke().
+        This routine always sends the keystroke without regard to the state of
+        things in the Processor at the moment. receiveKeystroke will decide if
+        the keystroke can be accepted or the keyboard is locked. The parameter
+        to receiveKeystroke is:
+            (>=0) the ASCII code for the key pressed.
+            (-1) indicates the R/S (Enter) key was pressed.
+            (-2) indicates the CORR (Backspace) key was pressed.
+            (-3) indicates the FLG (` [grave accent] or ~ [tilde] key was pressed.
+            (-4) indicates the INSERT (ESC) key was pressed (reply=0).
+        The receiveKeystroke method returns:
+            0 if the keystroke is to be ignored and not echoed (keyboard locked).
+            (-1) if an R/S code is accepted and should be echoed to the paper.
+            (-2) if a CORR code is accepted and should be printed.
+            (-3) if a FLG code is accepted and a flagged echo should be set up.
+            (-4) if an INSERT key is accepted (no action taken).
+            otherwise, the 1620 internal code for the character to be echoed.
+        Note that keystrokes are normally processed on keyup, but with a typewriter,
+        when you pressed the key, you got the action. Hence, the processing of
+        keystrokes on keydown */
+        let key = ev.key;               // string representation of keystroke
+        let code = 0;                   // code to be sent to the processor
 
         if (ev.ctrlKey || ev.altKey || ev.metaKey) {
             return;                     // ignore this keystroke, allow default action
         }
 
         switch (key) {
-        case "-": case "/":
-        case "0": case "1": case "2": case "3": case "4":
-        case "5": case "6": case "7": case "8": case "9":
-        case "S": case "s":
-        case "U": case "V": case "W": case "X": case "Y": case "Z":
-        case "u": case "v": case "w": case "x": case "y": case "z":
+        case "Enter":                   // treat as the R/S key
             ev.preventDefault();
-            this.printChar(key);
-            p.receiveKeyboardCode(IOCodes.ioCodeFilter[code]);
+            code = -1;
+            // Print R/S unconditionally now to avoid a time race with the Processor.
+            await this.resetFlagPending(" ");
+            await this.printChar(Typewriter.RSChar, false, false);
             break;
-        case "A": case "a":
-        case "B": case "b":
-        case "C": case "c":
-        case "F": case "f":
-        case "I": case "i":
-        case "M": case "m":
-        case "P": case "p":
-        case "Q": case "q":
-        case "R": case "r":
-        case "T": case "t":
+        case "Backspace":               // treat as the CORR key
             ev.preventDefault();
-            this.printChar(key);
-            p.receiveKeyboardCode(-code);
+            code = -2;
             break;
-        case "Enter":
+        case "`":                       // treat both as the FLG key
+        case "~":
             ev.preventDefault();
-            this.printNewLine();
-            p.receiveKeyboardCode(IOCodes.ioCodeCR);
+            code = -3;
             break;
-        case "Tab":
+        case "Escape":                  // treat as the INSERT key
             ev.preventDefault();
-            this.printTab();
-            p.receiveKeyboardCode(IOCodes.ioCodeTab);
+            code = -4;
             break;
-        case "Escape":
+        case "|":                       // treat both as the record mark key
+        case "\\":
             ev.preventDefault();
-            if (!ev.repeating) {
-                p.enableSwitchChange(1);
-                this.$$("EnableSwitchOff").checked = false;
-                this.$$("EnableSwitchOn").checked = true;
-            }
+            code = key.charCodeAt(0);
+            key = Envir.glyphRecMark;           // echo the correct glyph
             break;
-        case "Backspace":
-            ev.preventDefault();
-            break;
-        default:
-            switch (ev.location) {
-            case KeyboardEvent.DOM_KEY_LOCATION_STANDARD:
-            case KeyboardEvent.DOM_KEY_LOCATION_NUMPAD:
-                if (key.length == 1) {
-                    ev.preventDefault();
-                    this.printChar(key);
-                }
-                break;
+        default:                        // all other keys
+            if (key.length > 1) {
+                return;                         // all special and control keys just do their thing
+            } else {
+                ev.preventDefault();
+                code = key.toUpperCase().charCodeAt(0);
             }
             break;
         }
-    }
 
-    /**************************************/
-    kbdKeyup(ev) {
-        /* Handles the keyup event from Typewriter window */
-        let p = this.processor;         // local copy of Processor reference
-
-        switch (ev.key) {
-        case "Escape":
-            ev.preventDefault();
-            p.enableSwitchChange(0);
-            this.$$("EnableSwitchOff").checked = true;
-            this.$$("EnableSwitchOn").checked = false;
-            break;
+        if (code) {
+            let reply = this.processor.receiveKeystroke(code);
+            switch (reply) {
+            case 0:                     // ignore keystroke, flash the cursor
+                this.indicateKeyboardLock();
+                break;
+            case -1:                    // R/S key, echo is handled above
+                break;
+            case -2:                    // CORR key, print a struck-through space
+                await this.resetFlagPending(" ");
+                await this.printChar(" ", false, true);
+                break;
+            case -3:                    // FLG key, print a flagged space as a placeholder
+                if (!this.flagPending) {
+                    this.flagPending = true;
+                    await this.printChar(Typewriter.cursorChar, true, false);
+                    // Temporarily get rid of the cursor char after the flagged cursor.
+                    this.paper.lastChild.nodeValue = this.paper.lastChild.nodeValue.slice(0, -1);
+                }
+                break;
+            case -4:                    // INSERT key, do nothing
+                break;
+            default:                    // echo the keystroke
+                if (this.flagPending) {
+                    await this.resetFlagPending(key);
+                } else {
+                    await this.printChar(key, false, false);
+                }
+                break;
+            }
         }
     }
 
@@ -306,46 +361,50 @@ class Typewriter {
     /**************************************/
     textOnChange(ev) {
         /* Handler for textbox onchange events */
+        let box = ev.target;
         let prefs = this.config.getNode("Typewriter");
-        let text = ev.target.value;
+        let text = box.value;
         let v = null;
 
-        switch (ev.target.id) {
+        switch (box.id) {
         case "MarginLeft":
-            v = parseInt(text, 10) || 0;
-            ev.target.value = v;
-            if (v < 0 || v > this.marginRight) {
+            v = parseInt(text, 10);
+            if (isNaN(v) || v < 0 || v > this.marginRight) {
                 this.window.alert("Invalid left margin");
-                return;
+                box.value = this.marginLeft;
+                box.focus();
+                box.select();
             } else {
-                this.marginLeft = v;
-                prefs.marginLeft = v;
+                box.value = this.marginLeft = prefs.marginLeft = v;
+                this.config.putNode("Typewriter", prefs);
             }
             break;
         case "MarginRight":
-            v = parseInt(text, 10) || 0;
-            ev.target.value = v;
-            if (v <= this.marginLeft || v > Typewriter.maxCols) {
+            v = parseInt(text, 10);
+            if (isNaN(v) || v <= this.marginLeft || v > Typewriter.maxCols) {
                 this.window.alert("Invalid right margin");
-                return;
+                box.value = this.marginRight;
+                box.focus();
+                box.select();
             } else {
-                this.marginRight = v;
-                prefs.marginRight = v;
+                box.value = this.marginRight = prefs.marginRight = v;
+                this.config.putNode("Typewriter", prefs);
             }
             break;
         case "TabStops":
             v = this.parseTabStops(text || "", this.window);
             if (v === null) {
-                return;
+                box.value = this.formatTabStops(this.tabStops);
+                box.focus();
+                box.select();
             } else {
                 this.tabStops = v;
-                ev.target.value = text = this.formatTabStops(v);
-                prefs.tabs = text;
+                box.value = prefs.tabs = this.formatTabStops(v);
+                this.config.putNode("Typewriter", prefs);
             }
             break;
-        } // switch ev.target.id
+        } // switch box.id
 
-        this.config.putNode("Typewriter", prefs);
         ev.preventDefault();
         ev.stopPropagation();
     }
@@ -386,7 +445,7 @@ class Typewriter {
         // Remove old lines that have overflowed the buffer.
         while (this.scrollLines > Typewriter.maxScrollLines) {
             let child = paper.removeChild(paper.firstChild);
-            if (child.nodeType = TEXT_NODE) {
+            if (child.nodeType = Node.TEXT_NODE) {
                 // Count the node as a line only if it ends with a newline.
                 if (child.nodeValue.at(-1) == "\n") {
                     --this.scrollLines;
@@ -474,7 +533,7 @@ class Typewriter {
             await this.timer.delayFor(Typewriter.charPeriod);  // delay for backspace
 
             // Set the appropriate styling on the span and delay for its output.
-            span.className = (flag ? flagstrike : strike);
+            span.className = (flag ? "flagstrike" : "strike");
             await this.timer.delayFor(Typewriter.charPeriod);   // delay for revised output
         }
 
@@ -508,12 +567,12 @@ class Typewriter {
                 let cursorOnly = paper.removeChild(node);
                 let prior = paper.lastChild;
                 switch (prior.nodeType) {
-                case ELEMENT_NODE:
+                case Node.ELEMENT_NODE:
                     // If the prior node is an element, assume the character to
                     // be backspaced is in a flag span, and just delete that node.
                     paper.removeChild(prior);
                     prior = paper.lastChild;
-                    if (prior && prior.nodeType == TEXT_NODE) {
+                    if (prior && prior.nodeType == Node.TEXT_NODE) {
                         // If the prior node is a text node, append the cursor char.
                         prior.nodeValue += Typewriter.cursorChar;
                     } else {
@@ -522,7 +581,7 @@ class Typewriter {
                        paper.appendChild(cursorOnly);
                     }
                     break;
-                case TEXT_NODE:
+                case Node.TEXT_NODE:
                     // If the prior node is a text node, just trim the last char
                     // and re-append the cursor char.
                     if (prior.nodeValue.length > 0) {
@@ -624,12 +683,12 @@ class Typewriter {
     }
 
     /**************************************/
-    writeNumeric(code) {
+    writeNumeric(digit) {
         /* Writes one digit to the typewriter, suppressing some undigit codes.
         This should be used directly by Write Numerically. Returns a Promise
         for completion */
 
-        if (code & Register.flagMask) {
+        if (digit & Register.flagMask) {
             switch (digit & Register.bcdMask) {
             case Envir.numRecMark:
             case Envir.numBlank:
@@ -639,7 +698,7 @@ class Typewriter {
             }
         }
 
-        return this.dumpNumeric(code);
+        return this.dumpNumeric(digit);
     }
 
     /**************************************/
@@ -709,8 +768,7 @@ class Typewriter {
             this.paper.removeEventListener("dblclick", this.boundUnloadPaperClick);
             this.window.removeEventListener("beforeunload", this.beforeUnload, false);
             this.window.removeEventListener("resize", this.boundResizeWindow, false);
-            //this.window.removeEventListener("keydown", this.boundKbdKeydown, false);
-            //this.window.removeEventListener("keyup", this.boundKbdKeyup, false);
+            this.window.removeEventListener("keydown", this.boundKeydown, false);
             this.window.close();
         }
     }
@@ -720,6 +778,9 @@ class Typewriter {
 // Static properties
 
 Typewriter.cursorChar = "_";            // end-of-line cursor indicator
+Typewriter.RSChar = "\u00A7";           // section symbol used for R/S
+Typewriter.lockoutChar = "\u2592";
+
 Typewriter.maxScrollLines = 10000;      // max lines retained in "paper" area
 Typewriter.maxCols = 85;                // maximum number of columns per line
 Typewriter.charPeriod = 1000/15.5;      // ms per non-space character
@@ -730,7 +791,7 @@ Typewriter.indexInterlock = 124;        // CPU interlock time for indexing, ms
 Typewriter.travelPeriod = 5.88;         // printing element travel time per position, ms
 Typewriter.idlePeriod = 5*60000;        // typewriter motor turnoff delay, ms (5 minutes)
 Typewriter.idleStartupTime = 500;       // typewriter idle startup time, ms
-
+Typewriter.lockoutFlashTime = 150;      // keyboard lock flash time, ms
 Typewriter.numericGlyphs = [
     "0", "1",  "2",  "3", "4", "5", "6", "7", "8", "9",
     Envir.glyphRecMark, Envir.glyphPillow, "@",  Envir.glyphPillow, Envir.glyphPillow, Envir.glyphGroupMark];

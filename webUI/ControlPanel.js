@@ -218,7 +218,7 @@ class ControlPanel {
         this.writeInterlockLamp = new ColoredLamp(panel, null, null, "WriteInterlockLamp", "WRITE<br>INTERLOCK", "panel orangeLamp", "panel orangeLamp orangeLit");
         this.readInterlockLamp = new ColoredLamp(panel, null, null, "ReadInterlockLamp", "READ<br>INTERLOCK", "panel orangeLamp", "panel orangeLamp orangeLit");
         this.saveLamp = new ColoredLamp(panel, null, null, "SaveLamp", "SAVE", "panel whiteLamp", "panel whiteLamp whiteLit");
-        this.twprSelectedLamp = new ColoredLamp(panel, null, null, "TypewriterSelectedLamp", "TWPR<br>SELECTED", "panel whiteLamp", "panel whiteLamp whiteLit");
+        this.twprSelectLamp = new ColoredLamp(panel, null, null, "TypewriterSelectLamp", "TWPR<br>SELECT", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.RFE1Lamp = new ColoredLamp(panel, null, null, "RFE1Lamp", "&nbsp;", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.RFE2Lamp = new ColoredLamp(panel, null, null, "RFE2Lamp", "&nbsp;", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.RFE3Lamp = new ColoredLamp(panel, null, null, "RFE3Lamp", "&nbsp;", "panel whiteLamp", "panel whiteLamp whiteLit");
@@ -513,7 +513,7 @@ class ControlPanel {
         this.writeInterlockLamp.set(p.gateWRITE_INTERLOCK.glow);
         this.readInterlockLamp.set(p.gateREAD_INTERLOCK.glow);
         this.saveLamp.set(p.gateSAVE.glow);
-        this.twprSelectedLamp.set(p.gateINSERT.glow);
+        this.twprSelectLamp.set(p.gateTWPR_SELECT.glow);
         //this.RFE1Lamp.set(p.gateRFE1Lamp.glow);
         //this.RFE2Lamp.set(p.gateRFE2Lamp.glow);
         //this.RFE3Lamp.set(p.gateRFE3Lamp.glow);
@@ -617,21 +617,25 @@ class ControlPanel {
             this.diskStopSwitch.flip();
             this.config.putNode("ControlPanel.DiskStopSW", this.diskStopSwitch.state);
             p.diskStopSwitch = this.diskStopSwitch.state;
+            p.verifyCheckStop();
             break;
         case "ParityStopSwitch":
             this.parityStopSwitch.flip();
             this.config.putNode("ControlPanel.ParityStopSW", this.parityStopSwitch.state);
             p.parityStopSwitch = this.parityStopSwitch.state;
+            p.verifyCheckStop();
             break;
         case "IOStopSwitch":
             this.ioStopSwitch.flip();
             this.config.putNode("ControlPanel.IOStopSW", this.ioStopSwitch.state);
             p.ioStopSwitch = this.ioStopSwitch.state;
+            p.verifyCheckStop();
             break;
         case "OflowStopSwitch":
             this.oflowStopSwitch.flip();
             this.config.putNode("ControlPanel.OflowStopSW", this.oflowStopSwitch.state);
             p.oflowStopSwitch = this.oflowStopSwitch.state;
+            p.verifyCheckStop();
             break;
         case "Program1Switch":
             this.program1Switch.flip();
