@@ -11,16 +11,6 @@
 *   Original version, from retro-205 D205ConsoleOutput.css.
 ***********************************************************************/
 
-SPAN.flag {
-    white-space:        pre;
-    text-decoration:    overline}
-SPAN.strike {
-    white-space:        pre;
-    text-decoration:    line-through}
-SPAN.flagstrike {
-    white-space:        pre;
-    text-decoration:    overline line-through}
-
 #PrinterBody {
     height:             100%;
     min-height:         100%;
@@ -40,15 +30,16 @@ SPAN.flagstrike {
     left:               4px;
     right:              4px;
     top:                4px;
-    bottom:             24px;
+    height:             calc(100% - 30px);
+    width:              calc(100% - 8px);
     min-height:         64px;
     min-width:          120px;
-    overflow-x:         hidden;
+    overflow-x:         scroll;
     overflow-y:         scroll;
     color:              black;
     background-color:   white;
-    padding:            4px;
-    border:             1px solid gray}
+    padding:            0;
+    border:             none}
 
 #Paper {
     margin-left:        0;
@@ -56,15 +47,8 @@ SPAN.flagstrike {
     margin-top:         0;
     margin-bottom:      0;
     padding:            0;
-    white-space:        pre}
-
-#EndOfPaper {
-    display:            block;
-    margin:             0;
-    padding:            0;
-    opacity:            0}
-#EndOfPaper.hidden {
-    display:            none}
+    white-space:        pre;
+    cursor:             auto}
 
 /***** Typewriter Control Panel *****/
 

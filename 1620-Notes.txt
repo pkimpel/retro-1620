@@ -28,16 +28,21 @@ an MBR (MIR?) check.
 
 5. What happens when a BB (42) is executed with no prior BT* (07/17/27) or SAVE
 key to set the return address? Mod 2 Ref p.38 indicates that causes a MAR check
-stop, but Germain p.97 states that IR2 remains valid after a BB and can be used
-again.
+stop, but Germain p.97 states that on the Model 2 IR2 remains valid after a BB
+and can be used again.
 
 6. Should XBR be cleared in I-5? Intermediate Diagrams don't indicate this, but
-it's done in I-1 in preparation for indexing the P address.
+it's done in I-1 in preparation for indexing the P address, so why wouldn't it
+be don in preparation for indexing the Q address?
 
 7. How are the Q10/Q11 digits handled in I-6 for I/O ops?
+[RESOLVED 2022-12-10: they remain in MBR and are examined in I/O selection
+during I-6]
 
 8. Is the START key effective only in MANUAL mode? Intermediate Diagrams don't
-appear to indicate that, but Mod2 Ref p.75 says so.
+appear to indicate that, but Mod2 Ref p.75 says so. I'm currently requiring
+MANUAL mode, since doing a START while the processor is already running could
+initiate a second run() and cause havoc.
 
 9. Gate DISPLAY_MAR is turned on by the DISPLAY MAR key, but what turns it off,
 other than the RESET key?
@@ -51,11 +56,18 @@ ops?
 12. Consider setting CLR MEM by mouse-down on the MODIFY key, drag to the CHECK
 RESET key, and then mouse-up to simulate a simultaneous press of the two keys
 (Dave Babcock's idea).
+[COMPLETED 2022-12-17]
 
 13. Consider having the MARS Selector switch detect clicks on either side of the
 knob pointer and moving the pointer one step in the direction towards the click
 rather than one step in the "current" direction.
+[COMPLETED 2022-12-17]
 
 14. Need more 1620-like toggle switches for the Control Panel.
 
+15. Clicking one of the dark blue bottons on the lower panel of the Control
+Panel animates the click by applying a darker style to the button. If you click
+and hold, then drag outside the button and release, there's no mouse up event
+fired on the button, and it stays dark. This does not affect the button's
+subsequent operation, though.
 

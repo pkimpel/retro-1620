@@ -327,7 +327,7 @@ class Processor {
         buildOpAtts(45, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 45 BNR
         buildOpAtts(46, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0);      // 46 BI
         buildOpAtts(47, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0);      // 47 BNI
-        buildOpAtts(48, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 48 H         ?? TEMP enable IA & IX on P & Q for testing ??
+        buildOpAtts(48, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 48 H
         buildOpAtts(49, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0);      // 49 B
 
         buildOpAtts(50, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 50
@@ -686,11 +686,6 @@ class Processor {
             this.ioVariant = 0;
             break;
         }
-
-        if (!this.ioDevice) {
-            this.gateWRITE_INTERLOCK.value = 1;
-            this.enterLimbo();
-        }
     }
 
     /**************************************/
@@ -782,17 +777,6 @@ class Processor {
         if (this.gateRD.value && this.ioSelectNr == 1) { // must be waiting for typewriter input
             const readNumeric = (this.opBinary == 36);
 
-            if (this.gate1ST_CYC.value) {
-                this.gate1ST_CYC.value = 0;
-                this.inputFlagged = false;
-                if (this.gateINSERT.value) {
-                    this.gateBR_EXEC.value = 0;
-                    this.regIR1.clear();
-                    this.regOR2.clear();
-                    this.regMAR.clear();
-                }
-            }
-
             switch (code) {
             case -1:    // R/S key
                 reply = code;
@@ -841,11 +825,14 @@ class Processor {
                 } else {
                     let char = Processor.twprASCIIalpha1620[String.fromCharCode(code)];
                     if (char !== undefined) {
-                        reply = Envir.oddParity5[char & Register.digitMask] |
-                                (Envir.oddParity5[char >> Register.digitBits] << Register.digitBits);
+                        let even = (char >> Register.digitBits) & Register.bcdMask;
+                        let odd  = char & Register.bcdMask;
+                        reply = (Envir.oddParity5[even] << Register.digitBits) | Envir.oddParity5[odd];
                         this.regMAR.value = this.regOR2.value;
                         this.fetch();
-                        this.regMIR.value = reply;
+                        // Preserve the flags already in memory.
+                        this.regMIR.setDigit(1, Envir.oddParity5[(this.regMIR.even & Register.flagMask) | even]);
+                        this.regMIR.setDigit(0, Envir.oddParity5[(this.regMIR.odd  & Register.flagMask) | odd]);
                         this.store();
                         if (this.gateINSERT.value && this.regMAR.binaryValue == 99) {
                             this.ioRelease();
@@ -877,6 +864,7 @@ class Processor {
         this.gateRD.value = 0;
         this.gateWR.value = 0;
         this.gateCHAR_GATE.value = 0;
+        this.gateRESP_GATE.value = 0;   // not sure about this...
         this.ioDevice = null;
         this.ioSelectNr = 0;
         this.ioVariant = 0;
@@ -1304,7 +1292,6 @@ class Processor {
         Sets the 1-bit in XR from the Q10 flag and the IA latch from the Q11
         flag as necessary. Takes the following special actions:
           - For immediate ops, sets OR1 to the address of the Q11 digit.
-          - For I/O ops, ?? DUNNO WHAT IT DOES WITH THE Q10/Q11 FUNCTION DIGITS ??.
           - For op 41 (NOP), terminates the instruction.
           - For op 48 (H), terminates the instruction and initiates a stop.
           - For ops 46 (BI) & 47 (BNI), evaluates the selected indicator and
@@ -1329,14 +1316,12 @@ class Processor {
             break;
         case 36:        // RN, Read Numerically
         case 37:        // RA, Read Alphanumerically
-            this.regMQ.value = mbrOdd;
             this.ioSelect(this.regDR.binaryValue, this.regMBR.odd & Register.bcdMask);
             break;
         case 35:        // DN, Dump Numerically
         case 38:        // WN, Write Numerically
         case 39:        // WA, Write Alphanumerically
             this.gateWR.value = 1;
-            this.regMQ.value = mbrOdd;
             this.ioSelect(this.regDR.binaryValue, this.regMBR.odd & Register.bcdMask);
             break;
 
@@ -1612,17 +1597,34 @@ class Processor {
             switch(this.opBinary) {
             case 34:        // K, Control
                 this.enterLimbo();      // stop run() while control() runs async
-                this.ioDevice.control(this.ioVariant).then(() => {
-                    this.ioRelease();
-                    this.run();         // exit from Limbo
-                });
+                if (!this.ioDevice) {
+                    this.gateWRITE_INTERLOCK.value = 1;
+                    this.enterLimbo;
+                } else {
+                    this.ioDevice.control(this.ioVariant).then(() => {
+                        this.ioRelease();
+                        this.run();         // exit from Limbo
+                    });
+                }
                 break;
-            case 36:        // RN - Read Numerically (first cycle only)
-            case 37:        // RA - Read Alphanumerically (first cycle only)
-                this.enterLimbo();      // release will restart normal execution
-                this.gateRD.value = 1;
-                this.inputFlagged = false;
-                this.ioDevice.enableInput();
+            case 36:        // RN, Read Numerically
+            case 38:        // RA, Read Alphanumerically
+                if (!this.ioDevice) {
+                    this.gateREAD_INTERLOCK.value = 1;
+                    this.enterLimbo;
+                } else {
+                    this.enterECycle();
+                }
+                break;
+            case 35:        // DN, Dump Numerically
+            case 37:        // WN, Write Numerically
+            case 39:        // WA, Write Alphanumerically
+                if (!this.ioDevice) {
+                    this.gateWRITE_INTERLOCK.value = 1;
+                    this.enterLimbo;
+                } else {
+                    this.enterECycle();
+                }
                 break;
             case 41:        // NOP, No Operation
                 this.enterICycle();
@@ -1792,6 +1794,14 @@ class Processor {
         case 35:        // DN - Dump Numerically
             await this.dumpNumerically(this.regMBR.getDigit(dx));
             this.regOR2.incr(1);
+            break;
+
+        case 36:        // RN - Read Numerically (first cycle only)
+        case 37:        // RA - Read Alphanumerically (first cycle only)
+            this.enterLimbo();      // release will restart normal execution
+            this.gateRD.value = 1;
+            this.inputFlagged = false;
+            this.ioDevice.initiateRead();
             break;
 
         case 38:        // WN - Write Numerically
@@ -2142,7 +2152,6 @@ class Processor {
         this.parityMBREvenCheck.value = 0;
         this.parityMBROddCheck.value = 0;
         this.gateCHECK_STOP.value = 0;
-        this.updateLampGlow(1);
     }
 
     /**************************************/
@@ -2204,12 +2213,21 @@ class Processor {
             this.regOP.binaryValue = this.opBinary = 36; // RN, Read Numerically
             this.ioSelect(1, 0);        // select typewriter
             this.inputFlagged = false;
-            this.ioDevice.enableInput();
+            this.ioDevice.initiateRead();
             if (!this.gateRD.value) {
                 this.gateRD.value = 1;
                 this.gate1ST_CYC.value = 1;
                 this.gateMANUAL.value = 0;
                 this.gateRUN.value = 1;
+
+                this.envir.tick();      // pretend to do a delayed 1st cycle
+                this.gate1ST_CYC.value = 0;
+                if (this.gateINSERT.value) {
+                    this.gateBR_EXEC.value = 0;
+                    this.regIR1.clear();
+                    this.regOR2.clear();
+                    this.regMAR.clear();
+                }
             }
 
             this.enterLimbo();

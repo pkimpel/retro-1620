@@ -55,6 +55,7 @@ class Typewriter {
 
         // Create the Typewriter window
         this.doc = null;
+        this.paperDoc = null;
         this.window = null;
         openPopup(window, "../webUI/Typewriter.html", "Typewriter",
                 `location=no,scrollbars,resizable,width=${w},height=${h}` +
@@ -112,7 +113,7 @@ class Typewriter {
     resizeWindow(ev) {
         /* Handles the window onresize event by scrolling the "paper" so it remains at the end */
 
-        this.platen.scrollTop = this.platen.scrollHeight;
+        this.paper.scrollIntoView(false);
     }
 
     /**************************************/
@@ -123,8 +124,9 @@ class Typewriter {
         this.doc = ev.target;
         this.window = this.doc.defaultView;
         this.doc.title = "retro-1620 Typewriter";
-        this.paper = this.$$("Paper");
         this.platen = this.$$("PrinterPlaten");
+        this.paperDoc = this.platen.contentDocument;
+        this.paper = this.paperDoc.getElementById("Paper");
         this.setPaperEmpty();
 
         this.$$("MarginLeft").value = this.marginLeft = prefs.marginLeft;
@@ -152,7 +154,7 @@ class Typewriter {
     *******************************************************************/
 
     /**************************************/
-    enableInput() {
+    initiateRead() {
         /* Called by Processor to prepare the device for input */
 
         this.window.focus();
@@ -256,7 +258,8 @@ class Typewriter {
                 return;                         // all special and control keys just do their thing
             } else {
                 ev.preventDefault();
-                code = key.toUpperCase().charCodeAt(0);
+                key = key.toUpperCase();
+                code = key.charCodeAt(0);
             }
             break;
         }
@@ -307,7 +310,7 @@ class Typewriter {
         this.paper.textContent = (" ").repeat(this.marginLeft) + Typewriter.cursorChar;
         this.printerCol = this.marginLeft;
         this.scrollLines = 0;
-        this.platen.scrollTop = this.platen.scrollHeight; // scroll to end
+        this.paper.scrollIntoView(false);
     }
 
     /**************************************/
@@ -437,7 +440,6 @@ class Typewriter {
     async printNewLine() {
         /* Appends a newline to the current text node, and then a new text
         node to the end of the <pre> element within the paper element */
-        let height = this.platen.scrollHeight;
         let paper = this.paper;
         let line = paper.lastChild.nodeValue;
         let positions = this.printerCol - this.marginLeft;
@@ -455,20 +457,20 @@ class Typewriter {
 
         let now = await this.waitReadyOutput();
 
+        // Erase the cursor at end of the current line and output a newline.
+        paper.lastChild.nodeValue = line.slice(0, -1) + "\n";
+
         // Delay for the newline and printing element return time.
         this.outputReadyStamp = now +
                 Math.max(Typewriter.returnInterlock, Typewriter.travelPeriod*positions);
         await this.timer.delayFor(Typewriter.returnInterlock);
 
-        // Erase the cursor at end of the current line and output a newline.
-        paper.lastChild.nodeValue = line.slice(0, -1) + "\n";
-
         // Output the margin spaces and new cursor character for the new line.
-        paper.appendChild(this.doc.createTextNode(
+        paper.appendChild(this.paperDoc.createTextNode(
                 (" ").repeat(this.marginLeft) + Typewriter.cursorChar));
         this.printerCol = this.marginLeft;
         ++this.scrollLines;
-        this.platen.scrollTop = height; // scroll to end
+        this.paper.scrollIntoView(false);
         return 1;                       // always returns end-of-block
     }
 
@@ -495,13 +497,14 @@ class Typewriter {
         // element for it. If flagged, make the element visible with an
         // overline style.
         if (flag || strike) {
-            span = this.doc.createElement("span");
-            span.appendChild(this.doc.createTextNode(" "));
+            span = this.paperDoc.createElement("span");
+            span.appendChild(this.paperDoc.createTextNode(" "));
             if (flag) {                 // print the flag first
                 span.className = "flag";
                 paper.appendChild(span);
+                paper.appendChild(this.paperDoc.createTextNode(""));    // create node for cursor char
                 // Delay for printing the flag and backspacing over it.
-                await this.timer.delayFor(Typewriter.charPeriod*2);
+                await this.timer.delayFor(Typewriter.charPeriod + Typewriter.spacePeriod);
             }
         }
 
@@ -515,17 +518,17 @@ class Typewriter {
             // If the span hasn't been appended to the line yet, now's the time.
             if (!flag) {
                 paper.appendChild(span);
+                paper.appendChild(this.paperDoc.createTextNode(""));    // create node for cursor char
             }
         }
 
         // Delay for one character time. Note that spaces are output slighty
-        // faster, at about 35ms each.
+        // faster, at about 50ms each.
         await this.timer.delayFor(char == " " ? Typewriter.spacePeriod : Typewriter.charPeriod);
 
-        // If the character is flagged or struck, output the new cursor character
-        // as a new text node.
+        // If the character is flagged or struck, output the new cursor character.
         if (flag || strike) {
-            paper.appendChild(this.doc.createTextNode(Typewriter.cursorChar));
+            paper.lastChild.nodeValue += Typewriter.cursorChar;
         }
 
         // If the character is struck, backspace and set the style.
@@ -610,7 +613,6 @@ class Typewriter {
         /* Indexes the platen one line without moving the printing element. We
         simulate this by emitting a newline, then padding the new line with
         spaces to the original print position */
-        let height = this.platen.scrollHeight;
         let position = this.printerCol;
         let paper = this.paper;
 
@@ -620,13 +622,13 @@ class Typewriter {
         paper.lastChild.nodeValue = paper.lastChild.nodeValue.slice(0, -1) + "\n";
 
         // Output the position spacing and new cursor characater
-        paper.appendChild(this.doc.createTextNode(
+        paper.appendChild(this.paperDoc.createTextNode(
                 (" ").repeat(position) + Typewriter.cursorChar));
         ++this.scrollLines;
 
         // Delay for the index interlock time.
         await this.timer.delayFor(Typewriter.indexInterlock);
-        this.platen.scrollTop = height; // scroll to end
+        this.paper.scrollIntoView(false);
         return 1;                       // always returns end-of-block
     }
 
@@ -724,6 +726,9 @@ class Typewriter {
         case 8:         // tabulate
             return this.printTab();
             break;
+        default:
+            return Promise.resolve(0);
+            break;
         }
     }
 
@@ -765,10 +770,10 @@ class Typewriter {
 
         if (this.window) {
             this.$$("FormatControlsDiv").removeEventListener("change", this.boundTextOnChange);
+            this.window.removeEventListener("keydown", this.boundKeydown, false);
             this.paper.removeEventListener("dblclick", this.boundUnloadPaperClick);
             this.window.removeEventListener("beforeunload", this.beforeUnload, false);
             this.window.removeEventListener("resize", this.boundResizeWindow, false);
-            this.window.removeEventListener("keydown", this.boundKeydown, false);
             this.window.close();
         }
     }
@@ -784,7 +789,7 @@ Typewriter.lockoutChar = "\u2592";
 Typewriter.maxScrollLines = 10000;      // max lines retained in "paper" area
 Typewriter.maxCols = 85;                // maximum number of columns per line
 Typewriter.charPeriod = 1000/15.5;      // ms per non-space character
-Typewriter.spacePeriod = 35;            // ms per space character
+Typewriter.spacePeriod = 50;            // ms per space character
 Typewriter.returnInterlock = 124;       // CPU interlock time for element return, ms
 Typewriter.defaultInterlock = 56;       // CPU interlock time for tab/space/backspace, ms
 Typewriter.indexInterlock = 124;        // CPU interlock time for indexing, ms

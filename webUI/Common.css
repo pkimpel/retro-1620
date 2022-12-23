@@ -96,7 +96,7 @@ DIV.paper {
     margin-top:         0;
     margin-bottom:      0;
     font-size:          12px;
-    line-height:        120%}
+    line-height:        12pt}
 DIV.topOfForm {
     page-break-before:  always;
     margin-top:         1px;
@@ -248,11 +248,11 @@ BUTTON.panel {
 BUTTON.darkBlueButton {
     color:              white;
     cursor:             pointer;
-    background-image:   linear-gradient(#0C2340, #061120, #0C2340)}       /* #0C2340=Pantone 289C */
+    background-image:   linear-gradient(#0C2340, #000020, #0C2340)}       /* #0C2340=Pantone 289C */
 BUTTON.darkBlueButtonDown {
     color:              #CCC;
     background-image:   none;
-    background-color:   #061120}
+    background-color:   #000020}
 
 BUTTON.whiteLamp {
     color:              black;
@@ -296,6 +296,16 @@ DIV.toggleSwitchBottomCaption {
     font-size:          5pt;
     font-weight:        normal;
     text-align:         center}
+
+SPAN.flag {
+    white-space:        pre;
+    text-decoration:    overline}
+SPAN.strike {
+    white-space:        pre;
+    text-decoration:    line-through}
+SPAN.flagstrike {
+    white-space:        pre;
+    text-decoration:    overline line-through}
 
 .bold {
     font-weight:        bold}
