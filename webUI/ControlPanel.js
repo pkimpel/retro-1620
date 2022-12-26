@@ -578,12 +578,12 @@ class ControlPanel {
         case "ModifyBtn":
             modified = true;
             this.modifyLatch = 1;
-            this.modifyBtn.setDown();   // show that it's now armed
+            this.modifyBtn.setButtonDown();     // show that it's now armed
             break;
         case "CheckResetBtn":
             if (this.modifyLatch) {
                 p.enableMemoryClear();
-                this.modifyBtn.setUp(); // clear the armed appearance
+                this.modifyBtn.setButtonUp();   // clear the armed appearance
             } else {
                 p.checkReset();
             }
@@ -677,8 +677,15 @@ class ControlPanel {
 
         switch (e.id) {
         case "ModifyBtn":
-            if (ev.type == "mousedown") {
+            switch (ev.type) {
+            case "mousedown":
                 this.modifyLatch = 1;
+                break;
+            case "mouseover":
+                if (this.modifyLatch) {
+                    this.modifyBtn.setButtonDown();
+                    break;
+                }
             }
             break;
         case "CheckResetBtn":
@@ -687,14 +694,15 @@ class ControlPanel {
                 case "mousedown":
                     break;
                 case "mouseup":
-                    this.modifyBtn.setUp(); // cancel the effect of its mousedown
+                    this.modifyBtn.setButtonUp();       // cancel the effect of its mousedown
                     this.context.processor.enableMemoryClear();
                     break;
                 case "mouseover":
-                    this.checkResetBtn.setDown();
+                    this.checkResetBtn.setButtonDown();
+                    this.modifyBtn.setButtonDown();     // make sure the Modify button shows down
                     break;
                 case "mouseout":
-                    this.checkResetBtn.setUp();
+                    this.checkResetBtn.setButtonUp();
                     break;
                 }
             }
@@ -704,7 +712,7 @@ class ControlPanel {
             case "mousedown":
             case "mouseup":
                 if (this.modifyLatch) {
-                    this.modifyBtn.setUp();
+                    this.modifyBtn.setButtonUp();
                     this.modifyLatch = 0;
                 }
                 break;

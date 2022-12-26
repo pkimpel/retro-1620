@@ -31,6 +31,7 @@ class PanelButton {
         this.bottomCaptionDiv = null;       // optional bottom caption element
         this.buttonUpClass = upClass;       // css styling for an "off" button
         this.buttonDownClass = downClass;   // css styling for an "on" button
+        this.buttonDown = false;            // button is currently down
 
         // visible DOM element
         this.element = document.createElement("button");
@@ -49,10 +50,13 @@ class PanelButton {
         }
 
         this.element.addEventListener("mousedown", (ev) => {
-            this.setDown();
+            this.setButtonDown();
         }, false);
         this.element.addEventListener("mouseup", (ev) => {
-            this.setUp();
+            this.setButtonUp();
+        }, false);
+        this.element.addEventListener("mouseout", (ev) => {
+            this.checkButtonDrag();
         }, false);
     }
 
@@ -64,17 +68,32 @@ class PanelButton {
     }
 
     /**************************************/
-    setDown() {
+    setButtonDown() {
         /* Sets the styling on the button to make it appear "down" */
 
         this.element.classList.add(this.buttonDownClass);
+        this.buttonDown = true;
     }
 
     /**************************************/
-    setUp() {
+    setButtonUp() {
         /* Removes the styling on the button that makes it appear "down" */
 
         this.element.classList.remove(this.buttonDownClass);
+        this.buttonDown = false;
+    }
+
+    /**************************************/
+    checkButtonDrag() {
+        /* Handler for the mouseout event. If the user moves the pointer outside
+        the boundaries of the button while holding down the button and then
+        releases it, the button will not get the mouseup event, and the click
+        doesn't happen. We check whether we're halfway through a click, and if
+        so, remove the button-down appearance */
+
+        if (this.buttonDown) {
+            this.setButtonUp();
+        }
     }
 
     /**************************************/
