@@ -57,7 +57,7 @@ window.addEventListener("load", function() {
         "242": ",",
         "222": "(",
         "042": "=",
-        "022": "@",
+        "022": "@",     // also numeric blank
         "900": "A",
         "880": "B",
         "840": "C",
@@ -95,10 +95,10 @@ window.addEventListener("load", function() {
         "004": "7",
         "002": "8",
         "001": "9",
-        "282": "|",     // record mark (0-2-8 punch)
-        "482": "{",     // flagged record mark (11-2-8 punch)
-        "206": "\\",    // group mark (0-7-8 punch)
-        "806": "}"      // flagged group mark (12-7-8 punch)
+        "282": "#",     // record mark (0-2-8 punch)
+        "482": "\"",    // flagged record mark (11-2-8 punch)
+        "206": "%",     // group mark (0-7-8 punch)
+        "806": "&"      // flagged group mark (12-7-8 punch)
     };
 
     const punchBits = ["9", "8", "7", "6", "5", "4", "3", "2", "1", "0", "11", "12"];

@@ -61,10 +61,17 @@ class PanelButton {
     }
 
     /**************************************/
-    addEventListener(eventName, handler, useCapture) {
+    addEventListener(eventName, handler, options) {
         /* Sets an event handler whenever the button element is clicked */
 
-        this.element.addEventListener(eventName, handler, useCapture);
+        this.element.addEventListener(eventName, handler, options);
+    }
+
+    /**************************************/
+    removeEventListener(eventName, handler, options) {
+        /* Sets an event handler whenever the button element is clicked */
+
+        this.element.removeEventListener(eventName, handler, options);
     }
 
     /**************************************/

@@ -60,7 +60,7 @@ BODY.deviceBody {
     overflow:           hidden;
     margin:             0;
     padding:            0;
-    background-color:   #246;
+    background-color:   #678;
     color:              white;
     user-select:        none;
     cursor:             default}
@@ -155,6 +155,17 @@ DIV.boxCaption {
     left:               -3px;
     font-size:          8px;
     text-align:         center}
+
+DIV.annunciator {
+    position:           absolute;
+    font-family:        DejaVuSansWeb, sans-serif;
+    font-size:          7pt;
+    color:              #00000033;
+    line-height:        100%;
+    text-align:         center}
+DIV.annunciatorLit {
+    color:              #FFF2CE}
+
 
 SPAN.panelSpan {
     position:           relative;
@@ -253,6 +264,46 @@ BUTTON.darkBlueButtonDown {
     color:              #CCC;
     background-image:   none;
     background-color:   #000020}
+
+BUTTON.device {
+    position:           absolute;
+    font-family:        DejaVuSansWeb, sans-serif;
+    font-size:          7pt;
+    font-weight:        normal;
+    line-height:        120%;
+    width:              56px;
+    height:             42px;
+    padding:            0;
+    border:             1px solid black;
+    border-radius:      2px}
+
+BUTTON.redButton {
+    color:              black;
+    background-image:   linear-gradient(#C00, #900, #C00)}
+BUTTON.redButtonDown {
+    background-color:   #900;
+    background-image:   none}
+
+BUTTON.greenButton {
+    color:              black;
+    background-image:   linear-gradient(#0C0, #090, #0C0)}
+BUTTON.greenButtonDown {
+    background-color:   #090;
+    background-image:   none}
+
+BUTTON.yellowButton {
+    color:              black;
+    background-image:   linear-gradient(#CC0, #990, #CC0)}
+BUTTON.yellowButtonDown {
+    background-color:   #990;
+    background-image:   none}
+
+BUTTON.whiteButton {
+    color:              black;
+    background-image:   linear-gradient(#CCC, #999, #CCC)}
+BUTTON.whiteButtonDown {
+    background-color:   #999;
+    background-image:   none}
 
 BUTTON.whiteLamp {
     color:              black;

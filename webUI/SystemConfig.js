@@ -98,6 +98,13 @@ class SystemConfig {
             // Reserved for future use
         }
 
+        // ?? TEMP cleanup during development ??
+        if ("cpm" in this.configData.Card) {
+            this.configData.Card.cpmRead = this.configData.Card.cpm;
+            this.configData.Card.cpmPunch = this.configData.Card.cpm/2;
+            delete this.configData.Card.cpm;
+        }
+
         // Recursively merge any new properties from defaults
         this.sortaDeepMerge(this.configData, SystemConfig.defaultConfig);
     }
@@ -239,7 +246,7 @@ class SystemConfig {
 
         // Card Reader/Punch
         this.$$("CardInstalled").checked = cd.Card.hasCard;
-        this.setListValue("CardSpeed", cd.Card.cpm);
+        this.setListValue("CardSpeed", cd.Card.cpmRead);
 
         // Printer
         this.$$("PrinterInstalled").checked = cd.Printer.hasPrinter;
@@ -299,7 +306,16 @@ class SystemConfig {
         cd.Card.hasCard = (this.$$("CardInstalled").checked ? 1 : 0);
         e = this.$$("CardSpeed");
         x = parseInt(e.options[e.selectedIndex].value, 10);
-        cd.Card.cpm = (isNaN(x) ? 250 : x);
+        switch (x) {
+        case 500:
+            cd.Card.cpmRead = 500;
+            cd.Card.cpmPunch = 250;
+            break;
+        default:
+            cd.Card.cpmRead = 250;
+            cd.Card.cpmPunch = 125;
+            break;
+        }
 
         // Printer
         cd.Printer.hasPrinter = (this.$$("PrinterInstalled").checked ? 1 : 0);
@@ -401,8 +417,9 @@ SystemConfig.defaultConfig = {
     },
 
     Card: {
-        hasCard: 0,
-        cpm: 500
+        hasCard: 1,
+        cpmRead: 500,
+        cpmPunch: 250,
     },
 
     Printer: {

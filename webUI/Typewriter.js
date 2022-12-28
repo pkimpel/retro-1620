@@ -121,7 +121,7 @@ class Typewriter {
         /* Initializes the Typewriter window and user interface */
         let prefs = this.config.getNode("Typewriter");
 
-        this.doc = ev.target;
+        this.doc = ev.target;           // now we can use this.$$()
         this.window = this.doc.defaultView;
         this.doc.title = "retro-1620 Typewriter";
         this.platen = this.$$("PrinterPlaten");
@@ -154,7 +154,7 @@ class Typewriter {
     *******************************************************************/
 
     /**************************************/
-    initiateRead() {
+    async initiateRead() {
         /* Called by Processor to prepare the device for input */
 
         this.window.focus();
@@ -187,11 +187,11 @@ class Typewriter {
                 let priorChild = lastChild.previousSibling;     // should be the <span>
                 if (priorChild && priorChild.nodeType == Node.ELEMENT_NODE) {
                     priorChild.textContent = key;       // fill in the current keystroke under the flag
-                } else {
-                    await this.printChar(key, false, false);
+                } else {                // should never happen
+                    console.error("Typewriter: bad DOM for resetFlagPending, no flag element for '%s'", key);
                 }
-            } else {
-                await this.printChar(key, false, false);
+            } else {                    // should never happen, either
+                console.error("Typewriter: bad DOM for resetFlagPending, no text node for '%s'", key);
             }
         }
     }
@@ -247,11 +247,16 @@ class Typewriter {
             ev.preventDefault();
             code = -4;
             break;
-        case "|":                       // treat both as the record mark key
-        case "\\":
+        case "#":                       // treat as the record mark key
             ev.preventDefault();
             code = key.charCodeAt(0);
             key = Envir.glyphRecMark;           // echo the correct glyph
+            break;
+        case "%":                       // ignore these, not valid from Typewriter
+        case "\"":
+        case "&":
+        case "~":
+        case "^":
             break;
         default:                        // all other keys
             if (key.length > 1) {
@@ -265,7 +270,7 @@ class Typewriter {
         }
 
         if (code) {
-            let reply = this.processor.receiveKeystroke(code);
+            let reply = this.processor.receiveKeystroke(code, this.flagPending);
             switch (reply) {
             case 0:                     // ignore keystroke, flash the cursor
                 this.indicateKeyboardLock();
@@ -811,7 +816,7 @@ Typewriter.alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit B
         Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 18
         Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 1C
         "-",                    "/",                    Envir.glyphPillow,      ",",                    // 20
-        "(",                    Envir.glyphPillow,      "?",                    Envir.glyphPillow,      // 24
+        "(",                    Envir.glyphPillow,      "^",                    Envir.glyphPillow,      // 24
         Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 28
         Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 2C
         Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      "=",                    // 30

@@ -14,11 +14,11 @@
 import * as Version from "../emulator/Version.js";
 import {Processor} from "../emulator/Processor.js";
 
+import {CardReader} from "./CardReader.js";
 import {ControlPanel} from "./ControlPanel.js";
 import {SystemConfig} from "./SystemConfig.js";
 import {Typewriter} from "./Typewriter.js";
 
-//import {Typewriter} from "./Typewriter.js";
 
 let globalLoad = (ev) => {
     let config = new SystemConfig();    // system configuration object
@@ -76,10 +76,13 @@ let globalLoad = (ev) => {
         window.addEventListener("beforeunload", beforeUnload);
 
         context.processor = new Processor(context);
-        context.controlPanel = new ControlPanel(context);
-        context.devices = {
-            "typewriter":               new Typewriter(context)
+        context.devices = {typewriter: new Typewriter(context)};
+        if (config.getNode("Card.hasCard")) {
+            context.devices.cardReader = new CardReader(context);
+            //context.devices.cardPunch = new CardPunch(context);
         }
+
+        context.controlPanel = new ControlPanel(context);
     }
 
     /**************************************/

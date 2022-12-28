@@ -595,7 +595,7 @@ class ControlPanel {
             p.saveIR1();
             break;
         case "InsertBtn":
-            p.insert();
+            p.insert(false);
             break;
         case "ReleaseBtn":
             p.release();
