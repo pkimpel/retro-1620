@@ -38,13 +38,23 @@
     right:              16px;
     width:              40px;
     height:             56px;
-    font-size:          6pt;
     background-image:   linear-gradient(#E0E0E0 0%, #E0E0E0 50%, #F7F7E9 50%, #F7F7E9 85%, #666 100%);
     border:             1px solid black;
     box-shadow:         3px 3px 3px #333}
 #NPROSwitch.clicked {
     background-image:   linear-gradient(#CCC 0%, #F7F7E9 15%, #D0D0D0 15%, #D0D0D0 50%,
                                         #E0E0E0 50%, #E0E0E0 100%)}
+#NPROSwitchCaption {
+    position:           absolute;
+    bottom:             15%;
+    width:              100%;
+    text-align:         center;
+    color:              black;
+    font-size:          5pt;
+    line-height:        100%}
+#NPROSwitch.clicked #NPROSwitchCaption {
+    bottom:             2px;
+    font-size:          6pt}
 
 #LoadBtn {
     position:           absolute;

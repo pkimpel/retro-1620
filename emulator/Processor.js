@@ -1425,8 +1425,10 @@ class Processor {
             case 0:     // turn off indexing
             case 1:     // set index Band 1
             case 2:     // set index Band 2
-                this.gateIX_BAND_1.value = mbrOdd & 1;
-                this.gateIX_BAND_2.value = mbrOdd & 2;
+                if (this.xrInstalled) {
+                    this.gateIX_BAND_1.value = mbrOdd & 1;
+                    this.gateIX_BAND_2.value = mbrOdd & 2;
+                }
                 break;
             case 8:     // turn off indirect addressing
             case 9:     // turn on indirect addressing
@@ -2379,9 +2381,12 @@ class Processor {
         memory cycle, but leaves it in automatic mode, even though MANUAL is also
         set. Otherwise, executes the next memory cycle, then stops the processor */
 
-        if (this.gatePOWER_ON.value) {
-            // also enabled by INSERT, SAVE, DISPLAY MAR, not AUTO, RELEASE, SCE ??
+        if (this.gatePOWER_ON.value &&
+                // Not sure about this next part, but mentioned in Germain p.25:
+                // Don't allow SCE during I/O unless it's Typewriter or Paper Tape output.
+                !(this.gateRD.value || (this.gateWR.value && !(this.ioSelectNr==1 || this.ioSelectNr==3)))) {
             this.gateSCE.value = 1;     // single memory-cycle latch
+            this.gateRUN.value = 1;
             if (this.gateMANUAL.value) {
                 // Singe-step one memory cycle (ignoring that we're in MANUAL mode).
                 this.run();
