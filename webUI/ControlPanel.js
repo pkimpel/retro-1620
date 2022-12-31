@@ -50,6 +50,7 @@ class ControlPanel {
         this.boundBeforeUnload = this.beforeUnload.bind(this);
         this.boundControlSwitchClick = this.controlSwitchClick.bind(this);
         this.boundModifyResetDrag = this.modifyResetDrag.bind(this);
+        this.boundLoadCMEMFile = this.loadCMEMFile.bind(this);
         this.boundShutDown = this.shutDown.bind(this);
 
         // Create the Control Panel window
@@ -339,6 +340,7 @@ class ControlPanel {
         this.$$("OperatorContainer").addEventListener("mousedown", this.boundModifyResetDrag);
         this.$$("OperatorContainer").addEventListener("mouseup", this.boundModifyResetDrag);
         this.marSelectorKnob.setChangeListener(this.boundMARSelectorChange);
+        this.$$("DPSLogo").addEventListener("dblclick", this.boundLoadCMEMFile);
 
         // Power up and initialize the system.
         setTimeout(() => {
@@ -353,6 +355,42 @@ class ControlPanel {
             // Resize the window to take into account the difference between inner and outer heights (Safari).
             this.window.resizeBy(0, this.doc.body.scrollHeight-this.doc.body.offsetHeight);
         }, 1000);
+    }
+
+    /**************************************/
+    loadCMEMFile(ev) {
+        /* Enables the LoadCMEMDiv overlay to select a CMEM file */
+
+        const cancelLoad = (ev) => {
+            /* Unwires the local events and closes the load panel */
+            this.$$("CMEMCancelBtn").removeEventListener("click", cancelLoad);
+            this.$$("CMEMSelector").removeEventListener("change", fileSelectorChange);
+            this.$$("LoadCMEMDiv").style.display = "none";
+        };
+
+        const fileSelectorChange = (ev) => {
+            /* Handle the <input type=file> onchange event when a file is selected */
+
+            const fileLoader_onLoad = (ev) => {
+                /* Handle the onLoad event for a Text FileReader and pass the text
+                of the file to the processsor for loading into memory */
+
+                const msg = this.context.processor.loadCMEMFile(ev.target.result);
+                if (msg.length) {
+                    this.window.alert(msg);
+                }
+
+                cancelLoad(ev);
+            };
+
+            const reader = new FileReader();
+            reader.onload = fileLoader_onLoad;
+            reader.readAsText(ev.target.files[0]);
+        };
+
+        this.$$("LoadCMEMDiv").style.display = "block";
+        this.$$("CMEMSelector").addEventListener("change", fileSelectorChange);
+        this.$$("CMEMCancelBtn").addEventListener("click", cancelLoad);
     }
 
     /**************************************/
@@ -748,6 +786,8 @@ class ControlPanel {
         this.$$("OperatorContainer").removeEventListener("mousedown", this.boundModifyResetDrag);
         this.$$("OperatorContainer").removeEventListener("mouseup", this.boundModifyResetDrag);
         this.marSelectorKnob.removeChangeListener(this.boundMARSelectorChange);
+        this.$$("DPSLogo").removeEventListener("dblclick", this.boundLoadCMEMFile);
+
         this.powerReadyLamp.set(0);
         this.powerOnLamp.set(0);
         if (this.intervalToken) {

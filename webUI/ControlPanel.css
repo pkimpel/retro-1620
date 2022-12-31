@@ -571,3 +571,16 @@ DIV.evenOddCaption {
     bottom:             8px;
     font-size:          8px;
     color:              black}
+
+
+#LoadCMEMDiv {
+    position:           absolute;
+    display:            none;
+    left:               50%;
+    top:                50%;
+    transform:          translate(-50%, -50%);
+    z-index:            10;
+    background-color:   #FFC;
+    padding:            8px;
+    border:             2px solid black;
+    box-shadow:         4px 4px 4px black}

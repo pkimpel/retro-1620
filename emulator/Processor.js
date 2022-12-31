@@ -434,6 +434,140 @@ class Processor {
     }
 
     /**************************************/
+    loadCMEMFile(buffer) {
+        /* Clears memory and then loads it from the text of the buffer passed
+        as a parameter. The system must be in MANUAL and not AUTOMATIC mode.
+        Sets IR1 to zero and resets BR_EXEC at the end.
+        Returns a (possibly empty) string with the result of the load */
+        let addr = 0;                   // current memory address
+        let bufLength = buffer.length;  // length of the "buffer"
+        let errors = 0;                 // number of errors detected
+        let errMsg = "";                // description of last error
+        let index = 0;                  // offset into "buffer"
+        let line = "";                  // one line from the file image
+        let lineNr = 0;                 // file image 1-relative line number
+        let match = null;               // result of eolRex.exec()
+
+        const eolRex = /([^\n\r\f]*)((:?\r[\n\f]?)|\n|\f)?/g;
+        const addrRex = /^([0-9]{0,5})\s*:/;
+        const dataSplitRex = /\s+/;
+        const digitRex = /^[0-1]?[0-9a-fA-F]$/;
+
+        const loadMemory = (addr, data) => {
+            /* Loads a string of space-delimited hex digit values to memory
+            starting at "addr". Returns the next address to be stored */
+            let odd = addr & 1;         // even/odd address flag
+
+            this.regMAR.binaryValue = addr;
+            this.fetch();
+
+            let digits = data.split(dataSplitRex);
+            for (let c of digits) {
+                if (!digitRex.test(c)) {
+                    ++errors;
+                    errMsg = `Invalid digit value @${addr}, line ${lineNr}`;
+                } else {
+                    let d = parseInt(c, 16);
+                    if (odd) {
+                        this.regMIR.odd = Envir.oddParity5[d];
+                        this.store();
+                        this.regMAR.incr(2);
+                        this.fetch();
+
+                    } else {
+                        this.regMIR.even = Envir.oddParity5[d];
+                    }
+                }
+
+                ++addr;
+                odd = 1-odd;
+            }
+
+            if (odd) {
+                this.store();
+            }
+
+            return addr;
+        };
+
+        const loadTabStops = (tabList) => {
+            /* Parses the sting "tabList" to produce a comma-delimited list of
+            typewriter tab stops. Passes that list to the Typewriter to be set
+            as a temporary set of tab stops. The persistent Typewriter
+            configuration data is not altered. This is a bit of a kludge, but
+            it's good enough for the purpose at hand */
+            let stopNrs = tabList.split(/[0-9]+/);
+
+            let stops = this.devices.typewriter.parseTabStops(stopNrs.join(","), this.window);
+            if (stops) {
+                this.devices.typewriter.tabStops = stops;
+                this.devices.typewriter.$$("TabStops").value =
+                        this.devices.typewriter.formatTabStops(stops);
+            }
+        };
+
+        // First, make sure we're in the proper state.
+        if (!(this.gatePOWER_ON.value && this.gateMANUAL.value && !this.gateAUTOMATIC.value)) {
+            return "Invalid processor state.";
+        }
+
+        // Second, clear memory to zeroes.
+        this.regMIR.clear();
+        this.MM.fill(this.regMIR.value);
+
+        // Read the lines from the file image.
+        while (index < bufLength) {
+            eolRex.lastIndex = index;
+            match = eolRex.exec(buffer);
+            if (!match) {               // assume EOF if no delimiter
+                line = "";
+                index = bufLength;
+            } else {                    // process the extracted line
+                ++lineNr;
+                index += match[0].length;
+                line = match[1].trimEnd().toLowerCase();
+                let length = line.length;
+                match = addrRex.exec(line);
+                if (!match) {           // it's not an address:data line
+                    if (length == 0) {
+                        // empty line -- ignore
+                    } else {
+                        switch (line.at(0)) {
+                        case "/":       // comment line -- ignore
+                            break;
+                        case "*":       // settings line
+                            loadTabStops(line.substring(1).trim());
+                            break;
+                        default:        // it's something undefined
+                            ++errors;
+                            errMsg = `Unrecognized line ${lineNr}`;
+                            break;
+                        }
+                    }
+                } else {                // process an address:data line
+                    let prefix = match[1];
+                    if (prefix.length > 0) {
+                        addr = parseInt(prefix, 10) ?? 0;
+                    }
+
+                    let data = line.substring(match[0].length).trim();
+                    let x = data.indexOf("/");
+                    if (x >= 0) {
+                        data = data.substring(0, x).trim();
+                    }
+
+                    addr = loadMemory(addr, data);
+                }
+            }
+        }
+
+        // Finally, clear IR1 and BR_EXEC.
+        this.regIR1.clear();
+        this.gateBR_EXEC.value = 0;
+        return (errors ? `${errors} error(s), last was ${errMsg}.` : "");
+    }
+
+    /**************************************/
     updateLampGlow(beta) {
         /* Updates the lamp glow for all registers and flip-flops in the
         system. Beta is a bias in the range (0,1). For normal update use 0;
