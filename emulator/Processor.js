@@ -535,18 +535,19 @@ class Processor {
             for (let c of digits) {
                 if (!digitRex.test(c)) {
                     ++errors;
-                    errMsg = `Invalid digit value @${addr}, line ${lineNr}`;
-                } else {
-                    let d = parseInt(c, 16);
-                    if (odd) {
-                        this.regMIR.odd = Envir.oddParity5[d];
-                        this.store();
-                        this.regMAR.incr(2);
-                        this.fetch();
+                    errMsg = `Invalid digit value "${c}" @${addr}, line ${lineNr}`;
+                    c = "0";
+                }
 
-                    } else {
-                        this.regMIR.even = Envir.oddParity5[d];
-                    }
+                let d = parseInt(c, 16);
+                if (odd) {
+                    this.regMIR.odd = Envir.oddParity5[d];
+                    this.store();
+                    this.regMAR.incr(2);
+                    this.fetch();
+
+                } else {
+                    this.regMIR.even = Envir.oddParity5[d];
                 }
 
                 ++addr;

@@ -407,7 +407,8 @@ SystemConfig.defaultConfig = {
         ParityStopSW: 0,
         IOStopSW: 0,
         OflowStopSW: 0,
-        MARSelSW: 0
+        MARSelSW: 0,                    // 0-relative knob position
+        DebugView: 0                    // display register Debug View panel
     },
 
     Typewriter: {

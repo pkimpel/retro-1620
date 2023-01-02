@@ -71,6 +71,12 @@ H1 {
     font-size:          14pt;
     font-weight:        bold}
 
+H2 {
+    margin-top:         1em;
+    margin-bottom:      1em;
+    font-size:          12pt;
+    font-weight:        bold}
+
 PRE.paper,
 IFRAME.paper {
     font-family:        DejaVuSansMonoBookWeb, monospace;
@@ -293,7 +299,7 @@ BUTTON.greenButtonDown {
 
 BUTTON.yellowButton {
     color:              black;
-    background-image:   linear-gradient(#CC0, #990, #CC0)}
+    background-image:   linear-gradient(#CC3, #993, #CC3)}
 BUTTON.yellowButtonDown {
     background-color:   #990;
     background-image:   none}

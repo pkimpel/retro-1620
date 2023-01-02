@@ -50,6 +50,7 @@ class ControlPanel {
         this.boundBeforeUnload = this.beforeUnload.bind(this);
         this.boundControlSwitchClick = this.controlSwitchClick.bind(this);
         this.boundModifyResetDrag = this.modifyResetDrag.bind(this);
+        this.boundToggleDebugView = this.toggleDebugView.bind(this);
         this.boundLoadCMEMFile = this.loadCMEMFile.bind(this);
         this.boundShutDown = this.shutDown.bind(this);
 
@@ -75,7 +76,6 @@ class ControlPanel {
         /* Initializes the Control Panel window and user interface */
         let p = this.context.processor;
         let panel = null;               // panel DOM object
-        //var prefs = this.config.getNode("ControlPanel");
 
         let buildGatePanel = (panelID, gateCols, gateIDs) => {
             let caption = "";           // panel caption text
@@ -331,6 +331,8 @@ class ControlPanel {
         this.program4Switch.set(this.config.getNode("ControlPanel.Program3SW"));
         p.program4Switch = this.program4Switch.state;
 
+        this.$$("RegisterViewTable").style.display =
+                (this.config.getNode("ControlPanel.DebugView") ? "table" : "none");
 
         this.$$("EmulatorVersion").textContent = Version.retro1620Version;
         this.window.addEventListener("beforeunload", this.boundBeforeUnload);
@@ -340,6 +342,7 @@ class ControlPanel {
         this.$$("OperatorContainer").addEventListener("mousedown", this.boundModifyResetDrag);
         this.$$("OperatorContainer").addEventListener("mouseup", this.boundModifyResetDrag);
         this.marSelectorKnob.setChangeListener(this.boundMARSelectorChange);
+        this.$$("IBMLogo").addEventListener("dblclick", this.boundToggleDebugView);
         this.$$("DPSLogo").addEventListener("dblclick", this.boundLoadCMEMFile);
 
         // Power up and initialize the system.
@@ -358,18 +361,187 @@ class ControlPanel {
     }
 
     /**************************************/
+    dumpCMEMFile(ev) {
+        /* Formats the contents of core memory to a popup window, from which the
+        user can copy/save/print it as they desire */
+        const title = "retro-1620 CMEM Memory Dump";
+        const p = this.context.processor;
+        const MM = p.MM;
+        const memSize = p.envir.memorySize;
+        const config = p.context.config.configData;
+        const dpl = 20;                 // digits per line
+
+        const formatCMEM = (ev) => {
+            const doc = ev.target;
+            const win = doc.defaultView;
+            const text = doc.getElementById("Paper");
+
+            let addr = 0;               // current memory address
+            let digit = 0;              // current memory digit
+            let digits = 20;            // digits on current line
+            let line = "";              // line assembly buffer
+            let lineAddr = 0;           // address of start of line
+            let pair = MM[0];           // current memory cell digit pair
+            let state = 0;              // FSA state variable
+            let zeroes = 0;             // count of contiguous zero digits
+
+            const startLine = (addr) => {
+                line = addr.toString().padStart(5, "0") + ":";
+                lineAddr = addr;
+                digits = 0;
+            };
+
+            const putLine = (line) => {
+                text.appendChild(doc.createTextNode(line + "\n"));
+            };
+
+            const putDigit = (digit) => {
+                line += digit.toString(16).toUpperCase().padStart((digits == 10 ? 4 : 3), " ");
+                ++digits;
+            };
+
+            doc.title = title;
+            win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
+            //doc.getElementById("Paper").textContent = text;
+            putLine(`// retro-1620 CMEM Dump - ${(new Date()).toString()}`);
+            putLine("");
+            putLine(`// OR1=${p.regOR1.binaryValue.toString().padStart(5, "0")}` +
+                     `  OR2=${p.regOR2.binaryValue.toString().padStart(5, "0")}` +
+                     `  OR3=${p.regOR3.binaryValue.toString().padStart(5, "0")}` +
+                     `  OR4=${p.regOR4.binaryValue.toString().padStart(5, "0")}` +
+                     `  OR5=${p.regOR5.binaryValue.toString().padStart(5, "0")}` +
+                     `  CR1=${p.regCR1.binaryValue.toString().padStart(5, "0")}` +
+                     `  MAR=${p.regMAR.binaryValue.toString().padStart(5, "0")}`);
+            putLine(`// IR1=${p.regIR1.binaryValue.toString().padStart(5, "0")}` +
+                     `  IR2=${p.regIR2.binaryValue.toString().padStart(5, "0")}` +
+                     `  IR3=${p.regIR3.binaryValue.toString().padStart(5, "0")}` +
+                     `  IR4=${p.regIR4.binaryValue.toString().padStart(5, "0")}` +
+                     `  PR1=${p.regPR1.binaryValue.toString().padStart(5, "0")}` +
+                     `  PR2=${p.regPR2.binaryValue.toString().padStart(5, "0")}` +
+                     `  XBR=${p.regXBR.binaryValue.toString().padStart(5, "0")}`);
+            putLine(`// OP=${p.regOP.binaryValue.toString().padStart(2, "0")}  ` +
+                       `DR=${p.gateFL_2.value ? "~" : " "}${p.regDR.even & Register.bcdMask}` +
+                          `${p.gateFL_1.value ? "~" : " "}${p.regDR.odd  & Register.bcdMask}  ` +
+                       `MQ=${p.regMQ.binaryValue}  IA=${p.gateIA_SEL.value}  ` +
+                       `XR=${p.regXR.binaryValue}  BAND=${p.gateIX_BAND_2.value*2 + p.gateIX_BAND_1.value}`);
+            putLine("//");
+            line = "// Annunciators: ";
+            if (p.gateTHERMAL.value)            {line += "THERMAL "}
+            if (p.gateWRITE_INTERLOCK.value)    {line += "WRITE-INTERLOCK "}
+            if (p.gateREAD_INTERLOCK.value)     {line += "READ-INTERLOCK "}
+            if (p.gateSAVE.value)               {line += "SAVE "}
+            if (p.gateTWPR_SELECT.value)        {line += "TWPR-SELECT "}
+            if (p.gateAUTOMATIC.value)          {line += "AUTOMATIC "}
+            if (p.gateMANUAL.value)             {line += "MANUAL "}
+            if (p.gateCHECK_STOP.value)         {line += "CHECK-STOP "}
+            putLine(line);
+            line = "// Checks: ";
+            if (p.diskAddrCheck.value)          {line += "DISK-ADDR "}
+            if (p.diskCylOflowCheck.value)      {line += "CYL-OFLOW "}
+            if (p.diskWRLRBCCheck.value)        {line += "WRLRBC "}
+            if (p.ioPrinterCheck.value)         {line += "PRINTER "}
+            if (p.ioReadCheck.value)            {line += "READ "}
+            if (p.ioWriteCheck.value)           {line += "WRITE "}
+            if (p.oflowArithCheck.value)        {line += "ARITH-OFLOW "}
+            if (p.oflowExpCheck.value)          {line += "EXP-OFLOW "}
+            if (p.parityMARCheck.value)         {line += "MAR-PARITY "}
+            if (p.parityMBREvenCheck.value)     {line += "MBR-E-PARITY "}
+            if (p.parityMBROddCheck.value)      {line += "MBR-O-PARITY "}
+            putLine(line);
+            putLine(`// PS1=${p.program1Switch}, PS2=${p.program2Switch}, PS3=${p.program3Switch}, PS4=${p.program4Switch}, ` +
+                    `Stop: Disk=${p.diskStopSwitch}, Parity=${p.parityStopSwitch}, I/O=${p.ioStopSwitch}, Oflow=${p.oflowStopSwitch}, ` +
+                    `MARS: ${p.marSelectorKnob}`);
+            line = `// Config: ${config.configName}, Memory ${memSize}`;
+            if (p.xrInstalled) {line += ", Index Registers"}
+            if (p.fpInstalled) {line += ", Floating Point"}
+            if (p.bcInstalled) {line += ", Binary Capabilities"}
+            putLine(line);
+            line = "// Devices:";
+            if (config.Card.hasCard) {line += ` Card ${config.Card.cpmRead}/${config.Card.cpmPunch} CPM,`}
+            if (config.Printer.hasPrinter) {line += ` Printer ${config.Printer.lpm} LPM,`}
+            if (config.Disk.hasDisk) {
+                line += " Disk units ";
+                for (let x=0; x<config.Disk.units.length; ++x) {
+                    if (config.Disk.units[x].enabled) {line += `${x},`}
+                }
+            }
+            putLine(line.slice(0, -1));
+
+            line = "";
+
+            while (addr < memSize) {
+                if (addr & 1) {                 // get next even/odd digit
+                    digit = pair & Register.notParityMask;
+                } else {
+                    pair = MM[addr >> 1];
+                    digit = (pair >> Register.digitBits) & Register.notParityMask;
+                }
+
+                if (digit == 0) {
+                    ++zeroes;                   // count contiguous unflagged zeroes
+                } else {
+                    // Fill in any unflagged zeros that will fit on the line.
+                    while (zeroes && digits < dpl) {
+                        putDigit(0);
+                        --zeroes;
+                    }
+
+                    // If there are remaining zeroes, skip to the line with the current address.
+                    if (zeroes) {
+                        putLine(line);
+                        if (zeroes >= dpl) {    // at least one line of zeroes
+                            putLine("");
+                        }
+
+                        zeroes = 0;
+                        startLine(Math.floor(addr/dpl)*dpl);
+                        while (lineAddr+digits < addr) {// output any leading zeroes
+                            putDigit(0);
+                        }
+                    }
+
+                    // Output the current non-zero digit, starting a new line as needed.
+                    if (digits >= dpl) {
+                        putLine(line);
+                        startLine(addr);
+                    }
+
+                    putDigit(digit);
+                }
+
+                // Increment memory address.
+                ++addr;
+            }
+
+            if (digits) {
+                putLine(line);
+            }
+
+            putLine("");
+            putLine("// End CMEM Dump");
+        };
+
+
+        openPopup(this.window, "./FramePaper.html", "",
+                "scrollbars,resizable,width=600,height=500", this, formatCMEM);
+    }
+
+    /**************************************/
     loadCMEMFile(ev) {
         /* Enables the LoadCMEMDiv overlay to select a CMEM file */
 
         const cancelLoad = (ev) => {
             /* Unwires the local events and closes the load panel */
+
             this.$$("CMEMCancelBtn").removeEventListener("click", cancelLoad);
-            this.$$("CMEMSelector").removeEventListener("change", fileSelectorChange);
+            this.$$("CMEMDumpBtn").removeEventListener("click", initiateCMEMDump);
+            this.$$("CMEMSelector").removeEventListener("change", initiateCMEMLoad);
             this.$$("LoadCMEMDiv").style.display = "none";
         };
 
-        const fileSelectorChange = (ev) => {
-            /* Handle the <input type=file> onchange event when a file is selected */
+        const initiateCMEMLoad = (ev) => {
+            /* Handle the <input type=file> onchange event when a file is selected
+            to initiate a CMEM load */
 
             const fileLoader_onLoad = (ev) => {
                 /* Handle the onLoad event for a Text FileReader and pass the text
@@ -388,9 +560,31 @@ class ControlPanel {
             reader.readAsText(ev.target.files[0]);
         };
 
+        const initiateCMEMDump = (ev) => {
+            /* Handle the click event on the dump button to initiate a CMEM dump */
+
+            this.dumpCMEMFile(ev);
+            cancelLoad(ev);
+        };
+
         this.$$("LoadCMEMDiv").style.display = "block";
-        this.$$("CMEMSelector").addEventListener("change", fileSelectorChange);
+        this.$$("CMEMSelector").addEventListener("change", initiateCMEMLoad);
+        this.$$("CMEMDumpBtn").addEventListener("click", initiateCMEMDump);
         this.$$("CMEMCancelBtn").addEventListener("click", cancelLoad);
+    }
+
+    /**************************************/
+    toggleDebugView(ev) {
+        /* Toggles display of the Debug View panel when the IBM logo is double-clicked */
+        const dbv = this.$$("RegisterViewTable");
+
+        if (dbv.style.display == "none") {
+           dbv.style.display = "table";
+           this.config.putNode("ControlPanel.DebugView", 1);
+        } else {
+           dbv.style.display = "none";
+           this.config.putNode("ControlPanel.DebugView", 0);
+        }
     }
 
     /**************************************/
@@ -577,20 +771,20 @@ class ControlPanel {
         this.oflowArithCheckLamp.set(p.oflowArithCheck.glow);
 
         // Register View Table **DEBUG**
-        this.$$("ViewMAR").textContent = p.regMAR.binaryValue.toString().padStart(5, "0");
         this.$$("ViewOR1").textContent = p.regOR1.binaryValue.toString().padStart(5, "0");
         this.$$("ViewOR2").textContent = p.regOR2.binaryValue.toString().padStart(5, "0");
         this.$$("ViewOR3").textContent = p.regOR3.binaryValue.toString().padStart(5, "0");
         this.$$("ViewOR4").textContent = p.regOR4.binaryValue.toString().padStart(5, "0");
         this.$$("ViewOR5").textContent = p.regOR5.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewXBR").textContent = p.regXBR.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewCR1").textContent = p.regCR1.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewMAR").textContent = p.regMAR.binaryValue.toString().padStart(5, "0");
         this.$$("ViewIR1").textContent = p.regIR1.binaryValue.toString().padStart(5, "0");
         this.$$("ViewIR2").textContent = p.regIR2.binaryValue.toString().padStart(5, "0");
         this.$$("ViewIR3").textContent = p.regIR3.binaryValue.toString().padStart(5, "0");
         this.$$("ViewIR4").textContent = p.regIR4.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewCR1").textContent = p.regCR1.binaryValue.toString().padStart(5, "0");
         this.$$("ViewPR1").textContent = p.regPR1.binaryValue.toString().padStart(5, "0");
         this.$$("ViewPR2").textContent = p.regPR2.binaryValue.toString().padStart(5, "0");
+        this.$$("ViewXBR").textContent = p.regXBR.binaryValue.toString().padStart(5, "0");
 
         this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
     }
@@ -786,6 +980,7 @@ class ControlPanel {
         this.$$("OperatorContainer").removeEventListener("mousedown", this.boundModifyResetDrag);
         this.$$("OperatorContainer").removeEventListener("mouseup", this.boundModifyResetDrag);
         this.marSelectorKnob.removeChangeListener(this.boundMARSelectorChange);
+        this.$$("IBMLogo").removeEventListener("dblClick", this.boundToggleDebugView);
         this.$$("DPSLogo").removeEventListener("dblclick", this.boundLoadCMEMFile);
 
         this.powerReadyLamp.set(0);

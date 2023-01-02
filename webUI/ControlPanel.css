@@ -253,6 +253,7 @@ DIV.evenOddCaption {
 
 #RegisterViewTable {                    /* **DEBUG** */
     position:           absolute;
+    display:            none;
     top:                16px;
     right:              114px;
     background-color:   #FFC;
@@ -584,3 +585,5 @@ DIV.evenOddCaption {
     padding:            8px;
     border:             2px solid black;
     box-shadow:         4px 4px 4px black}
+#LoadCMEMDiv TABLE {
+    width:              100%}
