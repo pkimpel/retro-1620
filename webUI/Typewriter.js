@@ -138,8 +138,6 @@ class Typewriter {
             this.$$("TabStops").value = this.formatTabStops(tabStops);
         }
 
-        this.setPaperEmpty();
-
         // Events
         this.window.addEventListener("beforeunload", this.beforeUnload, false);
         this.window.addEventListener("resize", this.boundResizeWindow, false);
@@ -739,28 +737,91 @@ class Typewriter {
 
     /**************************************/
     copyPaper(ev) {
-        /* Copies the text contents of the "paper" area of the device, opens a new
-        temporary window, and pastes that text into the window so it can be copied
-        or saved by the user */
-        let text = this.paper.textContent;
-        let title = "retro-g15 Typewriter Output";
+        /* Copies the text contents of the "paper" area of the device, opens a
+        new temporary window, and converts that text and pastes it into the
+        window so it can be copied, printed, or saved by the user. Flagged digits
+        are converted to j-sign letters, and special characters are converted to
+        ASCII according to the convention used by the 1620-Jr project */
+        const title = "retro-1620 Typewriter Extract";
+        const xlateFlag = {
+            "0":"~", "1":"j", "2":"k", "3":"l", "4":"m", "5":"n", "6":"o", "7":"p",
+            "8":"q", "9":"r", "\u2021":"\"", "\u2262":"&", "\u25AE":"?"};
 
-        openPopup(this.window, "./FramePaper.html", "",
-                "scrollbars,resizable,width=500,height=500",
-                this, function(ev) {
-            let doc = ev.target;
-            let win = doc.defaultView;
+        const convertToASCII = (text) => {
+            return text.replace(/[\u2021\u2262\u25AE\u00A7]/g, (text) => {
+                switch (text) {
+                case Envir.glyphRecMark:        // \u2021
+                    return "#";
+                    break;
+                case Envir.glyphGroupMark:      // \u2262
+                    return "%";
+                    break;
+                case Envir.glyphPillow:         // \u25AE
+                    return "?";
+                    break;
+                case Typewriter.RSChar:
+                    return "|";
+                    break;
+                default:
+                    return "!";
+                    break;
+                }
+            });
+        };
+
+        const convertTypewriterPaper = (ev) => {
+            const doc = ev.target;
+            const win = doc.defaultView;
+            const content = doc.getElementById("Paper");
 
             doc.title = title;
             win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
-            doc.getElementById("Paper").textContent = text;
+
+            let node = this.paper.firstChild;
+            while (node) {
+                switch (node.nodeType) {
+                case Node.TEXT_NODE:    // plain text
+                    content.appendChild(doc.createTextNode(convertToASCII(node.nodeValue)));
+                    break;
+                case Node.ELEMENT_NODE: // hopefully a flag/strike span
+                    if (node.tagName == "SPAN") {
+                        if (node.classList.contains("flag")) {
+                            let c = node.textContent;
+                            let a = xlateFlag[c];
+                            if (a) {
+                                content.appendChild(doc.createTextNode(a));
+                            } else {
+                                content.appendChild(doc.createTextNode(convertToASCII(c)));
+                            }
+                        } else if (node.classList.contains("strike")) {
+                            content.appendChild(doc.createTextNode("!"));
+                        } else if (node.classList.contains("flagstrike")) {
+                            content.appendChild(doc.createTextNode("!"));
+                        } else { // something that sholdn't be here
+                            content.appendChild(doc.createTextNode(">"));
+                        }
+                    }
+                    break;
+                default:        // unknown node type, should never happen
+                    content.appendChild(doc.createTextNode("<"));
+                    break;
+                }
+
+                node = node.nextSibling;
+            }
+
             this.setPaperEmpty();
-        });
+
+        };
+
+        openPopup(this.window, "./FramePaper.html", "",
+                "scrollbars,resizable,width=660,height=500",
+                this, convertTypewriterPaper);
     }
 
     /**************************************/
     unloadPaperClick(ev) {
-        /* Clears the internal scrp;; buffer in response to double-clicking
+        /* Clears the internal scroll buffer in response to double-clicking
         the paper area */
 
         this.copyPaper();
