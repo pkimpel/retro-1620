@@ -52,6 +52,7 @@ class ControlPanel {
         this.boundModifyResetDrag = this.modifyResetDrag.bind(this);
         this.boundToggleDebugView = this.toggleDebugView.bind(this);
         this.boundLoadCMEMFile = this.loadCMEMFile.bind(this);
+        this.boundPanelUnload = this.panelUnload.bind(this);
         this.boundShutDown = this.shutDown.bind(this);
 
         // Create the Control Panel window
@@ -336,6 +337,7 @@ class ControlPanel {
 
         this.$$("EmulatorVersion").textContent = Version.retro1620Version;
         this.window.addEventListener("beforeunload", this.boundBeforeUnload);
+        this.window.addEventListener("unload", this.boundPanelUnload);
         this.$$("OperatorContainer").addEventListener("click", this.boundControlSwitchClick);
         this.$$("OperatorContainer").addEventListener("mouseover", this.boundModifyResetDrag);
         this.$$("OperatorContainer").addEventListener("mouseout", this.boundModifyResetDrag);
@@ -971,6 +973,13 @@ class ControlPanel {
     }
 
     /**************************************/
+    panelUnload(ev) {
+        /* Event handler for the window unload event */
+
+        this.shutDown();
+    }
+
+    /**************************************/
     shutDown() {
         /* Shuts down the panel */
 
@@ -990,9 +999,10 @@ class ControlPanel {
             this.intervalToken = 0;
         }
 
+        this.window.removeEventListener("beforeunload", this.boundBeforeUnload);
+        this.window.removeEventListener("unload", this.boundPanelUnload);
+        this.context.systemShutDown();
         this.window.setTimeout(() => {
-            this.context.systemShutDown();
-            this.window.removeEventListener("beforeunload", this.boundBeforeUnload);
             this.window.close();
         }, 1000);
     }

@@ -45,6 +45,7 @@ class Typewriter {
         this.printerCol = 0;                    // current print position
         this.scrollLines = 0;                   // lines in scroll buffer
         this.flagPending = false;               // FLG key has been pressed, awaiting next char
+        this.insertMode = false;                // input initiated for INSERT operation
         this.tabStops = [];                     // tab stop columns
         this.timer = new Timer();
 
@@ -152,13 +153,6 @@ class Typewriter {
     *******************************************************************/
 
     /**************************************/
-    async initiateRead() {
-        /* Called by Processor to prepare the device for input */
-
-        this.window.focus();
-    }
-
-    /**************************************/
     indicateKeyboardLock() {
         /* Temporarily flashes the cursor character to indicate the keyboard
         is locked */
@@ -231,6 +225,10 @@ class Typewriter {
             // Print R/S unconditionally now to avoid a time race with the Processor.
             await this.resetFlagPending(" ");
             await this.printChar(Typewriter.RSChar, false, false);
+            if (this.insertMode) {
+                this.insertMode = false;
+                await this.printNewLine();
+            }
             break;
         case "Backspace":               // treat as the CORR key
             ev.preventDefault();
@@ -297,6 +295,29 @@ class Typewriter {
                 }
                 break;
             }
+        }
+    }
+
+    /**************************************/
+    async initiateRead(insertMode) {
+        /* Called by Processor to prepare the device for input */
+
+        this.window.focus();
+        this.platen.classList.add("inputEnabled");
+        if (insertMode) {
+            this.insertMode = true;
+            await this.printNewLine();
+        }
+    }
+
+    /**************************************/
+    release() {
+        /* Called by Processor to indicate the device has been released */
+
+        this.platen.classList.remove("inputEnabled");
+        if (this.insertMode) {
+            this.insertMode = false;
+            this.printNewLine();
         }
     }
 

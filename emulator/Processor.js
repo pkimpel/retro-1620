@@ -875,23 +875,28 @@ class Processor {
             this.gateTWPR_SELECT.value = 1;
             break;
         case 2:         // Paper Tape Punch / Plotter
-            //break;
+            this.ioDevice = null;
+            break;
         case 3:         // Paper Tape Reader
-            //break;
+            this.ioDevice = null;
+            break;
         case 4:         // Card Punch
-            //break;
+            this.ioDevice = null;
+            break;
         case 5:         // Card Reader
             this.ioDevice = this.devices.cardReader;
             break;
         case 7:         // Disk Drive
-            //break;
+            this.ioDevice = null;
+            break;
         case 9:         // Printer
-            //break;
+            this.ioDevice = null;
+            break;
         case 33:        // Binary Paper Tape Reader
-            // break;
+            this.ioDevice = null;
+            break;
         default:
             this.ioDevice = null;
-            this.ioVariant = 0;
             break;
         }
     }
@@ -1155,13 +1160,13 @@ class Processor {
         this.gateWR.value = 0;
         this.gateCHAR_GATE.value = 0;
         this.gateRESP_GATE.value = 0;   // not sure about this...
+        this.ioDevice.release();
         this.ioDevice = null;
         this.ioSelectNr = 0;
         this.ioVariant = 0;
         this.gateTWPR_SELECT.value = 0;
         this.gateREAD_INTERLOCK.value = 0;
         this.gateWRITE_INTERLOCK.value = 0;
-        this.envir.startTiming();       // reset the emulation clock
     }
 
     /**************************************/
@@ -1169,10 +1174,11 @@ class Processor {
         /* Releases any currently-active I/O operation */
 
         if (this.gateRD.value || this.gateWR.value) {
-           this.gateREL.value = 1;
-           this.gateINSERT.value = 0;
-           this.ioExit();
-           this.enterICycle();
+            this.gateREL.value = 1;
+            this.ioExit();
+            this.gateINSERT.value = 0;
+            this.enterICycle();
+            this.envir.startTiming();   // reset the emulation clock
         }
     }
 
@@ -1913,7 +1919,7 @@ class Processor {
                     if (this.ioSelectNr == 3 || this.ioSelectNr == 5) {
                         this.gateREAD_INTERLOCK.value = 1;      // card or paper tape
                     }
-                    this.ioDevice.initiateRead();
+                    this.ioDevice.initiateRead(false);
                 }
                 break;
             case 35:        // DN, Dump Numerically
@@ -2530,7 +2536,7 @@ class Processor {
         this.gateSCTR_CYC.value = 0;
         this.gateSIMO_30.value = 0;
         this.gateSIMO_HOLD.value = 0;
-        this.ioExit();
+        this.ioRelease();
 
         this.gateWRITE_INTERLOCK.value = 0;
         this.gateREAD_INTERLOCK.value = 0;
@@ -2637,7 +2643,7 @@ class Processor {
             this.gateAUTOMATIC.value = 1;
             this.gateREL.value = 0;
             this.regOP.binaryValue = this.opBinary = 36; // RN, Read Numerically
-            this.ioSelect((cardLoad ? 5 : 1), 0);        // select card or typewriter
+            this.ioSelect((cardLoad ? 5 : 1), 0);        // select card(5) or typewriter(1)
             if (!this.gateRD.value) {   // not sure about this...
                 this.gateRD.value = 1;
                 this.gate1ST_CYC.value = 1;
@@ -2653,7 +2659,7 @@ class Processor {
             this.regOR2.clear();
             this.regMAR.clear();
 
-            this.ioDevice.initiateRead();
+            this.ioDevice.initiateRead(true);
             this.updateLampGlow(1);
         }
     }
@@ -2665,7 +2671,7 @@ class Processor {
         if (this.gatePOWER_ON.value && (this.gateRD.value || this.gateWR.value)) {
             this.gateSTOP.value = 1;
             this.ioRelease();           // STOP will force MANUAL mode in I-Cycle Entry
-            this.updateLampGlow(1);
+            //this.updateLampGlow(1);
         }
     }
 
@@ -2722,7 +2728,7 @@ class Processor {
             } else {
                 // Stop processor after next memory cycle.
                 this.gateMANUAL.value = 1;
-                this.updateLampGlow(1);
+                //this.updateLampGlow(1);
             }
         }
     }
@@ -2771,13 +2777,16 @@ class Processor {
             const flagZero = ("@").charCodeAt(0);
 
             let d = 0;
+            let flagged = false;
             let odd = addr & 1;
 
             this.regMAR.binaryValue = addr;
             this.regMIR.value = this.MM[addr >> 1];
 
             for (let c of digits.toUpperCase()) {
-                if (c != " ") {
+                if (c == "~") {
+                    flagged = true;
+                } else if (c != " ") {
                     if (numRex.test(c)) {
                         d = c.charCodeAt(0) - zero;
                     } else if (flagRex.test(c)) {
@@ -2803,6 +2812,11 @@ class Processor {
                             d = 0xF;    // Group Mark
                             break;
                         }
+                    }
+
+                    if (flagged) {
+                        flagged = false;
+                        d |= Register.flagMask;
                     }
 
                     if (odd) {
@@ -2839,7 +2853,7 @@ class Processor {
             "49 00988 99999");  //  0000 B      988,99999       branch to 988 to start test
 
         loadMemory(200,
-            "0@1A2B3C4D5E6F7G8H9I #$_%&|");
+            "0@ 1A 2B 3C 4D 5E 6F 7G 8H 9I #~# $~$ _~_ %~% &~& |~|");
 
         loadMemory(300,         // load index registers
             "88888 00000 00000 00000 00000 00000 00000 00000" +         // Band 1: IX 0-7
@@ -2875,7 +2889,7 @@ class Processor {
 
             "15 19999 0000|" +  //  1240 TDM    19999,GM        transmit group mark to 19999
             "35 19999 00100" +  //  1252 DNTY   19999,100       dump the group mark
-            "47 01240 00100" +  //  1264 BNI    1252,1          branch unless PS1 is on
+            "47 01252 00100" +  //  1264 BNI    1252,1          branch unless PS1 is on
             "34 00000 00102" +  //  1276 K      0,102           carriage return
 
             "48 77777 99999" +  //  1288 H      77777,99999     halt again

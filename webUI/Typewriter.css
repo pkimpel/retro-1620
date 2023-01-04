@@ -27,9 +27,9 @@
 
 #PrinterPlaten {
     position:           absolute;
-    left:               4px;
-    right:              4px;
-    top:                4px;
+    left:               2px;
+    right:              2px;
+    top:                2px;
     height:             calc(100% - 30px);
     width:              calc(100% - 8px);
     min-height:         64px;
@@ -39,7 +39,9 @@
     color:              black;
     background-color:   white;
     padding:            0;
-    border:             none}
+    border:             2px solid black}
+#PrinterPlaten.inputEnabled {
+    border:             2px solid green}
 
 #Paper {
     margin-left:        0;

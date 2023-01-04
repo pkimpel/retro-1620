@@ -255,7 +255,7 @@ DIV.evenOddCaption {
     position:           absolute;
     display:            none;
     top:                16px;
-    right:              114px;
+    left:               713px;
     background-color:   #FFC;
     box-shadow:         inset 3px 3px 3px #666}
 #RegisterViewTable TR {
@@ -266,7 +266,7 @@ DIV.evenOddCaption {
 #IndicatorButtonPanel {
     position:           absolute;
     top:                76px;
-    right:              114px;
+    left:               516px;
     width:              784px;
     height:             106px;
     background-color:   lightgray;
