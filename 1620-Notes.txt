@@ -17,10 +17,13 @@ Intermediate Diagrams -- "IBM Data Processing System Model 2 Customer
 processor be halted immediately by setting MANUAL? Germain p.27 indicates that
 it stops like an H (48) instruction, but pressing the START key after that
 results in a MAR check stop. Intermediate diagrams indicate MANUAL is set in
-I-1, but doesn't show how the check stop occurs.
+I-1, but doesn't show how the check stop occurs.  
+[CORRECTED 2022-12-07: op code 00 puts system into MANUAL, will check stop 
+if START is then pressed]
 
 3. What action should be taken for undefined op codes? NOP? Check Stop?
-Germain p.27 indicates invalid op codes cause a MAR check stop.
+Germain p.27 indicates invalid op codes cause a MAR check stop.    
+[COMPLETED 2023-01-01: invalid op codes cause MAR check stop]
 
 4. How should "undigits" (hex A-F) be handled? Germain p.27 indicates that
 arithmetic on such digits results in a MAR check stop, or on the Mod2, sometimes
@@ -69,5 +72,9 @@ rather than one step in the "current" direction.
 Panel animates the click by applying a darker style to the button. If you click
 and hold, then drag outside the button and release, there's no mouse up event
 fired on the button, and it stays dark. This does not affect the button's
-subsequent operation, though.
+subsequent operation, though.  
+[COMPLETED 2022-12-26]
 
+16. Need to implement the Emergency Off switch on the Control Panel, if only as
+a static image.    
+[COMPLETED 2023-01-18]

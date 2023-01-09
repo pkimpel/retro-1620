@@ -565,6 +565,74 @@ DIV.evenOddCaption {
     left:               265px;
     width:              24px}
 
+#EmergencyOffSwitch {
+    position:           absolute;
+    top:                74px;
+    left:               90px;
+    width:              62px;
+    height:             110px;
+    border:             1px solid black;
+    box-shadow:         6px 2px 6px #666}
+#EmergencyOffTopBar {
+    position:           absolute;
+    top:                0;
+    left:               0;
+    right:              0;
+    height:             3px;
+    background-image:   linear-gradient(to right, rgb(175,42,1) 0%, rgb(199,119,94) 40%, rgb(155,35,1) 100%)}
+#EmergencyOffBottomBar {
+    position:           absolute;
+    bottom:             0;
+    left:               0;
+    right:              0;
+    height:             3px;
+    background-image:   linear-gradient(to right, rgb(175,42,1) 0%, rgb(199,119,94) 40%, rgb(155,35,1) 100%)}
+#EmergencyOffLeftBar {
+    position:           absolute;
+    top:                3px;
+    left:               0;
+    bottom:             3px;
+    width:              6px;
+    background-image:   linear-gradient(to right, rgb(199,119,94) 0, rgb(175,42,1) 3px, rgb(175,42,1) 6px)}
+#EmergencyOffRightBar {
+    position:           absolute;
+    top:                3px;
+    right:              0;
+    bottom:             3px;
+    width:              6px;
+    background-image:   linear-gradient(to right, rgb(183,96,83) 0, rgb(188,55,10) 3px, rgb(43,1,2) 6px)}
+#EmergencyOffDeepBox {
+    position:           absolute;
+    top:                3px;
+    left:               6px;
+    right:              6px;
+    bottom:             3px;
+    background-color:   rgb(121,18,0);
+    box-shadow:         inset 8px 3px 8px #333}
+#EmergencyOffPull {
+    position:           absolute;
+    top:                50%;
+    left:               2px;
+    right:              2px;
+    height:             40px;
+    color:              black;
+    background-color:   white;
+    transform:          translate(0, -50%);
+    box-shadow:         0 8px 8px #333}
+#EmergencyOffCaption1 {
+    position:           relative;
+    top:                0;
+    left:               0;
+    font-size:          8px;
+    letter-spacing:     -0.75px;
+    text-align:         center}
+#EmergencyOffCaption2 {
+    position:           relative;
+    bottom:             2px;
+    left:               0;
+    font-size:          12px;
+    text-align:         center}
+
 
 #VersionDiv {
     position:           absolute;

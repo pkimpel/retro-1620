@@ -52,6 +52,7 @@ class ControlPanel {
         this.boundModifyResetDrag = this.modifyResetDrag.bind(this);
         this.boundToggleDebugView = this.toggleDebugView.bind(this);
         this.boundLoadCMEMFile = this.loadCMEMFile.bind(this);
+        this.boundEmergencyOffClick = this.emergencyOffClick.bind(this);
         this.boundPanelUnload = this.panelUnload.bind(this);
         this.boundShutDown = this.shutDown.bind(this);
 
@@ -75,7 +76,7 @@ class ControlPanel {
     /**************************************/
     panelOnLoad(ev) {
         /* Initializes the Control Panel window and user interface */
-        let p = this.context.processor;
+        const p = this.context.processor;
         let panel = null;               // panel DOM object
 
         let buildGatePanel = (panelID, gateCols, gateIDs) => {
@@ -344,6 +345,7 @@ class ControlPanel {
         this.$$("OperatorContainer").addEventListener("mousedown", this.boundModifyResetDrag);
         this.$$("OperatorContainer").addEventListener("mouseup", this.boundModifyResetDrag);
         this.marSelectorKnob.setChangeListener(this.boundMARSelectorChange);
+        this.$$("EmergencyOffSwitch").addEventListener("dblclick", this.boundEmergencyOffClick);
         this.$$("IBMLogo").addEventListener("dblclick", this.boundToggleDebugView);
         this.$$("DPSLogo").addEventListener("dblclick", this.boundLoadCMEMFile);
 
@@ -576,6 +578,22 @@ class ControlPanel {
     }
 
     /**************************************/
+    emergencyOffClick(ev) {
+        /* Handles the forbidden click of the Emergency Off switch */
+        const p = this.context.processor;
+
+        this.window.clearTimeout(this.intervalToken);
+        p.enterManual();
+        p.manualReset();
+        p.powerDown();
+        this.powerReadyLamp.set(0);
+        this.powerOnLamp.set(0);
+        this.updatePanel();
+        this.$$("AlarmSound").volume = 1.0;
+        this.$$("AlarmSound").play();
+    }
+
+    /**************************************/
     toggleDebugView(ev) {
         /* Toggles display of the Debug View panel when the IBM logo is double-clicked */
         const dbv = this.$$("RegisterViewTable");
@@ -592,7 +610,7 @@ class ControlPanel {
     /**************************************/
     toggleTracing(ev) {
         /* Toggles the Processor's tracing option */
-        let p = this.context.processor;
+        const p = this.context.processor;
 
         this.$$("FrontPanel").focus();  // de-select the version <div>
 
@@ -609,7 +627,7 @@ class ControlPanel {
     /**************************************/
     updatePanel() {
         /* Updates the panel registers and flip-flops from processor state */
-        let p = this.context.processor;
+        const p = this.context.processor;
 
         p.updateLampGlow(0);
 
@@ -796,7 +814,7 @@ class ControlPanel {
         /* Event handler for the pane's switch controls */
         let e = ev.target;
         let modified = false;           // MODIFY button was pressed this time
-        let p = this.context.processor;
+        const p = this.context.processor;
 
         if (e.tagName == "IMG") {
             e = e.parentElement;        // adjust for clicking image of ToggleSwitch objects
@@ -989,6 +1007,8 @@ class ControlPanel {
         this.$$("OperatorContainer").removeEventListener("mousedown", this.boundModifyResetDrag);
         this.$$("OperatorContainer").removeEventListener("mouseup", this.boundModifyResetDrag);
         this.marSelectorKnob.removeChangeListener(this.boundMARSelectorChange);
+        this.$$("EmergencyOffSwitch").removeEventListener("dblclick", this.boundEmergencyOffClick);
+        this.$$("AlarmSound").pause();
         this.$$("IBMLogo").removeEventListener("dblClick", this.boundToggleDebugView);
         this.$$("DPSLogo").removeEventListener("dblclick", this.boundLoadCMEMFile);
 

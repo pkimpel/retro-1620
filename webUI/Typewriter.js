@@ -53,6 +53,7 @@ class Typewriter {
         this.boundResizeWindow = this.resizeWindow.bind(this);
         this.boundUnloadPaperClick = this.unloadPaperClick.bind(this);
         this.boundTextOnChange = this.textOnChange.bind(this);
+        this.boundSelectricClick = this.selectricClick.bind(this);
 
         // Create the Typewriter window
         this.doc = null;
@@ -140,10 +141,12 @@ class Typewriter {
         }
 
         // Events
-        this.window.addEventListener("beforeunload", this.beforeUnload, false);
-        this.window.addEventListener("resize", this.boundResizeWindow, false);
-        this.paper.addEventListener("dblclick", this.boundUnloadPaperClick, false);
-        this.window.addEventListener("keydown", this.boundKeydown, false);
+        this.window.addEventListener("beforeunload", this.beforeUnload);
+        this.window.addEventListener("resize", this.boundResizeWindow);
+        this.window.addEventListener("keydown", this.boundKeydown);
+        this.paperDoc.addEventListener("keydown", this.boundKeydown);
+        this.paper.addEventListener("dblclick", this.boundUnloadPaperClick);
+        this.$$("SelectricLogo").addEventListener("click", this.boundSelectricClick);
         this.$$("FormatControlsDiv").addEventListener("change", this.boundTextOnChange);
     }
 
@@ -201,12 +204,18 @@ class Typewriter {
             (-2) indicates the CORR (Backspace) key was pressed.
             (-3) indicates the FLG (` [grave accent] or ~ [tilde] key was pressed.
             (-4) indicates the INSERT (ESC) key was pressed (reply=0).
+            (-5) indicates the RETURN (Enter) key was pressed.
+            (-6) indicates the TAB key was pressed.
+            (-7) indicates the SPACE key was pressed.
         The receiveKeystroke method returns:
             0 if the keystroke is to be ignored and not echoed (keyboard locked).
             (-1) if an R/S code is accepted and should be echoed to the paper.
             (-2) if a CORR code is accepted and should be printed.
             (-3) if a FLG code is accepted and a flagged echo should be set up.
             (-4) if an INSERT key is accepted (no action taken).
+            (-5) indicates a local carriage-return should be output.
+            (-6) indicates a local tab should be output.
+            (-7) indicates a local space should be output.
             otherwise, the 1620 internal code for the character to be echoed.
         Note that keystrokes are normally processed on keyup, but with a typewriter,
         when you pressed the key, you got the action. Hence, the processing of
@@ -214,13 +223,20 @@ class Typewriter {
         let key = ev.key;               // string representation of keystroke
         let code = 0;                   // code to be sent to the processor
 
-        if (ev.ctrlKey || ev.altKey || ev.metaKey) {
+        if (ev.ctrlKey || ev.altKey || ev.metaKey /* || ev.target !== this.paper */) {
             return;                     // ignore this keystroke, allow default action
+        } else {
+            switch (ev.target.id) {
+            case "PrinterBody":
+            case "PaperBody":
+                break;
+            default:
+                return;
+            }
         }
 
         switch (key) {
-        case "Enter":                   // treat as the R/S key
-            ev.preventDefault();
+        case "#":                       // treat as the R/S key
             code = -1;
             // Print R/S unconditionally now to avoid a time race with the Processor.
             await this.resetFlagPending(" ");
@@ -231,34 +247,40 @@ class Typewriter {
             }
             break;
         case "Backspace":               // treat as the CORR key
-            ev.preventDefault();
             code = -2;
             break;
         case "`":                       // treat both as the FLG key
         case "~":
-            ev.preventDefault();
             code = -3;
             break;
-        case "Escape":                  // treat as the INSERT key
-            ev.preventDefault();
-            code = -4;
-            break;
-        case "#":                       // treat as the record mark key
-            ev.preventDefault();
+        case "|":                       // treat as the record mark key
             code = key.charCodeAt(0);
             key = Envir.glyphRecMark;           // echo the correct glyph
             break;
-        case "%":                       // ignore these, not valid from Typewriter
-        case "\"":
-        case "&":
-        case "~":
-        case "^":
+        case "Enter":                   // local carriage-return
+            code = -5;
+            break;
+        case "Tab":                     // local tab
+            code = -6;
+            break;
+        case " ":                       // may be a local or captured space
+            code = -7;
+            break;
+        case "Escape":                  // treat as the INSERT key
+            code = -4;
+            break;
+        case "}":                       // ignore these, not valid from Typewriter: group mark
+        case "!":                               // flagged record mark
+        case "\"":                              // flagged group mark
+        case "~":                               // flagged numeric blank
+        case "]":                               // flagged zero
+        case "^":                               // "special" character
+            ev.preventDefault();
             break;
         default:                        // all other keys
             if (key.length > 1) {
                 return;                         // all special and control keys just do their thing
             } else {
-                ev.preventDefault();
                 key = key.toUpperCase();
                 code = key.charCodeAt(0);
             }
@@ -266,6 +288,7 @@ class Typewriter {
         }
 
         if (code) {
+            ev.preventDefault();
             let reply = this.processor.receiveKeystroke(code, this.flagPending);
             switch (reply) {
             case 0:                     // ignore keystroke, flash the cursor
@@ -286,6 +309,15 @@ class Typewriter {
                 }
                 break;
             case -4:                    // INSERT key, do nothing
+                break;
+            case -5:                    // print local carriage-return
+                await this.printNewLine();
+                break;
+            case -6:                    // print local tab
+                await this.printTab();
+                break;
+            case -7:                    // print local space
+                await this.printChar(" ", false, false);
                 break;
             default:                    // echo the keystroke
                 if (this.flagPending) {
@@ -494,7 +526,7 @@ class Typewriter {
                 (" ").repeat(this.marginLeft) + Typewriter.cursorChar));
         this.printerCol = this.marginLeft;
         ++this.scrollLines;
-        this.paper.scrollIntoView(false);
+        paper.scrollIntoView(false);
         return 1;                       // always returns end-of-block
     }
 
@@ -652,7 +684,7 @@ class Typewriter {
 
         // Delay for the index interlock time.
         await this.timer.delayFor(Typewriter.indexInterlock);
-        this.paper.scrollIntoView(false);
+        paper.scrollIntoView(false);
         return 1;                       // always returns end-of-block
     }
 
@@ -765,26 +797,23 @@ class Typewriter {
         ASCII according to the convention used by the 1620-Jr project */
         const title = "retro-1620 Typewriter Extract";
         const xlateFlag = {
-            "0":"~", "1":"j", "2":"k", "3":"l", "4":"m", "5":"n", "6":"o", "7":"p",
-            "8":"q", "9":"r", "\u2021":"\"", "\u2262":"&", "\u25AE":"?"};
+            "0":"]", "1":"j", "2":"k", "3":"l", "4":"m", "5":"n", "6":"o", "7":"p",
+            "8":"q", "9":"r", "@":"~", "\u2021":"!", "\u2262":"\"", "\u25AE":"?"};
 
         const convertToASCII = (text) => {
             return text.replace(/[\u2021\u2262\u25AE\u00A7]/g, (text) => {
                 switch (text) {
                 case Envir.glyphRecMark:        // \u2021
-                    return "#";
-                    break;
-                case Envir.glyphGroupMark:      // \u2262
-                    return "%";
-                    break;
-                case Envir.glyphPillow:         // \u25AE
-                    return "?";
-                    break;
-                case Typewriter.RSChar:
                     return "|";
                     break;
-                default:
-                    return "!";
+                case Envir.glyphGroupMark:      // \u2262
+                    return "}";
+                    break;
+                case Typewriter.RSChar:         // \u00A7
+                    return "#";
+                    break;
+                default:                        // includes pillow, \u25AE
+                    return "?";
                     break;
                 }
             });
@@ -814,17 +843,15 @@ class Typewriter {
                             } else {
                                 content.appendChild(doc.createTextNode(convertToASCII(c)));
                             }
-                        } else if (node.classList.contains("strike")) {
-                            content.appendChild(doc.createTextNode("!"));
-                        } else if (node.classList.contains("flagstrike")) {
-                            content.appendChild(doc.createTextNode("!"));
-                        } else { // something that sholdn't be here
-                            content.appendChild(doc.createTextNode(">"));
+                        } else {        // strike-outs and stuff that shouldn't be here
+                            content.appendChild(doc.createTextNode("?"));
                         }
+                    } else {            // unknown tag, should never happen
+                        content.appendChild(doc.createTextNode("?"));
                     }
                     break;
-                default:        // unknown node type, should never happen
-                    content.appendChild(doc.createTextNode("<"));
+                default:                // unknown node type, should never happen
+                    content.appendChild(doc.createTextNode("?"));
                     break;
                 }
 
@@ -851,16 +878,25 @@ class Typewriter {
     }
 
     /**************************************/
+    selectricClick(ev) {
+        /* Handler for clicking the Selectric logo and printing the paper area */
+
+        this.platen.contentWindow.print();
+    }
+
+    /**************************************/
     shutDown() {
         /* Shuts down the device. If the window open failed and onLoad didn't
         run, do nothing because this.window, etc., didn't get initialized */
 
         if (this.window) {
             this.$$("FormatControlsDiv").removeEventListener("change", this.boundTextOnChange);
-            this.window.removeEventListener("keydown", this.boundKeydown, false);
+            this.$$("SelectricLogo").removeEventListener("click", this.boundSelectricClick);
             this.paper.removeEventListener("dblclick", this.boundUnloadPaperClick);
-            this.window.removeEventListener("beforeunload", this.beforeUnload, false);
-            this.window.removeEventListener("resize", this.boundResizeWindow, false);
+            this.paperDoc.removeEventListener("keydown", this.boundKeydown);
+            this.window.removeEventListener("keydown", this.boundKeydown);
+            this.window.removeEventListener("beforeunload", this.beforeUnload);
+            this.window.removeEventListener("resize", this.boundResizeWindow);
             this.window.close();
         }
     }

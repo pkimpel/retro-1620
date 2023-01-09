@@ -268,7 +268,8 @@ class Processor {
         // Bound Methods
 
         // Initialization
-        let buildOpAtts = (opCode, opValid, eState, rfe1, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4) => {
+        const buildOpAtts = (opCode,
+                opValid, eState, rfe1, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4) => {
             this.opAtts[opCode] = {
                 opValid, eState, rfe1, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4};
         };
@@ -353,8 +354,8 @@ class Processor {
 
         buildOpAtts(70, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 70 MA
         buildOpAtts(71, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 71 MF
-        buildOpAtts(72, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 72 TNS
-        buildOpAtts(73, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 73 TNF
+        buildOpAtts(72, 1, 2, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 72 TNS
+        buildOpAtts(73, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 73 TNF
         buildOpAtts(74, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 74
         buildOpAtts(75, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 75
         buildOpAtts(76, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 76
@@ -648,7 +649,7 @@ class Processor {
         /* Updates the lamp glow for all registers and flip-flops in the
         system. Beta is a bias in the range (0,1). For normal update use 0;
         to freeze the current state in the lamps use 1 */
-        let gamma = (this.gateSTOP.value ? 1 : beta || 0);
+        let gamma = (this.gateMANUAL.value ? 1 : beta || 0);
 
         // Control Gates
         this.gate$$$_OFLO.updateLampGlow(gamma);
@@ -905,21 +906,24 @@ class Processor {
     async dumpNumerically(digit) {
         /* Executes one digit cycle of Dump Numerically (DN, 35). If the device
         returns an end-of-block indication and we're at END OF MODULE, or
-        RELEASE occurs, terminate the I/O */
+        RELEASE occurs, terminate the I/O (note that OR2 gets incremented before
+        this routine is called */
 
         this.gateRESP_GATE.value = 0;
         this.gateCHAR_GATE.value = 1;
 
         let eob = await this.ioDevice.dumpNumeric(digit);
         this.gateCHAR_GATE.value = 0;
-        this.gateRESP_GATE.value = 1;
+        if (this.gateWR.value) {        // we haven't been released...
+            this.gateRESP_GATE.value = 1;
 
-        if (this.regOR2.binaryValue % 20000 == 19999) {
-            this.gateEND_OF_MODULE.value = 1;
-        }
+            if (this.regOR2.binaryValue % 20000 == 0) {
+                this.gateEND_OF_MODULE.value = 1;
+            }
 
-        if (eob && this.gateEND_OF_MODULE.value) {
-            this.ioRelease();
+            if (eob && this.gateEND_OF_MODULE.value) {
+                this.ioRelease();
+            }
         }
     }
 
@@ -936,7 +940,9 @@ class Processor {
 
             let eob = await this.ioDevice.writeNumeric(digit);
             this.gateCHAR_GATE.value = 0;
-            this.gateRESP_GATE.value = 1;
+            if (this.gateWR.value) {    // we haven't been released...
+                this.gateRESP_GATE.value = 1;
+            }
         }
     }
 
@@ -954,7 +960,9 @@ class Processor {
 
             let eob = await this.ioDevice.writeAlpha(digitPair);
             this.gateCHAR_GATE.value = 0;
-            this.gateRESP_GATE.value = 1;
+            if (this.gateWR.value) {    // we haven't been released...
+                this.gateRESP_GATE.value = 1;
+            }
         }
     }
 
@@ -968,6 +976,9 @@ class Processor {
             (-2) indicates the CORR (Backspace) key was pressed.
             (-3) indicates the FLG (` [grave accent] or ~ [tilde] key was pressed.
             (-4) indicates the INSERT (ESC) key was pressed.
+            (-5) indicates the RETURN (Enter) key was pressed.
+            (-6) indicates the TAB key was pressed.
+            (-7) indicates the SPACE key was pressed.
         For numeric input (RN, 36)
             only the decimal digits, record mark (|), and numeric blank (@) are
             accepted. CORR causes OR2 to be decremented by 1.
@@ -980,6 +991,9 @@ class Processor {
             (-2) if a CORR code is accepted and should be printed.
             (-3) if a FLG code is accepted and a flagged echo should be set up.
             (-4) if an INSERT code is accepted.
+            (-5) indicates a local carriage-return should be output.
+            (-6) indicates a local tab should be output.
+            (-7) indicates a local space should be output.
             otherwise, the 1620 internal code for the character to be echoed.
         "flagged" indicates the keystroke was preceded by the FLG key. This is
         ignored for Read Alphanumerically.
@@ -1015,7 +1029,15 @@ class Processor {
             case -4:    // INSERT key -- can't be used while I/O in progress
                 break;
 
-            default:    // some character
+            case -5:    // RETURN key
+            case -6:    // TAB key
+                reply = code;           // just return these for local echo
+                break;
+
+            case -7:    // SPACE key: convert to the space code and continue
+                code = (" ").charCodeAt(0);
+                //--no break
+            default:    // some other character
                 this.gateRESP_GATE.value = 1;
                 if (readNumeric) {
                     let char = Processor.twprASCIInumeric1620[String.fromCharCode(code)];
@@ -1024,6 +1046,7 @@ class Processor {
                             this.gateIO_FLAG.value = 1;
                             reply = Envir.oddParity5[char | Register.flagMask];
                         } else {
+                            this.gateIO_FLAG.value = 0;
                             reply = Envir.oddParity5[char];
                         }
 
@@ -1062,14 +1085,21 @@ class Processor {
                 break;
             }
 
-            this.envir.tick();                  // advance the throttling clock
-            this.envir.tick();                  // by 2 memory cycles
             this.gateRESP_GATE.value = 0;
-            this.gateIO_FLAG.value = 0;
             this.envir.startTiming();           // restart the throttling clock (because Typewriter is so slow)
-        } else if (code == -4) {        // INSERT key
-            reply = code;
-            this.insert();              // will check for MANUAL mode, etc.
+            this.updateLampGlow(1);
+        } else {                        // check for local action
+            switch (code) {
+            case -4:                    // INSERT key
+                reply = code;
+                this.insert();                  // will check for MANUAL mode, etc.
+                break;
+            case -5:                    // RETURN key
+            case -6:                    // TAB key
+            case -7:                    // SPACE key
+                reply = code;                   // just echo the key locally
+                break;
+            }
         }
 
         return reply;
@@ -1092,8 +1122,8 @@ class Processor {
                 if (code === undefined) {
                     this.ioReadCheckPending = true;
                     code = 0;
-                } else if (code & Register.flagMask) {
-                    this.gateIO_FLAG.value = 1;
+                } else {
+                    this.gateIO_FLAG.value = code & Register.flagMask;
                 }
 
                 this.regMAR.value = this.regOR2.value;
@@ -1133,7 +1163,6 @@ class Processor {
             this.envir.tick();                  // advance the throttling clock
             this.envir.tick();                  // by 2 memory cycles
             this.gateRESP_GATE.value = 0;
-            this.gateIO_FLAG.value = 0;
             if (lastCol) {
                 if (this.ioReadCheckPending) {
                     this.ioReadCheckPending = false;
@@ -1160,7 +1189,7 @@ class Processor {
         this.gateWR.value = 0;
         this.gateCHAR_GATE.value = 0;
         this.gateRESP_GATE.value = 0;   // not sure about this...
-        this.ioDevice.release();
+        this.ioDevice?.release();
         this.ioDevice = null;
         this.ioSelectNr = 0;
         this.ioVariant = 0;
@@ -1919,6 +1948,7 @@ class Processor {
                     if (this.ioSelectNr == 3 || this.ioSelectNr == 5) {
                         this.gateREAD_INTERLOCK.value = 1;      // card or paper tape
                     }
+                    this.updateLampGlow(1);
                     this.ioDevice.initiateRead(false);
                 }
                 break;
@@ -1983,6 +2013,7 @@ class Processor {
             return;
         }
 
+        let initialEState = atts.eState;
         switch (this.opBinary) {
         case  6:        // TFL - Transmit Floating
         case 15:        // TDM - Transmit Digit Immediate
@@ -1992,17 +2023,18 @@ class Processor {
         case 30:        // TRNM - Transmit Record No Record Mark
         case 31:        // TR - Transmit Record
             this.enterTransmit();
-            this.setProcState(procStateE1);
             break;
 
-        default:
-            let initialEState = atts.eState;
-            if (initialEState) {
-                this.setProcState(procStateE1 + initialEState - 1);
-            } else {
-                this.checkStop(`Unimplemented op code=${this.opBinary}`);
-            }
+        case 72:        // TNS - Transmit Numeric Strip
+        case 73:        // TNF - Transmit Numeric Fill
+            this.gate1ST_CYC.value = 1; // not sure how this gets set, but it must
             break;
+        }
+
+        if (initialEState) {
+            this.setProcState(procStateE1 - 1 + initialEState);
+        } else {
+            this.checkStop(`Unimplemented op code=${this.opBinary}`);
         }
     }
 
@@ -2086,6 +2118,41 @@ class Processor {
                 this.regMIR.setDigitFlag(dx, 0);
                 this.store();
             }
+            this.regOR1.decr(1);
+            this.setProcState(procStateE2);
+            break;
+
+        case 72:        // TNS - Tranmit Numeric Strip
+            digit = this.regMBR.getDigit(dx);
+            if ((digit & Register.flagMask) && !this.gate1ST_CYC.value) {
+                this.gateFIELD_MK_1.value == 1;
+                this.regMIR.setDigit(dx, this.regDR.odd | Register.flagMask);
+                this.enterICycle();
+            } else {
+                this.regMIR.setDigit(dx, this.regDR.odd);
+                this.setProcState(procStateE2);
+            }
+
+            this.gate1ST_CYC.value = 0;
+            this.store();
+            this.regOR1.decr(1);
+            break;
+
+        case 73:        // TNF - Transmit Numeric Fill
+            digit = this.regMBR.getDigit(dx);
+            this.setDROdd(digit);
+            if (this.gate1ST_CYC.value) {
+                this.gateFIELD_MK_1.value = 0;
+                if (digit & Register.flagMask) {
+                        this.gateFIELD_MK_2.value == 1;
+                }
+            } else {
+                this.gateFIELD_MK_2.value = 0;
+                if (digit & Register.flagMask) {
+                    this.gateFIELD_MK_1.value = 1;
+                }
+            }
+
             this.regOR1.decr(1);
             this.setProcState(procStateE2);
             break;
@@ -2212,21 +2279,28 @@ class Processor {
             break;
 
         case 35:        // DN - Dump Numerically
-            await this.dumpNumerically(this.regMBR.getDigit(dx));
             this.regOR2.incr(1);
+            await this.dumpNumerically(this.regMBR.getDigit(dx));
             break;
 
-        //case 36:      // RN - Read Numerically (runs in Limbp)
+        //case 36:      // RN - Read Numerically (runs in Limbo)
         //case 37:      // RA - Read Alphanumerically (runs in Limbo)
 
         case 38:        // WN - Write Numerically
-            await this.writeNumerically(this.regMBR.getDigit(dx));
             this.regOR2.incr(1);
+            await this.writeNumerically(this.regMBR.getDigit(dx));
             break;
 
         case 39:        // WA - Write Alphanumerically
-            await this.writeAlphanumerically(this.regMBR.value);
             this.regOR2.incr(2);
+            if (this.regMAR.isEven) {
+                // Simulate the problem with even starting addresses. This is
+                // just a guess to what happened, and probably not a good one.
+                await this.writeAlphanumerically(
+                        (this.regMBR.odd << Register.digitBits) | this.regMBR.even);
+            } else {
+                await this.writeAlphanumerically(this.regMBR.value);
+            }
             break;
 
         case 71:        // MF - Move Flag
@@ -2235,7 +2309,49 @@ class Processor {
                 this.store();
             }
             this.regOR2.decr(1);
-            this.setProcState(procStateE2);
+            this.enterICycle();
+            break;
+
+        case 72:        // TNS - Transmit Numeric Strip
+            if (this.regMAR.isEven) {
+                // Simulate the problem with even starting addresses. This is
+                // just a guess to what happened, and probably not a good one.
+                digit = this.regMBR.odd;
+                this.setDROdd(this.regMBR.even);
+            } else {
+                digit = this.regMBR.even;
+                this.setDROdd(this.regMBR.odd);
+            }
+
+            if (this.gate1ST_CYC_DELAYD.value) { // special sign logic for TNS
+                if (digit == 5 || digit == 1 || (digit == 2 && this.regDR.odd == 0)) {
+                    this.gateFL_1.value = 1;
+                }
+            }
+
+            this.regOR2.decr(2);
+            this.setProcState(procStateE1);
+            break;
+
+        case 73:        // TNF - Transmit Numeric Fill
+            digit = (this.gateFIELD_MK_2.value ? 5 : 7);
+            if (this.regMAR.isEven) {
+                // Simulate the problem with even starting addresses. This is
+                // just a guess to what happened, and probably not a good one.
+                this.regMIR.even = this.getDROdd();
+                this.regMIR.odd = digit;
+            } else {
+                this.regMIR.even = digit;
+                this.regMIR.odd = this.getDROdd();
+            }
+
+            this.store();
+            this.regOR2.decr(2);
+            if (this.gateFIELD_MK_1.value) {
+                this.enterICycle();
+            } else {
+                this.setProcState(procStateE1);
+            }
             break;
 
         default:
@@ -2452,7 +2568,7 @@ class Processor {
 
             case procStateLimbo:
                 await this.envir.throttle();
-                this.updateLampGlow(1);
+                this.updateLampGlow(0);
                 return;             // exit into Limbo state
                 break;
 
@@ -2470,7 +2586,7 @@ class Processor {
             } else if (this.envir.tick()) {
                 await this.envir.throttle();
             }
-        } while (!this.gateMANUAL.value);
+        } while (this.gatePOWER_ON.value && !this.gateMANUAL.value);
 
         this.updateLampGlow(1);         // freeze current state in the lamps
     }
@@ -2758,10 +2874,22 @@ class Processor {
     powerDown() {
         /* Powers down the processor */
 
-        this.ioRelease();
-        this.enterManual();                             // stop immediately
+        if (this.gateRD.value || this.gateWR.value || !this.gateMANUAL.value) {
+            this.release();
+            this.enterManual();                         // stop immediately
+            setTimeout(() => {this.powerDown}, 100);
+            return;
+        }
+
         this.gatePOWER_ON.value = false;
         this.gatePOWER_READY.value = false;
+        for (let prop in this) {
+            if (this[prop] instanceof FlipFlop || this[prop] instanceof Register) {
+                this[prop].intVal = 0;
+            }
+        }
+
+        this.updateLampGlow(1);
     }
 
     /**************************************/
@@ -2920,9 +3048,9 @@ Processor.twprASCIInumeric1620 = {
     "8": 8,
     "9": 9,
     "@": Envir.numBlank,
-    "#": Envir.numRecMark};
+    "|": Envir.numRecMark};
 
-// CardReader numeric input keystroke digit codes.
+// CardReader numeric input digit codes.
 Processor.cardASCIInumeric1620 = {
     "0": 0,
     "1": 1,
@@ -2943,7 +3071,7 @@ Processor.cardASCIInumeric1620 = {
     "G": 7,
     "H": 8,
     "I": 9,
-    "~": 0 | Register.flagMask,
+    "]": 0 | Register.flagMask,
     "J": 1 | Register.flagMask,
     "K": 2 | Register.flagMask,
     "L": 3 | Register.flagMask,
@@ -2965,18 +3093,19 @@ Processor.cardASCIInumeric1620 = {
     ".": 0o13,
     ",": 0o13,
     "@": Envir.numBlank,
-    "(": 0o14,
-    ")": 0o14,
+    "(": Envir.numBlank,
+    ")": Envir.numBlank,
     "=": 0o13,
-    "*": 0o14 | Register.flagMask,
+    "*": Envir.numBlank | Register.flagMask,
     "-": 0 | Register.flagMask,
     "+": 0 | Register.flagMask,
-    "#": Envir.numRecMark,
-    "%": Envir.numGroupMark,
+    "|": Envir.numRecMark,
+    "}": Envir.numGroupMark,
     "$": 0o13 | Register.flagMask,
     " ": 0,
-    "\"":Envir.numRecMark | Register.flagMask,
-    "&": Envir.numGroupMark | Register.flagMask};
+    "!": Envir.numRecMark | Register.flagMask,
+    "\"":Envir.numGroupMark | Register.flagMask,
+    "~": Envir.numBlank | Register.flagMask};
 
 // Standard alphanumeric input keystroke character codes for most devices.
 Processor.stdASCIIalpha1620 = {
@@ -3028,9 +3157,9 @@ Processor.stdASCIIalpha1620 = {
     "X": 0o06_07,
     "Y": 0o06_10,
     "Z": 0o06_11,
-    "#": 0o00_12,       // record mark
-    "\"":0o05_12,       // flagged record mark
-    "%": 0o00_17,       // group mark
-    "&": 0o05_17,       // flagged group mark
-    "~": 0o05_00,       // flagged zero (code 50)
+    "|": 0o00_12,       // record mark
+    "!": 0o05_12,       // flagged record mark
+    "}": 0o00_17,       // group mark
+    "\"":0o05_17,       // flagged group mark
+    "]": 0o05_00,       // flagged zero (code 50)
     "^": 0o02_06};      // the "special" character (code 26)

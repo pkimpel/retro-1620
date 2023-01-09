@@ -41,7 +41,7 @@ class CardReader {
         this.timer = new Timer();
 
         this.eolRex = /([^\n\r\f]*)((:?\r[\n\f]?)|\n|\f)?/g;
-        this.invalidCharRex = /[^A-Z0-9 .)+$*-/,(=@#%~"&]/;
+        this.invalidCharRex = /[^A-Z0-9 .)+$*-/,(=@|}!"\x5D]/;
 
         // Calculate timing factors.
         this.cardsPerMinute = this.config.getNode("Card.cpmRead");
@@ -172,9 +172,13 @@ class CardReader {
     /**************************************/
     stopBtnClick(ev) {
         /* Handle the click event for the STOP button */
+        const p = this.processor;
 
         if (this.transportReady) {
             this.setTransportReady(false);
+            //if (p.gateAUTOMATIC.value && p.gateREAD_INTERLOCK.value) {
+            //    p.updateLampGlow(1);       // freeze the console lamps
+            //}
         }
     }
 
@@ -283,7 +287,7 @@ class CardReader {
             this.bufLength = this.buffer.length;
             this.$$("HopperBar").value = this.bufLength;
             this.$$("HopperBar").max = this.bufLength;
-        }
+        };
 
         for (let file of fileList) {
             let deck = new FileReader();
@@ -472,7 +476,7 @@ class CardReader {
     }
 
     /**************************************/
-    async initiateRead() {
+    async initiateRead(insertMode) {
         /* Called by the Processor to request transfer of the buffered card.
         If the buffered card is not ready, simply sets the transferRequested flag.
         Exits unconditionally. The next card will be sent once it has been read
@@ -483,6 +487,13 @@ class CardReader {
         } else {                        // wait for the buffer to be filled
             this.transferRequested = true;
         }
+    }
+
+    /**************************************/
+    release () {
+        /* Called by Processor to indicate the device has been released */
+
+        // Nothing to do for CardReader.
     }
 
     /**************************************/

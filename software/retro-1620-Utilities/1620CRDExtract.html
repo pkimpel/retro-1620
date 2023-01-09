@@ -51,7 +51,7 @@ window.addEventListener("load", function() {
         "822": ")",
         "800": "+",
         "442": "$",
-        "422": "*",
+        "422": "*",     // also flagged numeric blank
         "400": "-",
         "300": "/",
         "242": ",",
@@ -67,7 +67,7 @@ window.addEventListener("load", function() {
         "804": "G",
         "802": "H",
         "801": "I",
-        "600": "~",     // -0 (11-0 punch)
+        "600": "]",     // -0 (11-0 punch, flagged zero)
         "500": "J",
         "480": "K",
         "440": "L",
@@ -95,10 +95,11 @@ window.addEventListener("load", function() {
         "004": "7",
         "002": "8",
         "001": "9",
-        "282": "#",     // record mark (0-2-8 punch)
-        "482": "\"",    // flagged record mark (11-2-8 punch)
-        "206": "%",     // group mark (0-7-8 punch)
-        "806": "&"      // flagged group mark (12-7-8 punch)
+        "282": "|",     // record mark (0-2-8 punch)
+        "482": "!",     // flagged record mark (11-2-8 punch)
+        "206": "}",     // group mark (0-7-8 punch)
+        "806": "\"",    // flagged group mark (12-7-8 punch)
+
     };
 
     const punchBits = ["9", "8", "7", "6", "5", "4", "3", "2", "1", "0", "11", "12"];
@@ -159,15 +160,14 @@ window.addEventListener("load", function() {
     }
 
     function extractFile(f, blob) {
-        /* Extracts the extracts the data from "blob" for file "f" and converts
-        it to ASCII, writing the text to a new window object within the browser */
+        /* Extracts the data from "blob" for file "f" and converts it to ASCII,
+        writing the text to a new window object within the browser */
         let fileName = f.name;
 
         let formatFile = (ev) => {
             let doc = ev.target;
             let win = doc.defaultView;
             doc.title = fileName;
-            win.removeEventListener("load", formatFile);
             win.moveTo((screen.availWidth - 800)/2, (screen.availHeight - 600)/2);
             win.focus();
 
@@ -208,9 +208,9 @@ window.addEventListener("load", function() {
         spout(" ");
         spout(`Converting ${fileName}: ${f.size} octets, ${(new Date(f.lastModified).toDateString())}`);
 
-        let win = window.open("./FramePaper.html", "ASCII",
+        let win = window.open("../../webUI/FramePaper.html", "ASCII",
                 "width=800,height=600,scrollbars");
-        win.addEventListener("load", formatFile);
+        win.addEventListener("load", formatFile, {once: true});
 
         let result = !confirm("Copy and save " + f.name + " from the sub-window.\n" +
                           "Then click OK to continue or Cancel to quit.");
@@ -246,7 +246,7 @@ window.addEventListener("load", function() {
         if (missing.length == 0) {
             return false;
         } else {
-            alert("No can do... your browser does not support the following features:\n" + missing.substring(2));
+            alert(`No can do... your browser does not support the following features:\n${missing.substring(2)}`);
             return true;
         }
     }
