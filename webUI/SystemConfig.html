@@ -52,8 +52,8 @@
             <option          value=60000>60000
         </select> Digit Memory Size<br>
         <input id=SystemIndexRegisters type=checkbox value=1> <label for=SystemIndexRegisters>Index Registers</label><br>
-        <input id=SystemFloatingPoint  type=checkbox value=1> <label for=SystemFloatingPoint>Floating Point</label><br>
-        <input id=SystemBinaryCaps     type=checkbox value=1> <label for=SystemBinaryCaps>Binary Capabilities</label><br>
+        <input id=SystemFloatingPoint  type=checkbox value=1 DISABLED> <label for=SystemFloatingPoint>Floating Point</label><br>
+        <input id=SystemBinaryCaps     type=checkbox value=1 DISABLED> <label for=SystemBinaryCaps>Binary Capabilities</label><br>
     </div>
 
 
@@ -68,15 +68,15 @@
     <div class=details>
         <input id=CardInstalled type=checkbox value=1> <label for=CardInstalled>Installed</label><br>
         <select id=CardSpeed>
-            <option value=250>250/125 CPM
-            <option value=500>500/250 CPM
+            <option value=250>Model 1: 250/125 CPM
+            <option value=500>Model 2: 500/250 CPM
         </select> Reader/Punch Speed
     </div>
 
 
     <div class=heading>1443 Printer:</div>
     <div class=details>
-        <input id=PrinterInstalled type=checkbox value=1> <label for=PrinterInstalled>Installed</label><br>
+        <input id=PrinterInstalled type=checkbox value=1 DISABLED> <label for=PrinterInstalled>Installed</label><br>
         <select id=PrinterSpeed>
             <option value=240>240 LPM, 52-character set
             <option value=300>300 LPM, 39-character set
@@ -87,7 +87,7 @@
 
     <div class=heading>1311 Disk:</div>
     <div class=details>
-        <input id=DiskInstalled type=checkbox value=1> <label for=DiskInstalled>Installed</label><br>
+        <input id=DiskInstalled type=checkbox value=1 DISABLED> <label for=DiskInstalled>Installed</label><br>
         <br>
         <input id=Disk0Enabled type=checkbox value=1> <label for=Disk0Enabled>Disk 0 Enabled (required)</label><br>
         <input id=Disk1Enabled type=checkbox value=1> <label for=Disk1Enabled>Disk 1 Enabled</label><br>

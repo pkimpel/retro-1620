@@ -287,10 +287,10 @@ class Processor {
         buildOpAtts( 9, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 09 FDIV
 
         buildOpAtts(10, 1, 2, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0);      // 10 BTAM
-        buildOpAtts(11, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 11 AM
-        buildOpAtts(12, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 12 SM
+        buildOpAtts(11, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 11 AM
+        buildOpAtts(12, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 12 SM
         buildOpAtts(13, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 13 MM
-        buildOpAtts(14, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 14 CM
+        buildOpAtts(14, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 14 CM
         buildOpAtts(15, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 15 TDM
         buildOpAtts(16, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 16 TFM
         buildOpAtts(17, 1, 2, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0);      // 17 BTM
@@ -298,10 +298,10 @@ class Processor {
         buildOpAtts(19, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 19 DM
 
         buildOpAtts(20, 1, 2, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 20 BTA
-        buildOpAtts(21, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 21 A
-        buildOpAtts(22, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 22 S
+        buildOpAtts(21, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 21 A
+        buildOpAtts(22, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 22 S
         buildOpAtts(23, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 23 M
-        buildOpAtts(24, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 24 C
+        buildOpAtts(24, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 24 C
         buildOpAtts(25, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 25 TD
         buildOpAtts(26, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 26 TF
         buildOpAtts(27, 1, 2, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 27 BT
@@ -476,30 +476,28 @@ class Processor {
     }
 
     /**************************************/
-    addDigits(addend) {
+    addDigits(rawAddend) {
         /* Adds two digits and yields their sum. The augend must be in regDR.odd.
         If gateCOMP is set, the 9s-complement of the augend is added instead.
         gateCARRY_IN is added to the sum, which is then decimal-adjusted before
         storing it in regDR.odd. gateCARRY_OUT is set to the carry from the sum */
-        let augend = this.regDR.odd;
-        let sum = 0;
+        let augend = this.regDR.odd & Register.bcdMask;
+        let addend = rawAddend & Register.bcdMask;
 
-        if ((augend & Envir.undigitMask) > Envir.undigitFalse ||
-                (addend & Envir.undigitMask) > Envir.undigitFalse) {
+        if (augend >= Register.undigitBase || addend >= Register.undigitBase) {
             this.marCheck(`addDigits invalid BCD code: aug=${augend.toString(2)}, add=${addend.toString(2)}`);
-        } else {
-            sum = (augend & Register.bcdMask) + this.gateCARRY_IN.value +
-                    ((this.gateCOMP.value ? 9-addend : addend) & Register.bcdMask);
-            if (sum < 10) {
-                this.gateCARRY_OUT.value = 0;
-            } else {
-                sum -= 10;
-                this.gateCARRY_OUT.value = 1;
-            }
-
-            this.setDROdd(Envir.oddParity5[sum]);
         }
 
+        let sum = (this.gateP_COMP.value ? 9-addend : addend) + this.gateCARRY_IN.value +
+                  (this.gateCOMP.value ? 9-augend : augend);
+        if (sum < 10) {
+            this.gateCARRY_OUT.value = 0;
+        } else {
+            sum -= 10;
+            this.gateCARRY_OUT.value = 1;
+        }
+
+        this.setDROdd(Envir.oddParity5[sum]);
         return sum;
     }
 
@@ -1258,7 +1256,7 @@ class Processor {
             break;
         case 14:        // Arithmetic Check
             isSet = this.oflowArithCheck.value;
-            this.oFlowArithCheck.value = 0;
+            this.oflowArithCheck.value = 0;
             break;
         case 15:        // Exponent Check
             isSet = this.oflowExpCheck.value
@@ -1350,10 +1348,15 @@ class Processor {
     resetICycle() {
         /* Resets processor state at the beginning of an I-Cycle,  */
 
+        this.gate1ST_CYC.value = 0;
+        this.gate1ST_CYC_DELAYD.value = 0;
         this.gate1ST_MPLY_CYCLE.value = 0;
         this.gate2_DIG_CNTRL.value = 0;
         this.gateADD_ENT.value = 0;
         this.gateADD_MODE.value = 0;
+        this.gateCARRY_IN.value = 0;
+        this.gateCARRY_OUT.value = 0;
+        this.gateCOMP.value = 0;
         this.gateDIV_1_CYC.value = 0;
         this.gateDVD_L_CYC.value = 0;
         this.gateDVD_SIGN.value = 0;
@@ -1959,7 +1962,7 @@ class Processor {
                     this.gateWRITE_INTERLOCK.value = 1;
                     this.enterLimbo();
                 } else {
-                    this.enterECycle();
+                    this.setProcState(procStateE2);     // no E-cycle entry for I/O
                 }
                 break;
             case 41:        // NOP, No Operation
@@ -1985,22 +1988,6 @@ class Processor {
     *******************************************************************/
 
     /**************************************/
-    enterTransmit() {
-        /* Sets up execution for the transmit-like ops: TF, TFM, TD, TDM, TR,
-        TRNM, ADD, SUB */
-
-        // ?? reset false xmit entry ??
-        // ?? reset LD clear exit ??
-        // ?? reset P scan to result xmit ??
-        this.gateEXMIT_ENT.value = 1;
-        this.gateEXMIT_MODE.value = 1;
-        this.gate1ST_CYC.value = 1;
-        this.gateFIELD_MK_1.value = 0;
-        this.gateFIELD_MK_2.value = 0;
-        this.gateRECOMP.value = 0;
-    }
-
-    /**************************************/
     enterECycle() {
         /* Initiates the start of the current instruction E-cycles */
         let atts = this.opAtts[this.opBinary];
@@ -2016,13 +2003,29 @@ class Processor {
         let initialEState = atts.eState;
         switch (this.opBinary) {
         case  6:        // TFL - Transmit Floating
+        case  7:        // BTFL - Branch and Transmit Floating
+        case 10:        // BTA - Branch and Transmit
         case 15:        // TDM - Transmit Digit Immediate
         case 16:        // TFM - Transmit Field Immediate
+        case 17:        // BTM - Branch and Transmit Immediate
+        case 20:        // BTAM - Branch and Transmit Immediate
         case 25:        // TD - Transmit Digit
         case 26:        // TF - Transmit Field
+        case 27:        // BT - Branch and Transmit
         case 30:        // TRNM - Transmit Record No Record Mark
         case 31:        // TR - Transmit Record
-            this.enterTransmit();
+            this.gateEXMIT_ENT.value = 1;
+            break;
+
+        case 12:        // SM - Subtract Immediate
+        case 14:        // CM - Compare Immediate
+        case 22:        // S - Subtract
+        case 24:        // C - Compare
+            this.gateCOMP.value = 1;
+            //--no break
+        case 11:        // AM - Add Immediate
+        case 21:        // A - Add
+            this.gateADD_ENT.value = 1;
             break;
 
         case 72:        // TNS - Transmit Numeric Strip
@@ -2039,25 +2042,66 @@ class Processor {
     }
 
     /**************************************/
+    enterAdd() {
+        /* Sets up execution for the add-like ops: A, AM, S, SM, C, CM */
+
+        this.gate1ST_CYC.value = 1;
+        this.gateEZ.value = 1;
+        this.gateHP.value = 1;
+        this.gateADD_MODE.value = 1;
+        this.gateFIELD_MK_1.value = 0;
+        this.gateFIELD_MK_2.value = 0;
+        this.gateADD_ENT.value = 0;
+
+        switch (this.opBinary) {
+        case 12:        // Subtract Immediate, SM
+        case 14:        // Compare Immediate, CM
+        case 22:        // Subtract, S
+        case 24:        // Compare, C
+            this.gateCOMP.value = 1;
+            break;
+        }
+    }
+
+    /**************************************/
+    enterTransmit() {
+        /* Sets up execution for the transmit-like ops: TF, TFM, TD, TDM, TR,
+        TRNM, ADD, SUB */
+
+        // ?? reset false xmit entry ??
+        // ?? reset LD clear exit ??
+        // ?? reset P scan to result xmit ??
+        this.gateEXMIT_MODE.value = 1;
+        this.gate1ST_CYC.value = 1;
+        this.gateEXMIT_ENT.value = 0;
+        this.gateFIELD_MK_1.value = 0;
+        this.gateFIELD_MK_2.value = 0;
+        this.gateRECOMP.value = 0;
+    }
+
+    /**************************************/
     stepECycle1() {
         /* Executes E-Cycle 1 - processes data at the OR1 (Q) address */
         let digit = 0;
         let dx = this.regOR1.isEven;    // digit index: 0/1
 
-        this.gateE_CYC_ENT.value = 0;
         this.regMAR.value = this.regOR1.value;
         this.fetch();
 
         switch (this.opBinary) {
         case  6:        // TFL - Transmit Floating
-        case  7:        // BTFL - Branch and Transmit Floating
-        case 10:        // BTA - Branch and Transmit
         case 15:        // TDM - Transmit Digit Immediate
         case 16:        // TFM - Transmit Field Immediate
-        case 17:        // BTM - Branch and Transmit Immediate
-        case 20:        // BTAM - Branch and Transmit Immediate
         case 25:        // TD - Transmit Digit
         case 26:        // TF - Transmit Field
+            if (this.gateE_CYC_ENT.value) {
+                this.enterTransmit();
+            }
+            //--no break
+        case  7:        // BTFL - Branch and Transmit Floating
+        case 10:        // BTA - Branch and Transmit
+        case 17:        // BTM - Branch and Transmit Immediate
+        case 20:        // BTAM - Branch and Transmit Immediate
         case 27:        // BT - Branch and Transmit
             this.setDREven(this.regMBR.even);
             if (dx) {                   // MAR is even
@@ -2070,8 +2114,41 @@ class Processor {
             this.setProcState(procStateE2);
             break;
 
+        case 11:        // AM - Add Immediate
+        case 12:        // SM - Subtract Immediate
+        case 14:        // CM - Compare Immediate
+        case 21:        // A - Add
+        case 22:        // S - Subtract
+        case 24:        // C - Compare
+            digit = this.regMBR.getDigit(dx);
+            if (this.gateE_CYC_ENT.value) {
+                this.enterAdd();
+                // If the low-order Q digit is flagged, reverse COMP, CARRY_IN, HP
+                if (digit & Register.flagMask) {
+                    this.gateCOMP.flip();
+                    this.gateCARRY_IN.value = this.gateCOMP.value;
+                    //this.gateHP.flip();
+                }
+            }
+
+            this.resetDROdd();
+            this.setDREven(this.regMBR.even);
+            if (dx) {                   // MAR is even
+                this.regOR1.decr(1);
+            } else {                    // MAR is odd
+                this.gate2_DIG_CNTRL.value = 1;
+                this.setDROdd(digit);
+                this.regOR1.decr(2);
+            }
+            this.setProcState(procStateE2);
+            break;
+
         case 30:        // TRNM - Transmit Record No Record Mark
         case 31:        // TR - Transmit Record
+            if (this.gateE_CYC_ENT.value) {
+                this.enterTransmit();
+            }
+
             this.setDREven(this.regMBR.odd);
             if (!dx) {                  // MAR is odd
                 this.regOR1.incr(1);
@@ -2114,7 +2191,7 @@ class Processor {
         case 71:        // MF - Move Flag
             digit = this.regMBR.getDigit(dx);
             if (digit & Register.flagMask) {
-                this.gateFIELD_MARK_1.value = 1;
+                this.gateFIELD_MK_1.value = 1;
                 this.regMIR.setDigitFlag(dx, 0);
                 this.store();
             }
@@ -2124,12 +2201,12 @@ class Processor {
 
         case 72:        // TNS - Tranmit Numeric Strip
             digit = this.regMBR.getDigit(dx);
-            if ((digit & Register.flagMask) && !this.gate1ST_CYC.value) {
-                this.gateFIELD_MK_1.value == 1;
+            if ((digit & Register.flagMask) && !this.gate1ST_CYC_DELAYD.value) {
+                this.gateFIELD_MK_1.value = 1;
                 this.regMIR.setDigit(dx, this.regDR.odd | Register.flagMask);
                 this.enterICycle();
             } else {
-                this.regMIR.setDigit(dx, this.regDR.odd);
+                this.regMIR.setDigit(dx, this.getDROdd());
                 this.setProcState(procStateE2);
             }
 
@@ -2144,7 +2221,7 @@ class Processor {
             if (this.gate1ST_CYC.value) {
                 this.gateFIELD_MK_1.value = 0;
                 if (digit & Register.flagMask) {
-                        this.gateFIELD_MK_2.value == 1;
+                    this.gateFIELD_MK_2.value = 1;
                 }
             } else {
                 this.gateFIELD_MK_2.value = 0;
@@ -2161,6 +2238,8 @@ class Processor {
             this.panic(`E-1 op not implemented ${this.opBinary}`);
             break;
         }
+
+        this.gateE_CYC_ENT.value = 0;
     }
 
     /**************************************/
@@ -2170,7 +2249,6 @@ class Processor {
         let dx = this.regOR2.isEven;    // digit index: 0/1
         let nextState = 0;
 
-        this.gateE_CYC_ENT.value = 0;
         this.regMAR.value = this.regOR2.value;
         this.fetch();
 
@@ -2234,7 +2312,118 @@ class Processor {
             } else if (this.gateFL_1.value && !this.gate1ST_CYC_DELAYD.value) {
                 this.gateFIELD_MK_1.value = 1;
                 this.enterICycle();
-            } else if (nextState) {     // do either E1 or a second E2
+            } else if (nextState) {     // do either E1 or continue with E2
+                this.setProcState(nextState);
+            }
+            break;
+
+        case 11:        // AM - Add Immediate
+        case 12:        // SM - Subtract Immediate
+        case 14:        // CM - Compare Immediate
+        case 21:        // A - Add
+        case 22:        // S - Subtract
+        case 24:        // C - Compare
+            this.gateCARRY_OUT.value = 0;
+            digit = this.regMBR.getDigit(dx);
+
+            if (this.gate2_DIG_CNTRL.value) {
+                this.gate2_DIG_CNTRL.value = 0;
+            } else {
+                this.shiftDREvenOdd();
+                if (!this.gateRECOMP.value) {
+                    nextState = procStateE1;
+                }
+            }
+
+            if (this.gate1ST_CYC_DELAYD.value) {
+                // The following tests are conditioned on 1ST_CYC in the ILD, but we just
+                // turned that off above when turning on 1ST_CYC_DELAYD, so sameo-sameo.
+                if (this.gateCOMP.value) {
+                    this.gateCARRY_IN.value = 1;        // pre-set carry if subtract
+                }
+
+                if (this.gateRECOMP.value) {
+                    // Set up initial conditions for the RECOMP phase.
+                    this.gateCARRY_IN.value = 1;
+                    this.gateCOMP.value = 0;
+                    this.gateFIELD_MK_2.value = 0;
+                    this.gateP_COMP.value = 1;
+                    // We need to redo the E2 fetch and start with the low-order P digit.
+                    this.regOR2.value = this.regMAR.value = this.regOR3.value;
+                    dx = this.regOR2.isEven;
+                    this.fetch();
+                    digit = this.regMBR.getDigit(dx);
+                } else {
+                    // If not RECOMP and the low-order P digit is flagged, reverse COMP, CARRY_IN, HP
+                    if (digit & Register.flagMask) {
+                        this.gateCOMP.flip();
+                        this.gateCARRY_IN.value = this.gateCOMP.value;
+                        this.gateHP.flip();
+                    }
+                }
+            } else {
+                if (this.gateFL_1.value) {
+                    this.gateFIELD_MK_1.value = 1;      // end of Q field
+                }
+
+                if (digit & Register.flagMask) {
+                    this.gateFIELD_MK_2.value = 1;      // end of P field
+                }
+            }
+
+            if (this.gateFIELD_MK_1.value) {
+                this.resetDREven();
+                this.setDREven(0);                      // addend will be zero from here on...
+                nextState = 0;                          // no more E1 cycles -- E2 only
+            }
+
+            digit = this.addDigits(digit);
+            if (digit) {
+                this.gateEZ.value = 0;
+            }
+
+            this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+            if (op % 10 == 4) {                 // doing Compare
+                // Check for compare early exit: sum or Q digit != 0.
+                if ((digit || (this.regDR.odd && Register.bcdMask)) && !this.gateCOMP.value) {
+                    this.gateEZ.value = 0;
+                    nextState = 0;
+                    this.enterICycle();
+                }
+            } else {                                    // not doing Compare
+                if (this.gateFIELD_MK_2.value || (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value)) {
+                    digit |= Register.flagMask;         // low-order P digit sign or high-order P digit flag
+                }
+                this.regMIR.setDigit(dx, digit);
+                this.store();
+            }
+
+            if (this.gateFIELD_MK_2.value) {
+                // Check for overflow.
+                if (!this.gateFIELD_MK_1.value ||
+                        (this.gateCARRY_OUT.value && !this.gateCOMP.value && op % 10 != 4)) {
+                    this.oflowArithCheck.value = 1;
+                    if (this.oflowStopSwitch) {
+                        this.checkStop(`Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue}`);
+                    }
+                }
+
+                // Check for initiation of RECOMP phase.
+                if (this.gateCOMP.value && !this.gateCARRY_OUT.value) {
+                    this.gateRECOMP.value = 1;
+                    this.gate1ST_CYC.value = 1;
+                    this.gateHP.flip();
+                }
+
+                // Check for end of add operation: COMP&CARRY | !COMP | Compare.
+                if ((this.gateCOMP.value ? this.gateCARRY_OUT.value : 1) || op % 10 == 4) {
+                    nextState = 0;
+                    this.enterICycle();
+                }
+            }
+
+            this.regOR2.decr(1);
+            if (nextState) {     // do either E1 or continue with E2
                 this.setProcState(nextState);
             }
             break;
@@ -2260,7 +2449,7 @@ class Processor {
                 this.regMIR.setDigit(dx, digit);
                 this.store();
                 this.regOR2.incr(1);
-                if (nextState) {        // do either E1 or a second E2
+                if (nextState) {        // do either E1 or continue with E2
                     this.setProcState(nextState);
                 }
             }
@@ -2316,15 +2505,16 @@ class Processor {
             if (this.regMAR.isEven) {
                 // Simulate the problem with even starting addresses. This is
                 // just a guess to what happened, and probably not a good one.
-                digit = this.regMBR.odd;
+                digit = this.regMBR.odd & Register.bcdMask;
                 this.setDROdd(this.regMBR.even);
             } else {
-                digit = this.regMBR.even;
+                digit = this.regMBR.even & Register.bcdMask;
                 this.setDROdd(this.regMBR.odd);
             }
 
             if (this.gate1ST_CYC_DELAYD.value) { // special sign logic for TNS
-                if (digit == 5 || digit == 1 || (digit == 2 && this.regDR.odd == 0)) {
+                if (digit == 5 || digit == 1 || (digit == 2 &&
+                        (this.regDR.odd & Register.bcdMask) == 0)) {
                     this.gateFL_1.value = 1;
                 }
             }
@@ -2338,11 +2528,11 @@ class Processor {
             if (this.regMAR.isEven) {
                 // Simulate the problem with even starting addresses. This is
                 // just a guess to what happened, and probably not a good one.
-                this.regMIR.even = this.getDROdd();
+                this.regMIR.even = this.regDR.odd;
                 this.regMIR.odd = digit;
             } else {
                 this.regMIR.even = digit;
-                this.regMIR.odd = this.getDROdd();
+                this.regMIR.odd = this.regDR.odd;
             }
 
             this.store();
@@ -2355,7 +2545,7 @@ class Processor {
             break;
 
         default:
-            this.panic(`E-2 op not implemented ${this.opBinary}`);
+            this.panic(`E-2 op not implemented ${op}`);
             break;
         }
     }
@@ -2491,7 +2681,7 @@ class Processor {
             this.parityMBREvenCheck.value = 1;
         }
 
-        if (this.parityStopSwitch.value) {
+        if (this.parityStopSwitch) {
             this.checkStop(msg);
         }
     }
@@ -2675,6 +2865,8 @@ class Processor {
         this.regXBR.clear();
 
         this.checkReset();
+        this.oflowArithCheck.value = 0;
+        this.oflowExpCheck.value = 0;
         this.ioPrinterChannel9.value = 0;
         this.ioPrinterChannel12.value = 0;
 
@@ -3098,7 +3290,7 @@ Processor.cardASCIInumeric1620 = {
     "=": 0o13,
     "*": Envir.numBlank | Register.flagMask,
     "-": 0 | Register.flagMask,
-    "+": 0 | Register.flagMask,
+    "+": 0,
     "|": Envir.numRecMark,
     "}": Envir.numGroupMark,
     "$": 0o13 | Register.flagMask,

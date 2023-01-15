@@ -395,4 +395,5 @@ Register.parityFlagMask=0b110000;
 Register.bcdMask =      0b001111;
 Register.notFlagMask =  0b101111;
 Register.notParityMask =0b011111;
+Register.undigitBase =  0b001010;       // (digit & bcdMask) >= undigitBase => it's an undigit
 Register.bcdValueMask = 0b001111_001111_001111_001111_001111;

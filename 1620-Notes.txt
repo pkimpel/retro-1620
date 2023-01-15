@@ -17,12 +17,12 @@ Intermediate Diagrams -- "IBM Data Processing System Model 2 Customer
 processor be halted immediately by setting MANUAL? Germain p.27 indicates that
 it stops like an H (48) instruction, but pressing the START key after that
 results in a MAR check stop. Intermediate diagrams indicate MANUAL is set in
-I-1, but doesn't show how the check stop occurs.  
-[CORRECTED 2022-12-07: op code 00 puts system into MANUAL, will check stop 
+I-1, but doesn't show how the check stop occurs.
+[CORRECTED 2022-12-07: op code 00 puts system into MANUAL, will check stop
 if START is then pressed]
 
 3. What action should be taken for undefined op codes? NOP? Check Stop?
-Germain p.27 indicates invalid op codes cause a MAR check stop.    
+Germain p.27 indicates invalid op codes cause a MAR check stop.
 [COMPLETED 2023-01-01: invalid op codes cause MAR check stop]
 
 4. How should "undigits" (hex A-F) be handled? Germain p.27 indicates that
@@ -46,6 +46,8 @@ during I-6]
 appear to indicate that, but Mod2 Ref p.75 says so. I'm currently requiring
 MANUAL mode, since doing a START while the processor is already running could
 initiate a second run() and cause havoc.
+[RESOLVED 2023-01-10: the Model 2 CPU Reference Manual (page 75) indicates the
+START key is effective only in MANUAL mode]
 
 9. Gate DISPLAY_MAR is turned on by the DISPLAY MAR key, but what turns it off,
 other than the RESET key?
@@ -72,9 +74,9 @@ rather than one step in the "current" direction.
 Panel animates the click by applying a darker style to the button. If you click
 and hold, then drag outside the button and release, there's no mouse up event
 fired on the button, and it stays dark. This does not affect the button's
-subsequent operation, though.  
+subsequent operation, though.
 [COMPLETED 2022-12-26]
 
 16. Need to implement the Emergency Off switch on the Control Panel, if only as
-a static image.    
+a static image.
 [COMPLETED 2023-01-18]

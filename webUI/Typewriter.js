@@ -45,7 +45,6 @@ class Typewriter {
         this.printerCol = 0;                    // current print position
         this.scrollLines = 0;                   // lines in scroll buffer
         this.flagPending = false;               // FLG key has been pressed, awaiting next char
-        this.insertMode = false;                // input initiated for INSERT operation
         this.tabStops = [];                     // tab stop columns
         this.timer = new Timer();
 
@@ -241,10 +240,6 @@ class Typewriter {
             // Print R/S unconditionally now to avoid a time race with the Processor.
             await this.resetFlagPending(" ");
             await this.printChar(Typewriter.RSChar, false, false);
-            if (this.insertMode) {
-                this.insertMode = false;
-                await this.printNewLine();
-            }
             break;
         case "Backspace":               // treat as the CORR key
             code = -2;
@@ -336,10 +331,6 @@ class Typewriter {
 
         this.window.focus();
         this.platen.classList.add("inputEnabled");
-        if (insertMode) {
-            this.insertMode = true;
-            await this.printNewLine();
-        }
     }
 
     /**************************************/
@@ -347,10 +338,6 @@ class Typewriter {
         /* Called by Processor to indicate the device has been released */
 
         this.platen.classList.remove("inputEnabled");
-        if (this.insertMode) {
-            this.insertMode = false;
-            this.printNewLine();
-        }
     }
 
 
@@ -428,7 +415,7 @@ class Typewriter {
         switch (box.id) {
         case "MarginLeft":
             v = parseInt(text, 10);
-            if (isNaN(v) || v < 0 || v > this.marginRight) {
+            if (isNaN(v) || v < 0 || v >= this.marginRight) {
                 this.window.alert("Invalid left margin");
                 box.value = this.marginLeft;
                 box.focus();
