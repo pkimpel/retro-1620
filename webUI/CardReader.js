@@ -444,9 +444,9 @@ class CardReader {
         const limit = CardReader.columns-1;
         const p = this.processor;
         let lastChar = " ";             // last char defaults to padded space
-        let length = this.cardBuffer.length-1;
+        let length = this.cardBuffer.length;
 
-        if (limit <= length) {          // it's at least 80 characters
+        if (limit < length) {           // buffer is at least 80 characters
             lastChar = this.cardBuffer.at(limit);
             length = limit;
         }

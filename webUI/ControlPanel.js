@@ -42,6 +42,7 @@ class ControlPanel {
         this.context = context;
         this.config = context.config;
         this.systemShutdown = context.systemShutdown;
+        this.debugView = false;         // true if Debug View is displaying
         this.intervalToken = 0;         // panel refresh timer cancel token
         this.modifyLatch = 0;           // MODIFY key was pressed, awaiting CHECK RESET key
 
@@ -333,8 +334,9 @@ class ControlPanel {
         this.program4Switch.set(this.config.getNode("ControlPanel.Program3SW"));
         p.program4Switch = this.program4Switch.state;
 
-        this.$$("RegisterViewTable").style.display =
-                (this.config.getNode("ControlPanel.DebugView") ? "table" : "none");
+        this.debugView = this.config.getNode("ControlPanel.DebugView");
+        this.$$("RegisterViewTable").style.display = (this.debugView ? "table" : "none");
+        this.$$("AvgDelayTable").style.display = (this.debugView ? "table" : "none");
 
         this.$$("EmulatorVersion").textContent = Version.retro1620Version;
         this.window.addEventListener("beforeunload", this.boundBeforeUnload);
@@ -595,15 +597,19 @@ class ControlPanel {
 
     /**************************************/
     toggleDebugView(ev) {
-        /* Toggles display of the Debug View panel when the IBM logo is double-clicked */
-        const dbv = this.$$("RegisterViewTable");
+        /* Toggles display of the Debug View and AvgDelay panels when the IBM
+        logo is double-clicked */
 
-        if (dbv.style.display == "none") {
-           dbv.style.display = "table";
-           this.config.putNode("ControlPanel.DebugView", 1);
-        } else {
-           dbv.style.display = "none";
+        if (this.debugView) {
+           this.debugView = false;
+           this.$$("RegisterViewTable").style.display = "none";
+           this.$$("AvgDelayTable").style.display = "none";
            this.config.putNode("ControlPanel.DebugView", 0);
+        } else {
+           this.debugView = true;
+           this.$$("RegisterViewTable").style.display = "table";
+           this.$$("AvgDelayTable").style.display = "table";
+           this.config.putNode("ControlPanel.DebugView", 1);
         }
     }
 
@@ -790,21 +796,28 @@ class ControlPanel {
         this.ioWriteCheckLamp.set(p.ioWriteCheck.glow);
         this.oflowArithCheckLamp.set(p.oflowArithCheck.glow);
 
-        // Register View Table **DEBUG**
-        this.$$("ViewOR1").textContent = p.regOR1.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewOR2").textContent = p.regOR2.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewOR3").textContent = p.regOR3.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewOR4").textContent = p.regOR4.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewOR5").textContent = p.regOR5.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewCR1").textContent = p.regCR1.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewMAR").textContent = p.regMAR.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewIR1").textContent = p.regIR1.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewIR2").textContent = p.regIR2.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewIR3").textContent = p.regIR3.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewIR4").textContent = p.regIR4.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewPR1").textContent = p.regPR1.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewPR2").textContent = p.regPR2.binaryValue.toString().padStart(5, "0");
-        this.$$("ViewXBR").textContent = p.regXBR.binaryValue.toString().padStart(5, "0");
+        // Register View & Delay Stats Tables **DEBUG**
+        if (this.debugView) {
+            this.$$("ViewOR1").textContent = p.regOR1.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewOR2").textContent = p.regOR2.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewOR3").textContent = p.regOR3.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewOR4").textContent = p.regOR4.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewOR5").textContent = p.regOR5.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewCR1").textContent = p.regCR1.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewMAR").textContent = p.regMAR.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewIR1").textContent = p.regIR1.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewIR2").textContent = p.regIR2.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewIR3").textContent = p.regIR3.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewIR4").textContent = p.regIR4.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewPR1").textContent = p.regPR1.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewPR2").textContent = p.regPR2.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewXBR").textContent = p.regXBR.binaryValue.toString().padStart(5, "0");
+
+            this.$$("AvgDelay").textContent =       p.avgThrottleDelay.toFixed(2);
+            this.$$("AvgDelayDelta").textContent =  p.avgThrottleDelta.toFixed(2);
+            this.$$("RealTime").textContent =       performance.now().toFixed(2);
+            this.$$("ETime").textContent =          p.envir.eTime.toFixed(2);
+        }
 
         this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
     }

@@ -222,7 +222,7 @@ class Typewriter {
         let key = ev.key;               // string representation of keystroke
         let code = 0;                   // code to be sent to the processor
 
-        if (ev.ctrlKey || ev.altKey || ev.metaKey /* || ev.target !== this.paper */) {
+        if (ev.ctrlKey || ev.altKey || ev.metaKey || this.busy) {
             return;                     // ignore this keystroke, allow default action
         } else {
             switch (ev.target.id) {
@@ -487,6 +487,8 @@ class Typewriter {
         let line = paper.lastChild.nodeValue;
         let positions = this.printerCol - this.marginLeft;
 
+        this.busy = true;
+
         // Remove old lines that have overflowed the buffer.
         while (this.scrollLines > Typewriter.maxScrollLines) {
             let child = paper.removeChild(paper.firstChild);
@@ -514,6 +516,7 @@ class Typewriter {
         this.printerCol = this.marginLeft;
         ++this.scrollLines;
         paper.scrollIntoView(false);
+        this.busy = false;
         return 1;                       // always returns end-of-block
     }
 
@@ -524,6 +527,8 @@ class Typewriter {
         "strike" indicates the character should be printed with strike-through */
         let paper = this.paper;
         let span = null;
+
+        this.busy = true;
 
         // Check for right margin overflow and automatic newline.
         if (this.printerCol >= this.marginRight) {
@@ -584,6 +589,7 @@ class Typewriter {
         }
 
         ++this.printerCol;
+        this.busy = false;
         return 1;                       // always returns end-of-block
     }
 
@@ -597,7 +603,9 @@ class Typewriter {
         Note in the following that the last node of the paper is always a text
         node containing at least the cursor character at its end */
 
+        this.busy = true;
         await this.waitReadyOutput();
+
         if (this.printerCol > this.marginLeft) {
             let paper = this.paper;
             let node = paper.lastChild;
@@ -648,6 +656,7 @@ class Typewriter {
         }
 
         await this.timer.delayFor(Typewriter.defaultInterlock);
+        this.busy = false;
         return 1;                       // always returns end-of-block
     }
 
@@ -659,6 +668,7 @@ class Typewriter {
         let position = this.printerCol;
         let paper = this.paper;
 
+        this.busy = true;
         let now = await this.waitReadyOutput();
 
         // Erase the cursor at end of the current line and output a newline.
@@ -672,6 +682,7 @@ class Typewriter {
         // Delay for the index interlock time.
         await this.timer.delayFor(Typewriter.indexInterlock);
         paper.scrollIntoView(false);
+        this.busy = false;
         return 1;                       // always returns end-of-block
     }
 
@@ -681,6 +692,7 @@ class Typewriter {
         let line = this.paper.lastChild.nodeValue.slice(0, -1);
         let tabCol = this.marginRight+1; // tabulation defaults to right margin
 
+        this.busy = true;
         for (let stop of this.tabStops) {
             if (this.printerCol < stop) {
                 if (stop < tabCol) {
@@ -702,6 +714,7 @@ class Typewriter {
         this.outputReadyStamp = now +
                 Typewriter.defaultInterlock + Typewriter.travelPeriod*positions;
         await this.timer.delayFor(Typewriter.defaultInterlock);
+        this.busy = false;
         return 1;                       // always returns end-of-block
     }
 
@@ -711,6 +724,7 @@ class Typewriter {
         Dump Numerically. Returns a Promise for completion */
         let digit = code & Register.digitMask;
 
+        this.processor.updateLampGlow(1);       // because Typewriter is so slow
         return this.printChar(Typewriter.numericGlyphs[digit & Register.bcdMask],
                 (digit & Register.flagMask), (Envir.oddParity5[digit] != digit));
     }
@@ -723,6 +737,7 @@ class Typewriter {
         let odd = digitPair & Register.digitMask;
 
         let code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
+        this.processor.updateLampGlow(1);       // because Typewriter is so slow
         return this.printChar(Typewriter.alphaGlyphs[code],
                 false, (Envir.oddParity5[even] != even || Envir.oddParity5[odd] != odd));
     }

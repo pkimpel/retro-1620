@@ -263,6 +263,16 @@ DIV.evenOddCaption {
 #RegisterViewTable TR TD {
     font-size:          12px}
 
+#AvgDelayTable {
+    position:           absolute;
+    display:            none;
+    top:                6px;
+    left:               12px}
+#AvgDelayTableCol1 {
+    width:              10em}
+#AvgDelayTable TD {
+    padding-right:      2px}
+
 #IndicatorButtonPanel {
     position:           absolute;
     top:                76px;

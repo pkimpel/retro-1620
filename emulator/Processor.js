@@ -254,8 +254,10 @@ class Processor {
         this.bcInstalled = (context.config.getNode("binaryCapabilities") ? 1 : 0);
 
         // General emulator state
+        this.avgThrottleDelay = 0;                      // running average throttling delay, ms
+        this.avgThrottleDelta = 0;                      // running average throttling delay deviation, ms
         this.procState = procStateLimbo;                // processor instruction load/execute state
-        this.tracing = false;                           // trace command debugging
+        this.running = false;                           // true when this.run() is active
 
         // I/O Subsystem
         this.ioTimer = new Timer();                     // general timer for I/O operations
@@ -486,6 +488,8 @@ class Processor {
 
         if (augend >= Register.undigitBase || addend >= Register.undigitBase) {
             this.marCheck(`addDigits invalid BCD code: aug=${augend.toString(2)}, add=${addend.toString(2)}`);
+            augend = Envir.bcdBinary[augend];
+            addend = Envir.bcdBinary[addend];
         }
 
         let sum = (this.gateP_COMP.value ? 9-addend : addend) + this.gateCARRY_IN.value +
@@ -497,7 +501,7 @@ class Processor {
             this.gateCARRY_OUT.value = 1;
         }
 
-        this.setDROdd(Envir.oddParity5[sum]);
+        this.setDROdd(sum);
         return sum;
     }
 
@@ -519,8 +523,9 @@ class Processor {
         const eolRex = /([^\n\r\f]*)((:?\r[\n\f]?)|\n|\f)?/g;
         const addrRex = /^([0-9]{0,5})\s*:/;
         const dataSplitRex = /\s+/;
-        const digitRex = /^[0-1]?[0-9acfACF]$/;
         const fullHexRex = /^[0-1]?[0-9a-fA-F]$/;
+
+        let digitRex = /^[0-1]?[0-9acfACF]$/;
 
         const loadMemory = (addr, data) => {
             /* Loads a string of space-delimited hex digit values to memory
@@ -610,7 +615,7 @@ class Processor {
                             if (line.startsWith("tabs")) {
                                 loadTabStops(line.substring(4).trim());
                             } else if (line.startsWith("invalid")) {
-                                this.digitRex = this.fullHexRex;
+                                digitRex = fullHexRex;
                             }
                             break;
                         default:        // it's something undefined
@@ -1084,7 +1089,7 @@ class Processor {
             }
 
             this.gateRESP_GATE.value = 0;
-            this.envir.startTiming();           // restart the throttling clock (because Typewriter is so slow)
+            this.envir.startTiming();   // restart the throttling clock (because Typewriter is so slow)
             this.updateLampGlow(1);
         } else {                        // check for local action
             switch (code) {
@@ -1158,7 +1163,7 @@ class Processor {
                 this.regOR2.incr(2);
             }
 
-            this.envir.tick();                  // advance the throttling clock
+            this.envir.tick();                  // advance the emulation clock
             this.envir.tick();                  // by 2 memory cycles
             this.gateRESP_GATE.value = 0;
             if (lastCol) {
@@ -1201,11 +1206,11 @@ class Processor {
         /* Releases any currently-active I/O operation */
 
         if (this.gateRD.value || this.gateWR.value) {
+            this.envir.startTiming();   // restart the emulation clock
             this.gateREL.value = 1;
             this.ioExit();
             this.gateINSERT.value = 0;
             this.enterICycle();
-            this.envir.startTiming();   // reset the emulation clock
         }
     }
 
@@ -1272,7 +1277,7 @@ class Processor {
             break;
         case 19:        // Any Check (6, 7, 16, 17, 25, 39)
             isSet = this.ioReadCheck.value | this.ioWriteCheck.value |
-                    this.parity.MBREvenCheck.value | this.parityMBROddCheck.value |
+                    this.parityMBREvenCheck.value | this.parityMBROddCheck.value |
                     this.ioPrinterCheck.value | this.diskAddrCheck.value |
                     this.diskWRLRBCCheck.value | this.diskCylOflowCheck.value;
             break;
@@ -1330,8 +1335,8 @@ class Processor {
         this.gateAUTOMATIC.value = 0;
         this.gateRUN.value = 0;
         if (this.gateSTOP.value) {
-            this.enterManual();
             this.gateSTOP.value = 0;
+            this.enterManual();
         }
 
         if (this.gateEZ.value) {
@@ -1400,6 +1405,7 @@ class Processor {
         Steps to I-Cycle 2 */
 
         this.gateI_CYC_ENT.value = 0;
+        this.gateAUTOMATIC.value = 1;
         if (this.gateBR_EXEC.value) {
             this.regIR1.value = this.regOR2.value;
             this.gateBR_EXEC.value = 0;
@@ -1416,7 +1422,6 @@ class Processor {
         this.regPR2.clear();
         this.regXBR.clear();
         this.regXR.clear();
-        this.gateAUTOMATIC.value = 1;
 
         this.regIR1.incr(2);
         this.opBinary = this.regMBR.binaryValue;
@@ -1931,7 +1936,7 @@ class Processor {
             }
         } else {                        // finish with Q address
             switch(this.opBinary) {
-            case 34:
+            case 34:    // K, Control
                 this.enterLimbo();      // stop run() while control() runs async
                 if (!this.ioDevice) {
                     this.gateWRITE_INTERLOCK.value = 1;
@@ -1942,8 +1947,8 @@ class Processor {
                     });
                 }
                 break;
-            case 36:        // RN, Read Numerically
-            case 37:        // RA, Read Alphanumerically
+            case 36:    // RN, Read Numerically
+            case 37:    // RA, Read Alphanumerically
                 this.enterLimbo();      // device will trigger the memory cycles
                 if (!this.ioDevice) {
                     this.gateREAD_INTERLOCK.value = 1;
@@ -1955,9 +1960,9 @@ class Processor {
                     this.ioDevice.initiateRead(false);
                 }
                 break;
-            case 35:        // DN, Dump Numerically
-            case 38:        // WN, Write Numerically
-            case 39:        // WA, Write Alphabetically
+            case 35:    // DN, Dump Numerically
+            case 38:    // WN, Write Numerically
+            case 39:    // WA, Write Alphabetically
                 if (!this.ioDevice) {
                     this.gateWRITE_INTERLOCK.value = 1;
                     this.enterLimbo();
@@ -1965,13 +1970,13 @@ class Processor {
                     this.setProcState(procStateE2);     // no E-cycle entry for I/O
                 }
                 break;
-            case 41:        // NOP, No Operation
-            case 46:        // BI, Branch Indicator
-            case 47:        // BNI, Branch No Indicator
-            case 60:        // BS, Branch and Select
+            case 41:    // NOP, No Operation
+            case 46:    // BI, Branch Indicator
+            case 47:    // BNI, Branch No Indicator
+            case 60:    // BS, Branch and Select
                 this.enterICycle();
                 break;
-            case 48:        // H, Halt
+            case 48:    // H, Halt
                 this.enterICycle();
                 this.enterManual();
                 break;
@@ -2383,12 +2388,14 @@ class Processor {
             }
 
             this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+            this.regOR2.decr(1);                        // update OR1 before chance of early exits
+
             if (op % 10 == 4) {                 // doing Compare
                 // Check for compare early exit: sum or Q digit != 0.
                 if ((digit || (this.regDR.odd && Register.bcdMask)) && !this.gateCOMP.value) {
                     this.gateEZ.value = 0;
-                    nextState = 0;
-                    this.enterICycle();
+                    this.enterICycle();                 // early exit to I-Cycle entry
+                    return;
                 }
             } else {                                    // not doing Compare
                 if (this.gateFIELD_MK_2.value || (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value)) {
@@ -2417,12 +2424,11 @@ class Processor {
 
                 // Check for end of add operation: COMP&CARRY | !COMP | Compare.
                 if ((this.gateCOMP.value ? this.gateCARRY_OUT.value : 1) || op % 10 == 4) {
-                    nextState = 0;
-                    this.enterICycle();
+                    this.enterICycle();                 // exit to I-Cycle entry
+                    return;
                 }
             }
 
-            this.regOR2.decr(1);
             if (nextState) {     // do either E1 or continue with E2
                 this.setProcState(nextState);
             }
@@ -2693,7 +2699,14 @@ class Processor {
         throttle performance to approximate that of a real 1620. Executes memory
         cycles until some sort of stop condition is detected */
 
+        if (this.running) {
+            this.panic("Multiple instances of this.run() active");
+            return;
+        }
+
+        this.running = true;
         this.envir.startTiming();
+
         do {
             switch (this.procState) {
             case procStateI1:
@@ -2759,6 +2772,7 @@ class Processor {
             case procStateLimbo:
                 await this.envir.throttle();
                 this.updateLampGlow(0);
+                this.running = false;
                 return;             // exit into Limbo state
                 break;
 
@@ -2767,18 +2781,27 @@ class Processor {
                 break;
             }
 
-            // Increment the emulation clock and note whether it's time to
+            // Increment the emulation clock, and if the time slice has ended,
             // throttle performance. We need to increment after the register and
             // flip-flop states have been set so that register their glow values
             // will be computed properly.
-            if (this.gateRD.value || this.gateWR.value) {
-                this.envir.startTiming();
-            } else if (this.envir.tick()) {
-                await this.envir.throttle();
+            if (this.envir.tick()) {
+                if (!(this.gateRD.value || this.gateWR.value)) { // not doing I/O
+                    const delayStart = performance.now();
+                    const delay = this.envir.eTime - delayStart;
+                    this.avgThrottleDelay =
+                            this.avgThrottleDelay*Processor.delayAlpha1 + delay*Processor.delayAlpha;
+
+                    await this.envir.throttle();
+
+                    this.avgThrottleDelta = this.avgThrottleDelta*Processor.delayAlpha1 +
+                            (performance.now() - delayStart - delay)*Processor.delayAlpha;
+                }
             }
         } while (this.gatePOWER_ON.value && !this.gateMANUAL.value);
 
         this.updateLampGlow(1);         // freeze current state in the lamps
+        this.running = false;
     }
 
 
@@ -2979,7 +3002,7 @@ class Processor {
         if (this.gatePOWER_ON.value && (this.gateRD.value || this.gateWR.value)) {
             this.gateSTOP.value = 1;
             this.ioRelease();           // STOP will force MANUAL mode in I-Cycle Entry
-            //this.updateLampGlow(1);
+            this.updateLampGlow(1);
         }
     }
 
@@ -3036,7 +3059,6 @@ class Processor {
             } else {
                 // Stop processor after next memory cycle.
                 this.gateMANUAL.value = 1;
-                //this.updateLampGlow(1);
             }
         }
     }
@@ -3051,13 +3073,13 @@ class Processor {
         /* Powers up and initializes the processor */
 
         if (!this.gatePOWER_ON.value) {
-            this.envir.startTiming();
             this.gatePOWER_ON.value = 1;
             this.gateMANUAL.value = 1;                  // must be set for manualReset()
             this.manualReset();
             this.gateIA_SEL.value = 1;                  // enable indirect addressing
             this.devices = this.context.devices;        // I/O device objects
             this.loadMemory();                          // >>> DEBUG ONLY <<<
+            this.envir.startTiming();
             this.updateLampGlow(1);
         }
     }
@@ -3225,6 +3247,9 @@ class Processor {
 
 
 // Static class properties
+
+Processor.delayAlpha = 0.001;           // throttling delay average decay factor
+Processor.delayAlpha1 = 1-Processor.delayAlpha;
 
 // Typewriter numeric input keystroke digit codes.
 Processor.twprASCIInumeric1620 = {

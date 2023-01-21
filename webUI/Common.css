@@ -217,19 +217,19 @@ DIV.gateLamp {
     font-size:          4px;
     border-radius:      50%;
     border:             2px solid #222;
-    background-color:   #777777}
+    background-color:   #666666}        /* was 777777 */
 DIV.gateLit1 {
-    background-color:   #A09388}        /* try 8C8878 ?? */
+    background-color:   #807D75}        /* was A09388 try 8C8878 ?? */
 DIV.gateLit2 {
-    background-color:   #B3A696}        /* try A39981 ?? */
+    background-color:   #999484}        /* was B3A696 try A39981 ?? */
 DIV.gateLit3 {
-    background-color:   #C6B9A4}        /* try BAAA87 ?? */
+    background-color:   #B3AB93}        /* was C6B9A4 try BAAA87 ?? */
 DIV.gateLit4 {
-    background-color:   #D9CCB2}        /* try D1BB8D ?? */
+    background-color:   #CCC2A2}        /* was D9CCB2 try D1BB8D ?? */
 DIV.gateLit5 {
-    background-color:   #ECDFC0}        /* try E8CC93 ?? */
+    background-color:   #E6D9B1}        /* was ECDFC0 try E8CC93 ?? */
 DIV.gateLit {
-    background-color:   #FFF2CE}        /* try FFDD99 as a base ?? */
+    background-color:   #FFF0C0}        /* was FFF2CE try FFDD99 as a base ?? */
 
 DIV.gateLampTopCaption {
     position:           absolute;
@@ -314,6 +314,16 @@ BUTTON.whiteButtonDown {
 BUTTON.whiteLamp {
     color:              black;
     background-image:   linear-gradient(#B3A696, #D9CCB2, #B3A696)}
+BUTTON.whiteLit1 {
+    background-image:   radial-gradient(circle, #DCD0B9 33%, #DCD0B9 67%, #B6A998)}
+BUTTON.whiteLit2 {
+    background-image:   radial-gradient(circle, #E0D3C1 33%, #E0D3C1 67%, #B9AC9B)}
+BUTTON.whiteLit3 {
+    background-image:   radial-gradient(circle, #E4D7C8 33%, #E4D7C8 67%, #BDB09B)}
+BUTTON.whiteLit4 {
+    background-image:   radial-gradient(circle, #E7DBCF 33%, #E7DBCF 67%, #C0B39F)}
+BUTTON.whiteLit5 {
+    background-image:   radial-gradient(circle, #EBDED7 33%, #EBDED7 67%, #C3B6A2)}
 BUTTON.whiteLit {
     background-image:   radial-gradient(circle, #FFF2CE 33%, #EEE2DE 67%, #C6B9A4)}
 

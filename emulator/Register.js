@@ -10,6 +10,8 @@
 ************************************************************************
 * 2022-07-19  P.Kimpel
 *   Original version, from retro-g15 Register.js.
+* 2023-01-19  P.Kimpel
+*   Reformat to use newer JavaScript static and public field definitions.
 ***********************************************************************/
 
 export {Register}
@@ -18,12 +20,36 @@ import {BitField} from "./BitField.js";
 import {Envir} from "./Envir.js";
 import {FlipFlop} from "./FlipFlop.js";
 
+
 class Register {
+
+    // Static class properties
+
+    static digitBits =      6;          // bits/digit
+    static maxDigits =      5;          // max digits register can hold
+    static flagBitNr =      4;          // 0-relative bit number for the flag
+
+    static digitMask =      0b111111;
+    static parityMask =     0b100000;
+    static notParityMask =  0b011111;
+    static flagMask =       0b010000;
+    static notFlagMask =    0b101111;
+    static parityFlagMask=  0b110000;
+    static bcdMask =        0b001111;
+    static undigitBase =    0b001010;   // (digit & bcdMask) >= undigitBase => it's an undigit
+    static bcdValueMask =   0b001111_001111_001111_001111_001111;
+
+    // Public Instance Properties
+
+    lastETime = 0;                      // emulation time register was last set
+    intVal = 0;                         // binary value of register: read-only externally
+    parityError = false;                // true if last update had a digit parity error
+
 
     constructor(digits, envir, visible, parity, flagged) {
         /* Constructor for the generic Register class. Defines a binary register
         of "digits" 6-bit digits. The bits in each digit are arranged, from high-
-        to low-order, as C F 8 4 2 1 (C= odd parity).
+        to low-order, as C F 8 4 2 1 (C=odd parity).
 
         The maximum number of digits supported is 5 (30 bits). Since this
         fits in a 32-bit 2s-complement value, we can use Javascript bit
@@ -47,10 +73,10 @@ class Register {
         incoming flag (F) bits will be unconditionally reset and will not
         contribute to the parity sum.
 
-        Note that it is important to increment envir.eTime in the caller AFTER
-        setting new values in registers and flip-flops. This allows the average
-        intensity to be computed based on the amount of time a bit was actually in
-        that state */
+        Note that it is important to call envir.tick() in the caller to increment
+        envir.eTime AFTER setting new values in registers and flip-flops. This
+        allows the average intensity to be computed based on the amount of time
+        a bit was actually in that state */
 
         this.digits = digits;           // number of 6-bit digits in register
         this.envir = envir;             // local copy of clock object
@@ -59,26 +85,24 @@ class Register {
         this.flagged = (flagged ? true : false);
         this.bits = digits*Register.digitBits;
         this.digitMask = (flagged ? Register.digitMask : Register.notFlagMask);
-        this.lastETime = 0;             // emulation time register was last set
-        this.intVal = 0;                // binary value of register: read-only externally
-        this.parityError = false;       // true if last update had a digit parity error
 
-        if (this.visible) {
-            this.glow = new Float64Array(this.bits);    // average lamp glow values
-        }
+        this.glow = new Float64Array(this.bits);    // average lamp glow values
 
         this.clear();                   // initialize with proper parity
     }
+
+    // Public Instance Methods
 
     get value() {
         return this.intVal;
     }
 
     set value(value) {
-        /* Set a binary value of digits into the register. Use this rather than
+        /* Set a BCD mask of digits into the register. Use this rather than
         setting the value member directly so that parity and average lamp glow
-        can be computed. Returns the new value */
+        can be computed */
 
+        this.updateLampGlow(0);
         if (this.intVal != value) {
             let val = value;
             let newVal = 0;
@@ -100,13 +124,11 @@ class Register {
             this.intVal = newVal;
         }
 
-        if (this.visible) {
-           this.updateLampGlow(0);
-        }
     }
 
     get binaryValue() {
-        /* Returns the value of the register as a binary integer */
+        /* Returns the value of the register as a binary integer. Invalid BCD
+        values are coerced to either an 8 or a 9 */
         let val = this.intVal & Register.bcdValueMask;
         let binary = Envir.bcdBinary[val & Register.bcdMask];
         let power = 1;
@@ -123,27 +145,23 @@ class Register {
     }
 
     set binaryValue(value) {
-        /* Sets the BCD value of the register from a binary integer.
-        Preserves flag bits but recomputes parity for each digit.
-        Returns the new register value */
+        /* Sets the BCD value of the register from a binary integer. Preserves
+        flag bits but recomputes parity for each digit */
         let bin = value;
         let bits = 0;
         let newVal = 0;
         let val = this.intVal;
 
+        this.updateLampGlow(0);
         do {
-            let bcd = bin % 10;
-            let digit = Envir.oddParity5[(val & Register.parityFlagMask) | bcd];
-            newVal |= (digit << bits);
+            let digit = bin % 10;
+            newVal |= Envir.oddParity5[(val & Register.parityFlagMask) | digit] << bits;
             val >>= Register.digitBits;
-            bin = (bin-bcd)/10;
+            bin = (bin-digit)/10;
             bits += Register.digitBits;
         } while (bits < this.bits);
 
         this.intVal = newVal;
-        if (this.visible) {
-           this.updateLampGlow(0);
-        }
     }
 
     get isntZero() {
@@ -167,8 +185,7 @@ class Register {
 
     set odd(value) {
         /* Sets the value of digit 0 in a register. This is useful for the
-        2-digit even/odd registers. Unconditionally recomputes parity for the
-        digit */
+        2-digit even/odd registers. Recomputes parity for the digit */
 
         this.setDigit(0, value);
     }
@@ -189,8 +206,8 @@ class Register {
 
     set even(value) {
         /* Sets the value of digit 1 in a register. This is useful for the
-        2-digit even/odd registers. Unconditionally recomputes parity for the
-        digit. If the register has only one digit, does nothing */
+        2-digit even/odd registers. Recomputes parity for the digit. If the
+        register has only one digit, does nothing */
 
         this.setDigit(1, value);
     }
@@ -202,24 +219,21 @@ class Register {
         let d = 0;
         this.parityError = false;
 
+        this.updateLampGlow(0);
         do {
             newVal = (newVal << Register.digitBits) | Register.parityMask;
         } while (++d < this.digits);
 
         this.intVal = newVal;
-        if (this.visible) {
-           this.updateLampGlow(0);
-        }
-
         return this.intVal;
     }
 
     /**************************************/
     incr(increment) {
-        /* Increments the register by "count", which must be in the range 1-9.
-        If this is a 5-digit register, it is assumed to be an address register,
-        and the result will be modulo the system memory size. Otherwise, overflow
-        is ignored.
+        /* Increments the register by "increment", which must be in the range
+        1-9. If this is a 5-digit register, it is assumed to be an address
+        register, and the result will be modulo the system memory size.
+        Otherwise, overflow is ignored.
         This routine is designed to minimize the number of digits changed */
         let carry = increment;
         let d = 0;
@@ -239,7 +253,7 @@ class Register {
             val >>= Register.digitBits;
         } while (carry && ++d < this.digits);
 
-        if (this.digits > 4) {
+        if (this.digits == 5) {
             val = this.binaryValue;
             if (val >= this.envir.memorySize) {
                 this.binaryValue = val - this.envir.memorySize;
@@ -249,11 +263,11 @@ class Register {
 
     /**************************************/
     decr(decrement) {
-        /* Decrements the register by "count", which must be in the range 1-9.
-        If this is a 5-digit register, it is assumed to be an address register,
-        and the result will be modulo the system memory size. Otherwise,
-        underflow is ignored and the result will be in 10s-complement form.
-        This routine is designed to minimize the number of digits changed */
+        /* Decrements the register by "decrement", which must be in the range
+        1-9. If this is a 5-digit register, it is assumed to be an address
+        register, and the result will be modulo the system memory size.
+        Otherwise, underflow is ignored and the result will be in 10s-complement
+        form. This routine is designed to minimize the number of digits changed */
         let borrow = decrement;
         let d = 0;
         let digit = 0;
@@ -272,7 +286,7 @@ class Register {
             val >>= Register.digitBits;
         } while (borrow && ++d < this.digits);
 
-        if (this.digits > 4) {
+        if (this.digits == 5) {
             val = this.binaryValue;
             if (val >= this.envir.memorySize) {
                 this.binaryValue = this.memorySize + val - 100000;
@@ -348,10 +362,10 @@ class Register {
         glow is always aged by at least one clock tick. Beta is a bias in the
         range (0,1). For normal update, use 0; to freeze the current state, use 1.
         MUST NOT BE CALLED UNLESS this.visible IS TRUE */
-        let eTime = this.envir.eTime;
 
         if (this.visible) {
-        let delta = eTime - this.lastETime;
+            let eTime = this.envir.eTime;
+            let delta = eTime - this.lastETime;
             if (delta < Envir.cycleTime) {
                 delta += Envir.tickTime;
                 eTime += Envir.tickTime;
@@ -380,20 +394,3 @@ class Register {
     }
 
 } // class Register
-
-
-// Static class properties
-
-Register.digitBits = 6;                 // bits/digit
-Register.maxDigits = 5;                 // max digits register can hold
-Register.flagBitNr = 4;                 // 0-relative bit number for the flag
-
-Register.digitMask =    0b111111;
-Register.parityMask =   0b100000;
-Register.flagMask =     0b010000;
-Register.parityFlagMask=0b110000;
-Register.bcdMask =      0b001111;
-Register.notFlagMask =  0b101111;
-Register.notParityMask =0b011111;
-Register.undigitBase =  0b001010;       // (digit & bcdMask) >= undigitBase => it's an undigit
-Register.bcdValueMask = 0b001111_001111_001111_001111_001111;
