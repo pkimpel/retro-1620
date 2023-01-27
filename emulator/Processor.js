@@ -55,6 +55,7 @@ class Processor {
         this.devices = null;            // initialized in this.powerUp()
         this.envir = new Envir();
         this.envir.memorySize = context.config.getNode("memorySize");
+        this.envir.setIndicator = this.setIndicator.bind(this);
 
         // Control Gates
         this.gate$$$_OFLO =         new FlipFlop(this.envir, true);
@@ -192,27 +193,27 @@ class Processor {
         this.ioPrinterBusy =        new FlipFlop(this.envir, false);
 
         // Console Registers
-        this.regDR =                new Register(2, this.envir, true,  true,  false);
-        this.regMAR =               new Register(5, this.envir, true,  true,  false);
-        this.regMBR =               new Register(2, this.envir, true,  false, true);
-        this.regMIR =               new Register(2, this.envir, true,  true,  true);
-        this.regMQ =                new Register(1, this.envir, true,  true,  false);
-        this.regOP =                new Register(2, this.envir, true,  true,  false);
-        this.regXR =                new Register(1, this.envir, true,  false, false);   // indexing bits X-1, X-2, X-3
+        this.regDR =                new Register("DR",  2, this.envir, true,  true,  false);
+        this.regMAR =               new Register("MAR", 5, this.envir, true,  true,  false);
+        this.regMBR =               new Register("MBR", 2, this.envir, true,  false, true);
+        this.regMIR =               new Register("MIR", 2, this.envir, true,  true,  true);
+        this.regMQ =                new Register("MQ",  1, this.envir, true,  true,  false);
+        this.regOP =                new Register("OP",  2, this.envir, true,  true,  false);
+        this.regXR =                new Register("XR",  1, this.envir, true,  false, false);   // indexing bits X-1, X-2, X-3
 
         // MARS Registers
-        this.regCR1 =               new Register(5, this.envir, false, true,  false);
-        this.regIR1 =               new Register(5, this.envir, false, true,  false);
-        this.regIR2 =               new Register(5, this.envir, false, true,  false);
-        this.regIR3 =               new Register(5, this.envir, false, true,  false);
-        this.regIR4 =               new Register(5, this.envir, false, true,  false);
-        this.regOR1 =               new Register(5, this.envir, false, true,  false);
-        this.regOR2 =               new Register(5, this.envir, false, true,  false);
-        this.regOR3 =               new Register(5, this.envir, false, true,  false);
-        this.regOR4 =               new Register(5, this.envir, false, true,  false);
-        this.regOR5 =               new Register(5, this.envir, false, true,  false);
-        this.regPR1 =               new Register(5, this.envir, false, true,  false);
-        this.regPR2 =               new Register(5, this.envir, false, true,  false);
+        this.regCR1 =               new Register("CR1", 5, this.envir, false, true,  false);
+        this.regIR1 =               new Register("IR1", 5, this.envir, false, true,  false);
+        this.regIR2 =               new Register("IR2", 5, this.envir, false, true,  false);
+        this.regIR3 =               new Register("IR3", 5, this.envir, false, true,  false);
+        this.regIR4 =               new Register("IR4", 5, this.envir, false, true,  false);
+        this.regOR1 =               new Register("OR1", 5, this.envir, false, true,  false);
+        this.regOR2 =               new Register("OR2", 5, this.envir, false, true,  false);
+        this.regOR3 =               new Register("OR3", 5, this.envir, false, true,  false);
+        this.regOR4 =               new Register("OR4", 5, this.envir, false, true,  false);
+        this.regOR5 =               new Register("OR5", 5, this.envir, false, true,  false);
+        this.regPR1 =               new Register("PR1", 5, this.envir, false, true,  false);
+        this.regPR2 =               new Register("PR2", 5, this.envir, false, true,  false);
 
         this.marsRegisters = [
             this.regOR1, this.regOR2, this.regOR3, this.regOR4, this.regOR5, this.regCR1,
@@ -227,7 +228,7 @@ class Processor {
         this.gateSAVE_CTRL =        new FlipFlop(this.envir, false);    // SAVE control latch
         this.gateSCE =              new FlipFlop(this.envir, false);    // single-cycle execute
 
-        this.regXBR =               new Register(5, this.envir, false, true,  true);
+        this.regXBR =               new Register("XBR", 5, this.envir, false, true,  true);
 
         // Console Switches
         this.marSelectorKnob = 0;
@@ -248,6 +249,7 @@ class Processor {
         this.opBinary = 0;                              // binary value of current op code
         this.opIndexable = 0;                           // op code is valid for indexing addresses
         this.opAtts = new Array(100);                   // op code attributes table
+        this.opThisAtts = null;                         // op code attributes for current op
 
         this.xrInstalled = (context.config.getNode("indexRegisters") ? 1 : 0);
         this.fpInstalled = (context.config.getNode("floatingPoint") ? 1 : 0);
@@ -256,8 +258,10 @@ class Processor {
         // General emulator state
         this.avgThrottleDelay = 0;                      // running average throttling delay, ms
         this.avgThrottleDelta = 0;                      // running average throttling delay deviation, ms
+        this.instructionCount = 0                       // number of instructions executed
         this.procState = procStateLimbo;                // processor instruction load/execute state
         this.running = false;                           // true when this.run() is active
+        this.runTime = 0;                               // actual system run time, ms
 
         // I/O Subsystem
         this.ioTimer = new Timer();                     // general timer for I/O operations
@@ -266,6 +270,7 @@ class Processor {
         this.ioSelectNr = 0;                            // I/O channel from Q8/Q9
         this.ioVariant = 0;                             // I/O function variant from Q10/Q11
         this.ioReadCheckPending = false;                // Read Check condition has occurred but not yet been set
+        this.ioWriteCheckPending = false;               // Write Check condition has occurred but not het been set
 
         // Bound Methods
 
@@ -486,8 +491,8 @@ class Processor {
         let augend = this.regDR.odd & Register.bcdMask;
         let addend = rawAddend & Register.bcdMask;
 
-        if (augend >= Register.undigitBase || addend >= Register.undigitBase) {
-            this.marCheck(`addDigits invalid BCD code: aug=${augend.toString(2)}, add=${addend.toString(2)}`);
+        if (augend != Envir.bcdBinary[augend] || addend != Envir.bcdBinary[addend]) {
+            this.marCheck(`addDigits() invalid BCD code: aug=${augend.toString()}, add=${addend.toString()}`);
             augend = Envir.bcdBinary[augend];
             addend = Envir.bcdBinary[addend];
         }
@@ -800,22 +805,24 @@ class Processor {
         into MBR */
         let addr = this.regMAR.binaryValue;
 
-        if (addr >= this.envir.memorySize) {
-            this.marCheck(`fetch invalid memory address=${addr}`);
+        if (this.regMAR.invalidBCD) {
+            this.marCheck(`fetch() invalid MAR BCD ${this.regMAR.toBCDString()}`);
+        } else if (addr >= this.envir.memorySize) {
+            this.marCheck(`fetch() invalid memory address=${this.regMAR.toBCDString()}`);
         } else {
-            let pair = this.MM[addr >> 1];   // div 2
-            this.regMIR.value = this.regMBR.value = pair;
+            let pair = this.MM[addr >> 1];              // div 2
+            this.regMIR.correctedValue = this.regMBR.value = pair;
 
             // Set indicators for parity errors.
             if (this.regMBR.parityError) {
                 let digit = (pair >> Register.digitBits) & this.digitMask;
                 if (Envir.oddParity5[digit] != digit) {
-                    this.mbrCheck(0, `fetch MBR-Even parity error @${addr}`);
+                    this.setIndicator(17, `fetch() parity error @${this.regMAR.toBCDString()}`);
                 }
 
                 digit = pair & this.digitMask;
                 if (Envir.oddParity5[digit] != digit) {
-                    this.mbrCheck(1, `fetch MBR-Odd parity error @${addr}`);
+                    this.mbrCheck(16, `fetch() parity error @${this.regMAR.toBCDString()}`);
                 }
             }
         }
@@ -826,8 +833,10 @@ class Processor {
         /* Stores the double-digit pair in MIR to memory at the MAR address */
         let addr = this.regMAR.binaryValue;
 
-        if (addr >= this.envir.memorySize) {
-            this.marCheck(`store invalid memory address=${addr}`);
+        if (this.regMAR.invalidBCD) {
+            this.marCheck(`store() invalid MAR BCD ${this.regMAR.toBCDString()}`);
+        } else if (addr >= this.envir.memorySize) {
+            this.marCheck(`store() invalid memory address=${this.regMAR.toBCDString()}`);
         } else {
             this.MM[addr >> 1] = this.regMIR.value;
         }
@@ -1072,9 +1081,15 @@ class Processor {
                         this.regMAR.value = this.regOR2.value;
                         this.fetch();
 
-                        // Simulate the problem with even starting addresses. This is
-                        // just a guess to what happened, and probably not a good one.
+                        // Simulate the problem with even starting addresses.
+                        // The input translator was sensitive to whether it was
+                        // dealing with zone or numeric digits, so an even address
+                        // could cause translation and parity errors. This
+                        // approach just sets Read Check Pending, which will set
+                        // the check indicator in ioRelease.
                         if (this.regMAR.isEven) {
+                            this.ioReadCheckPending = true;
+                            this.ioReadCheck.value = 1;
                             [even, odd] = [odd, even];
                         }
 
@@ -1095,7 +1110,7 @@ class Processor {
             switch (code) {
             case -4:                    // INSERT key
                 reply = code;
-                this.insert();                  // will check for MANUAL mode, etc.
+                this.insert(false);             // will check for MANUAL mode, etc.
                 break;
             case -5:                    // RETURN key
             case -6:                    // TAB key
@@ -1150,9 +1165,13 @@ class Processor {
                 this.regMAR.value = this.regOR2.value;
                 this.fetch();
 
-                // Simulate the problem with even starting addresses. This is
-                // just a guess to what happened, and probably not a good one.
+                // Simulate the problem with even starting addresses. The input
+                // translator was sensitive to whether it was dealing with zone
+                // or numeric digits, so an even address could cause translation
+                // and parity errors. This approach just sets Read Check Pending,
+                // which will set the check indicator in at lastCol below.
                 if (this.regMAR.isEven) {
+                    this.ioReadCheckPending = true;
                     [even, odd] = [odd, even];
                 }
 
@@ -1169,15 +1188,14 @@ class Processor {
             if (lastCol) {
                 if (this.ioReadCheckPending) {
                     this.ioReadCheckPending = false;
-                    this.ioReadCheck.value = 1;
+                    this.setIndicator(6, "CardReader read check");
                     if (this.ioStopSwitch) {
-                        this.checkStop("CardReader read check");
-                        return;
+                        return;                 // don't restart the Processor
                     }
                 }
 
-                this.ioRelease();               // will reset INSERT if it's set
-                this.startRunning();            // exit Limbo state
+                this.ioRelease();               // exits Limbo state; will reset INSERT if it's set
+                this.run();
             }
         }
     }
@@ -1207,6 +1225,14 @@ class Processor {
 
         if (this.gateRD.value || this.gateWR.value) {
             this.envir.startTiming();   // restart the emulation clock
+            if (this.ioReadCheckPending) {
+                this.ioReadCheckPending = false;
+                this.setIndicator(6, `I/O device ${this.ioSelectNr} Read Check`);
+            } else if (this.ioWriteCheckPending) {
+                this.ioWriteCheckPending = false;
+                this.setIndicator(7, `I/O device ${this.ioSelectNr} Write Check`);
+            }
+
             this.gateREL.value = 1;
             this.ioExit();
             this.gateINSERT.value = 0;
@@ -1332,7 +1358,7 @@ class Processor {
 
         this.gateI_CYC_ENT.value = 1;
         this.resetICycle();
-        this.gateAUTOMATIC.value = 0;
+        this.exitAutomatic();
         this.gateRUN.value = 0;
         if (this.gateSTOP.value) {
             this.gateSTOP.value = 0;
@@ -1404,8 +1430,9 @@ class Processor {
         this.opBinary for later use. If the op code is zero, initiates a stop.
         Steps to I-Cycle 2 */
 
+        ++this.instructionCount;
         this.gateI_CYC_ENT.value = 0;
-        this.gateAUTOMATIC.value = 1;
+        this.enterAutomatic();
         if (this.gateBR_EXEC.value) {
             this.regIR1.value = this.regOR2.value;
             this.gateBR_EXEC.value = 0;
@@ -1413,6 +1440,9 @@ class Processor {
 
         this.regMAR.value = this.regIR1.value;
         this.fetch();
+        if (this.regMAR.value & 1) {
+            this.marCheck(`I-1: instruction at odd MAR address ${this.regMAR.toBCDString()}`);
+        }
 
         this.regOP.value = this.regMBR.value;
         this.gateP.value = 1;                   // now working on the P address
@@ -1424,17 +1454,24 @@ class Processor {
         this.regXR.clear();
 
         this.regIR1.incr(2);
-        this.opBinary = this.regMBR.binaryValue;
-
-        // If the op code is 0, go immediately into MANUAL to halt at the end of
-        // this cycle. The state will advance to I-2. If START is then pressed,
-        // this will cause a MAR check stop in I-2 due to the invalid op code.
-        // Not sure the 1620-2 actually worked this way, but the result is
-        // what's expected.
-        if (this.opBinary == 0) {
+        this.opBinary = this.regOP.binaryValue;
+        if (this.regOP.invalidBCD) {
+            console.log(`I-1: invalid opcode BCD ${this.regOP.toBCDString()} @${this.regMAR.toBCDString()}`);
+            if (this.opAtts[this.opBinary] ?? this.opAtts[this.opBinary].opValid) {
+                this.opBinary = 99;     // to be sure it's not been 8/9 coerced to a valid opcode
+            }
+        } else if (this.opBinary == 0) {
+            // If the op code is 0, go immediately into MANUAL to halt at the
+            // end of this cycle. The state will advance to I-2. If START is
+            // then pressed, this will cause a MAR check stop in E-Cycle entry
+            // due to the invalid op code. Not sure the 1620-2 actually worked
+            // this way, but the result is what's expected.
+            console.log(`I-1: invalid opcode 00 (special stop) @${this.regMAR.toBCDString()}`);
+            this.exitAutomatic();
             this.enterManual();
         }
 
+        this.opThisAtts = this.opAtts[this.opBinary];
         this.setProcState(procStateI2);
     }
 
@@ -1445,14 +1482,10 @@ class Processor {
         loads the P2/P3 digits to the MARS registers. Sets the 4-bit in XR from
         the P3 flag as necessary. Steps to I-Cycle 3 */
 
-        this.opIndexable = this.opAtts[this.opBinary].pIX &&
+        this.opIndexable = this.opThisAtts.pIX &&
                 (this.gateIX_BAND_1.value || this.gateIX_BAND_2.value);
 
         switch (this.opBinary) {
-        case 0:                                 // 00=(invalid op code from I-1)
-            this.marCheck(`I-2 invalid op code 00 @${this.regIR1.binaryValue-2}`);
-            break;
-
         case 42:                                // 42=BB, Branch Back
             // ?? MAR Check Stop if no prior BT instruction or SAVE control ?? Mod2 Ref p.38 vs Germain p.97
             if (this.gateSAVE.value) {
@@ -1541,7 +1574,7 @@ class Processor {
         this.setDROdd(0);
         this.regPR1.clear();
         if ((mbrEven & Register.flagMask) &&
-                this.opAtts[this.opBinary].pIA && this.gateIA_SEL.value) {
+                this.opThisAtts.pIA && this.gateIA_SEL.value) {
             this.gateIA_REQ.value = 1;          // set the IA latch
         }
 
@@ -1577,7 +1610,7 @@ class Processor {
         this.regXBR.clear();                    // ??
         this.regXR.clear();
         this.regMQ.clear();
-        this.opIndexable = this.opAtts[this.opBinary].qIX &&
+        this.opIndexable = this.opThisAtts.qIX &&
                 (this.gateIX_BAND_1.value || this.gateIX_BAND_2.value);
 
         switch (this.opBinary) {
@@ -1600,7 +1633,7 @@ class Processor {
             break;                              // do nothing in I-5
 
         default:
-            if (!this.opAtts[this.opBinary].immed) {    // don't load OR-1 for immediate ops in I-5
+            if (!this.opThisAtts.immed) {       // don't load OR-1 for immediate ops in I-5
                 let drOdd = this.shiftDREvenOdd();
                 this.regOR1.setDigit(4, drOdd);
                 this.regOR1.setDigit(3, mbrEven);
@@ -1704,7 +1737,7 @@ class Processor {
             this.regIR2.incr(2);                // address of next instruction for return
             //--no break
         default:
-            if (this.opAtts[this.opBinary].immed) {     // set OR-1 to Q11 addr for immediate ops
+            if (this.opThisAtts.immed) {        // set OR-1 to Q11 addr for immediate ops
                 this.regOR1.value = this.regMAR.value |= 1;
             } else {
                 this.regOR1.setDigit(1, mbrEven);
@@ -1720,7 +1753,7 @@ class Processor {
         }
 
         if ((mbrOdd & Register.flagMask) &&
-                this.opAtts[this.opBinary].qIA && this.gateIA_SEL.value) {
+                this.opThisAtts.qIA && this.gateIA_SEL.value) {
             this.gateIA_REQ.value = 1;          // set the IA latch
         }
 
@@ -1943,7 +1976,7 @@ class Processor {
                 } else {
                     this.ioDevice.control(this.ioVariant).then(() => {
                         this.ioRelease();
-                        this.startRunning();    // exit Limbo state
+                        this.run();     // exit Limbo state
                     });
                 }
                 break;
@@ -1956,7 +1989,6 @@ class Processor {
                     if (this.ioSelectNr == 3 || this.ioSelectNr == 5) {
                         this.gateREAD_INTERLOCK.value = 1;      // card or paper tape
                     }
-                    this.updateLampGlow(1);
                     this.ioDevice.initiateRead(false);
                 }
                 break;
@@ -1995,17 +2027,17 @@ class Processor {
     /**************************************/
     enterECycle() {
         /* Initiates the start of the current instruction E-cycles */
-        let atts = this.opAtts[this.opBinary];
 
         this.gateE_CYC_ENT.value = 1;
         this.gateIX.value = 0;
         this.regMQ.clear();
-        if (!atts.opValid) {
-            this.marCheck(`enterECycle invalid op code=${this.opBinary} @${this.regIR1.binaryValue-12}`);
+
+        if (!this.opThisAtts.opValid) {
+            this.marCheck(`E-Cyc-Ent: invalid op code ${this.regOP.toBCDString()} @${this.regIR1.binaryValue-12}`);
             return;
         }
 
-        let initialEState = atts.eState;
+        let initialEState = this.opThisAtts.eState;
         switch (this.opBinary) {
         case  6:        // TFL - Transmit Floating
         case  7:        // BTFL - Branch and Transmit Floating
@@ -2409,10 +2441,7 @@ class Processor {
                 // Check for overflow.
                 if (!this.gateFIELD_MK_1.value ||
                         (this.gateCARRY_OUT.value && !this.gateCOMP.value && op % 10 != 4)) {
-                    this.oflowArithCheck.value = 1;
-                    if (this.oflowStopSwitch) {
-                        this.checkStop(`Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue}`);
-                    }
+                    this.setIndicator(14, `A/S/C Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue-12}`);
                 }
 
                 // Check for initiation of RECOMP phase.
@@ -2489,8 +2518,13 @@ class Processor {
         case 39:        // WA - Write Alphanumerically
             this.regOR2.incr(2);
             if (this.regMAR.isEven) {
-                // Simulate the problem with even starting addresses. This is
-                // just a guess to what happened, and probably not a good one.
+                // Simulate the problem with even starting addresses. The output
+                // translator was sensitive to whether it was dealing with zone
+                // or numeric digits, so an even address could cause translation
+                // and parity errors. This approach just sets Write Check Pending
+                // and sets the check indicator in ioRelease.
+                this.ioWriteCheckPending = true;
+                this.ioWriteCheck.value = 1;
                 await this.writeAlphanumerically(
                         (this.regMBR.odd << Register.digitBits) | this.regMBR.even);
             } else {
@@ -2602,27 +2636,12 @@ class Processor {
     }
 
     /**************************************/
-    startRunning() {
-        /* Starts the normal memory cycle. The next processor state must have
-        already been established. This simply calls run() (and restarts the
-        throttling clock), but does so as the result of a promise fulfilling,
-        so that instead of running on top of us in the stack, it's called from
-        the JavaScript event loop, allowing the functions below us in the stack
-        to exit back into the event loop first. This avoids needless stack
-        buildup and prevents recursive run() calls in I/O */
-
-        if (!this.gateMANUAL.value) {
-            Promise.resolve().then(() => {this.run()});
-        }
-    }
-
-    /**************************************/
     enterLimbo() {
         /* Stops processing by setting this.procState to procStateLimbo. This
         will cause this.run() to exit but leave the Processor in AUTOMATIC and
         not MANUAL mode. Typically used for read/write interlock conditions.
-        To get out of this, you'll need to call startRunning(), or do RELEASE
-        and RESET then manually restart the system */
+        To get out of this, you'll need to call run(), or do RELEASE and RESET
+        then manually restart the system */
 
         this.setProcState(procStateLimbo);
     }
@@ -2637,11 +2656,33 @@ class Processor {
     }
 
     /**************************************/
+    enterAutomatic() {
+        /* Starts the run time clock for AUTOMATIC mode */
+        const now = performance.now();
+
+        this.gateAUTOMATIC.value = 1;
+        while (this.runTime >= 0) {
+            this.runTime -= now;
+        }
+    }
+
+    /**************************************/
+    exitAutomatic() {
+        /* Stops the run time clock for AUTOMATIC mode */
+        const now = performance.now();
+
+        this.gateAUTOMATIC.value = 0;
+        while (this.runTime < 0) {
+            this.runTime += now;
+        }
+    }
+
+    /**************************************/
     checkStop(msg) {
         /* Turns on the CHECK STOP lamp, enters MANUALmode, and logs "msg" */
 
         this.gateCHECK_STOP.value = 1;
-        this.gateAUTOMATIC.value = 0;
+        this.exitAutomatic();
         this.enterManual();
         console.info(`>>CHECK STOP: ${msg}`);
     }
@@ -2673,22 +2714,142 @@ class Processor {
     marCheck(msg) {
         /* Stops the processor for MAR addressing errors */
 
-        this.parityMARCheck.value = 1;
-        this.checkStop(msg);
+        this.setIndicator(0, msg);
+    }
+
+
+    /**************************************/
+    setIndicator(code, msg) {
+        /* Sets the indicator specified by "code" and does a Check Stop based on
+        any associated stop switch. Not all indicators are settable -- any codes
+        that are not supported by this function are simply ignored. The "msg"
+        parameter is used only when a Check Stop occurs.
+        Code 0 is used to set a MAR Check condition, which does not have an
+        associated indicator, and always results in a Check Stop */
+        const text = msg ?? "";
+
+        switch (code) {
+        case 0:         // MAR Check (parity, invalid digit, invalid address)
+            this.parityMARCheck.value = 1;
+            this.checkStop(`MAR Check: ${text}`);
+            break;
+        case  6:        // Read Check
+            this.ioReadCheck.value = 1;
+            if (this.ioStopSwitch) {
+                this.checkStop(`Read Check: ${text}`);
+            }
+            break;
+        case  7:        // Write Check
+            this.ioWriteCheck.value = 1;
+            if (this.ioStopSwitch) {
+                this.checkStop(`Write Check: ${text}`);
+            }
+            break;
+        case  9:        // Last card (1622 read)
+            this.gateLAST_CARD.value = 1;
+            break;
+        case 14:        // Arithmetic Check
+            this.oflowArithCheck.value = 1;
+            if (this.oflowStopSwitch) {
+                this.checkStop(`Arithmetic Overflow Check: ${text}`);
+            }
+            break;
+        case 15:        // Exponent Check
+            this.oflowExpCheck.value = 1;
+            if (this.oflowStopSwitch) {
+                this.checkStop(`Exponent Overflow Check: ${text}`);
+            }
+            break;
+        case 16:        // MBR-even Check
+            this.parityMBREvenCheck.value = 1;
+            if (this.parityStopSwitch) {
+                this.checkStop(`MBR-Even Check: ${text}`);
+            }
+            break;
+        case 17:        // MBR-odd Check
+            this.parityMBROddCheck.value = 1;
+            if (this.parityStopSwitch) {
+                this.checkStop(`MBR-Odd Check: ${text}`);
+            }
+            break;
+        case 36:        // 1311 Address Check
+            this.diskAddrCheck.value = 1;
+            if (this.diskStopSwitch) {
+                this.checkStop(`Disk Address Check: ${text}`);
+            }
+            break;
+        case 37:        // 1311 Wrong-length Record / Read-back Check
+            this.diskWRLRBCCheck.value = 1;
+            if (this.diskStopSwitch) {
+                this.checkStop(`Disk WRL/RBC Check: ${text}`);
+            }
+            break;
+        case 38:        // 1311 Cylinder Overflow
+            this.diskCylOflowCheck.value = 1;
+            if (this.diskStopSwitch) {
+                this.checkStop(`Disk Cylinder Overflow Check: ${text}`);
+            }
+            break;
+        case 25:        // 1443 Printer Check
+            this.ioPrinterCheck.value = 1;      // ?? but not if it's a sync check ??
+            if (this.ioStopSwitch) {
+                this.checkStop(`Printer Check: ${text}`);
+            }
+            break;
+        case 33:        // 1443 Channel 9
+            this.ioPrinterChannel9.value = 1;   // also reset by sensing channel 1
+            break;
+        case 34:        // 1443 Channel 12
+            this.ioPrinterChannel12.value = 1;  // also reset by sensing channel 1
+            break;
+        }
     }
 
     /**************************************/
-    mbrCheck(which, msg) {
-        /* Sets one of the MBR parity lamps based on "which" (0=Even, 1=Odd) */
+    resetIndicator(code) {
+        /* Resets the specified indicator in the Processor, complementing the
+        function of this.setIndicator() */
 
-        if (which) {
-            this.parityMBROddCheck.value = 1;
-        } else {
-            this.parityMBREvenCheck.value = 1;
-        }
-
-        if (this.parityStopSwitch) {
-            this.checkStop(msg);
+        switch (code) {
+        case  6:        // Read Check
+            this.ioReadCheck.value = 0;
+            break;
+        case  7:        // Write Check
+            this.ioWriteCheck.value = 0;
+            break;
+        case  9:        // Last card (1622 read)
+            this.gateLAST_CARD.value = 0;
+            break;
+        case 14:        // Arithmetic Check
+            this.oflowArithCheck.value = 0;
+            break;
+        case 15:        // Exponent Check
+            this.oflowExpCheck.value = 0;
+            break;
+        case 16:        // MBR-even Check
+            this.parityMBREvenCheck.value = 0;
+            break;
+        case 17:        // MBR-odd Check
+            this.parityMBROddCheck.value = 0;
+            break;
+        case 36:        // 1311 Address Check
+            this.diskAddrCheck.value = 0;
+            break;
+        case 37:        // 1311 Wrong-length Record / Read-back Check
+            this.diskWRLRBCCheck.value = 0;
+            break;
+        case 38:        // 1311 Cylinder Overflow
+            this.diskCylOflowCheck.value = 0;
+            break;
+        case 25:        // 1443 Printer Check
+            this.ioPrinterCheck.value = 0;      // ?? but not if it's a sync check ??
+            break;
+        case 33:        // 1443 Channel 9
+            this.ioPrinterChannel9.value = 0;   // also reset by sensing channel 1
+            break;
+        case 34:        // 1443 Channel 12
+            this.ioPrinterChannel12.value = 0;  // also reset by sensing channel 1
+            break;
         }
     }
 
@@ -2798,10 +2959,10 @@ class Processor {
                             (performance.now() - delayStart - delay)*Processor.delayAlpha;
                 }
             }
-        } while (this.gatePOWER_ON.value && !this.gateMANUAL.value);
+        } while (!this.gateMANUAL.value && this.gatePOWER_ON.value);
 
-        this.updateLampGlow(1);         // freeze current state in the lamps
         this.running = false;
+        this.updateLampGlow(1);         // freeze current state in the lamps
     }
 
 
@@ -2971,7 +3132,7 @@ class Processor {
 
         if (this.gatePOWER_ON.value && this.gateMANUAL.value && !this.gateAUTOMATIC.value) {
             this.gateINSERT.value = 1;
-            this.gateAUTOMATIC.value = 1;
+            this.enterAutomatic();
             this.gateREL.value = 0;
             this.regOP.binaryValue = this.opBinary = 36; // RN, Read Numerically
             this.ioSelect((cardLoad ? 5 : 1), 0);        // select card(5) or typewriter(1)
@@ -2983,15 +3144,24 @@ class Processor {
             }
 
             this.enterLimbo();
-            this.envir.tick();      // pretend to do a delayed 1st cycle
+            this.envir.tick();          // pretend to do a delayed 1st cycle
             this.gate1ST_CYC.value = 0;
             this.gateBR_EXEC.value = 0;
             this.regIR1.clear();
             this.regOR2.clear();
             this.regMAR.clear();
 
-            this.ioDevice.initiateRead(true);
-            this.updateLampGlow(1);
+            this.enterLimbo();          // device will trigger the memory cycles
+            if (!this.ioDevice) {
+                this.gateREAD_INTERLOCK.value = 1;
+            } else {
+                if (this.ioSelectNr == 3) {             // card reader
+                    this.gateREAD_INTERLOCK.value = 1;
+                }
+
+                this.updateLampGlow(1);
+                this.ioDevice.initiateRead(true);
+            }
         }
     }
 
@@ -3010,7 +3180,7 @@ class Processor {
     start() {
         /* Initiates the processor on the Javascript thread */
 
-        if (this.gatePOWER_ON.value && this.gateMANUAL.value) {
+        if (this.gatePOWER_ON.value && this.gateMANUAL.value && !this.gateCHECK_STOP.value) {
             this.gateSCE.value = 0;     // reset single-cycle mode
             this.gateSAVE_CTRL.value = 0;
             this.gateMANUAL.value = 0;
@@ -3021,7 +3191,7 @@ class Processor {
             if (this.gateCLR_MEM.value) {
                 this.clearMemory();     // async -- returns immediately
             } else {
-                this.startRunning();
+                this.run();             // async
             }
         }
     }
@@ -3032,11 +3202,11 @@ class Processor {
         instruction. If the processor is already in manual mode, executes the
         next instruction, then stops the processor */
 
-        if (this.gatePOWER_ON.value) {
+        if (this.gatePOWER_ON.value && !this.gateCHECK_STOP.value) {
             this.gateSTOP.value = 1;    // stop processor at end of current instruction
             if (this.gateMANUAL.value) {
                 this.gateMANUAL.value = 0;
-                this.startRunning();    // async - singe-step one instruction
+                this.run();             // async - singe-step one instruction
             }
         }
     }
@@ -3044,10 +3214,10 @@ class Processor {
     /**************************************/
     stopSCE() {
         /* If the processor is running, stops it at the end of the current
-        memory cycle, but leaves it in automatic mode, even though MANUAL is also
+        memory cycle, but leaves it in AUTOMATIC mode, even though MANUAL is also
         set. Otherwise, executes the next memory cycle, then stops the processor */
 
-        if (this.gatePOWER_ON.value &&
+        if (this.gatePOWER_ON.value && !this.gateCHECK_STOP.value &&
                 // Not sure about this next part, but it's mentioned in Germain p.25:
                 // Don't allow SCE during I/O unless it's Typewriter or Paper Tape output.
                 !(this.gateRD.value || (this.gateWR.value && !(this.ioSelectNr==1 || this.ioSelectNr==3)))) {
@@ -3055,7 +3225,7 @@ class Processor {
             this.gateRUN.value = 1;
             if (this.gateMANUAL.value) {
                 // Singe-step one memory cycle (ignoring that we're in MANUAL mode).
-                this.run();
+                this.run();             // async
             } else {
                 // Stop processor after next memory cycle.
                 this.gateMANUAL.value = 1;
@@ -3123,7 +3293,7 @@ class Processor {
             let odd = addr & 1;
 
             this.regMAR.binaryValue = addr;
-            this.regMIR.value = this.MM[addr >> 1];
+            this.regMIR.correctedValue = this.MM[addr >> 1];
 
             for (let c of digits.toUpperCase()) {
                 if (c == "~") {
@@ -3223,7 +3393,7 @@ class Processor {
             "34 00000 00108" +  //  1168 K      0,108           tabulate
             "38 00200 00100" +  //  1180 WNTY   200,100         write numerically
             "34 00000 00108" +  //  1192 K      0,108           tabulate
-            "39 00200 00100" +  //  1204 WATY   200,100         write alphanumerically
+            "39 00201 00100" +  //  1204 WATY   200,100         write alphanumerically
             "34 00000 00102" +  //  1216 K      0,102           carriage return
             "34 00000 00102" +  //  1228 K      0,102           carriage return again
 

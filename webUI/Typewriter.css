@@ -41,7 +41,7 @@
     padding:            0;
     border:             2px solid black}
 #PrinterPlaten.inputEnabled {
-    border:             2px solid green}
+    border:             2px solid red}
 
 #Paper {
     margin-left:        0;
@@ -67,6 +67,15 @@
     left:               4px;
     top:                50%;
     transform:          translate(0, -50%)}
+#InsertBtn {
+    position:           absolute;
+    left:               35%;
+    top:                2px;
+    bottom:             2px;
+    transform:          translate(-50%, 0);
+    font-weight:        bold;
+    background-color:   #EBDFCE;
+    border-radius:      6px}
 #SelectricLogo {
     position:           absolute;
     left:               50%;

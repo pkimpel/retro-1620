@@ -37,6 +37,7 @@ class CardReader {
 
         this.context = context;
         this.config = context.config;
+        this.origin = null;             // window origin for postMessage
         this.processor = context.processor;
         this.timer = new Timer();
 
@@ -66,6 +67,7 @@ class CardReader {
         this.boundLoadBtnClick = this.loadBtnClick.bind(this);
         this.boundNPROSwitchAction = this.NPROSwitchAction.bind(this);
         this.boundHopperBarClick = this.hopperBarClick.bind(this);
+        this.boundReceiveMessage = this.receiveMessage.bind(this);
 
         this.clear();
 
@@ -111,7 +113,7 @@ class CardReader {
     setReaderReadyStatus() {
         /* Determines the reader-ready state of the card reader and the
         READER READY lamp */
-        let wasReady = this.readerReady;
+        const wasReady = this.readerReady;
 
         this.readerReady = this.cardReady && this.transportReady && !this.readerCheck;
         if (this.readerReady && !wasReady) {
@@ -158,7 +160,7 @@ class CardReader {
 
         if (!this.transportReady) {
             if (this.bufIndex < this.bufLength) {       // hopper is not empty
-                this.processor.gateLAST_CARD.value = 0;
+                this.processor.resetIndicator(9);       // LAST_CARD gate
                 this.setTransportReady(true);
                 if (this.readerReady) {
                     this.initiateTransfer();
@@ -172,13 +174,9 @@ class CardReader {
     /**************************************/
     stopBtnClick(ev) {
         /* Handle the click event for the STOP button */
-        const p = this.processor;
 
         if (this.transportReady) {
             this.setTransportReady(false);
-            //if (p.gateAUTOMATIC.value && p.gateREAD_INTERLOCK.value) {
-            //    p.updateLampGlow(1);       // freeze the console lamps
-            //}
         }
     }
 
@@ -203,7 +201,7 @@ class CardReader {
             if (this.bufIndex < this.bufLength) {       // hopper is not empty
                 this.setTransportReady(true);
                 this.transferRequested = false;
-                this.processor.gateLAST_CARD.value = 0;
+                this.processor.resetIndicator(9);       // LAST_CARD gate
                 this.initiateCardRead();
                 p.insert(true);
             }
@@ -261,7 +259,7 @@ class CardReader {
     fileSelectorChange(ev) {
         /* Handle the <input type=file> onchange event when files are selected. For each
         file, load it and add it to the "input hopper" of the reader */
-        let fileList = ev.target.files;
+        const fileList = ev.target.files;
 
         const fileLoader_onLoad = (ev) => {
             /* Handle the onLoad event for a Text FileReader and load the text
@@ -290,7 +288,7 @@ class CardReader {
         };
 
         for (let file of fileList) {
-            let deck = new FileReader();
+            const deck = new FileReader();
             deck.onload = fileLoader_onLoad;
             deck.readAsText(file);
         }
@@ -314,7 +312,6 @@ class CardReader {
             card = match[1].toUpperCase();
         }
 
-        let length = card.length;
         if (this.bufIndex < this.bufLength) {
             this.hopperBar.value = this.bufLength-this.bufIndex;
         } else {
@@ -336,9 +333,21 @@ class CardReader {
     }
 
     /**************************************/
+    receiveMessage(ev) {
+        /* Handler for the window's onMessage event. The postMessage()/event
+        mechanism is used to guarantee that execution will pass through the
+        JavaScript runtime's event loop, allowing other activities to complete
+        first */
+
+        if (ev.origin === this.origin && ev.data == "initiateTransfer") {
+            this.initiateTransfer();
+        }
+    }
+
+    /**************************************/
     beforeUnload(ev) {
-        let msg = "Closing this window will make the device unusable.\n" +
-                  "Suggest you stay on the page and minimize this window instead";
+        const msg = "Closing this window will make the device unusable.\n" +
+                    "Suggest you stay on the page and minimize this window instead";
 
         ev.preventDefault();
         ev.returnValue = msg;
@@ -350,11 +359,12 @@ class CardReader {
         /* Initializes the reader window and user interface */
 
         this.doc = ev.target;           // now we can use this.$$()
-        this.window = this.doc.defaultView;
         this.doc.title = "retro-1620 Card Reader";
+        this.window = this.doc.defaultView;
+        this.origin = `${this.window.location.protocol}//${this.window.location.host}`;
         this.setReaderReadyStatus();
 
-        let panel = this.$$("ControlsDiv");
+        const panel = this.$$("ControlsDiv");
         this.loadBtn = new PanelButton(panel, null, null, "LoadBtn", "LOAD", "device yellowButton", "yellowButtonDown");
         this.stopBtn = new PanelButton(panel, null, null, "StopBtn", "STOP", "device redButton", "redButtonDown");
         this.startBtn = new PanelButton(panel, null, null, "StartBtn", "START", "device greenButton", "greenButtonDown");
@@ -368,6 +378,7 @@ class CardReader {
         this.outHopper.style.lineHeight = "120%";
 
         this.window.addEventListener("beforeunload", this.beforeUnload);
+        this.window.addEventListener("message", this.boundReceiveMessage);
         this.startBtn.addEventListener("click", this.boundStartBtnClick);
         this.stopBtn.addEventListener("click", this.boundStopBtnClick);
         this.loadBtn.addEventListener("click", this.boundLoadBtnClick);
@@ -378,7 +389,7 @@ class CardReader {
         this.$$("FileSelector").addEventListener("change", this.boundFileSelectorChange);
         this.hopperBar.addEventListener("click", this.boundHopperBarClick);
 
-        let de = this.doc.documentElement;
+        const de = this.doc.documentElement;
         this.window.resizeBy(de.scrollWidth - this.window.innerWidth + 4, // kludge for right-padding/margin
                              de.scrollHeight - this.window.innerHeight);
         this.window.moveTo(0, screen.availHeight - this.window.outerHeight);
@@ -408,8 +419,8 @@ class CardReader {
                 // The next latch point has already passed, so compute a new one
                 // based on where we are in the machine's cycle with respect to
                 // the next latch point.
-                let cyclePoint = now % this.readPeriod;
-                let latchDelay = this.readLatchPoint - cyclePoint;
+                const cyclePoint = now % this.readPeriod;
+                const latchDelay = this.readLatchPoint - cyclePoint;
                 if (latchDelay < 0) {   // must delay to latch point in next cycle
                     this.nextLatchPointStamp = now + latchDelay + this.readPeriod;
                 } else {                // we can still catch this bus...
@@ -418,7 +429,7 @@ class CardReader {
             }
 
             // Wait until the latch point occurs and the card buffer is ready.
-            let delay = this.nextLatchPointStamp - now + this.readLatchDelay;
+            const delay = this.nextLatchPointStamp - now + this.readLatchDelay;
             await this.timer.delayFor(delay);
             this.lastUseStamp = this.nextLatchPointStamp;
 
@@ -468,7 +479,7 @@ class CardReader {
         if (this.bufIndex < this.bufLength) {
             this.initiateCardRead();
         } else {                        // reader hopper empty
-            p.gateLAST_CARD.value = 1;
+            p.setIndicator(9);          // LAST_CARD gate
             this.setTransportReady(false);
         }
 
@@ -478,14 +489,19 @@ class CardReader {
     /**************************************/
     async initiateRead(insertMode) {
         /* Called by the Processor to request transfer of the buffered card.
+        The "insertMode" parameter is not used by CardReader.
+        If the buffered card is ready, this posts a message to this.window that
+        signals the buffer should be transferred once the message passes through
+        the JavaScript event loop, so that the Processor can finish exiting into
+        its Limbo state before the transfer begins, avoiding a time race.
         If the buffered card is not ready, simply sets the transferRequested flag.
         Exits unconditionally. The next card will be sent once it has been read
         and no error conditions exist */
 
         if (this.cardReady && !this.processor.ioReadCheck.value) {
-            this.initiateTransfer();
-        } else {                        // wait for the buffer to be filled
-            this.transferRequested = true;
+            this.window.postMessage("initiateTransfer", this.origin);   // queue to event loop
+        } else {
+            this.transferRequested = true;                              // wait for buffer
         }
     }
 
@@ -509,6 +525,7 @@ class CardReader {
         this.$$("NPROSwitch").removeEventListener("dblclick", this.boundNPROSwitchAction);
         this.$$("FileSelector").removeEventListener("change", this.boundFileSelectorChange);
         this.hopperBar.removeEventListener("click", this.boundHopperBarClick);
+        this.window.removeEventListener("message", this.boundReceiveMessage);
         this.window.removeEventListener("beforeunload", this.beforeUnload, false);
         this.window.close();
     }

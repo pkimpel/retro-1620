@@ -42,11 +42,13 @@ class Register {
     // Public Instance Properties
 
     lastETime = 0;                      // emulation time register was last set
-    intVal = 0;                         // binary value of register: read-only externally
+    intVal = 0;                         // bitmask value of register: read-only externally
+    intBinaryVal = 0;                   // binary value of register: read-onlyl externally
+    invalidBCD = false;                 // true if arithmetic or conversion done on an undigit
     parityError = false;                // true if last update had a digit parity error
 
 
-    constructor(digits, envir, visible, parity, flagged) {
+    constructor(mnemonic, digits, envir, visible, parity, flagged) {
         /* Constructor for the generic Register class. Defines a binary register
         of "digits" 6-bit digits. The bits in each digit are arranged, from high-
         to low-order, as C F 8 4 2 1 (C=odd parity).
@@ -54,6 +56,9 @@ class Register {
         The maximum number of digits supported is 5 (30 bits). Since this
         fits in a 32-bit 2s-complement value, we can use Javascript bit
         operators to maniuplate the values.
+
+        "mnemonic" is a short string identifying the register for use in error
+        messages.
 
         "envir" is a reference to the object that maintains the emulation clock,
         which must support the property "eTime". That property reports the
@@ -78,6 +83,7 @@ class Register {
         allows the average intensity to be computed based on the amount of time
         a bit was actually in that state */
 
+        this.mnemonic = mnemonic;       // name of the register
         this.digits = digits;           // number of 6-bit digits in register
         this.envir = envir;             // local copy of clock object
         this.visible = (visible ? true : false);
@@ -98,16 +104,18 @@ class Register {
     }
 
     set value(value) {
-        /* Set a BCD mask of digits into the register. Use this rather than
+        /* Set a BCD mask of digits into the register. The binary value is
+        computed by coercing undigit values to 8 or 9. Use this rather than
         setting the value member directly so that parity and average lamp glow
         can be computed */
 
-        this.updateLampGlow(0);
         if (this.intVal != value) {
-            let val = value;
-            let newVal = 0;
+            let binVal = 0;
             let bits = 0;
-            this.parityError = false;
+            let newVal = 0;
+            let power = 1;
+            let val = value;
+            this.parityError = this.invalidBCD = false;
 
             do {
                 let digit = val & this.digitMask;
@@ -117,51 +125,93 @@ class Register {
                 }
 
                 newVal |= (this.parity ? corr : digit) << bits;
+
+                digit &= Register.bcdMask;
+                corr = Envir.bcdBinary[digit];
+                if (corr != digit) {
+                    this.invalidBCD = true;
+                }
+
+                binVal += corr*power;
+                power *= 10;
                 val >>= Register.digitBits;
                 bits += Register.digitBits;
             } while (bits < this.bits);
 
+            this.intBinaryVal = binVal;
             this.intVal = newVal;
         }
 
+        this.updateLampGlow(0);
+    }
+
+    set correctedValue(value) {
+        /* Does what set value() does, but unconditionally sets correct parity
+        in the register. Does not set this.parityError, but will set invalidBCD
+        if there is an undigit */
+
+        if (this.intVal != value) {
+            let binVal = 0;
+            let bits = 0;
+            let newVal = 0;
+            let power = 1;
+            let val = value;
+            this.parityError = this.invalidBCD = false;
+
+            do {
+                let digit = Envir.oddParity5[val & this.digitMask];
+                newVal |= digit << bits;
+
+                digit &= Register.bcdMask;
+                let corr = Envir.bcdBinary[digit];
+                if (corr != digit) {
+                    this.invalidBCD = true;
+                }
+
+                binVal += corr*power;
+                power *= 10;
+                val >>= Register.digitBits;
+                bits += Register.digitBits;
+            } while (bits < this.bits);
+
+            this.intBinaryVal = binVal;
+            this.intVal = newVal;
+        }
+
+        this.updateLampGlow(0);
     }
 
     get binaryValue() {
-        /* Returns the value of the register as a binary integer. Invalid BCD
-        values are coerced to either an 8 or a 9 */
-        let val = this.intVal & Register.bcdValueMask;
-        let binary = Envir.bcdBinary[val & Register.bcdMask];
-        let power = 1;
+        /* Returns the value of the register as a binary integer */
 
-        let d = 1;
-        while (val && d < this.digits) {
-            val >>= Register.digitBits;
-            power *= 10;
-            binary += Envir.bcdBinary[val & Register.bcdMask]*power;
-            ++d;
-        }
-
-        return binary;
+        return this.intBinaryVal;
     }
 
     set binaryValue(value) {
         /* Sets the BCD value of the register from a binary integer. Preserves
         flag bits but recomputes parity for each digit */
         let bin = value;
+        let binVal = 0;
         let bits = 0;
         let newVal = 0;
+        let power = 1;
         let val = this.intVal;
+        this.parityError = this.invalidBCD = false;
 
-        this.updateLampGlow(0);
         do {
             let digit = bin % 10;
             newVal |= Envir.oddParity5[(val & Register.parityFlagMask) | digit] << bits;
+
+            binVal += digit*power;
+            power *= 10;
             val >>= Register.digitBits;
             bin = (bin-digit)/10;
             bits += Register.digitBits;
         } while (bits < this.bits);
 
+        this.intBinaryVal = binVal;
         this.intVal = newVal;
+        this.updateLampGlow(0);
     }
 
     get isntZero() {
@@ -213,19 +263,29 @@ class Register {
     }
 
     /**************************************/
+    setMARCheck(msg) {
+        /* Sets the Processor's check indicator for a MAR check condition. This
+        in turn will cause a Check Stop in the Processor */
+
+        this.envir.setIndicator(0, `reg${this.mnemonic}: ${msg}`);
+    }
+
+    /**************************************/
     clear() {
         /* Clears the register to zero with correct parity. Returns the new value */
         let newVal = 0;
         let d = 0;
-        this.parityError = false;
+        this.parityError = this.invalidBCD = false;
 
         this.updateLampGlow(0);
         do {
             newVal = (newVal << Register.digitBits) | Register.parityMask;
         } while (++d < this.digits);
 
+        this.intBinaryVal = 0;
         this.intVal = newVal;
-        return this.intVal;
+        this.updateLampGlow(0);
+        return newVal;
     }
 
     /**************************************/
@@ -236,12 +296,20 @@ class Register {
         Otherwise, overflow is ignored.
         This routine is designed to minimize the number of digits changed */
         let carry = increment;
+        let corr = 0;
         let d = 0;
         let digit = 0;
         let val = this.intVal;
 
         do {
-            digit = Envir.bcdBinary[val & Register.bcdMask] + carry;
+            digit = val & Register.bcdMask;
+            corr = Envir.bcdBinary[digit];
+            if (digit != corr) {
+                this.setMARCheck(`incr() invalid BCD digit ${digit}`);
+                this.invalidBCD = true;
+            }
+
+            digit = corr + carry;
             if (digit <= 9) {
                 carry = 0;
             } else {
@@ -254,9 +322,8 @@ class Register {
         } while (carry && ++d < this.digits);
 
         if (this.digits == 5) {
-            val = this.binaryValue;
-            if (val >= this.envir.memorySize) {
-                this.binaryValue = val - this.envir.memorySize;
+            if (this.intBinaryVal >= this.envir.memorySize) {
+                this.binaryValue = this.intBinaryVal - this.envir.memorySize;
             }
         }
     }
@@ -269,12 +336,20 @@ class Register {
         Otherwise, underflow is ignored and the result will be in 10s-complement
         form. This routine is designed to minimize the number of digits changed */
         let borrow = decrement;
+        let corr = 0;
         let d = 0;
         let digit = 0;
         let val = this.intVal;
 
         do {
-            digit = Envir.bcdBinary[val & Register.bcdMask] - borrow;
+            digit = val & Register.bcdMask;
+            corr = Envir.bcdBinary[digit];
+            if (digit != corr) {
+                this.setMARCheck(`decr() invalid BCD digit ${digit}`);
+                this.invalidBCD = true;
+            }
+
+            digit = corr - borrow;
             if (digit >= 0) {
                 borrow = 0;
             } else {
@@ -287,9 +362,8 @@ class Register {
         } while (borrow && ++d < this.digits);
 
         if (this.digits == 5) {
-            val = this.binaryValue;
-            if (val >= this.envir.memorySize) {
-                this.binaryValue = this.memorySize + val - 100000;
+            if (this.intBinaryVal >= this.envir.memorySize) {
+                this.binaryValue = this.intBinaryVal + this.envir.memorySize - 100000;
             }
         }
     }
@@ -347,13 +421,34 @@ class Register {
         recomputes parity for the digit. Returns the new register value */
 
         if (d < this.digits) {
-            let digit = this.getDigit(d);
-            let comp = 9 - Envir.bcdBinary[digit];
+            const digit = this.getDigit(d);
+            const corr = Envir.bcdBinary[digit];
+            const comp = 9 - corr;
             digit = Envir.oddParity5[(digit & Register.parityFlagMask) | comp];
             this.value = BitField.fieldInsert(this.intVal, (d+1)*Register.digitBits-1, Register.digitBits, digit);
+            if (digit != corr) {
+                this.setMARCheck(`complementDigit(${d}) invalid BCD=${digit}, used ${corr}`);
+            }
         }
 
         return this.intVal;
+    }
+
+    /**************************************/
+    toBCDString() {
+        /* Returns the BCD digits of the internal value formatted as hex digits */
+        let bcd = 0;
+        let d = 0;
+        let shift = 0;
+        let val = this.intVal;
+
+        do {
+            bcd |= (val & Register.bcdMask) << shift;
+            shift += 4;
+            val >>= Register.digitBits;
+        } while (val && ++d < this.digits);
+
+        return bcd.toString(16).toUpperCase().padStart(this.digits, "0");
     }
 
     /**************************************/

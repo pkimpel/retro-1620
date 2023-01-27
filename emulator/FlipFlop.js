@@ -23,7 +23,7 @@ class FlipFlop {
 
     // Public Static Properties
 
-    static lampPersistence =  8;        // persistence of incandescent bulb glow [ms]
+    static lampPersistence =  30;       // persistence of incandescent bulb glow [ms]
 
     // Public Instance Properties
 
@@ -73,7 +73,7 @@ class FlipFlop {
     }
 
     /**************************************/
-    updateLampGlow(beta) {
+    updateLampGlow(beta=0) {
         /* Updates the average glow for the flip flop. Note that the glow is
         always aged by at least one clock tick. Beta is a bias in the
         range (0,1). For normal update, use 0; to freeze the current state, use 1 */

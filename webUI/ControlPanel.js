@@ -45,6 +45,9 @@ class ControlPanel {
         this.debugView = false;         // true if Debug View is displaying
         this.intervalToken = 0;         // panel refresh timer cancel token
         this.modifyLatch = 0;           // MODIFY key was pressed, awaiting CHECK RESET key
+        this.avgInstructionRate = 0;    // running average instructions/sec
+        this.lastInstructionCount = 0;  // prior total instruction count (for average)
+        this.lastRunTime = 0            // prior total run time (for average), ms
 
         this.boundUpdatePanel = this.updatePanel.bind(this);
         this.boundMARSelectorChange = this.marSelectorChange.bind(this);
@@ -336,7 +339,7 @@ class ControlPanel {
 
         this.debugView = this.config.getNode("ControlPanel.DebugView");
         this.$$("RegisterViewTable").style.display = (this.debugView ? "table" : "none");
-        this.$$("AvgDelayTable").style.display = (this.debugView ? "table" : "none");
+        this.$$("RunStatsTable").style.display = (this.debugView ? "table" : "none");
 
         this.$$("EmulatorVersion").textContent = Version.retro1620Version;
         this.window.addEventListener("beforeunload", this.boundBeforeUnload);
@@ -346,6 +349,7 @@ class ControlPanel {
         this.$$("OperatorContainer").addEventListener("mouseout", this.boundModifyResetDrag);
         this.$$("OperatorContainer").addEventListener("mousedown", this.boundModifyResetDrag);
         this.$$("OperatorContainer").addEventListener("mouseup", this.boundModifyResetDrag);
+        this.powerBtn.addEventListener("dblclick", this.boundControlSwitchClick);
         this.marSelectorKnob.setChangeListener(this.boundMARSelectorChange);
         this.$$("EmergencyOffSwitch").addEventListener("dblclick", this.boundEmergencyOffClick);
         this.$$("IBMLogo").addEventListener("dblclick", this.boundToggleDebugView);
@@ -597,18 +601,18 @@ class ControlPanel {
 
     /**************************************/
     toggleDebugView(ev) {
-        /* Toggles display of the Debug View and AvgDelay panels when the IBM
+        /* Toggles display of the Debug View and RunStats panels when the IBM
         logo is double-clicked */
 
         if (this.debugView) {
            this.debugView = false;
            this.$$("RegisterViewTable").style.display = "none";
-           this.$$("AvgDelayTable").style.display = "none";
+           this.$$("RunStatsTable").style.display = "none";
            this.config.putNode("ControlPanel.DebugView", 0);
         } else {
            this.debugView = true;
            this.$$("RegisterViewTable").style.display = "table";
-           this.$$("AvgDelayTable").style.display = "table";
+           this.$$("RunStatsTable").style.display = "table";
            this.config.putNode("ControlPanel.DebugView", 1);
         }
     }
@@ -798,25 +802,38 @@ class ControlPanel {
 
         // Register View & Delay Stats Tables **DEBUG**
         if (this.debugView) {
-            this.$$("ViewOR1").textContent = p.regOR1.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewOR2").textContent = p.regOR2.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewOR3").textContent = p.regOR3.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewOR4").textContent = p.regOR4.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewOR5").textContent = p.regOR5.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewCR1").textContent = p.regCR1.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewMAR").textContent = p.regMAR.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewIR1").textContent = p.regIR1.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewIR2").textContent = p.regIR2.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewIR3").textContent = p.regIR3.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewIR4").textContent = p.regIR4.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewPR1").textContent = p.regPR1.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewPR2").textContent = p.regPR2.binaryValue.toString().padStart(5, "0");
-            this.$$("ViewXBR").textContent = p.regXBR.binaryValue.toString().padStart(5, "0");
+            this.$$("ViewOR1").textContent = p.regOR1.toBCDString();
+            this.$$("ViewOR2").textContent = p.regOR2.toBCDString();
+            this.$$("ViewOR3").textContent = p.regOR3.toBCDString();
+            this.$$("ViewOR4").textContent = p.regOR4.toBCDString();
+            this.$$("ViewOR5").textContent = p.regOR5.toBCDString();
+            this.$$("ViewCR1").textContent = p.regCR1.toBCDString();
+            this.$$("ViewMAR").textContent = p.regMAR.toBCDString();
+            this.$$("ViewIR1").textContent = p.regIR1.toBCDString();
+            this.$$("ViewIR2").textContent = p.regIR2.toBCDString();
+            this.$$("ViewIR3").textContent = p.regIR3.toBCDString();
+            this.$$("ViewIR4").textContent = p.regIR4.toBCDString();
+            this.$$("ViewPR1").textContent = p.regPR1.toBCDString();
+            this.$$("ViewPR2").textContent = p.regPR2.toBCDString();
+            this.$$("ViewXBR").textContent = p.regXBR.toBCDString();
+
+            const now = performance.now();
+            let runTime = p.runTime;
+            while (runTime < 0) {
+                runTime += now;
+            }
 
             this.$$("AvgDelay").textContent =       p.avgThrottleDelay.toFixed(2);
             this.$$("AvgDelayDelta").textContent =  p.avgThrottleDelta.toFixed(2);
-            this.$$("RealTime").textContent =       performance.now().toFixed(2);
-            this.$$("ETime").textContent =          p.envir.eTime.toFixed(2);
+            this.$$("TotalRunTime").textContent =   (runTime/1000).toFixed(2);
+            if (runTime != this.lastRunTime) {
+                this.avgInstructionRate = this.avgInstructionRate*(1-ControlPanel.displayAlpha) +
+                        ((p.instructionCount-this.lastInstructionCount)/
+                            ((runTime-this.lastRunTime)/1000))*ControlPanel.displayAlpha;
+                this.$$("AvgInstructionRate").textContent = this.avgInstructionRate.toFixed(2);
+                this.lastRunTime = runTime;
+                this.lastInstructionCount = p.instructionCount;
+            }
         }
 
         this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
@@ -826,6 +843,16 @@ class ControlPanel {
     controlSwitchClick(ev) {
         /* Event handler for the pane's switch controls */
         let e = ev.target;
+
+        if (ev.type == "dblclick") {
+            switch (e.id) {
+            case "PowerBtn":
+                this.shutDown();
+                break;
+            }
+            return;
+        }
+
         let modified = false;           // MODIFY button was pressed this time
         const p = this.context.processor;
 
@@ -834,9 +861,6 @@ class ControlPanel {
         }
 
         switch (e.id) {
-        case "PowerBtn":
-            this.shutDown();
-            break;
         case "ResetBtn":
             p.manualReset();
             break;
@@ -1019,6 +1043,7 @@ class ControlPanel {
         this.$$("OperatorContainer").removeEventListener("mouseout", this.boundModifyResetDrag);
         this.$$("OperatorContainer").removeEventListener("mousedown", this.boundModifyResetDrag);
         this.$$("OperatorContainer").removeEventListener("mouseup", this.boundModifyResetDrag);
+        this.powerBtn.removeEventListener("dblclick", this.boundControlSwitchClick);
         this.marSelectorKnob.removeChangeListener(this.boundMARSelectorChange);
         this.$$("EmergencyOffSwitch").removeEventListener("dblclick", this.boundEmergencyOffClick);
         this.$$("AlarmSound").pause();
@@ -1044,6 +1069,7 @@ class ControlPanel {
 
 // Static class properties
 
+ControlPanel.displayAlpha = 0.01;       // running average decay factor
 ControlPanel.displayRefreshPeriod = 50; // ms
 ControlPanel.offSwitchImage = "./resources/ToggleLargeDown.png";
 ControlPanel.onSwitchImage = "./resources/ToggleLargeUp.png";

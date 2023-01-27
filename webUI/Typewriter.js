@@ -52,6 +52,7 @@ class Typewriter {
         this.boundResizeWindow = this.resizeWindow.bind(this);
         this.boundUnloadPaperClick = this.unloadPaperClick.bind(this);
         this.boundTextOnChange = this.textOnChange.bind(this);
+        this.boundInsertBtnClick = this.insertBtnClick.bind(this);
         this.boundSelectricClick = this.selectricClick.bind(this);
 
         // Create the Typewriter window
@@ -102,8 +103,8 @@ class Typewriter {
 
     /**************************************/
     beforeUnload(ev) {
-        let msg = "Closing this window will make the device unusable.\n" +
-                  "Suggest you stay on the page and minimize this window instead";
+        const msg = "Closing this window will make the device unusable.\n" +
+                    "Suggest you stay on the page and minimize this window instead";
 
         ev.preventDefault();
         ev.returnValue = msg;
@@ -120,7 +121,7 @@ class Typewriter {
     /**************************************/
     typewriterOnLoad(ev) {
         /* Initializes the Typewriter window and user interface */
-        let prefs = this.config.getNode("Typewriter");
+        const prefs = this.config.getNode("Typewriter");
 
         this.doc = ev.target;           // now we can use this.$$()
         this.window = this.doc.defaultView;
@@ -133,7 +134,7 @@ class Typewriter {
         this.$$("MarginLeft").value = this.marginLeft = prefs.marginLeft;
         this.$$("MarginRight").value = this.marginRight = prefs.marginRight;
 
-        let tabStops = this.parseTabStops(prefs.tabs || "", this.window);
+        const tabStops = this.parseTabStops(prefs.tabs || "", this.window);
         if (tabStops !== null) {
             this.tabStops = tabStops;
             this.$$("TabStops").value = this.formatTabStops(tabStops);
@@ -145,6 +146,7 @@ class Typewriter {
         this.window.addEventListener("keydown", this.boundKeydown);
         this.paperDoc.addEventListener("keydown", this.boundKeydown);
         this.paper.addEventListener("dblclick", this.boundUnloadPaperClick);
+        this.$$("InsertBtn").addEventListener("click", this.boundInsertBtnClick);
         this.$$("SelectricLogo").addEventListener("click", this.boundSelectricClick);
         this.$$("FormatControlsDiv").addEventListener("change", this.boundTextOnChange);
     }
@@ -175,10 +177,10 @@ class Typewriter {
 
         if (this.flagPending) {
             this.flagPending = false;
-            let lastChild = this.paper.lastChild;       // should be the cursor char
+            const lastChild = this.paper.lastChild;       // should be the cursor char
             if (lastChild && lastChild.nodeType == Node.TEXT_NODE) {
                 lastChild.nodeValue += Typewriter.cursorChar;   // reinstate the cursor
-                let priorChild = lastChild.previousSibling;     // should be the <span>
+                const priorChild = lastChild.previousSibling;     // should be the <span>
                 if (priorChild && priorChild.nodeType == Node.ELEMENT_NODE) {
                     priorChild.textContent = key;       // fill in the current keystroke under the flag
                 } else {                // should never happen
@@ -284,7 +286,7 @@ class Typewriter {
 
         if (code) {
             ev.preventDefault();
-            let reply = this.processor.receiveKeystroke(code, this.flagPending);
+            const reply = this.processor.receiveKeystroke(code, this.flagPending);
             switch (reply) {
             case 0:                     // ignore keystroke, flash the cursor
                 this.indicateKeyboardLock();
@@ -326,11 +328,30 @@ class Typewriter {
     }
 
     /**************************************/
+    insertBtnClick(ev) {
+        /* Handles the click event on the INSERT button */
+
+        ev.target.blur();
+        this.window.focus();
+        this.processor.insert(false);
+    }
+
+    /**************************************/
     async initiateRead(insertMode) {
-        /* Called by Processor to prepare the device for input */
+        /* Called by Processor to prepare the device for input. this.lastUseStamp
+        is set to current time so that a 500ms wait for motor startup will take
+        place if necessary */
+        const now = performance.now();
 
         this.window.focus();
         this.platen.classList.add("inputEnabled");
+
+        // Set up the wait for motor startup if currently idle.
+        if (now - this.lastUseStamp > Typewriter.idlePeriod) {
+            this.outputReadyStamp = Typewriter.idleStartuptime + now;
+        }
+
+        this.lastUseStamp = now;
     }
 
     /**************************************/
@@ -380,11 +401,11 @@ class Typewriter {
 
         if (text.search(/\S/) >= 0) {
             let lastCol = 0;
-            let cols = text.split(",");
+            const cols = text.split(",");
             for (let item of cols) {
-                let raw = item.trim();
+                const raw = item.trim();
                 if (raw.length > 0) {       // ignore empty fields
-                    let col = parseInt(raw, 10);
+                    const col = parseInt(raw, 10);
                     if (isNaN(col)) {
                         copacetic = false;
                         alertWin.alert(`Tab stop "${raw}" is not numeric`);
@@ -407,9 +428,9 @@ class Typewriter {
     /**************************************/
     textOnChange(ev) {
         /* Handler for textbox onchange events */
-        let box = ev.target;
-        let prefs = this.config.getNode("Typewriter");
-        let text = box.value;
+        const box = ev.target;
+        const prefs = this.config.getNode("Typewriter");
+        const text = box.value;
         let v = null;
 
         switch (box.id) {
@@ -483,15 +504,15 @@ class Typewriter {
     async printNewLine() {
         /* Appends a newline to the current text node, and then a new text
         node to the end of the <pre> element within the paper element */
-        let paper = this.paper;
-        let line = paper.lastChild.nodeValue;
-        let positions = this.printerCol - this.marginLeft;
+        const paper = this.paper;
+        const line = paper.lastChild.nodeValue;
+        const positions = this.printerCol - this.marginLeft;
 
         this.busy = true;
 
         // Remove old lines that have overflowed the buffer.
         while (this.scrollLines > Typewriter.maxScrollLines) {
-            let child = paper.removeChild(paper.firstChild);
+            const child = paper.removeChild(paper.firstChild);
             if (child.nodeType = Node.TEXT_NODE) {
                 // Count the node as a line only if it ends with a newline.
                 if (child.nodeValue.at(-1) == "\n") {
@@ -500,7 +521,7 @@ class Typewriter {
             }
         }
 
-        let now = await this.waitReadyOutput();
+        const now = await this.waitReadyOutput();
 
         // Erase the cursor at end of the current line and output a newline.
         paper.lastChild.nodeValue = line.slice(0, -1) + "\n";
@@ -525,7 +546,7 @@ class Typewriter {
         /* Outputs the Unicode character "char" to the device.
         "flag" indicates the character should be printed with a flag.
         "strike" indicates the character should be printed with strike-through */
-        let paper = this.paper;
+        const paper = this.paper;
         let span = null;
 
         this.busy = true;
@@ -538,7 +559,7 @@ class Typewriter {
         await this.waitReadyOutput();
 
         // Remove the existing cursor character from the line.
-        let line = paper.lastChild.nodeValue.slice(0, -1);
+        const line = paper.lastChild.nodeValue.slice(0, -1);
         paper.lastChild.nodeValue = line;
 
         // If the character will be flagged or struck, create a blank <span>
@@ -607,9 +628,9 @@ class Typewriter {
         await this.waitReadyOutput();
 
         if (this.printerCol > this.marginLeft) {
-            let paper = this.paper;
-            let node = paper.lastChild;
-            let line = node.nodeValue;
+            const paper = this.paper;
+            const node = paper.lastChild;
+            const line = node.nodeValue;
 
             if (line.length > 1) {
                 // If the node has at least two characters, we can trim the cursor
@@ -618,7 +639,7 @@ class Typewriter {
             } else if (paper.firstNode !== paper.lastNode) {
                 // Otherwise, the node has just the cursor character, so unless
                 // it's the only node, remove it and examine the prior node.
-                let cursorOnly = paper.removeChild(node);
+                const cursorOnly = paper.removeChild(node);
                 let prior = paper.lastChild;
                 switch (prior.nodeType) {
                 case Node.ELEMENT_NODE:
@@ -665,11 +686,11 @@ class Typewriter {
         /* Indexes the platen one line without moving the printing element. We
         simulate this by emitting a newline, then padding the new line with
         spaces to the original print position */
-        let position = this.printerCol;
-        let paper = this.paper;
+        const paper = this.paper;
+        const position = this.printerCol;
 
         this.busy = true;
-        let now = await this.waitReadyOutput();
+        const now = await this.waitReadyOutput();
 
         // Erase the cursor at end of the current line and output a newline.
         paper.lastChild.nodeValue = paper.lastChild.nodeValue.slice(0, -1) + "\n";
@@ -689,8 +710,8 @@ class Typewriter {
     /**************************************/
     async printTab() {
         /* Simulates tabulation by inserting an appropriate number of spaces */
-        let line = this.paper.lastChild.nodeValue.slice(0, -1);
-        let tabCol = this.marginRight+1; // tabulation defaults to right margin
+        const line = this.paper.lastChild.nodeValue.slice(0, -1);
+        let tabCol = this.marginRight+1;        // tabulation defaults to right margin
 
         this.busy = true;
         for (let stop of this.tabStops) {
@@ -702,10 +723,10 @@ class Typewriter {
             }
         }
 
-        let now = await this.waitReadyOutput();
+        const now = await this.waitReadyOutput();
 
         // Output the necessary spacing to the tab stop.
-        let positions = tabCol - this.printerCol;
+        const positions = tabCol - this.printerCol;
         this.paper.lastChild.nodeValue =
                 `${line}${(" ").repeat(positions)}${Typewriter.cursorChar}`;
         this.printerCol = tabCol;
@@ -722,7 +743,7 @@ class Typewriter {
     dumpNumeric(code) {
         /* Writes one digit to the typewriter. This should be used directly by
         Dump Numerically. Returns a Promise for completion */
-        let digit = code & Register.digitMask;
+        const digit = code & Register.digitMask;
 
         this.processor.updateLampGlow(1);       // because Typewriter is so slow
         return this.printChar(Typewriter.numericGlyphs[digit & Register.bcdMask],
@@ -733,10 +754,10 @@ class Typewriter {
     writeAlpha(digitPair) {
         /* Writes one even/odd digit pair to the typewriter. This should be used
         directly by Write Alphanumerically. Returns a Promise for completion */
-        let even = (digitPair >> Register.digitBits) & Register.digitMask;
-        let odd = digitPair & Register.digitMask;
+        const even = (digitPair >> Register.digitBits) & Register.digitMask;
+        const odd = digitPair & Register.digitMask;
 
-        let code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
+        const code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
         this.processor.updateLampGlow(1);       // because Typewriter is so slow
         return this.printChar(Typewriter.alphaGlyphs[code],
                 false, (Envir.oddParity5[even] != even || Envir.oddParity5[odd] != odd));
@@ -829,7 +850,7 @@ class Typewriter {
             doc.title = title;
             win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
 
-            let node = this.paper.firstChild;
+            const node = this.paper.firstChild;
             while (node) {
                 switch (node.nodeType) {
                 case Node.TEXT_NODE:    // plain text
@@ -838,8 +859,8 @@ class Typewriter {
                 case Node.ELEMENT_NODE: // hopefully a flag/strike span
                     if (node.tagName == "SPAN") {
                         if (node.classList.contains("flag")) {
-                            let c = node.textContent;
-                            let a = xlateFlag[c];
+                            const c = node.textContent;
+                            const a = xlateFlag[c];
                             if (a) {
                                 content.appendChild(doc.createTextNode(a));
                             } else {
@@ -894,6 +915,7 @@ class Typewriter {
         if (this.window) {
             this.$$("FormatControlsDiv").removeEventListener("change", this.boundTextOnChange);
             this.$$("SelectricLogo").removeEventListener("click", this.boundSelectricClick);
+            this.$$("InsertBtn").removeEventListener("click", this.boundInsertBtnClick);
             this.paper.removeEventListener("dblclick", this.boundUnloadPaperClick);
             this.paperDoc.removeEventListener("keydown", this.boundKeydown);
             this.window.removeEventListener("keydown", this.boundKeydown);

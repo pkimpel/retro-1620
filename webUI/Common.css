@@ -219,17 +219,17 @@ DIV.gateLamp {
     border:             2px solid #222;
     background-color:   #666666}        /* was 777777 */
 DIV.gateLit1 {
-    background-color:   #807D75}        /* was A09388 try 8C8878 ?? */
+    background-color:   #807866}        /* was 807D75, A09388 try 8C8878 ?? */
 DIV.gateLit2 {
-    background-color:   #999484}        /* was B3A696 try A39981 ?? */
+    background-color:   #9A8966}        /* was 999484, B3A696 try A39981 ?? */
 DIV.gateLit3 {
-    background-color:   #B3AB93}        /* was C6B9A4 try BAAA87 ?? */
+    background-color:   #B3A273}        /* was B3AB93, C6B9A4 try BAAA87 ?? */
 DIV.gateLit4 {
-    background-color:   #CCC2A2}        /* was D9CCB2 try D1BB8D ?? */
+    background-color:   #CCBB80}        /* was CCC2A2, D9CCB2 try D1BB8D ?? */
 DIV.gateLit5 {
-    background-color:   #E6D9B1}        /* was ECDFC0 try E8CC93 ?? */
+    background-color:   #E6D58C}        /* was E6D9B1, ECDFC0 try E8CC93 ?? */
 DIV.gateLit {
-    background-color:   #FFF0C0}        /* was FFF2CE try FFDD99 as a base ?? */
+    background-color:   #FFEE99}        /* was FFF0C0, FFF2CE try FFDD99 as a base ?? */
 
 DIV.gateLampTopCaption {
     position:           absolute;
@@ -330,8 +330,18 @@ BUTTON.whiteLit {
 BUTTON.orangeLamp {
     color:              black;
     background-image:   linear-gradient(#8E3A22, #B14A2A, #8E3A22)}
+BUTTON.orangeLit1 {
+    background-image:   radial-gradient(circle, #BE5723 33%, #B14A2A 67%, #B14A2A)}
+BUTTON.orangeLit2 {
+    background-image:   radial-gradient(circle, #CB641C 36%, #BE5723 69%, #BE5723)}
+BUTTON.orangeLit3 {
+    background-image:   radial-gradient(circle, #D87115 39%, #CB651C 71%, #CB641C)}
+BUTTON.orangeLit4 {
+    background-image:   radial-gradient(circle, #E57E0E 42%, #D87115 74%, #D87115)}
+BUTTON.orangeLit5 {
+    background-image:   radial-gradient(circle, #F28C07 46%, #E57E0E 77%, #E57E0E)}
 BUTTON.orangeLit {
-    background-image:   radial-gradient(circle, #F90 50%, #F70 80%, #F50)}
+    background-image:   radial-gradient(circle, #FF9900 50%, #FF7700 80%, #FF5500)}
 
 BUTTON.greenLamp {
     color:              black;

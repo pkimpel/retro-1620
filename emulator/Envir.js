@@ -70,6 +70,7 @@ class Envir {
     eTimeSliceEnd = 0;                  // current emulation time slice end time, ms
     governor = new Timer();             // throttling delay timer
     memorySize = 20000;                 // configured core memory size, digits
+    setIndicator = null;                // reference to Processor's setIndicator() method
 
 
     /**************************************/

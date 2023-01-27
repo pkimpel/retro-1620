@@ -263,15 +263,16 @@ DIV.evenOddCaption {
 #RegisterViewTable TR TD {
     font-size:          12px}
 
-#AvgDelayTable {
+#RunStatsTable {
     position:           absolute;
     display:            none;
-    top:                6px;
-    left:               12px}
-#AvgDelayTableCol1 {
+    top:                12px;
+    right:              calc(100% - 156px)}
+#RunStatsTableCol1 {
     width:              10em}
-#AvgDelayTable TD {
-    padding-right:      2px}
+#RunStatsTable TD {
+    line-height:        110%;
+    padding-right:      4px}
 
 #IndicatorButtonPanel {
     position:           absolute;
@@ -648,7 +649,7 @@ DIV.evenOddCaption {
     position:           absolute;
     right:              8px;
     bottom:             8px;
-    font-size:          8px;
+    font-size:          10px;
     color:              black}
 
 
