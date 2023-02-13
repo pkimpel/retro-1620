@@ -24,6 +24,111 @@ import {openPopup} from "./PopupUtil.js";
 
 class Typewriter {
 
+    // Static properties
+
+    static cursorChar = "_";            // end-of-line cursor indicator
+    static RSChar = "\u00A7";           // section symbol used for R/S
+    static lockoutChar = "\u2592";
+
+    static maxScrollLines = 10000;      // max lines retained in "paper" area
+    static maxCols = 85;                // maximum number of columns per line
+    static charPeriod = 1000/15.5;      // ms per non-space character
+    static spacePeriod = 50;            // ms per space character
+    static returnInterlock = 124;       // CPU interlock time for element return, ms
+    static defaultInterlock = 56;       // CPU interlock time for tab/space/backspace, ms
+    static indexInterlock = 124;        // CPU interlock time for indexing, ms
+    static travelPeriod = 5.88;         // printing element travel time per position, ms
+    static idlePeriod = 5*60000;        // typewriter motor turnoff delay, ms (5 minutes)
+    static idleStartupTime = 500;       // typewriter idle startup time, ms
+    static lockoutFlashTime = 150;      // keyboard lock flash time, ms
+
+    static numericGlyphs = [
+        "0", "1",  "2",  "3", "4", "5", "6", "7", "8", "9",
+        Envir.glyphRecMark, Envir.glyphPillow, "@",  Envir.glyphPillow, Envir.glyphPillow, Envir.glyphGroupMark];
+
+    static alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit BCD)
+            " ",                    Envir.glyphPillow,      Envir.glyphPillow,      ".",                    // 00
+            ")",                    Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 04
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphRecMark,     Envir.glyphPillow,      // 08
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphGroupMark,   // 0C
+            "+",                    Envir.glyphPillow,      Envir.glyphPillow,      "$",                    // 10
+            "*",                    Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 14
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 18
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 1C
+            "-",                    "/",                    Envir.glyphPillow,      ",",                    // 20
+            "(",                    Envir.glyphPillow,      "^",                    Envir.glyphPillow,      // 24
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 28
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 2C
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      "=",                    // 30
+            "@",                    Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 34
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 38
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 3C
+            Envir.glyphPillow,      "A",                    "B",                    "C",                    // 40
+            "D",                    "E",                    "F",                    "G",                    // 44
+            "H",                    "I",                    Envir.glyphPillow,      Envir.glyphPillow,      // 48
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 4C
+            "-",                    "J",                    "K",                    "L",                    // 50
+            "M",                    "N",                    "O",                    "P",                    // 54
+            "Q",                    "R",                    null,                   Envir.glyphPillow,      // 58
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      null,                   // 5C
+            Envir.glyphPillow,      Envir.glyphPillow,      "S",                    "T",                    // 60
+            "U",                    "V",                    "W",                    "X",                    // 64
+            "Y",                    "Z",                    Envir.glyphPillow,      Envir.glyphPillow,      // 68
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 6C
+            "0",                    "1",                    "2",                    "3",                    // 70
+            "4",                    "5",                    "6",                    "7",                    // 74
+            "8",                    "9",                    Envir.glyphPillow,      Envir.glyphPillow,      // 78
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 7C
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 80
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 84
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 88
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 8C
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 90
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 94
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 98
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 9C
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // A0
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // A4
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // A8
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // AC
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // B0
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // B4
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // B8
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // BC
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // C0
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // C4
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // C8
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // CC
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // D0
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // D4
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // D8
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // DC
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // E0
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // E4
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // E8
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // EC
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // F0
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // F4
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // F8
+            Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow];     // FC
+
+        // Public Instance Properties
+
+        paper = null;                           // the output canvas
+        platen = null;                          // the scrolling area
+        doc = null;                             // window document object
+        paperDoc = null;                        // window paper-area
+        window = null;                          // window object
+
+        marginLeft = 0;                         // left margin indent
+        marginRight = Typewriter.maxCols;       // right margin stop
+        printerCol = 0;                         // current print position
+        scrollLines = 0;                        // lines in scroll buffer
+        flagPending = false;                    // FLG key has been pressed, awaiting next char
+        tabStops = [];                          // tab stop columns
+        timer = new Timer();                    // delay management timer
+
+
     constructor(context) {
         /* Initializes and wires up events for the console typewriter device.
         "context" is an object passing other objects and callback functions from
@@ -37,28 +142,15 @@ class Typewriter {
         this.context = context;
         this.config = context.config;
         this.processor = context.processor;
-        this.paper = null;                      // the output canvas
-        this.platen = null;                     // the scrolling area
-
-        this.marginLeft = 0;                    // left margin indent
-        this.marginRight = Typewriter.maxCols;  // right margin stop
-        this.printerCol = 0;                    // current print position
-        this.scrollLines = 0;                   // lines in scroll buffer
-        this.flagPending = false;               // FLG key has been pressed, awaiting next char
-        this.tabStops = [];                     // tab stop columns
-        this.timer = new Timer();
 
         this.boundKeydown = this.keydown.bind(this);
         this.boundResizeWindow = this.resizeWindow.bind(this);
         this.boundUnloadPaperClick = this.unloadPaperClick.bind(this);
         this.boundTextOnChange = this.textOnChange.bind(this);
         this.boundInsertBtnClick = this.insertBtnClick.bind(this);
-        this.boundSelectricClick = this.selectricClick.bind(this);
+        this.boundSelectricLogoClick = this.selectricLogoClick.bind(this);
 
         // Create the Typewriter window
-        this.doc = null;
-        this.paperDoc = null;
-        this.window = null;
         openPopup(window, "../webUI/Typewriter.html", "Typewriter",
                 `location=no,scrollbars,resizable,width=${w},height=${h}` +
                     `,top=${screen.availHeight-h},left=${screen.availWidth-w}`,
@@ -147,7 +239,7 @@ class Typewriter {
         this.paperDoc.addEventListener("keydown", this.boundKeydown);
         this.paper.addEventListener("dblclick", this.boundUnloadPaperClick);
         this.$$("InsertBtn").addEventListener("click", this.boundInsertBtnClick);
-        this.$$("SelectricLogo").addEventListener("click", this.boundSelectricClick);
+        this.$$("SelectricLogo").addEventListener("click", this.boundSelectricLogoClick);
         this.$$("FormatControlsDiv").addEventListener("change", this.boundTextOnChange);
     }
 
@@ -337,7 +429,7 @@ class Typewriter {
     }
 
     /**************************************/
-    async initiateRead(insertMode) {
+    async initiateRead() {
         /* Called by Processor to prepare the device for input. this.lastUseStamp
         is set to current time so that a 500ms wait for motor startup will take
         place if necessary */
@@ -812,6 +904,20 @@ class Typewriter {
     }
 
     /**************************************/
+    initiateWrite() {
+        /* Called by Processor to prepare the device for output. this.lastUseStamp
+        is set to current time so that a 500ms wait for motor startup will take
+        place if necessary */
+        const now = performance.now();
+
+        if (now - this.lastUseStamp > Typewriter.idlePeriod) {
+            this.outputReadyStamp = Typewriter.idleStartuptime + now;
+        }
+
+        this.lastUseStamp = now;
+    }
+
+    /**************************************/
     copyPaper(ev) {
         /* Copies the text contents of the "paper" area of the device, opens a
         new temporary window, and converts that text and pastes it into the
@@ -850,7 +956,7 @@ class Typewriter {
             doc.title = title;
             win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
 
-            const node = this.paper.firstChild;
+            let node = this.paper.firstChild;
             while (node) {
                 switch (node.nodeType) {
                 case Node.TEXT_NODE:    // plain text
@@ -901,7 +1007,7 @@ class Typewriter {
     }
 
     /**************************************/
-    selectricClick(ev) {
+    selectricLogoClick(ev) {
         /* Handler for clicking the Selectric logo and printing the paper area */
 
         this.platen.contentWindow.print();
@@ -914,7 +1020,7 @@ class Typewriter {
 
         if (this.window) {
             this.$$("FormatControlsDiv").removeEventListener("change", this.boundTextOnChange);
-            this.$$("SelectricLogo").removeEventListener("click", this.boundSelectricClick);
+            this.$$("SelectricLogo").removeEventListener("click", this.boundSelectricLogoClick);
             this.$$("InsertBtn").removeEventListener("click", this.boundInsertBtnClick);
             this.paper.removeEventListener("dblclick", this.boundUnloadPaperClick);
             this.paperDoc.removeEventListener("keydown", this.boundKeydown);
@@ -924,92 +1030,4 @@ class Typewriter {
             this.window.close();
         }
     }
-}
-
-
-// Static properties
-
-Typewriter.cursorChar = "_";            // end-of-line cursor indicator
-Typewriter.RSChar = "\u00A7";           // section symbol used for R/S
-Typewriter.lockoutChar = "\u2592";
-
-Typewriter.maxScrollLines = 10000;      // max lines retained in "paper" area
-Typewriter.maxCols = 85;                // maximum number of columns per line
-Typewriter.charPeriod = 1000/15.5;      // ms per non-space character
-Typewriter.spacePeriod = 50;            // ms per space character
-Typewriter.returnInterlock = 124;       // CPU interlock time for element return, ms
-Typewriter.defaultInterlock = 56;       // CPU interlock time for tab/space/backspace, ms
-Typewriter.indexInterlock = 124;        // CPU interlock time for indexing, ms
-Typewriter.travelPeriod = 5.88;         // printing element travel time per position, ms
-Typewriter.idlePeriod = 5*60000;        // typewriter motor turnoff delay, ms (5 minutes)
-Typewriter.idleStartupTime = 500;       // typewriter idle startup time, ms
-Typewriter.lockoutFlashTime = 150;      // keyboard lock flash time, ms
-Typewriter.numericGlyphs = [
-    "0", "1",  "2",  "3", "4", "5", "6", "7", "8", "9",
-    Envir.glyphRecMark, Envir.glyphPillow, "@",  Envir.glyphPillow, Envir.glyphPillow, Envir.glyphGroupMark];
-
-Typewriter.alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit BCD)
-        " ",                    Envir.glyphPillow,      Envir.glyphPillow,      ".",                    // 00
-        ")",                    Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 04
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphRecMark,     Envir.glyphPillow,      // 08
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphGroupMark,   // 0C
-        "+",                    Envir.glyphPillow,      Envir.glyphPillow,      "$",                    // 10
-        "*",                    Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 14
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 18
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 1C
-        "-",                    "/",                    Envir.glyphPillow,      ",",                    // 20
-        "(",                    Envir.glyphPillow,      "^",                    Envir.glyphPillow,      // 24
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 28
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 2C
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      "=",                    // 30
-        "@",                    Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 34
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 38
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 3C
-        Envir.glyphPillow,      "A",                    "B",                    "C",                    // 40
-        "D",                    "E",                    "F",                    "G",                    // 44
-        "H",                    "I",                    Envir.glyphPillow,      Envir.glyphPillow,      // 48
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 4C
-        "-",                    "J",                    "K",                    "L",                    // 50
-        "M",                    "N",                    "O",                    "P",                    // 54
-        "Q",                    "R",                    null,                   Envir.glyphPillow,      // 58
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      null,                   // 5C
-        Envir.glyphPillow,      Envir.glyphPillow,      "S",                    "T",                    // 60
-        "U",                    "V",                    "W",                    "X",                    // 64
-        "Y",                    "Z",                    Envir.glyphPillow,      Envir.glyphPillow,      // 68
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 6C
-        "0",                    "1",                    "2",                    "3",                    // 70
-        "4",                    "5",                    "6",                    "7",                    // 74
-        "8",                    "9",                    Envir.glyphPillow,      Envir.glyphPillow,      // 78
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 7C
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 80
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 84
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 88
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 8C
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 90
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 94
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 98
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // 9C
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // A0
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // A4
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // A8
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // AC
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // B0
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // B4
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // B8
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // BC
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // C0
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // C4
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // C8
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // CC
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // D0
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // D4
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // D8
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // DC
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // E0
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // E4
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // E8
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // EC
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // F0
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // F4
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // F8
-        Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow];     // FC
+} // class TypeWriter

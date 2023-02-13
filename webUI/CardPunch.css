@@ -1,23 +1,23 @@
 /***********************************************************************
-* retro-1620/webUI CardReader.css
+* retro-1620/webUI CardPunch.css
 ************************************************************************
 * Copyright (c) 2022, Paul Kimpel.
 * Licensed under the MIT License,
 *       see http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* IBM 1622 Card Reader Unit web interface style sheet.
+* IBM 1622 Card Punch Unit web interface style sheet.
 ************************************************************************
-* 2022-12-23  P.Kimpel
-*   Original version, from retro-220 B220CardatronInput.css.
+* 2023-01-29  P.Kimpel
+*   Original version, from CardReader.css.
 ***********************************************************************/
 
-#readerBody {
+#punchBody {
     height:             100%;
     min-height:         100%;
     overflow:           hidden;
     padding:            0}
 
-#ReaderDiv {
+#PunchDiv {
     position:           absolute;
     top:                0;
     bottom:             0;
@@ -35,7 +35,7 @@
 #NPROSwitch {
     position:           absolute;
     top:                4px;
-    right:              16px;
+    left:               16px;
     width:              40px;
     height:             56px;
     background-image:   linear-gradient(#E0E0E0 0%, #E0E0E0 50%, #F7F7E9 50%, #F7F7E9 85%, #666 100%);
@@ -56,38 +56,79 @@
     bottom:             2px;
     font-size:          6pt}
 
-#LoadBtn {
+#SelectStopSwitch {
+    position:           absolute;
+    top:                4px;
+    left:               60px;
+    width:              40px;
+    height:             56px;
+    background-image:   linear-gradient(#E0E0E0 0%, #E0E0E0 50%, #F7F7E9 50%, #F7F7E9 85%, #666 100%);
+    border:             1px solid black;
+    box-shadow:         3px 3px 3px #333}
+#SelectStopSwitch.nStop {
+    background-image:   linear-gradient(#CCC 0%, #F7F7E9 15%, #D0D0D0 15%, #D0D0D0 50%,
+                                        #E0E0E0 50%, #E0E0E0 100%)}
+#SelectNStopSwitchCaption {
+    position:           absolute;
+    top:                2px;
+    width:              100%;
+    text-align:         center;
+    color:              black;
+    font-size:          6pt;
+    line-height:        100%}
+#SelectStopSwitch.nStop #SelectNStopSwitchCaption {
+    top:                15%;
+    font-size:          5pt}
+
+#SelectStopSwitchCaption {
+    position:           absolute;
+    bottom:             15%;
+    width:              100%;
+    text-align:         center;
+    color:              black;
+    font-size:          5pt;
+    line-height:        100%}
+#SelectStopSwitch.nStop #SelectStopSwitchCaption {
+    bottom:             2px;
+    font-size:          6pt}
+
+#PowerReadyLamp {
+    left:               124px;
+    top:                12px;
+    width:              40px}
+
+#PunchReadyLamp {
+    left:               124px;
+    top:                36px;
+    width:              40px}
+
+#PunchCheckLamp {
+    left:               172px;
+    top:                12px;
+    width:              40px}
+
+#StackerLamp {
+    left:               172px;
+    top:                36px;
+    width:              40px}
+
+#CheckResetBtn {
     position:           absolute;
     top:                11px;
-    left:               16px;
+    right:              16px;
     box-shadow:         inset 2px 2px 2px #333}
 
 #StopBtn {
     position:           absolute;
     top:                11px;
-    left:               88px;
+    right:              88px;
     box-shadow:         2px 2px 2px #333}
 
 #StartBtn {
     position:           absolute;
     top:                11px;
-    left:               160px;
+    right:              160px;
     box-shadow:         inset 2px 2px 2px #333}
-
-#ReaderCheckLamp {
-    right:              128px;
-    top:                12px;
-    width:              40px}
-
-#PowerReadyLamp {
-    right:              80px;
-    top:                12px;
-    width:              40px}
-
-#ReaderReadyLamp {
-    right:              80px;
-    top:                36px;
-    width:              40px}
 
 #StackerDiv {
     position:           absolute;
@@ -96,18 +137,12 @@
     right:              8px;
     bottom:             8px}
 
-#FileSelector {
-    width:              100%;
-    color:              white;
-    border:             1px solid white}
-
-#HopperBar {
-    margin-top:         4px;
+#StackerBar {
     width:              100%;
     height:             16px;
     border:             1px solid white}
 
-#HopperCaption {
+#StackerCaption {
     position:           absolute;
     display:            none;           /* for now... */
     right:              4px;

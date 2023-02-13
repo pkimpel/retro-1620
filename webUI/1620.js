@@ -15,6 +15,7 @@ import * as Version from "../emulator/Version.js";
 import {Processor} from "../emulator/Processor.js";
 
 import {CardReader} from "./CardReader.js";
+import {CardPunch} from "./CardPunch.js";
 import {ControlPanel} from "./ControlPanel.js";
 import {SystemConfig} from "./SystemConfig.js";
 import {Typewriter} from "./Typewriter.js";
@@ -79,7 +80,7 @@ let globalLoad = (ev) => {
         context.devices = {typewriter: new Typewriter(context)};
         if (config.getNode("Card.hasCard")) {
             context.devices.cardReader = new CardReader(context);
-            //context.devices.cardPunch = new CardPunch(context);
+            context.devices.cardPunch = new CardPunch(context);
         }
 
         context.controlPanel = new ControlPanel(context);
@@ -92,7 +93,7 @@ let globalLoad = (ev) => {
 
         if (!processor.gateMANUAL.value) {
             processor.enterManual();
-            processor.ioRelease();
+            processor.ioExit();
             setTimeout(systemShutDown, 1000);
             return;
         }

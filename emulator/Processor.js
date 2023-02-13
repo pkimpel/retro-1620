@@ -11,7 +11,7 @@
 *   "IBM 1620 Central Processing Unit Model 2," Form A26-5781-2, ca 1966.
 *   "IBM Data Processing System Model 2 Customer Engineering Intermediate
 *       Level Diagrams," Form 227-5857-0 (includes Supplement S27-0500),
-*       1964-04-29.
+*       1964-04-29. Also known as the "ILD".
 *   "Programming the IBM 1620," Second Edition, Clarence B. Germain,
 *       Prentice-Hall, 1965.
 ************************************************************************
@@ -259,6 +259,8 @@ class Processor {
         this.avgThrottleDelay = 0;                      // running average throttling delay, ms
         this.avgThrottleDelta = 0;                      // running average throttling delay deviation, ms
         this.instructionCount = 0                       // number of instructions executed
+        this.limboEntryFcn = null;                      // function to call on entering LimboState
+        this.limboEntryContext = null;                  // object context to apply to limboEntryFcn
         this.procState = procStateLimbo;                // processor instruction load/execute state
         this.running = false;                           // true when this.run() is active
         this.runTime = 0;                               // actual system run time, ms
@@ -894,7 +896,7 @@ class Processor {
             this.ioDevice = null;
             break;
         case 4:         // Card Punch
-            this.ioDevice = null;
+            this.ioDevice = this.devices.cardPunch;
             break;
         case 5:         // Card Reader
             this.ioDevice = this.devices.cardReader;
@@ -933,48 +935,80 @@ class Processor {
                 this.gateEND_OF_MODULE.value = 1;
             }
 
-            if (eob && this.gateEND_OF_MODULE.value) {
-                this.ioRelease();
+            if (eob) {
+                if (this.gateEND_OF_MODULE.value) {
+                    this.ioExit();
+                } else {
+                    // Update emulation clock after each non-final block
+                    this.envir.startTiming();
+                }
             }
         }
     }
 
     /**************************************/
     async writeNumerically(digit) {
-        /* Executes one digit cycle of Write Numerically (WN, 38). If the digit
-        matches a record mark or RELEASE occurs, terminate the I/O */
+        /* Executes one digit cycle of Write Numerically (WN, 38).
+        Terminate the I/O if:
+            * For Card Punch, if it returns eob=true (=> 80th column sent)
+            * For all others, if the digit matches a record mark
+            * If a RELEASE occurs
+        */
 
-        if ((digit & Envir.numRecMark) == Envir.numRecMark) { // it's more complicated than this for cards...
-            this.ioRelease();
-        } else {
-            this.gateRESP_GATE.value = 0;
-            this.gateCHAR_GATE.value = 1;
-
-            let eob = await this.ioDevice.writeNumeric(digit);
-            this.gateCHAR_GATE.value = 0;
-            if (this.gateWR.value) {    // we haven't been released...
-                this.gateRESP_GATE.value = 1;
+        this.gateRESP_GATE.value = 0;
+        this.gateCHAR_GATE.value = 1;
+        switch (this.ioSelectNr) {
+        case 4:         // Card Punch
+            const eob = await this.ioDevice.writeNumeric(digit);
+            if (eob) {
+                this.ioExit();
             }
+            break;
+        default:
+            if ((digit & Envir.numRecMark) == Envir.numRecMark) {
+                this.ioExit();
+            } else {
+                await this.ioDevice.writeNumeric(digit);
+            }
+            break;
+        }
+
+        this.gateCHAR_GATE.value = 0;
+        if (this.gateWR.value) {    // we haven't been released...
+            this.gateRESP_GATE.value = 1;
         }
     }
 
     /**************************************/
     async writeAlphanumerically(digitPair) {
-        /* Executes one character cycle of Write Numerically (WN, 39). If the
-        character matches a record or group mark, or RELEASE occurs, terminate
-        the I/O */
+        /* Executes one character cycle of Write Numerically (WN, 39).
+        Terminate the I/O if:
+            * For Card Punch, if it returns eob=true (=> 80th column sent)
+            * For all others, if the odd digit matches a record mark
+            * If a RELEASE occurs
+        */
 
-        if ((digitPair & Envir.numRecMark) == Envir.numRecMark) { // it's more complicated than this for cards...
-            this.ioRelease();
-        } else {
-            this.gateRESP_GATE.value = 0;
-            this.gateCHAR_GATE.value = 1;
-
-            let eob = await this.ioDevice.writeAlpha(digitPair);
-            this.gateCHAR_GATE.value = 0;
-            if (this.gateWR.value) {    // we haven't been released...
-                this.gateRESP_GATE.value = 1;
+        this.gateRESP_GATE.value = 0;
+        this.gateCHAR_GATE.value = 1;
+        switch (this.ioSelectNr) {
+        case 4:         // Card Punch
+            const eob = await this.ioDevice.writeAlpha(digitPair);
+            if (eob) {
+                this.ioExit();
             }
+            break;
+        default:
+            if ((digitPair & Envir.numRecMark) == Envir.numRecMark) {
+                this.ioExit();
+            } else {
+                await this.ioDevice.writeAlpha(digitPair);
+            }
+            break;
+        }
+
+        this.gateCHAR_GATE.value = 0;
+        if (this.gateWR.value) {    // we haven't been released...
+            this.gateRESP_GATE.value = 1;
         }
     }
 
@@ -1068,7 +1102,7 @@ class Processor {
                         this.store();
                         this.regOR2.incr(1);
                         if (this.gateINSERT.value && this.regMAR.binaryValue == 99) {
-                            this.ioRelease();
+                            this.ioExit();
                             this.enterManual();
                         }
                     }
@@ -1086,11 +1120,13 @@ class Processor {
                         // dealing with zone or numeric digits, so an even address
                         // could cause translation and parity errors. This
                         // approach just sets Read Check Pending, which will set
-                        // the check indicator in ioRelease.
+                        // the check indicator in ioExit.
                         if (this.regMAR.isEven) {
-                            this.ioReadCheckPending = true;
-                            this.ioReadCheck.value = 1;
                             [even, odd] = [odd, even];
+                            if (!this.ioReadCheckPending) {
+                                this.ioReadCheckPending = true;
+                                this.ioReadCheck.value = 1;
+                            }
                         }
 
                         // Preserve any flags already in memory.
@@ -1150,7 +1186,7 @@ class Processor {
                 this.store();
                 this.regOR2.incr(1);
                 if (this.gateINSERT.value && this.regMAR.binaryValue == 99) {
-                    this.ioRelease();
+                    this.ioExit();
                     this.enterManual();
                 }
             } else {    // read alphanumeric
@@ -1171,8 +1207,8 @@ class Processor {
                 // and parity errors. This approach just sets Read Check Pending,
                 // which will set the check indicator in at lastCol below.
                 if (this.regMAR.isEven) {
-                    this.ioReadCheckPending = true;
                     [even, odd] = [odd, even];
+                    this.ioReadCheckPending = true;
                 }
 
                 // Preserve any flags already in memory.
@@ -1194,7 +1230,7 @@ class Processor {
                     }
                 }
 
-                this.ioRelease();               // exits Limbo state; will reset INSERT if it's set
+                this.ioExit();                  // exits Limbo state; will reset INSERT if it's set
                 this.run();
             }
         }
@@ -1202,26 +1238,7 @@ class Processor {
 
     /**************************************/
     ioExit() {
-        /* Terminates an I/O operation, resetting state */
-
-        this.gateIO_FLAG.value = 0;     // not sure about this...
-        this.gateRESP_GATE.value = 0;   // not sure about this, either...
-        this.gateRD.value = 0;
-        this.gateWR.value = 0;
-        this.gateCHAR_GATE.value = 0;
-        this.gateRESP_GATE.value = 0;   // not sure about this...
-        this.ioDevice?.release();
-        this.ioDevice = null;
-        this.ioSelectNr = 0;
-        this.ioVariant = 0;
-        this.gateTWPR_SELECT.value = 0;
-        this.gateREAD_INTERLOCK.value = 0;
-        this.gateWRITE_INTERLOCK.value = 0;
-    }
-
-    /**************************************/
-    ioRelease() {
-        /* Releases any currently-active I/O operation */
+        /* Releases and terminates an I/O operation, resetting state */
 
         if (this.gateRD.value || this.gateWR.value) {
             this.envir.startTiming();   // restart the emulation clock
@@ -1234,7 +1251,19 @@ class Processor {
             }
 
             this.gateREL.value = 1;
-            this.ioExit();
+            this.gateIO_FLAG.value = 0;         // not sure about this...
+            this.gateRESP_GATE.value = 0;       // not sure about this, either...
+            this.gateRD.value = 0;
+            this.gateWR.value = 0;
+            this.gateCHAR_GATE.value = 0;
+            this.gateRESP_GATE.value = 0;       // not sure about this...
+            this.ioDevice?.release();
+            this.ioDevice = null;
+            this.ioSelectNr = 0;
+            this.ioVariant = 0;
+            this.gateTWPR_SELECT.value = 0;
+            this.gateREAD_INTERLOCK.value = 0;
+            this.gateWRITE_INTERLOCK.value = 0;
             this.gateINSERT.value = 0;
             this.enterICycle();
         }
@@ -1360,11 +1389,6 @@ class Processor {
         this.resetICycle();
         this.exitAutomatic();
         this.gateRUN.value = 0;
-        if (this.gateSTOP.value) {
-            this.gateSTOP.value = 0;
-            this.enterManual();
-        }
-
         if (this.gateEZ.value) {
             this.gateHP.value = 0;
         }
@@ -1372,6 +1396,12 @@ class Processor {
         if (!(this.gateSAVE_CTRL.value || this.gateDISPLAY_MAR.value ||
                 this.gateINSERT.value || this.gateCLR_MEM.value)) {
             this.setProcState(procStateI1);
+        }
+
+        if (this.gateSTOP.value) {
+            this.gateSTOP.value = 0;
+            this.enterManual();
+            this.updateLampGlow(1);     // freeze the state of the lamps
         }
     }
 
@@ -1462,10 +1492,10 @@ class Processor {
             }
         } else if (this.opBinary == 0) {
             // If the op code is 0, go immediately into MANUAL to halt at the
-            // end of this cycle. The state will advance to I-2. If START is
-            // then pressed, this will cause a MAR check stop in E-Cycle entry
-            // due to the invalid op code. Not sure the 1620-2 actually worked
-            // this way, but the result is what's expected.
+            // end of this cycle (see ILD 10.01.41.1). The state will advance to
+            // I-2. If START is then pressed, this will cause a MAR check stop
+            // in E-Cycle entry due to the invalid op code. Not sure the 1620-2
+            // actually worked this way, but the result is what's expected.
             console.log(`I-1: invalid opcode 00 (special stop) @${this.regMAR.toBCDString()}`);
             this.exitAutomatic();
             this.enterManual();
@@ -1975,21 +2005,26 @@ class Processor {
                     this.gateWRITE_INTERLOCK.value = 1;
                 } else {
                     this.ioDevice.control(this.ioVariant).then(() => {
-                        this.ioRelease();
+                        this.ioExit();
                         this.run();     // exit Limbo state
                     });
                 }
                 break;
             case 36:    // RN, Read Numerically
             case 37:    // RA, Read Alphanumerically
-                this.enterLimbo();      // device will trigger the memory cycles
                 if (!this.ioDevice) {
                     this.gateREAD_INTERLOCK.value = 1;
+                    this.enterLimbo();
                 } else {
-                    if (this.ioSelectNr == 3 || this.ioSelectNr == 5) {
+                    switch (this.ioSelectNr) {
+                    case 3:     // Paper Tape Reader
+                    case 5:     // Card Reader
+                    case 7:     // Disk Drive
                         this.gateREAD_INTERLOCK.value = 1;      // card or paper tape
+                        break;
                     }
-                    this.ioDevice.initiateRead(false);
+                    // Enter Limbo state to service input device memory cycles.
+                    this.enterLimbo(this.ioDevice, this.ioDevice.initiateRead);
                 }
                 break;
             case 35:    // DN, Dump Numerically
@@ -2000,6 +2035,14 @@ class Processor {
                     this.enterLimbo();
                 } else {
                     this.setProcState(procStateE2);     // no E-cycle entry for I/O
+                    switch (this.ioSelectNr) {
+                    case 4:     // Card Punch
+                    case 7:     // Disk Drive
+                    case 9:     // Printer
+                        this.gateWRITE_INTERLOCK.value = 1;
+                        break;
+                    }
+                    this.ioDevice.initiateWrite();
                 }
                 break;
             case 41:    // NOP, No Operation
@@ -2522,11 +2565,13 @@ class Processor {
                 // translator was sensitive to whether it was dealing with zone
                 // or numeric digits, so an even address could cause translation
                 // and parity errors. This approach just sets Write Check Pending
-                // and sets the check indicator in ioRelease.
-                this.ioWriteCheckPending = true;
-                this.ioWriteCheck.value = 1;
+                // and sets the check indicator in ioExit.
                 await this.writeAlphanumerically(
                         (this.regMBR.odd << Register.digitBits) | this.regMBR.even);
+                if (!this.ioWriteCheckPending) {
+                    this.ioWriteCheckPending = true;
+                    this.ioWriteCheck.value = 1;
+                }
             } else {
                 await this.writeAlphanumerically(this.regMBR.value);
             }
@@ -2636,13 +2681,17 @@ class Processor {
     }
 
     /**************************************/
-    enterLimbo() {
+    enterLimbo(entryContext=null, entryFcn=null) {
         /* Stops processing by setting this.procState to procStateLimbo. This
         will cause this.run() to exit but leave the Processor in AUTOMATIC and
-        not MANUAL mode. Typically used for read/write interlock conditions.
-        To get out of this, you'll need to call run(), or do RELEASE and RESET
-        then manually restart the system */
+        not MANUAL mode. Typically used for read/write interlock conditions and
+        input I/O. To get out of Limbo, you'll need to call run(), or do RELEASE
+        and RESET then manually restart the system.
+        "entryFcn" is a function to call upon entering Limbo state. "entryContext"
+        is the object context (this value) to apply to that call */
 
+        this.limboEntryFcn = entryFcn;
+        this.limboEntryContext = entryContext;
         this.setProcState(procStateLimbo);
     }
 
@@ -2693,11 +2742,12 @@ class Processor {
         off the lamp if none exist any longer */
 
         let disk = this.diskAddrCheck.value || this.diskCylOflowCheck.value || this.diskWRLRBCCheck.value;
-        let parity = this.parityMARCheck.value || this.parityMBREvenCheck.value || this.parityMBROddCheck.value;
+        let parity = this.parityMBREvenCheck.value || this.parityMBROddCheck.value;
         let io = this.ioPrinterCheck.value || this.ioReadCheck.value || this.ioWriteCheck.value;
         let oflow = this.oflowArithCheck.value || this.oflowExpCheck.value;
 
-        if (!(disk && this.diskStopSwitch) && !(parity && this.parityStopSwitch) &&
+        if (!this.parityMARCheck.value &&
+                !(disk && this.diskStopSwitch) && !(parity && this.parityStopSwitch) &&
                 !(io && this.ioStopSwitch) && !(oflow && this.oflowStopSwitch)) {
             this.gateCHECK_STOP.value = 0;
         }
@@ -2934,6 +2984,9 @@ class Processor {
                 await this.envir.throttle();
                 this.updateLampGlow(0);
                 this.running = false;
+                if (this.limboEntryFcn) {
+                    this.limboEntryFcn.call(this.limboEntryContext, this.limboEntryFcn);
+                }
                 return;             // exit into Limbo state
                 break;
 
@@ -3026,7 +3079,7 @@ class Processor {
         this.gateSCTR_CYC.value = 0;
         this.gateSIMO_30.value = 0;
         this.gateSIMO_HOLD.value = 0;
-        this.ioRelease();
+        this.ioExit();
 
         this.gateWRITE_INTERLOCK.value = 0;
         this.gateREAD_INTERLOCK.value = 0;
@@ -3048,11 +3101,15 @@ class Processor {
         this.regXR.clear();
         this.regXBR.clear();
 
-        this.checkReset();
+        this.diskAddrCheck.value = 0;
+        this.diskCylOflowCheck.value = 0;
+        this.diskWRLRBCCheck.value = 0;
+        this.parityMARCheck.value = 0;
         this.oflowArithCheck.value = 0;
         this.oflowExpCheck.value = 0;
         this.ioPrinterChannel9.value = 0;
         this.ioPrinterChannel12.value = 0;
+        this.checkReset();              // will turn off this.gateCHECK_STOP
 
         this.gateSTOP.value = 0;
         this.enterICycle();
@@ -3064,16 +3121,12 @@ class Processor {
     checkReset() {
         /* Resets the internal processor state by the CHECK RESET key */
 
-        this.diskAddrCheck.value = 0;
-        this.diskCylOflowCheck.value = 0;
-        this.diskWRLRBCCheck.value = 0;
         this.ioPrinterCheck.value = 0;
         this.ioReadCheck.value = 0;
         this.ioWriteCheck.value = 0;
-        this.parityMARCheck.value = 0;
         this.parityMBREvenCheck.value = 0;
         this.parityMBROddCheck.value = 0;
-        this.gateCHECK_STOP.value = 0;
+        this.verifyCheckStop();
     }
 
     /**************************************/
@@ -3160,7 +3213,7 @@ class Processor {
                 }
 
                 this.updateLampGlow(1);
-                this.ioDevice.initiateRead(true);
+                   this.ioDevice.initiateRead(true);
             }
         }
     }
@@ -3171,7 +3224,7 @@ class Processor {
 
         if (this.gatePOWER_ON.value && (this.gateRD.value || this.gateWR.value)) {
             this.gateSTOP.value = 1;
-            this.ioRelease();           // STOP will force MANUAL mode in I-Cycle Entry
+            this.ioExit();              // STOP will force MANUAL mode in I-Cycle Entry
             this.updateLampGlow(1);
         }
     }

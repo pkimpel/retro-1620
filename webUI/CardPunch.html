@@ -2,21 +2,21 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>IBM 1622 Card Reader Unit</title>
+<title>IBM 1622 Card Punch Unit</title>
 <!--
 /***********************************************************************
-* retro-1620/webUI CardReader.html
+* retro-1620/webUI CardPunch.html
 ************************************************************************
 * Copyright (c) 2022, Paul Kimpel.
 * Licensed under the MIT License, see
 *       http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* IBM 1622 Card Reader Unit device page.
+* IBM 1622 Card Punch Unit device page.
 *
-* Implements the IBM 1622 card reader peripheral.
+* Implements the IBM 1622 card punch peripheral.
 *
 ************************************************************************
-* 2022-12-23  P.Kimpel
+* 2023-01-29  P.Kimpel
 *   Original version, from retro-205 D205CardatronInput.html.
 ***********************************************************************/
 -->
@@ -24,27 +24,31 @@
 <meta http-equiv="Content-Script-Type" content="text/javascript">
 <meta http-equiv="Content-Style-Type" content="text/css">
 <link id=defaultStyleSheet rel=stylesheet type="text/css" href="Common.css">
-<link id=cardReaderStyleSheet rel=stylesheet type="text/css" href="CardReader.css">
+<link id=cardPunchStyleSheet rel=stylesheet type="text/css" href="CardPunch.css">
 </head>
 
-<body id=readerBody class=deviceBody>
+<body id=punchBody class=deviceBody>
 
-<div id=ReaderDiv class="ibmGray">
+<div id=PunchDiv class="ibmGray">
     <div id=ControlsDiv class="ibmBlue">
+        <div id=StackerLamp         class="annunciator">STACKER</div>
+        <div id=PunchCheckLamp      class="annunciator">PUNCH<br>CHECK</div>
+        <div id=PunchReadyLamp      class="annunciator">PUNCH<br>READY</div>
+        <div id=PowerReadyLamp      class="annunciator annunciatorLit">POWER<br>READY</div>
         <div id=NPROSwitch>
             <div id=NPROSwitchCaption>NON<br>PROC<br>RNOUT</div>
         </div>
-        <div id=PowerReadyLamp      class="annunciator annunciatorLit">POWER<br>READY</div>
-        <div id=ReaderReadyLamp     class="annunciator">READER<br>READY</div>
-        <div id=ReaderCheckLamp     class="annunciator">READER<br>CHECK</div>
+        <div id=SelectStopSwitch>
+            <div id=SelectNStopSwitchCaption>SELECT<br>N-STOP</div>
+            <div id=SelectStopSwitchCaption>SELECT<br>STOP</div>
+        </div>
     </div>
 
     <div id=StackerDiv>
-        <input id=FileSelector type=file size=60 multiple>
-        <label id=HopperCaption for=HopperBar>INPUT HOPPER</label>
-        <meter id=HopperBar min=0 max=100 value=0
-               title="Reader input hopper level. Click to clear the hopper"></meter>
-        <iframe id=StackerFrame class=paper scrolling=no src="./FramePaper.html"></iframe>
+        <label id=StackerCaption for=StackerBar>OUTPUT STACKER</label>
+        <meter id=StackerBar min=0 max=100 value=0
+               title="Punch stacker level. Click to clear the stacker"></meter>
+        <iframe id=StackerFrame class=paper scrolling=auto src="./FramePaper.html"></iframe>
     </div>
 </div>
 

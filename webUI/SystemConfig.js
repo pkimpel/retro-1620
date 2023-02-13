@@ -419,6 +419,7 @@ SystemConfig.defaultConfig = {
 
     Card: {
         hasCard: 1,
+        selectStop: 1,
         cpmRead: 500,
         cpmPunch: 250,
     },

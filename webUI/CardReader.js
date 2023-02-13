@@ -11,18 +11,35 @@
 *
 ************************************************************************
 * 2022-12-23  P.Kimpel
-*   Original version, from retro-228 B220CardatronInput.js.
+*   Original version, from retro-220 B220CardatronInput.js.
 ***********************************************************************/
 
 export {CardReader};
 
-import {Envir} from "../emulator/Envir.js";
-import {Register} from "../emulator/Register.js";
 import {Timer} from "../emulator/Timer.js";
 import {PanelButton} from "./PanelButton.js";
 import {openPopup} from "./PopupUtil.js";
 
 class CardReader {
+
+    // Static Properties
+
+    static columns = 80;                // if you don't know what this means, you shouldn't be here
+    static idlePeriod = 60000;          // reader motor turnoff delay, ms (5 minutes)
+    static idleStartupTime = 500;       // reader motor idle startup time, ms
+
+    // Public Instance Properties
+
+    doc = null;                         // window document object
+    window = null;                      // window object
+    hopperBar = null;                   // input hopper meter bar
+    stackerFrame = null;                // output stacker iframe object
+    stacker = null;                     // output stacker view area
+    timer = new Timer();                // delay management timer
+
+    eolRex = /([^\n\r\f]*)((:?\r[\n\f]?)|\n|\f)?/g;
+    invalidCharRex = /[^A-Z0-9 .)+$*-/,(=@|}!"\x5D]/;
+
 
     constructor(context) {
         /* Initializes and wires up events for the card reader component of the
@@ -33,33 +50,29 @@ class CardReader {
             processor is the Processor object
         */
         const h = 164;
-        const w = 560;
+        const w = 575;
 
         this.context = context;
         this.config = context.config;
-        this.origin = null;             // window origin for postMessage
         this.processor = context.processor;
-        this.timer = new Timer();
 
-        this.eolRex = /([^\n\r\f]*)((:?\r[\n\f]?)|\n|\f)?/g;
-        this.invalidCharRex = /[^A-Z0-9 .)+$*-/,(=@|}!"\x5D]/;
 
         // Calculate timing factors.
         this.cardsPerMinute = this.config.getNode("Card.cpmRead");
         this.readPeriod = 60000/this.cardsPerMinute;
         switch (this.cardsPerMinute) {
         case 500:
-            this.bufferReadyPoint = 89;         // time in cycle when buffer is ready (ms)
-            this.readLatchPoint = 106;          // time in cycle when latch point occurs (ms)
+            this.bufferReadyPoint = 89 /*cheat*/ - 10;  // time in cycle when buffer is ready (ms)
+            this.readLatchPoint = this.readPeriod-17;   // time in cycle when latch point occurs (ms)
             break;
         default:
-            this.bufferReadyPoint = this.readPeriod - 63;
-            this.readLatchPoint = this.readPeriod - 31;
+            this.bufferReadyPoint = 177;
+            this.readLatchPoint = this.readPeriod-31;
             break;
         }
 
-        this.readLatchDelay = this.readPeriod - (this.readLatchPoint - this.bufferReadyPoint);
-                                                // delay from latch point to card buffer ready
+        this.bufferReadyDelay = this.readPeriod - (this.readLatchPoint - this.bufferReadyPoint);
+                                                        // delay from latch point to card buffer ready
 
         this.boundFileSelectorChange = this.fileSelectorChange.bind(this);
         this.boundStartBtnClick = this.startBtnClick.bind(this);
@@ -67,15 +80,9 @@ class CardReader {
         this.boundLoadBtnClick = this.loadBtnClick.bind(this);
         this.boundNPROSwitchAction = this.NPROSwitchAction.bind(this);
         this.boundHopperBarClick = this.hopperBarClick.bind(this);
-        this.boundReceiveMessage = this.receiveMessage.bind(this);
+        this.boundStackerDblClick = this.stackerDblClick.bind(this);
 
         this.clear();
-
-        this.doc = null;
-        this.window = null;
-        this.hopperBar = null;
-        this.outHopperFrame = null;
-        this.outHopper = null;
 
         openPopup(window, "../webUI/CardReader.html", "CardReader",
                 `location=no,scrollbars,resizable,width=${w},height=${h},left=0,top=${screen.availHeight-h}`,
@@ -99,6 +106,7 @@ class CardReader {
         this.buffer = "";               // card reader "input hopper"
         this.bufLength = 0;             // current input buffer length (characters)
         this.bufIndex = 0;              // 0-relative offset to next "card" to be read
+        this.priorBufIndex = 0;         // 0-relative offset to the prior "card" just read
     }
 
     /**************************************/
@@ -185,25 +193,24 @@ class CardReader {
         /* Handle the click event for the LOAD button. If the Processor is not
         in MANUAL mode, this does the same thing as the START button. Otherwise,
         the routine sets up a physical card read and initiates it, which runs
-        async. What that is happening, this calls the Processor's insert
-        function, which initializes the Processor and calls the CardReader's
-        initiateRead function. If the read has finished by that time, the data
-        will be transferred to the Processor. If not, the transferRequsted flag
-        will be set and the transfer will take place once the read completes.
-        The Processor's receiver function will then start execution of the code
-        just loaded */
+        async. While that is happening, this routine calls the Processor's
+        "insert" function, which initializes the Processor so that it calls the
+        CardReader's initiateRead function. If the physical card read has
+        finished by that time, the data will be transferred to the Processor.
+        If not, the transferRequsted flag will be set and the transfer will take
+        place once the read completes. The Processor's receiver function will
+        then start execution of the code just loaded */
         const p = this.processor;
 
         if (p.gateAUTOMATIC.value || !p.gateMANUAL.value) {
             this.startBtnClick(ev);
         } else if (!(this.transportReady || this.cardReady || this.readerCheck ||
                 p.ioReadCheck.value)) {
-            if (this.bufIndex < this.bufLength) {       // hopper is not empty
+            if (this.bufIndex < this.bufLength) {       // input hopper is not empty
                 this.setTransportReady(true);
                 this.transferRequested = false;
-                this.processor.resetIndicator(9);       // LAST_CARD gate
-                this.initiateCardRead();
-                p.insert(true);
+                p.resetIndicator(9);                    // LAST_CARD gate
+                this.initiateCardRead().then(() => {p.insert(true)});
             }
         }
     }
@@ -248,8 +255,8 @@ class CardReader {
                 this.setReaderCheck(false);
                 this.hopperBar.value = 0;
                 this.clear();
-                while (this.outHopper.firstChild) {
-                    this.outHopper.removeChild(this.outHopper.firstChild);
+                while (this.stacker.firstChild) {
+                    this.stacker.removeChild(this.stacker.firstChild);
                 }
             }
         }
@@ -308,6 +315,7 @@ class CardReader {
         if (!match) {
             card = "";
         } else {
+            this.priorBufIndex = this.bufIndex;
             this.bufIndex += match[0].length;
             card = match[1].toUpperCase();
         }
@@ -316,31 +324,80 @@ class CardReader {
             this.hopperBar.value = this.bufLength-this.bufIndex;
         } else {
             this.hopperBar.value = 0;
-            this.buffer = "";           // discard the input buffer
-            this.bufLength = 0;
-            this.bufIndex = 0;
+            //this.buffer = "";           // discard the input buffer
+            //this.bufLength = 0;
+            //this.bufIndex = this.priorBufIndex = 0;
             // Reset the control so the same file can be reloaded immediately.
             this.$$("FileSelector").value = null;
         }
 
-        while (this.outHopper.childNodes.length > 1) {
-            this.outHopper.removeChild(this.outHopper.firstChild);
+        while (this.stacker.childNodes.length > 1) {
+            this.stacker.removeChild(this.stacker.firstChild);
         }
-        this.outHopper.appendChild(this.doc.createTextNode("\n"));
-        this.outHopper.appendChild(this.doc.createTextNode(card));
 
+        this.stacker.appendChild(this.doc.createTextNode("\n" + card));
+        this.stacker.scrollIntoView(false);     // keep last line in view
         return card;
     }
 
     /**************************************/
-    receiveMessage(ev) {
-        /* Handler for the window's onMessage event. The postMessage()/event
-        mechanism is used to guarantee that execution will pass through the
-        JavaScript runtime's event loop, allowing other activities to complete
-        first */
+    stackerDblClick(ev) {
+        /* Handle the double-click event for the "output stacker" panel by
+        opening a temporary sub-window and displaying the hopper buffer
+        contents */
 
-        if (ev.origin === this.origin && ev.data == "initiateTransfer") {
-            this.initiateTransfer();
+        if (this.bufLength > 0 && !this.transportReady) {
+            openPopup(this.window, "./FramePaper.html", "",
+                    "scrollbars,resizable,width=660,height=500",
+                    this, this.viewStacker);
+        }
+    }
+
+    /**************************************/
+    viewStacker(ev) {
+        /* Displays the text contents of the input hopper and output stacker of
+        the device so it can be viewed by the user. All characters are ASCII
+        according to the convention used by the CHM 1620-Jr project */
+        const doc = ev.target;
+        const content = doc.getElementById("Paper");
+        const win = doc.defaultView;
+        const title = "retro-1620 Card Reader Stacker View";
+
+        let cardBox = null;
+
+        doc.title = title;
+        content.style.margin = `${content.offsetLeft + 4}px`;   // make room for cardBox transform
+        win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
+
+        if (this.bufIndex > this.priorBufIndex) {
+            // Display the contents of the output stacker up to but not including
+            // the last card read.
+            content.appendChild(doc.createTextNode(this.buffer.substring(0, this.priorBufIndex)));
+
+            // Create a text box for the last card read and fill it in.
+            cardBox = doc.createElement("input");
+            cardBox.type = "text";
+            cardBox.size = CardReader.columns;
+            cardBox.maxLength = CardReader.columns;
+            cardBox.readOnly = true;            // for now...
+            cardBox.style.transform = "translate(-4px,0)";      // adjust for box's border & padding
+            cardBox.style.font = "inherit";
+            cardBox.value = this.buffer.substring(this.priorBufIndex,
+                    Math.min(this.priorBufIndex+CardReader.columns, this.bufIndex)).trimEnd();
+            cardBox.title = "Last card that was read";
+            content.appendChild(cardBox);
+            content.appendChild(doc.createTextNode("\n"));
+        }
+
+        if (this.bufIndex < this.bufLength) {
+            // Display the remainder of the buffer, which represents the input hopper.
+            content.appendChild(doc.createTextNode(
+                    this.buffer.substring(this.bufIndex).trimEnd()));
+        }
+
+        if (cardBox) {
+            cardBox.focus();
+            cardBox.scrollIntoView({block: "center"});
         }
     }
 
@@ -361,24 +418,22 @@ class CardReader {
         this.doc = ev.target;           // now we can use this.$$()
         this.doc.title = "retro-1620 Card Reader";
         this.window = this.doc.defaultView;
-        this.origin = `${this.window.location.protocol}//${this.window.location.host}`;
         this.setReaderReadyStatus();
 
         const panel = this.$$("ControlsDiv");
-        this.loadBtn = new PanelButton(panel, null, null, "LoadBtn", "LOAD", "device yellowButton", "yellowButtonDown");
-        this.stopBtn = new PanelButton(panel, null, null, "StopBtn", "STOP", "device redButton", "redButtonDown");
+        this.loadBtn = new PanelButton(panel, null, null, "LoadBtn", "LOAD", "device redButton", "redButtonDown");
+        this.stopBtn = new PanelButton(panel, null, null, "StopBtn", "STOP", "device yellowButton", "yellowButtonDown");
         this.startBtn = new PanelButton(panel, null, null, "StartBtn", "START", "device greenButton", "greenButtonDown");
 
         this.hopperBar = this.$$("HopperBar");
-        this.outHopperFrame = this.$$("OutHopperFrame");
-        this.outHopper = this.outHopperFrame.contentDocument.getElementById("Paper");
+        this.stackerFrame = this.$$("StackerFrame");
 
-        // Override the font size for the #Paper element inside the outHopperFrame iframe.
-        this.outHopper.style.fontSize = "11px";
-        this.outHopper.style.lineHeight = "120%";
+        // Override the font size for the #Paper element inside the stackerFrame iframe.
+        this.stacker = this.stackerFrame.contentDocument.getElementById("Paper");
+        this.stacker.style.fontSize = "11px";
+        this.stacker.style.lineHeight = "120%";
 
         this.window.addEventListener("beforeunload", this.beforeUnload);
-        this.window.addEventListener("message", this.boundReceiveMessage);
         this.startBtn.addEventListener("click", this.boundStartBtnClick);
         this.stopBtn.addEventListener("click", this.boundStopBtnClick);
         this.loadBtn.addEventListener("click", this.boundLoadBtnClick);
@@ -388,6 +443,7 @@ class CardReader {
         this.$$("NPROSwitch").addEventListener("dblclick", this.boundNPROSwitchAction);
         this.$$("FileSelector").addEventListener("change", this.boundFileSelectorChange);
         this.hopperBar.addEventListener("click", this.boundHopperBarClick);
+        this.stackerFrame.contentDocument.body.addEventListener("dblclick", this.boundStackerDblClick);
 
         const de = this.doc.documentElement;
         this.window.resizeBy(de.scrollWidth - this.window.innerWidth + 4, // kludge for right-padding/margin
@@ -414,6 +470,11 @@ class CardReader {
                 now += CardReader.idleStartupTime;
             }
 
+            //const pic9 = (val, digits=8) => val.toFixed(1).padStart(digits+2, " ");
+            //
+            //console.debug("ICP-1: %s=NOW %s=LPS %s=DEL",
+            //    pic9(now), pic9(this.nextLatchPointStamp), pic9(this.nextLatchPointStamp-now));
+
             // Next, wait until the next clutch latch point occurs.
             if (this.nextLatchPointStamp < now) {
                 // The next latch point has already passed, so compute a new one
@@ -426,12 +487,22 @@ class CardReader {
                 } else {                // we can still catch this bus...
                     this.nextLatchPointStamp = now + latchDelay;
                 }
+
+                //console.debug("ICP-2: %s=NOW %s=LPS %s=DEL           %s=CP  %s=LD",
+                //    pic9(now), pic9(this.nextLatchPointStamp), pic9(this.nextLatchPointStamp-now),
+                //    pic9(cyclePoint), pic9(latchDelay));
             }
 
-            // Wait until the latch point occurs and the card buffer is ready.
-            const delay = this.nextLatchPointStamp - now + this.readLatchDelay;
+            // Wait until the latch point occurs followed by card buffer ready.
+            const delay = this.nextLatchPointStamp - now + this.bufferReadyDelay;
             await this.timer.delayFor(delay);
             this.lastUseStamp = this.nextLatchPointStamp;
+            this.nextLatchPointStamp += this.readPeriod;        // earliest time next read can occur
+
+            //const now2 = performance.now();
+            //console.debug("ICP-3: %s=NOW %s=LPS %s=DEL %s=DLY %s=CYC, transferRequested=%i",
+            //                    pic9(now2), pic9(this.nextLatchPointStamp), pic9(now2-now-delay),
+            //                    pic9(delay), pic9(now2-this.lastUseStamp), this.transferRequested);
 
             // Read the card image and check it for invalid characters.
             this.cardBuffer = this.extractCardImage();
@@ -487,29 +558,24 @@ class CardReader {
     }
 
     /**************************************/
-    async initiateRead(insertMode) {
+    async initiateRead() {
         /* Called by the Processor to request transfer of the buffered card.
-        The "insertMode" parameter is not used by CardReader.
-        If the buffered card is ready, this posts a message to this.window that
-        signals the buffer should be transferred once the message passes through
-        the JavaScript event loop, so that the Processor can finish exiting into
-        its Limbo state before the transfer begins, avoiding a time race.
-        If the buffered card is not ready, simply sets the transferRequested flag.
-        Exits unconditionally. The next card will be sent once it has been read
+        If the buffered card is ready, transfer the buffer. If the buffered
+        card is not ready, simply sets the transferRequested flag. Exits
+        unconditionally. The next card will be sent once it has been read
         and no error conditions exist */
 
         if (this.cardReady && !this.processor.ioReadCheck.value) {
-            this.window.postMessage("initiateTransfer", this.origin);   // queue to event loop
+            this.initiateTransfer();            // queue to event loop
         } else {
-            this.transferRequested = true;                              // wait for buffer
+            this.transferRequested = true;      // wait for reader
         }
     }
 
     /**************************************/
     release () {
-        /* Called by Processor to indicate the device has been released */
-
-        // Nothing to do for CardReader.
+        /* Called by Processor to indicate the device has been released
+        Not used with CardReader */
     }
 
     /**************************************/
@@ -525,16 +591,9 @@ class CardReader {
         this.$$("NPROSwitch").removeEventListener("dblclick", this.boundNPROSwitchAction);
         this.$$("FileSelector").removeEventListener("change", this.boundFileSelectorChange);
         this.hopperBar.removeEventListener("click", this.boundHopperBarClick);
-        this.window.removeEventListener("message", this.boundReceiveMessage);
+        this.stackerFrame.contentDocument.body.removeEventListener("dblclick", this.boundStackerDblClick);
         this.window.removeEventListener("beforeunload", this.beforeUnload, false);
         this.window.close();
     }
 
 } // end class CardReader
-
-
-// Static Properties
-
-CardReader.columns = 80;                // if you don't know what this means, you shouldn't be here
-CardReader.idlePeriod = 60000;          // reader motor turnoff delay, ms (5 minutes)
-CardReader.idleStartupTime = 500;       // reader motor idle startup time, ms
