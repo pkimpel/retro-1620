@@ -92,17 +92,22 @@
 #StackerDiv {
     position:           absolute;
     top:                72px;
-    left:               8px;
-    right:              8px;
-    bottom:             8px}
+    left:               4px;
+    right:              6px;
+    bottom:             6px}
 
 #FileSelector {
+    position:           absolute;
+    top:                0;
+    left:               0;
     width:              100%;
     color:              white;
     border:             1px solid white}
 
 #HopperBar {
-    margin-top:         4px;
+    position:           absolute;
+    top:                26px;
+    left:               0;
     width:              100%;
     height:             16px;
     border:             1px solid white}
@@ -111,14 +116,23 @@
     position:           absolute;
     display:            none;           /* for now... */
     right:              4px;
-    top:                30px;
+    top:                28px;
     z-index:            1;
     height:             12px;
     color:              black;
     font-weight:        bold}
 
+#StackerFrameDiv{
+    position:           absolute;
+    top:                46px;
+    bottom:             0;
+    left:               0;
+    right:              0}
+
 #StackerFrame {
-    margin-top:         4px;
+    position:           absolute;
+    top:                0;
+    left:               0;
     width:              100%;
-    height:             35px;
+    height:             100%;
     border:             1px solid white}

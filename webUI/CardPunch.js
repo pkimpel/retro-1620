@@ -27,14 +27,14 @@ class CardPunch {
     // Static Properties
 
     static columns = 80;                // if you don't know what this means, you shouldn't be here
-    static cardPunchTop = 456;          // top coordinate of CardPunch window
+    static cardPunchTop = 458;          // top coordinate of CardPunch window above window bottom
     static idlePeriod = 60000;          // punch motor turnoff delay, ms (5 minutes)
     static idleStartupTime = 500;       // punch motor idle startup time, ms
     static stackerLimit = 10000;        // max card capacity of output stacker
 
     static numericGlyphs = [    // indexed as BCD code prefixed with flag bit: F8421
         "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", "@", "?", "?", "}",         // 00-0F
-        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "$", "*", "?", "?", "\""];       // 10-1F
+        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "$", "-", "?", "?", "\""];       // 10-1F
 
     static alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit BCD)
         " ", "?", "?", ".",             // 00
@@ -124,8 +124,8 @@ class CardPunch {
             config is the SystemConfig object
             processor is the Processor object
         */
-        const h = 124;
-        const w = 575;
+        const h = 140;
+        const w = 579;
         let bufferReadyPoint = 0;
         let punchLatchPoint = 0;
 
@@ -307,11 +307,7 @@ class CardPunch {
 
         this.selectStopSwitch = 1-this.selectStopSwitch;
         this.config.putNode("Card.selectStop", this.selectStopSwitch);
-        if (this.selectStopSwitch) {
-            this.$$("SelectStopSwitch").classList.remove("nStop");
-        } else {
-            this.$$("SelectStopSwitch").classList.add("nStop");
-        }
+        this.$$("SelectStopSwitch").classList.toggle("nStop");
     }
 
     /**************************************/
@@ -323,6 +319,7 @@ class CardPunch {
         if (!this.transportReady) {
             this.unloadStacker();
             this.$$("StackerLamp").classList.remove("annunciatorLit");
+            this.setPunchCheck(false);
         }
     }
 
@@ -522,7 +519,7 @@ class CardPunch {
             this.punchCheckPending = true;
         }
 
-        this.cardBuffer += CardPunch.numericGlyphs[digit & Register.notParityMask];
+        this.cardBuffer += char;
         if (this.cardBuffer.length >= CardPunch.columns) {
             this.bufferReady = true;
             await this.initiateCardPunch();

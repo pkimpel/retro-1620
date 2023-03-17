@@ -27,6 +27,7 @@ class CardReader {
     static columns = 80;                // if you don't know what this means, you shouldn't be here
     static idlePeriod = 60000;          // reader motor turnoff delay, ms (5 minutes)
     static idleStartupTime = 500;       // reader motor idle startup time, ms
+    static stackerViewSize = 60;        // number of output stacker cards retained for viewing
 
     // Public Instance Properties
 
@@ -331,7 +332,7 @@ class CardReader {
             this.$$("FileSelector").value = null;
         }
 
-        while (this.stacker.childNodes.length > 1) {
+        while (this.stacker.childNodes.length > CardReader.stackerViewSize) {
             this.stacker.removeChild(this.stacker.firstChild);
         }
 
