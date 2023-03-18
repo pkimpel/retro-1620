@@ -940,7 +940,7 @@ class Processor {
                     this.ioExit();
                 } else {
                     // Update emulation clock after each non-final block
-                    this.envir.startTiming();
+                    this.envir.restartTiming();
                 }
             }
         }
@@ -1140,7 +1140,7 @@ class Processor {
             }
 
             this.gateRESP_GATE.value = 0;
-            this.envir.startTiming();   // restart the throttling clock (because Typewriter is so slow)
+            this.envir.restartTiming(); // restart the throttling clock (because Typewriter is so slow)
             this.updateLampGlow(1);
         } else {                        // check for local action
             switch (code) {
@@ -1231,7 +1231,9 @@ class Processor {
                 }
 
                 this.ioExit();                  // exits Limbo state; will reset INSERT if it's set
-                this.run();
+                if (!this.gateMANUAL.value) {
+                    this.run();
+                }
             }
         }
     }
@@ -1241,7 +1243,7 @@ class Processor {
         /* Releases and terminates an I/O operation, resetting state */
 
         if (this.gateRD.value || this.gateWR.value) {
-            this.envir.startTiming();   // restart the emulation clock
+            this.envir.startTiming();           // restart the emulation clock and timeslice
             if (this.ioReadCheckPending) {
                 this.ioReadCheckPending = false;
                 this.setIndicator(6, `I/O device ${this.ioSelectNr} Read Check`);
@@ -1401,7 +1403,6 @@ class Processor {
         if (this.gateSTOP.value) {
             this.gateSTOP.value = 0;
             this.enterManual();
-            this.updateLampGlow(1);     // freeze the state of the lamps
         }
     }
 
@@ -2006,7 +2007,9 @@ class Processor {
                 } else {
                     this.ioDevice.control(this.ioVariant).then(() => {
                         this.ioExit();
-                        this.run();     // exit Limbo state
+                        if (!this.gateMANUAL.value) {
+                            this.run(); // exit Limbo state
+                        }
                     });
                 }
                 break;
@@ -2017,6 +2020,9 @@ class Processor {
                     this.enterLimbo();
                 } else {
                     switch (this.ioSelectNr) {
+                    case 1:     // Typewriter
+                        this.updateLampGlow(1);         // freeze the lamp states
+                        break;
                     case 3:     // Paper Tape Reader
                     case 5:     // Card Reader
                     case 7:     // Disk Drive
@@ -2698,32 +2704,39 @@ class Processor {
     /**************************************/
     enterManual() {
         /* Places the processor in Manual mode */
+        const now = performance.now();
 
         this.gateMANUAL.value = 1;
         this.gateRUN.value = 0;
         this.gateCLR_CTRL.value = 0;
+        while (this.runTime < 0) {
+            this.runTime += now;
+        }
     }
 
     /**************************************/
-    enterAutomatic() {
-        /* Starts the run time clock for AUTOMATIC mode */
+    exitManual() {
+        /* Releases the processor from Manual mode */
         const now = performance.now();
 
-        this.gateAUTOMATIC.value = 1;
+        this.gateMANUAL.value = 0;
         while (this.runTime >= 0) {
             this.runTime -= now;
         }
     }
 
     /**************************************/
+    enterAutomatic() {
+        /* Starts the run time clock for AUTOMATIC mode */
+
+        this.gateAUTOMATIC.value = 1;
+    }
+
+    /**************************************/
     exitAutomatic() {
         /* Stops the run time clock for AUTOMATIC mode */
-        const now = performance.now();
 
         this.gateAUTOMATIC.value = 0;
-        while (this.runTime < 0) {
-            this.runTime += now;
-        }
     }
 
     /**************************************/
@@ -3015,6 +3028,7 @@ class Processor {
         } while (!this.gateMANUAL.value && this.gatePOWER_ON.value);
 
         this.running = false;
+        this.envir.restartTiming();
         this.updateLampGlow(1);         // freeze current state in the lamps
     }
 
@@ -3192,7 +3206,7 @@ class Processor {
             if (!this.gateRD.value) {   // not sure about this...
                 this.gateRD.value = 1;
                 this.gate1ST_CYC.value = 1;
-                this.gateMANUAL.value = 0;
+                this.exitManual();
                 this.gateRUN.value = 1;
             }
 
@@ -3236,7 +3250,7 @@ class Processor {
         if (this.gatePOWER_ON.value && this.gateMANUAL.value && !this.gateCHECK_STOP.value) {
             this.gateSCE.value = 0;     // reset single-cycle mode
             this.gateSAVE_CTRL.value = 0;
-            this.gateMANUAL.value = 0;
+            this.exitManual();
             this.gateRUN.value = 1;
             // gate 1621 read cluch
             // gate I/O resp
@@ -3258,7 +3272,7 @@ class Processor {
         if (this.gatePOWER_ON.value && !this.gateCHECK_STOP.value) {
             this.gateSTOP.value = 1;    // stop processor at end of current instruction
             if (this.gateMANUAL.value) {
-                this.gateMANUAL.value = 0;
+                this.exitManual();
                 this.run();             // async - singe-step one instruction
             }
         }
@@ -3281,7 +3295,7 @@ class Processor {
                 this.run();             // async
             } else {
                 // Stop processor after next memory cycle.
-                this.gateMANUAL.value = 1;
+                this.enterManual();
             }
         }
     }
@@ -3297,7 +3311,7 @@ class Processor {
 
         if (!this.gatePOWER_ON.value) {
             this.gatePOWER_ON.value = 1;
-            this.gateMANUAL.value = 1;                  // must be set for manualReset()
+            this.enterManual();                         // must be set for manualReset()
             this.manualReset();
             this.gateIA_SEL.value = 1;                  // enable indirect addressing
             this.devices = this.context.devices;        // I/O device objects

@@ -117,6 +117,7 @@ class Register {
             let val = value;
             this.parityError = this.invalidBCD = false;
 
+            this.updateLampGlow(0);
             do {
                 let digit = val & this.digitMask;
                 let corr = Envir.oddParity5[digit];
@@ -142,7 +143,6 @@ class Register {
             this.intVal = newVal;
         }
 
-        this.updateLampGlow(0);
     }
 
     set correctedValue(value) {
@@ -158,6 +158,7 @@ class Register {
             let val = value;
             this.parityError = this.invalidBCD = false;
 
+            this.updateLampGlow(0);
             do {
                 let digit = Envir.oddParity5[val & this.digitMask];
                 newVal |= digit << bits;
@@ -178,7 +179,6 @@ class Register {
             this.intVal = newVal;
         }
 
-        this.updateLampGlow(0);
     }
 
     get binaryValue() {
@@ -198,6 +198,7 @@ class Register {
         let val = this.intVal;
         this.parityError = this.invalidBCD = false;
 
+        this.updateLampGlow(0);
         do {
             let digit = bin % 10;
             newVal |= Envir.oddParity5[(val & Register.parityFlagMask) | digit] << bits;
@@ -211,7 +212,6 @@ class Register {
 
         this.intBinaryVal = binVal;
         this.intVal = newVal;
-        this.updateLampGlow(0);
     }
 
     get isntZero() {
@@ -284,7 +284,6 @@ class Register {
 
         this.intBinaryVal = 0;
         this.intVal = newVal;
-        this.updateLampGlow(0);
         return newVal;
     }
 
@@ -462,8 +461,8 @@ class Register {
             let eTime = this.envir.eTime;
             let delta = eTime - this.lastETime;
             if (delta < Envir.cycleTime) {
-                delta += Envir.tickTime;
-                eTime += Envir.tickTime;
+                delta = Math.max(delta, 0) + Envir.tickTime;
+                eTime = this.lastETime + delta;
             }
 
             let alpha = Math.min(delta/FlipFlop.lampPersistence + beta, 1.0);
@@ -472,7 +471,7 @@ class Register {
             let bit = 0;
             let v = this.intVal;
 
-            while (v) {
+            while (v && b < this.bits) {
                 bit = v & 1;
                 this.glow[b] = this.glow[b]*alpha1 + bit*alpha;
                 v >>= 1;

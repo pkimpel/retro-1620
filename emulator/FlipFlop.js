@@ -82,8 +82,8 @@ class FlipFlop {
             let eTime = this.envir.eTime;
             let delta = eTime - this.lastETime;
             if (delta < Envir.cycleTime) {
-                delta += Envir.tickTime;
-                eTime += Envir.tickTime;
+                delta = Math.max(delta, 0) + Envir.tickTime;
+                eTime = this.lastETime + delta;
             }
 
             let alpha = Math.min(delta/FlipFlop.lampPersistence + beta, 1.0);

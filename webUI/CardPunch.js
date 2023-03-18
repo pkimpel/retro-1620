@@ -449,7 +449,8 @@ class CardPunch {
         /* Initiates the punching of the card from the card buffer */
 
         if (!this.transportReady) {
-            await this.waitForTransport()
+            this.processor.updateLampGlow(1);   // freeze the state of the lamps
+            await this.waitForTransport();
         } else {
             let now = performance.now();
 

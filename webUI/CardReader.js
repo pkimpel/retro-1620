@@ -570,6 +570,9 @@ class CardReader {
             this.initiateTransfer();            // queue to event loop
         } else {
             this.transferRequested = true;      // wait for reader
+            if (!this.transportReady || this.readerCheck) {
+                this.processor.updateLampGlow(1);       // freeze the lamp states
+            }
         }
     }
 

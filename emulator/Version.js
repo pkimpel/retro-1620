@@ -11,4 +11,4 @@
 *   Original version.
 ***********************************************************************/
 
-export const retro1620Version =         "0.08a";
+export const retro1620Version =         "0.08b";
