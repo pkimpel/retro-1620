@@ -30,77 +30,28 @@ class CardPunch {
     static cardPunchTop = 458;          // top coordinate of CardPunch window above window bottom
     static idlePeriod = 60000;          // punch motor turnoff delay, ms (5 minutes)
     static idleStartupTime = 500;       // punch motor idle startup time, ms
-    static stackerLimit = 10000;        // max card capacity of output stacker
 
     static numericGlyphs = [    // indexed as BCD code prefixed with flag bit: F8421
         "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", "@", "?", "?", "}",         // 00-0F
         "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "$", "-", "?", "?", "\""];       // 10-1F
 
     static alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit BCD)
-        " ", "?", "?", ".",             // 00
-        ")", "?", "?", "?",             // 04
-        "?", "?", "|", "?",             // 08
-        "?", "?", "?", "}",             // 0C
-        "+", "?", "?", "$",             // 10
-        "*", "?", "?", "?",             // 14
-        "?", "?", "?", "?",             // 18
-        "?", "?", "?", "?",             // 1C
-        "-", "/", "?", ",",             // 20
-        "(", "?", "^", "?",             // 24
-        "?", "?", "?", "?",             // 28
-        "?", "?", "?", "?",             // 2C
-        "?", "?", "?", "=",             // 30
-        "@", "?", "?", "?",             // 34
-        "?", "?", "?", "?",             // 38
-        "?", "?", "?", "?",             // 3C
-        "?", "A", "B", "C",             // 40
-        "D", "E", "F", "G",             // 44
-        "H", "I", "?", "?",             // 48
-        "?", "?", "?", "?",             // 4C
-        "]", "J", "K", "L",             // 50
-        "M", "N", "O", "P",             // 54
-        "Q", "R", "!", "?",             // 58
-        "?", "?", "?", "\"",            // 5C
-        "?", "?", "S", "T",             // 60
-        "U", "V", "W", "X",             // 64
-        "Y", "Z", "?", "?",             // 68
-        "?", "?", "?", "?",             // 6C
-        "0", "1", "2", "3",             // 70
-        "4", "5", "6", "7",             // 74
-        "8", "9", "?", "?",             // 78
-        "?", "?", "?", "?",             // 7C
-        "?", "?", "?", "?",             // 80
-        "?", "?", "?", "?",             // 84
-        "?", "?", "?", "?",             // 88
-        "?", "?", "?", "?",             // 8C
-        "?", "?", "?", "?",             // 90
-        "?", "?", "?", "?",             // 94
-        "?", "?", "?", "?",             // 98
-        "?", "?", "?", "?",             // 9C
-        "?", "?", "?", "?",             // A0
-        "?", "?", "?", "?",             // A4
-        "?", "?", "?", "?",             // A8
-        "?", "?", "?", "?",             // AC
-        "?", "?", "?", "?",             // B0
-        "?", "?", "?", "?",             // B4
-        "?", "?", "?", "?",             // B8
-        "?", "?", "?", "?",             // BC
-        "?", "?", "?", "?",             // C0
-        "?", "?", "?", "?",             // C4
-        "?", "?", "?", "?",             // C8
-        "?", "?", "?", "?",             // CC
-        "?", "?", "?", "?",             // D0
-        "?", "?", "?", "?",             // D4
-        "?", "?", "?", "?",             // D8
-        "?", "?", "?", "?",             // DC
-        "?", "?", "?", "?",             // E0
-        "?", "?", "?", "?",             // E4
-        "?", "?", "?", "?",             // E8
-        "?", "?", "?", "?",             // EC
-        "?", "?", "?", "?",             // F0
-        "?", "?", "?", "?",             // F4
-        "?", "?", "?", "?",             // F8
-        "?", "?", "?", "?"];            // FC
+        " ", "?", "?", ".", ")", "?", "?", "?", "?", "?", "|", "?", "?", "?", "?", "}",         // 00-0F
+        "+", "?", "?", "$", "*", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // 10-1F
+        "-", "/", "?", ",", "(", "?", "^", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // 20-2F
+        "?", "?", "?", "=", "@", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // 30-3F
+        "?", "A", "B", "C", "D", "E", "F", "G", "H", "I", "?", "?", "?", "?", "?", "?",         // 40-4F
+        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "?", "?", "?", "?", "\"",        // 50-5F
+        "?", "?", "S", "T", "U", "V", "W", "X", "Y", "Z", "?", "?", "?", "?", "?", "?",         // 60-6F
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "?", "?", "?", "?", "?", "?",         // 70-7F
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // 80-8F
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // 90-9F
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // A0-AF
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // B0-BF
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // C0-CF
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // D0-DF
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // E0-EF
+        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"];        // F0-FF
 
 
     // Public Instance Properties
@@ -125,13 +76,15 @@ class CardPunch {
             processor is the Processor object
         */
         const h = 140;
-        const w = 579;
+        const w = 575;
         let bufferReadyPoint = 0;
         let punchLatchPoint = 0;
 
         this.context = context;
         this.config = context.config;
         this.processor = context.processor;
+
+        this.stackerLimit = this.config.getNode("Card.stackerPunch");
 
         // Calculate timing factors.
         this.cardsPerMinute = this.config.getNode("Card.cpmPunch");
@@ -161,7 +114,8 @@ class CardPunch {
         this.clear();
 
         openPopup(window, "../webUI/CardPunch.html", "CardPunch",
-                `location=no,scrollbars,resizable,width=${w},height=${h},left=0,top=${screen.availHeight-CardPunch.cardPunchTop}`,
+                `location=no,scrollbars,resizable,width=${w},height=${h},` +
+                `left=0,top=${screen.availHeight-CardPunch.cardPunchTop}`,
                 this, this.punchOnLoad);
     }
 
@@ -172,10 +126,10 @@ class CardPunch {
 
         this.punchReady = false;        // status of PUNCH READY lamp
         this.transportReady = false;    // ready status: cards loaded and START or LOAD pressed
-        this.transportReadySignal = null;// function that resolves the transport-ready Promise
+        this.signalTransportReady = null;// function that resolves the transport-ready Promise
         this.transportRequested = false;// waiting for punch transport ready
         this.bufferReady = false;       // punch card buffer is ready to be punched
-        this.bufferEmptySignal = null;  // function that resolves the buffer-ready Promise
+        this.signalBufferReady = null;  // function that resolves the buffer-ready Promise
         this.bufferRequested = false;   // waiting for cardBuffer (this.bufferReady)
         this.punchCheck = false;        // true if a punch check has occurred
         this.punchCheckPending = false; // true if a punch check has been detected
@@ -211,7 +165,7 @@ class CardPunch {
         /* Controls the ready state of the card punch supply hopper/transport */
 
         if (ready && !this.transportReady) {
-            if (this.stackerCount < CardPunch.stackerLimit) {
+            if (this.stackerCount < this.stackerLimit) {
                 this.transportReady = true;
             }
         } else if (this.transportReady && !ready) {
@@ -249,7 +203,7 @@ class CardPunch {
             this.setTransportReady(true);
             if (this.punchReady) {
                 if (this.transportRequested) {
-                    this.transportReadySignal();
+                    this.signalTransportReady(false);
                 } else if (this.bufferReady) {
                     this.initiateCardPunch();
                 }
@@ -270,7 +224,7 @@ class CardPunch {
     checkResetBtnClick(ev) {
         /* Handle the click event for the CHECK RESET button */
 
-        if (!this.transportReady) {
+        if (this.punchCheck && !this.transportReady) {
             this.setPunchCheck(false);
         }
     }
@@ -290,8 +244,6 @@ class CardPunch {
             break;
         case "click":
             if (!this.transportReady) {
-                this.bufferReady = false;
-                this.cardBuffer = "";
                 this.setPunchCheck(false);
             }
             break;
@@ -375,7 +327,7 @@ class CardPunch {
 
         this.stackerBar = this.$$("StackerBar");
         this.stackerBar.value = 0;
-        this.stackerBar.max = CardPunch.stackerLimit;
+        this.stackerBar.max = this.stackerLimit;
         this.stackerFrame = this.$$("StackerFrame");
 
         // Override the font size for the #Paper element inside the stackerFrame iframe.
@@ -404,44 +356,48 @@ class CardPunch {
 
         this.setTransportReady(true);
 
-        const de = this.doc.documentElement;
-        this.window.resizeBy(de.scrollWidth - this.window.innerWidth + 4, // kludge for right-padding/margin
-                             de.scrollHeight - this.window.innerHeight);
-        this.window.moveTo(0, screen.availHeight - CardPunch.cardPunchTop);
+        // Resize the window to take into account the difference between inner and outer heights (WebKit).
+        this.window.resizeBy(0, this.doc.body.scrollHeight-this.window.innerHeight);
     }
 
     /**************************************/
     async waitForTransport() {
         /* Constructs and waits for a Promise that resolves when
-        this.transportReadySignal() is called, then invalidates the transport-
-        ready signaling mechanism. See:
+        this.signalTransportReady() is called, then invalidates the transport-
+        ready signaling mechanism. The parameter to that function is a Boolean
+        that is returned to the caller indicating whether the wait has been
+        canceled. See:
         https://stackoverflow.com/questions/26150232/resolve-javascript-promise-
         outside-the-promise-constructor-scope */
 
         this.transportRequested = true;
-        await new Promise((resolve) => {
-            this.transportReadySignal = resolve;
+        const result = await new Promise((resolve) => {
+            this.signalTransportReady = resolve;
         });
 
-        this.transportReadySignal = null;
+        this.signalTransportReady = null;
         this.transportRequested = false;
+        return result ?? false;
     }
 
     /**************************************/
     async waitForBuffer() {
         /* Constructs and waits for a Promise that resolves when
-        this.bufferEmptySignal() is called, then invalidates the buffer-ready
-        signaling mechanism. See:
+        this.signalBufferReady() is called, then invalidates the buffer-ready
+        signaling mechanism. The parameter to that function is a Boolean
+        that is returned to the caller indicating whether the wait has been
+        canceled. See:
         https://stackoverflow.com/questions/26150232/resolve-javascript-promise-
         outside-the-promise-constructor-scope */
 
         this.bufferRequested = true;
-        await new Promise((resolve) => {
-            this.bufferEmptySignal = resolve;
+        const result = await new Promise((resolve) => {
+            this.signalBufferReady = resolve;
         });
 
-        this.bufferEmptySignal = null;
+        this.signalBufferReady = null;
         this.bufferRequested = false;
+        return result ?? false;
     }
 
     /**************************************/
@@ -450,65 +406,64 @@ class CardPunch {
 
         if (!this.transportReady) {
             this.processor.updateLampGlow(1);   // freeze the state of the lamps
-            await this.waitForTransport();
-        } else {
-            let now = performance.now();
-
-            // First, if the punch has been idle for more than one minute, the
-            // motor will have timed out, so wait 500 ms for it to spin back up.
-            if (now - this.lastUseStamp > CardPunch.idlePeriod) {
-                await this.timer.delayFor(CardPunch.idleStartupTime);
-                now += CardPunch.idleStartupTime;
+            if (await this.waitForTransport()) {
+                return;                         // wait canceled
             }
+        }
 
-            // Next, wait until the next clutch latch point occurs.
-            if (this.nextLatchPointStamp < now) {
-                // The next latch point has already passed, so compute a new one
-                // based on where we are in the machine's cycle with respect to
-                // the next latch point.
-                const cyclePoint = now % this.punchLatchPeriod;
-                const latchDelay = this.punchLatchPeriod - cyclePoint;
-                if (latchDelay < 0) {   // must delay to latch point in next cycle
-                    this.nextLatchPointStamp = now + latchDelay + this.punchLatchPeriod;
-                } else {                // we can still catch this bus...
-                    this.nextLatchPointStamp = now + latchDelay;
-                }
-            }
+        let now = performance.now();
 
-            // Wait until the next cluth latch point, then for buffer ready.
-            const delay = this.nextLatchPointStamp - now + this.bufferReadyDelay;
-            await this.timer.delayFor(delay);
-            this.lastUseStamp = this.nextLatchPointStamp;
-            this.nextLatchPointStamp += this.punchLatchPeriod;  // earliest time next punch can occur
+        // First, if the punch has been idle for more than one minute, the
+        // motor will have timed out, so wait 500 ms for it to spin back up.
+        if (now - this.lastUseStamp > CardPunch.idlePeriod) {
+            await this.timer.delayFor(CardPunch.idleStartupTime);
+            now += CardPunch.idleStartupTime;
+        }
 
-            // Punch the card image.
-            this.stacker.appendChild(this.doc.createTextNode(this.cardBuffer.trimEnd() + "\n"));
-            this.stacker.scrollIntoView(false); // keep last line in view
-            this.stackerBar.value = ++this.stackerCount;
-            this.cardBuffer = "";               // clear the internal card buffer
-            this.bufferReady = false;           // buffer is ready to receive more data
-            if (this.punchCheckPending) {
-                this.setPunchCheck(true);
-            } else if (this.stackerCount >= CardPunch.stackerLimit) {
+        // Next, wait until the next clutch latch point occurs.
+        if (this.nextLatchPointStamp < now) {
+            // The next latch point has already passed, so compute a new one
+            // based on where we are in the machine's cycle with respect to
+            // the next latch point.
+            const cyclePoint = now % this.punchLatchPeriod;
+            this.nextLatchPointStamp = now + this.punchLatchPeriod - cyclePoint;
+        }
+
+        // Wait until the next cluth latch point, then for buffer ready.
+        const delay = this.nextLatchPointStamp + this.bufferReadyDelay - now;
+        await this.timer.delayFor(delay);
+        this.lastUseStamp = this.nextLatchPointStamp;
+        this.nextLatchPointStamp += this.punchLatchPeriod;  // earliest time next punch can occur
+
+        // Punch the card image.
+        this.stacker.appendChild(this.doc.createTextNode(this.cardBuffer.trimEnd() + "\n"));
+        this.stacker.scrollIntoView(false); // keep last line in view
+        this.stackerBar.value = ++this.stackerCount;
+        if (this.punchCheckPending) {
+            this.setPunchCheck(true);   // leave buffer in ready state
+        } else if (this.stackerCount >= this.stackerLimit) {
                 this.setTransportReady(false);
                 this.$$("StackerLamp").classList.add("annunciatorLit");
-            }
+        }
 
-            if (this.bufferRequested) {         // if data transfer is waiting for buffer
-                this.bufferEmptySignal();       // tell 'em it's ready
-            }
+        this.cardBuffer = "";           // clear the internal card buffer
+        this.bufferReady = false;       // buffer is ready to receive more data
+        if (this.bufferRequested) {     // if data transfer is waiting for buffer
+            this.signalBufferReady(false);      // tell 'em it's ready
         }
     }
 
     /**************************************/
-    async dumpNumeric(code) {
+    async writeNumeric(code) {
         /* Writes one digit to the card buffer. This should be used directly by
-        Dump Numerically (DN, 35) Returns true after the 80th digit is received */
+        Write Numerically (WN, 38) Returns 1 after the 80th digit is received */
         const digit = code & Register.digitMask;
         let eob = 0;                    // end-of-block signal to Processor
 
         if (this.bufferReady) {         // buffer not available to receive now
-            await this.waitForBuffer;
+            if (await this.waitForBuffer()) {
+                return 1;                       // wait canceled
+            }
         }
 
         if (Envir.oddParity5[digit] != digit) {
@@ -533,15 +488,17 @@ class CardPunch {
     /**************************************/
     async writeAlpha(digitPair) {
         /* Writes one even/odd digit pair as a characterto the card buffer.
-        This should be used directly by Write Alphanumerically (WA, 39). Returns
-        true after the 80th digit is received */
+        This should be used directly by Write Alphanumerically (WA, 39).
+        Returns 1 after the 80th digit pair is received */
         const even = (digitPair >> Register.digitBits) & Register.digitMask;
         const odd = digitPair & Register.digitMask;
         const code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
         let eob = 0;                    // end-of-block signal to Processor
 
         if (this.bufferReady) {         // buffer not available to receive now
-            await this.waitForBuffer;
+            if (await this.waitForBuffer()) {
+                return 1;                       // wait canceled
+            }
         }
 
         if (Envir.oddParity5[even] != even || Envir.oddParity5[odd] != odd) {
@@ -564,12 +521,12 @@ class CardPunch {
     }
 
     /**************************************/
-    writeNumeric(digit) {
+    dumpNumeric(digit) {
         /* Writes one digit to the card buffer. This should be used directly by
-        Write Numerically (WN, 38) Simply calls this.dumpNumerically and returns
+        Dump Numerically (DN, 35) Simply calls this.writeNumeric and returns
         its Promise result */
 
-        return this.dumpNumeric(digit);
+        return this.writeNumeric(digit);
     }
 
     /**************************************/
@@ -579,8 +536,15 @@ class CardPunch {
 
     /**************************************/
     release () {
-        /* Called by Processor to indicate the device has been released.
-        Not used with CardPunch */
+        /* Called by Processor to indicate the device has been released */
+
+        if (this.bufferRequested) {         // in case we've been manually released
+            this.signalBufferReady(true);
+        }
+
+        if (this.transportRequested) {      // ditto
+            this.signalTransportReady(true);
+        }
     }
 
     /**************************************/

@@ -41,7 +41,8 @@
     <div id=MessageArea></div>
     <button id=CancelBtn class="redButton">CANCEL</button>
     <button id=SaveBtn class="greenButton">SAVE</button>
-    <button id=DefaultsBtn class="redButton" title="Set configurartion to original defaults">SET DEFAULTS</button>
+    <button id=DefaultsBtn class="redButton"
+            title="Set configurartion to original defaults">DEFAULTS</button>
 
 
     <div class=heading>System Properties:</div>
@@ -51,32 +52,40 @@
             <option          value=40000>40000
             <option          value=60000>60000
         </select> Digit Memory Size<br>
-        <input id=SystemIndexRegisters type=checkbox value=1> <label for=SystemIndexRegisters>Index Registers</label><br>
-        <input id=SystemFloatingPoint  type=checkbox value=1 DISABLED> <label for=SystemFloatingPoint>Floating Point</label><br>
-        <input id=SystemBinaryCaps     type=checkbox value=1 DISABLED> <label for=SystemBinaryCaps>Binary Capabilities</label><br>
+        <input id=SystemIndexRegisters type=checkbox value=1>
+               <label for=SystemIndexRegisters>Index Registers</label><br>
+        <input id=SystemFloatingPoint  type=checkbox value=1 DISABLED>
+               <label for=SystemFloatingPoint>Floating Point</label><br>
+        <input id=SystemBinaryCaps     type=checkbox value=1 DISABLED>
+               <label for=SystemBinaryCaps>Binary Capabilities</label><br>
     </div>
 
 
     <div class=heading>731 Typewriter: [change on device panel]</div>
     <div class=details>
-        Margin Left=<span id=MarginLeft></span>, Right=<span id=MarginRight></span>, Columns=<span id=Columns></span><br>
+        Margin Left=<span id=MarginLeft></span>, Right=<span id=MarginRight></span>,
+        Columns=<span id=Columns></span><br>
         Tab Stops: <span id=TabStops></span>
     </div>
 
 
     <div class=heading>1622 Card Reader/Punch:</div>
     <div class=details>
-        <input id=CardInstalled type=checkbox value=1> <label for=CardInstalled>Installed</label><br>
+        <input id=CardInstalled type=checkbox value=1>
+               <label for=CardInstalled>Installed</label><br>
         <select id=CardSpeed>
             <option value=250>Model 1: 250/125 CPM
             <option value=500>Model 2: 500/250 CPM
-        </select> Reader/Punch Speed
+        </select> Reader/Punch Speed<br>
+        <input id=CardPunchStackerLimit class=rj type=number size=8 required min=100 max=999999 value=10000>
+               <label for=CardPunchStackerLimit>Punch Stacker Capacity</label>
     </div>
 
 
     <div class=heading>1443 Printer:</div>
     <div class=details>
-        <input id=PrinterInstalled type=checkbox value=1 DISABLED> <label for=PrinterInstalled>Installed</label><br>
+        <input id=PrinterInstalled type=checkbox value=1 DISABLED>
+               <label for=PrinterInstalled>Installed</label><br>
         <select id=PrinterSpeed>
             <option value=240>240 LPM, 52-character set
             <option value=300>300 LPM, 39-character set
@@ -87,12 +96,17 @@
 
     <div class=heading>1311 Disk:</div>
     <div class=details>
-        <input id=DiskInstalled type=checkbox value=1 DISABLED> <label for=DiskInstalled>Installed</label><br>
+        <input id=DiskInstalled type=checkbox value=1 DISABLED>
+               <label for=DiskInstalled>Installed</label><br>
         <br>
-        <input id=Disk0Enabled type=checkbox value=1> <label for=Disk0Enabled>Disk 0 Enabled (required)</label><br>
-        <input id=Disk1Enabled type=checkbox value=1> <label for=Disk1Enabled>Disk 1 Enabled</label><br>
-        <input id=Disk2Enabled type=checkbox value=1> <label for=Disk2Enabled>Disk 2 Enabled</label><br>
-        <input id=Disk3Enabled type=checkbox value=1> <label for=Disk3Enabled>Disk 3 Enabled</label><br>
+        <input id=Disk0Enabled type=checkbox value=1>
+               <label for=Disk0Enabled>Disk 0 Enabled (required)</label><br>
+        <input id=Disk1Enabled type=checkbox value=1>
+               <label for=Disk1Enabled>Disk 1 Enabled</label><br>
+        <input id=Disk2Enabled type=checkbox value=1>
+               <label for=Disk2Enabled>Disk 2 Enabled</label><br>
+        <input id=Disk3Enabled type=checkbox value=1>
+               <label for=Disk3Enabled>Disk 3 Enabled</label><br>
     </div>
 </div>
 

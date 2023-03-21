@@ -364,10 +364,10 @@ class ControlPanel {
                 this.powerReadyLamp.set(1);
                 this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
             }, 2000);
-
-            // Resize the window to take into account the difference between inner and outer heights (Safari).
-            this.window.resizeBy(0, this.doc.body.scrollHeight-this.doc.body.offsetHeight);
         }, 1000);
+
+        // Resize the window to take into account the difference between inner and outer heights (WebKit).
+        this.window.resizeBy(0, this.doc.body.scrollHeight-this.window.innerHeight);
     }
 
     /**************************************/

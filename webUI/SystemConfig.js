@@ -247,6 +247,7 @@ class SystemConfig {
         // Card Reader/Punch
         this.$$("CardInstalled").checked = cd.Card.hasCard;
         this.setListValue("CardSpeed", cd.Card.cpmRead);
+        this.$$("CardPunchStackerLimit").value = cd.Card.stackerPunch;
 
         // Printer
         this.$$("PrinterInstalled").checked = cd.Printer.hasPrinter;
@@ -315,6 +316,15 @@ class SystemConfig {
             cd.Card.cpmRead = 250;
             cd.Card.cpmPunch = 125;
             break;
+        }
+
+        x = parseInt(this.$$("CardPunchStackerLimit").value, 10);
+        if (x < 100) {
+            cd.Card.stackerPunch = 100;
+        } else if (x > 999999) {
+            cd.Card.stackerPunch = 999999;
+        } else {
+            cd.Card.stackerPunch = x;
         }
 
         // Printer
@@ -422,6 +432,7 @@ SystemConfig.defaultConfig = {
         selectStop: 1,
         cpmRead: 500,
         cpmPunch: 250,
+        stackerPunch: 10000
     },
 
     Printer: {

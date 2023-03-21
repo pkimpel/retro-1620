@@ -241,6 +241,9 @@ class Typewriter {
         this.$$("InsertBtn").addEventListener("click", this.boundInsertBtnClick);
         this.$$("SelectricLogo").addEventListener("click", this.boundSelectricLogoClick);
         this.$$("FormatControlsDiv").addEventListener("change", this.boundTextOnChange);
+
+        // Resize the window to take into account the difference between inner and outer heights (WebKit).
+        this.window.resizeBy(0, this.doc.body.scrollHeight-this.window.innerHeight);
     }
 
 

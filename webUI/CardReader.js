@@ -86,7 +86,8 @@ class CardReader {
         this.clear();
 
         openPopup(window, "../webUI/CardReader.html", "CardReader",
-                `location=no,scrollbars,resizable,width=${w},height=${h},left=0,top=${screen.availHeight-h}`,
+                `location=no,scrollbars,resizable,width=${w},height=${h},` +
+                `left=0,top=${screen.availHeight-h}`,
                 this, this.readerOnLoad);
     }
 
@@ -446,10 +447,8 @@ class CardReader {
         this.hopperBar.addEventListener("click", this.boundHopperBarClick);
         this.stackerFrame.contentDocument.body.addEventListener("dblclick", this.boundStackerDblClick);
 
-        const de = this.doc.documentElement;
-        this.window.resizeBy(de.scrollWidth - this.window.innerWidth + 4, // kludge for right-padding/margin
-                             de.scrollHeight - this.window.innerHeight);
-        this.window.moveTo(0, screen.availHeight - this.window.outerHeight);
+        // Resize the window to take into account the difference between inner and outer heights (WebKit).
+        this.window.resizeBy(0, this.doc.body.scrollHeight-this.window.innerHeight);
     }
 
     /**************************************/
@@ -495,7 +494,7 @@ class CardReader {
             }
 
             // Wait until the latch point occurs followed by card buffer ready.
-            const delay = this.nextLatchPointStamp - now + this.bufferReadyDelay;
+            const delay = this.nextLatchPointStamp + this.bufferReadyDelay - now;
             await this.timer.delayFor(delay);
             this.lastUseStamp = this.nextLatchPointStamp;
             this.nextLatchPointStamp += this.readPeriod;        // earliest time next read can occur
