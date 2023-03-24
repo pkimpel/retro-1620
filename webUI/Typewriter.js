@@ -41,6 +41,8 @@ class Typewriter {
     static idlePeriod = 5*60000;        // typewriter motor turnoff delay, ms (5 minutes)
     static idleStartupTime = 500;       // typewriter idle startup time, ms
     static lockoutFlashTime = 150;      // keyboard lock flash time, ms
+    static windowHeight = 240;          // window innerHeight, pixels
+    static windowWidth = 660;           // window innerWidth, pixels
 
     static numericGlyphs = [
         "0", "1",  "2",  "3", "4", "5", "6", "7", "8", "9",
@@ -136,8 +138,6 @@ class Typewriter {
             config is the SystemConfig object
             processor is the Processor object
         */
-        const h = 240;
-        const w = 660;
 
         this.context = context;
         this.config = context.config;
@@ -151,9 +151,10 @@ class Typewriter {
         this.boundSelectricLogoClick = this.selectricLogoClick.bind(this);
 
         // Create the Typewriter window
-        openPopup(window, "../webUI/Typewriter.html", "Typewriter",
-                `location=no,scrollbars,resizable,width=${w},height=${h}` +
-                    `,top=${screen.availHeight-h},left=${screen.availWidth-w}`,
+        openPopup(window, "../webUI/Typewriter.html", "retro-1620.Typewriter",
+                "location=no,scrollbars,resizable" +
+                `,width=${Typewriter.windowWidth},height=${Typewriter.windowHeight}` +
+                `,left=${screen.availWidth-Typewriter.windowWidth},top=${screen.availHeight-Typewriter.windowHeight}`,
                 this, this.typewriterOnLoad);
 
         this.clear();
@@ -243,7 +244,13 @@ class Typewriter {
         this.$$("FormatControlsDiv").addEventListener("change", this.boundTextOnChange);
 
         // Resize the window to take into account the difference between inner and outer heights (WebKit).
-        this.window.resizeBy(0, this.doc.body.scrollHeight-this.window.innerHeight);
+        if (this.window.innerHeight < Typewriter.windowHeight) {        // Safari bug
+            this.window.resizeBy(0, Typewriter.windowHeight - this.window.innerHeight);
+        }
+
+        setTimeout(() => {
+            this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
+        }, 500);
     }
 
 

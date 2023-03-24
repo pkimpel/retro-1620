@@ -387,7 +387,7 @@ class SystemConfig {
 
         this.doc = null;
         this.window = null;
-        openPopup(window, "../webUI/SystemConfig.html", SystemConfig.configStorageName,
+        openPopup(window, "../webUI/SystemConfig.html", `retro-1620.${SystemConfig.configStorageName}`,
                 "location=no,scrollbars,resizable,width=800,height=800",
                 this, configUI_Load);
     }

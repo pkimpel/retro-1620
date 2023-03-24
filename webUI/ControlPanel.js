@@ -28,6 +28,26 @@ import {ToggleSwitch} from "./ToggleSwitch.js";
 
 class ControlPanel {
 
+    // Static class properties
+
+    static displayAlpha = 0.01;         // running average decay factor
+    static displayRefreshPeriod = 50;   // ms
+    static offSwitchImage = "./resources/ToggleLargeDown.png";
+    static onSwitchImage = "./resources/ToggleLargeUp.png";
+    static powerBtnOnImage = "./resources/PowerSwitchOn.png";
+    static powerBtnOffImage = "./resources/PowerSwitchOff.png";
+    static windowHeight = 560;          // window innerHeight, pixels
+    static windowWidth = 1414;          // window innerWidth, pixels
+
+    // Public instance properties
+
+    avgInstructionRate = 0;             // running average instructions/sec
+    debugView = false;                  // true if Debug View is displaying
+    intervalToken = 0;                  // panel refresh timer cancel token
+    lastInstructionCount = 0;           // prior total instruction count (for average)
+    lastRunTime = 0;                    // prior total run time (for average), ms
+    modifyLatch = 0;                    // MODIFY key was pressed, awaiting CHECK RESET key
+
     /**************************************/
     constructor(context) {
         /* Constructs the 1620 control panel controls and wires up their events.
@@ -36,18 +56,10 @@ class ControlPanel {
             processor is the Processor object
             systemShutDown() shuts down the emulator
         */
-        const h = 560;
-        const w = 1414;
 
         this.context = context;
         this.config = context.config;
         this.systemShutdown = context.systemShutdown;
-        this.debugView = false;         // true if Debug View is displaying
-        this.intervalToken = 0;         // panel refresh timer cancel token
-        this.modifyLatch = 0;           // MODIFY key was pressed, awaiting CHECK RESET key
-        this.avgInstructionRate = 0;    // running average instructions/sec
-        this.lastInstructionCount = 0;  // prior total instruction count (for average)
-        this.lastRunTime = 0            // prior total run time (for average), ms
 
         this.boundUpdatePanel = this.updatePanel.bind(this);
         this.boundMARSelectorChange = this.marSelectorChange.bind(this);
@@ -63,9 +75,10 @@ class ControlPanel {
         // Create the Control Panel window
         this.doc = null;
         this.window = null;
-        openPopup(window, "../webUI/ControlPanel.html", "ControlPanel",
-                `location=no,scrollbars,resizable,width=${w},height=${h}` +
-                    `,top=0,left=${screen.availWidth - w}`,
+        openPopup(window, "../webUI/ControlPanel.html", "retro-1620.ControlPanel",
+                "location=no,scrollbars,resizable" +
+                `,width=${ControlPanel.windowWidth},height=${ControlPanel.windowHeight}` +
+                `,top=0,left=${screen.availWidth - ControlPanel.windowWidth}`,
                 this, this.panelOnLoad);
     }
 
@@ -233,7 +246,10 @@ class ControlPanel {
         this.manualLamp = new ColoredLamp(panel, null, null, "ManualLamp", "MANUAL", "panel whiteLamp", "panel whiteLamp whiteLit");
         this.checkStopLamp = new ColoredLamp(panel, null, null, "CheckStopLamp", "CHECK<br>STOP", "panel orangeLamp", "panel orangeLamp orangeLit");
 
-        this.powerBtn = new PanelButton(panel, null, null, "PowerBtn", "POWER", "panel darkBlueButton", "darkBlueButtonDown");
+        this.powerBtn = this.$$("PowerBtn");
+        //this.powerBtn = new PanelButton(panel, null, null, "PowerBtn", "POWER", "panel darkBlueButton", "darkBlueButtonDown");
+        this.powerBtn.src = ControlPanel.powerBtnOnImage;
+        this.powerBtn.title = "Double-click to power off and shut down the emulator";
         this.resetBtn = new PanelButton(panel, null, null, "ResetBtn", "RESET", "panel darkBlueButton", "darkBlueButtonDown");
         this.modifyBtn = new PanelButton(panel, null, null, "ModifyBtn", "MODIFY", "panel darkBlueButton", "darkBlueButtonDown");
         this.checkResetBtn = new PanelButton(panel, null, null, "CheckResetBtn", "CHECK<br>RESET", "panel darkBlueButton", "darkBlueButtonDown");
@@ -367,7 +383,13 @@ class ControlPanel {
         }, 1000);
 
         // Resize the window to take into account the difference between inner and outer heights (WebKit).
-        this.window.resizeBy(0, this.doc.body.scrollHeight-this.window.innerHeight);
+        if (this.window.innerHeight < ControlPanel.windowHeight) {      // Safari bug
+            this.window.resizeBy(0, ControlPanel.windowHeight - this.window.innerHeight);
+        }
+
+        setTimeout(() => {
+            this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
+        }, 500);
     }
 
     /**************************************/
@@ -585,7 +607,7 @@ class ControlPanel {
 
     /**************************************/
     emergencyOffClick(ev) {
-        /* Handles the forbidden click of the Emergency Off switch */
+        /* Handles the don't-you-dare-do-this double-click of the Emergency Off switch */
         const p = this.context.processor;
 
         this.window.clearTimeout(this.intervalToken);
@@ -1038,6 +1060,14 @@ class ControlPanel {
     shutDown() {
         /* Shuts down the panel */
 
+        this.powerBtn.src = ControlPanel.powerBtnOffImage;
+        this.powerReadyLamp.set(0);
+        this.powerOnLamp.set(0);
+        if (this.intervalToken) {
+            this.window.clearTimeout(this.intervalToken);
+            this.intervalToken = 0;
+        }
+
         this.$$("OperatorContainer").removeEventListener("click", this.boundControlSwitchClick);
         this.$$("OperatorContainer").removeEventListener("mouseover", this.boundModifyResetDrag);
         this.$$("OperatorContainer").removeEventListener("mouseout", this.boundModifyResetDrag);
@@ -1050,26 +1080,11 @@ class ControlPanel {
         this.$$("IBMLogo").removeEventListener("dblClick", this.boundToggleDebugView);
         this.$$("DPSLogo").removeEventListener("dblclick", this.boundLoadCMEMFile);
 
-        this.powerReadyLamp.set(0);
-        this.powerOnLamp.set(0);
-        if (this.intervalToken) {
-            this.window.clearTimeout(this.intervalToken);
-            this.intervalToken = 0;
-        }
-
         this.window.removeEventListener("beforeunload", this.boundBeforeUnload);
         this.window.removeEventListener("unload", this.boundPanelUnload);
         this.context.systemShutDown();
         this.window.setTimeout(() => {
             this.window.close();
-        }, 1000);
+        }, 2000);
     }
 } // class ControlPanel
-
-
-// Static class properties
-
-ControlPanel.displayAlpha = 0.01;       // running average decay factor
-ControlPanel.displayRefreshPeriod = 50; // ms
-ControlPanel.offSwitchImage = "./resources/ToggleLargeDown.png";
-ControlPanel.onSwitchImage = "./resources/ToggleLargeUp.png";

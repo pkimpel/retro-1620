@@ -28,12 +28,15 @@ class CardReader {
     static idlePeriod = 60000;          // reader motor turnoff delay, ms (5 minutes)
     static idleStartupTime = 500;       // reader motor idle startup time, ms
     static stackerViewSize = 60;        // number of output stacker cards retained for viewing
+    static windowHeight = 164;          // window innerHeight, pixels
+    static windowWidth = 575;           // window innerWidth, pixels
 
     // Public Instance Properties
 
     doc = null;                         // window document object
     window = null;                      // window object
     hopperBar = null;                   // input hopper meter bar
+    origin = null;                      // window origin for postMessage()
     stackerFrame = null;                // output stacker iframe object
     stacker = null;                     // output stacker view area
     timer = new Timer();                // delay management timer
@@ -50,8 +53,6 @@ class CardReader {
             config is the SystemConfig object
             processor is the Processor object
         */
-        const h = 164;
-        const w = 575;
 
         this.context = context;
         this.config = context.config;
@@ -81,13 +82,15 @@ class CardReader {
         this.boundLoadBtnClick = this.loadBtnClick.bind(this);
         this.boundNPROSwitchAction = this.NPROSwitchAction.bind(this);
         this.boundHopperBarClick = this.hopperBarClick.bind(this);
+        this.boundReceiveMessage = this.receiveMessage.bind(this);
         this.boundStackerDblClick = this.stackerDblClick.bind(this);
 
         this.clear();
 
-        openPopup(window, "../webUI/CardReader.html", "CardReader",
-                `location=no,scrollbars,resizable,width=${w},height=${h},` +
-                `left=0,top=${screen.availHeight-h}`,
+        openPopup(window, "../webUI/CardReader.html", "retro-1620.CardReader",
+                "location=no,scrollbars,resizable" +
+                `,width=${CardReader.windowWidth},height=${CardReader.windowHeight}` +
+                `,left=0,top=${screen.availHeight-CardReader.windowHeight}`,
                 this, this.readerOnLoad);
     }
 
@@ -404,6 +407,30 @@ class CardReader {
     }
 
     /**************************************/
+    receiveMessage(ev) {
+        /* Handler for the window's onMessage event. At present, this is used
+        only to receive a message from the CardPunch requesting the reader's
+        screen geometry and send a message back to the punch */
+
+        if (ev.origin === this.origin && ev.data?.fcn === "CardPunch.RequestGeometry") {
+            const msg = {
+                fcn: "CardReader.Geometry",
+                geometry: {
+                    screenX: this.window.screenX,
+                    screenY: this.window.screenY,
+                    outerWidth: this.window.outerWidth,
+                    outerHeight: this.window.outerHeight}
+            };
+
+            // Responding to ev.source doesn't work here, so we need to do this the harder way...
+            const win = this.window.open("", "retro-1620.CardPunch");
+            if (win) {
+                win.postMessage(msg, ev.origin);
+            }
+        }
+    }
+
+    /**************************************/
     beforeUnload(ev) {
         const msg = "Closing this window will make the device unusable.\n" +
                     "Suggest you stay on the page and minimize this window instead";
@@ -420,6 +447,7 @@ class CardReader {
         this.doc = ev.target;           // now we can use this.$$()
         this.doc.title = "retro-1620 Card Reader";
         this.window = this.doc.defaultView;
+        this.origin = `${this.window.location.protocol}//${this.window.location.host}`;
         this.setReaderReadyStatus();
 
         const panel = this.$$("ControlsDiv");
@@ -436,6 +464,7 @@ class CardReader {
         this.stacker.style.lineHeight = "120%";
 
         this.window.addEventListener("beforeunload", this.beforeUnload);
+        this.window.addEventListener("message", this.boundReceiveMessage);
         this.startBtn.addEventListener("click", this.boundStartBtnClick);
         this.stopBtn.addEventListener("click", this.boundStopBtnClick);
         this.loadBtn.addEventListener("click", this.boundLoadBtnClick);
@@ -448,7 +477,13 @@ class CardReader {
         this.stackerFrame.contentDocument.body.addEventListener("dblclick", this.boundStackerDblClick);
 
         // Resize the window to take into account the difference between inner and outer heights (WebKit).
-        this.window.resizeBy(0, this.doc.body.scrollHeight-this.window.innerHeight);
+        if (this.window.innerHeight < CardReader.windowHeight) {        // Safari bug
+            this.window.resizeBy(0, CardReader.windowHeight - this.window.innerHeight);
+        }
+
+        setTimeout(() => {
+            this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
+        }, 500);
     }
 
     /**************************************/
@@ -595,6 +630,7 @@ class CardReader {
         this.$$("FileSelector").removeEventListener("change", this.boundFileSelectorChange);
         this.hopperBar.removeEventListener("click", this.boundHopperBarClick);
         this.stackerFrame.contentDocument.body.removeEventListener("dblclick", this.boundStackerDblClick);
+        this.window.removeEventListener("message", this.boundReceiveMessage);
         this.window.removeEventListener("beforeunload", this.beforeUnload, false);
         this.window.close();
     }

@@ -3354,6 +3354,7 @@ class Processor {
             const flagRex = /[@-I]/;
             const zero = ("0").charCodeAt(0);
             const flagZero = ("@").charCodeAt(0);
+            const undigitMap = {"|": 0xA, "$": 0xB, "_": 0xC, "%": 0xD, "&": 0xE, "#": 0xF};
 
             let d = 0;
             let flagged = false;
@@ -3370,27 +3371,10 @@ class Processor {
                         d = c.charCodeAt(0) - zero;
                     } else if (flagRex.test(c)) {
                         d = (c.charCodeAt(0) - flagZero) | Register.flagMask;
+                    } else if (c in undigitMap) {
+                        d = undigitMap[c];
                     } else {
-                        switch (c) {
-                        case "#":
-                            d = 0xA;    // record mark
-                            break;
-                        case "$":
-                            d = 0xB;    // (unassigned)
-                            break;
-                        case "_":
-                            d = 0xC;    // numeric blank
-                            break;
-                        case "%":
-                            d = 0xD;    // (unassigned)
-                            break;
-                        case "&":
-                            d = 0xE;    // (unassigned)
-                            break;
-                        default:
-                            d = 0xF;    // Group Mark
-                            break;
-                        }
+                        d = 0xF;    // Group Mark
                     }
 
                     if (flagged) {
@@ -3426,55 +3410,6 @@ class Processor {
             "00500151020060218142007041128200806142230090817263" +      // 150-199
             "00000000005060708090012141618151811242720242822363" +      // 200-249
             "52035304540363248445532494653604846546275445362718");      // 250-299
-
-        // ?? DEBUG ?? I-Cycle testing
-        loadMemory(0,
-            "49 00988 99999");  //  0000 B      988,99999       branch to 988 to start test
-
-        loadMemory(200,
-            "0@ 1A 2B 3C 4D 5E 6F 7G 8H 9I #~# $~$ _~_ %~% &~& |~|");
-
-        loadMemory(300,         // load index registers
-            "88888 00000 00000 00000 00000 00000 00000 00000" +         // Band 1: IX 0-7
-            "99999 1010A 00015 00010 00000 00000 00000 00000");         // Band 2: IX 0-7
-
-        loadMemory(900,         // Indirect Addresses
-            "01084 0091D 01084 00IBD 99999 88888 77777 66666 55555 44444 33333 22222 11111");
-
-        loadMemory(988,
-            "60 01000 00008" +  //  0988 BS     1000,8          branch to 1000, reset IA mode
-            "41 23456 78901" +  //  1000 NOP    23456,78901     no-op
-            "32 00950 99999" +  //  1012 SF     99,99999        set flag
-            "33 00950 77777" +  //  1024 CF     99,77777        clear flag
-            "60 0104H 00002" +  //  1036 BS     -1048,2         set IX band 2 (IA disabled)
-            "60 01060 00009" +  //  1048 BS     1060,8          set IA mode
-            "46 0090D 01100" +  //  1060 BI     -900,11         branch on H/P, indirect through 904 => 1084
-            "47 0090I 01100" +  //  1072 BNI    -909,11         branch on not H/P, indirect through 909 to 914 => 1084
-            "48 222B2 00I0D" +  //  1084 H      22222(B1),-904(B2) halt: P=22222+(-10101) => 12121, Q=(see below)
-            "34 00000 00102" +  //  1096 K      0,102           carriage return
-            "34 00000 00102" +  //  1108 K      0,102           carriage return again
-            "35 00000 00100" +  //  1120 DNTY   0,100           dump numerically 00000 to typewriter
-            "34 00000 00104" +  //  1132 K      0,104           index carriage
-            "35 19990 00100" +  //  1144 DNTY   19990,102       dump numerically 19990 to typewriter
-            "34 00000 00102" +  //  1156 K      0,102           carriage return
-            "34 00000 00108" +  //  1168 K      0,108           tabulate
-            "38 00200 00100" +  //  1180 WNTY   200,100         write numerically
-            "34 00000 00108" +  //  1192 K      0,108           tabulate
-            "39 00201 00100" +  //  1204 WATY   200,100         write alphanumerically
-            "34 00000 00102" +  //  1216 K      0,102           carriage return
-            "34 00000 00102" +  //  1228 K      0,102           carriage return again
-
-            // The Brent Marsh Memorial Group Mark Challenge of 1968
-
-            "15 19999 0000|" +  //  1240 TDM    19999,GM        transmit group mark to 19999
-            "35 19999 00100" +  //  1252 DNTY   19999,100       dump the group mark
-            "47 01252 00100" +  //  1264 BNI    1252,1          branch unless PS1 is on
-            "34 00000 00102" +  //  1276 K      0,102           carriage return
-
-            "48 77777 99999" +  //  1288 H      77777,99999     halt again
-            "49 00988 33333"    //  1300 B      988,33333       branch to beginning
-        );
-                        // @1084: Q = -904(B2=15) = -919 indirect to -924(B3=10) = -934 indirect => 77777
 
         this.regMAR.clear();
         this.regMIR.clear();

@@ -15,6 +15,21 @@ export {ColoredLamp}
 
 class ColoredLamp {
 
+    // Static class properties
+
+    static lampLevels = 6;
+    static topCaptionClass = "coloredLampTopCaption";
+    static bottomCaptionClass = "coloredLampBottomCaption";
+    static blinkRate = 500;             // ms
+
+    // Instance variables
+
+    state = 0;                          // current lamp state, 0=off
+    topCaptionDiv = null;               // optional top caption element
+    bottomCaptionDiv = null;            // optional bottom caption element
+    blinking = false;                   // true when blinking
+    blinkToken = 0;                     // setInterval token for blinking
+
     constructor(parent, x, y, id, caption, offClass, onClass) {
         /* Parameters:
             parent      the DOM container element for this lamp object.
@@ -24,9 +39,6 @@ class ColoredLamp {
             offClass    CSS class name supplying the color of the lamp when it is off.
             onClass     CSS class name supplying the color of the lamp when it is fully lit */
 
-        this.state = 0;                     // current lamp state, 0=off
-        this.topCaptionDiv = null;          // optional top caption element
-        this.bottomCaptionDiv = null;       // optional bottom caption element
         this.lampClass = offClass;          // css styling for an "off" lamp
         this.litClass =                     // css styling for an "on" lamp
                     `${offClass} ${onClass}`;
@@ -54,6 +66,8 @@ class ColoredLamp {
         if (parent) {
             parent.appendChild(this.element);
         }
+
+        this.boundToggleBlink = this.toggleBlink.bind(this);
     }
 
     /**************************************/
@@ -68,6 +82,10 @@ class ColoredLamp {
         /* Changes the visible state of the lamp according to the value of "state", 0-1 */
         let newState = Math.max(Math.min(Math.round(state*ColoredLamp.lampLevels + 0.4999),
                                          ColoredLamp.lampLevels), 0);
+
+        if (this.blinking) {
+            this.blink(false);
+        }
 
         if (this.state != newState) {       // the state has changed
             this.state = newState;
@@ -102,14 +120,36 @@ class ColoredLamp {
             e.appendChild(document.createTextNode(caption));
             this.element.appendChild(e);
         }
+
         return e;
     }
 
+    /**************************************/
+    blink(onOff) {
+        /* Turns lamp blinking on or off */
+
+        if (onOff && !this.blinking) {
+            this.blinking = true;
+            this.blinkState = false;
+            this.blinkToken = setInterval(this.boundToggleBlink, ColoredLamp.blinkRate);
+        } else if (!onOff && this.blinking) {
+            this.blinking = false;
+            clearInterval(this.blinkToken);
+            this.blinkToken = 0;
+            this.element.className = this.levelClass[this.state];
+        }
+    }
+
+    /**************************************/
+    toggleBlink() {
+        /* Toggles the state of the lamp when blinking */
+
+        this.blinkState = !this.blinkState;
+        if (this.blinkState) {
+            this.element.className = this.litClass;
+        } else {
+            this.element.className = this.lampClass;
+        }
+    }
+
 } // class ColoredLamp
-
-
-// Static class properties
-
-ColoredLamp.lampLevels = 6;
-ColoredLamp.topCaptionClass = "coloredLampTopCaption";
-ColoredLamp.bottomCaptionClass = "coloredLampBottomCaption";

@@ -27,9 +27,11 @@ class CardPunch {
     // Static Properties
 
     static columns = 80;                // if you don't know what this means, you shouldn't be here
-    static cardPunchTop = 458;          // top coordinate of CardPunch window above window bottom
+    static cardPunchTop = 458;          // initial top coordinate of CardPunch window above window bottom
     static idlePeriod = 60000;          // punch motor turnoff delay, ms (5 minutes)
     static idleStartupTime = 500;       // punch motor idle startup time, ms
+    static windowHeight = 140;          // window innerHeight, pixels
+    static windowWidth = 575;           // window innerWidth, pixels
 
     static numericGlyphs = [    // indexed as BCD code prefixed with flag bit: F8421
         "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", "@", "?", "?", "}",         // 00-0F
@@ -58,6 +60,7 @@ class CardPunch {
 
     doc = null;                         // window document object
     window = null;                      // window object
+    origin = null;                      // window origin for postMessage()
 
     selectStopSwitch = 0;               // Select Stop switch off (0), on (1)
     stackerBar = null;                  // output stacker meter bar
@@ -75,8 +78,6 @@ class CardPunch {
             config is the SystemConfig object
             processor is the Processor object
         */
-        const h = 140;
-        const w = 575;
         let bufferReadyPoint = 0;
         let punchLatchPoint = 0;
 
@@ -110,12 +111,14 @@ class CardPunch {
         this.boundNPROSwitchAction = this.NPROSwitchAction.bind(this);
         this.boundSelectStopSwitchClick = this.selectStopSwitchClick.bind(this);
         this.boundStackerBarClick = this.stackerBarClick.bind(this);
+        this.boundReceiveMessage = this.receiveMessage.bind(this);
 
         this.clear();
 
-        openPopup(window, "../webUI/CardPunch.html", "CardPunch",
-                `location=no,scrollbars,resizable,width=${w},height=${h},` +
-                `left=0,top=${screen.availHeight-CardPunch.cardPunchTop}`,
+        openPopup(window, "../webUI/CardPunch.html", "retro-1620.CardPunch",
+                "location=no,scrollbars,resizable" +
+                `,width=${CardPunch.windowWidth},height=${CardPunch.windowHeight}` +
+                `,left=0,top=${screen.availHeight-CardPunch.cardPunchTop}`,
                 this, this.punchOnLoad);
     }
 
@@ -224,7 +227,7 @@ class CardPunch {
     checkResetBtnClick(ev) {
         /* Handle the click event for the CHECK RESET button */
 
-        if (this.punchCheck && !this.transportReady) {
+        if (this.punchCheck) {
             this.setPunchCheck(false);
         }
     }
@@ -302,6 +305,20 @@ class CardPunch {
     }
 
     /**************************************/
+    receiveMessage(ev) {
+        /* Handler for the window's onMessage event. At present, this is used
+        only to receive a message from the CardReader containing the reader's
+        screen geometry */
+
+        if (ev.origin === this.origin && ev.data?.fcn === "CardReader.Geometry") {
+            const geometry = ev.data.geometry;
+            if (geometry) {
+                this.window.moveTo(geometry.screenX, geometry.screenY - this.window.outerHeight);
+            }
+        }
+    }
+
+    /**************************************/
     beforeUnload(ev) {
         const msg = "Closing this window will make the device unusable.\n" +
                     "Suggest you stay on the page and minimize this window instead";
@@ -318,6 +335,7 @@ class CardPunch {
         this.doc = ev.target;           // now we can use this.$$()
         this.doc.title = "retro-1620 Card Punch";
         this.window = this.doc.defaultView;
+        this.origin = `${this.window.location.protocol}//${this.window.location.host}`;
         this.setPunchReadyStatus();
 
         const panel = this.$$("ControlsDiv");
@@ -344,6 +362,7 @@ class CardPunch {
 
 
         this.window.addEventListener("beforeunload", this.beforeUnload);
+        this.window.addEventListener("message", this.boundReceiveMessage);
         this.startBtn.addEventListener("click", this.boundStartBtnClick);
         this.stopBtn.addEventListener("click", this.boundStopBtnClick);
         this.checkResetBtn.addEventListener("click", this.boundCheckResetBtnClick);
@@ -357,7 +376,21 @@ class CardPunch {
         this.setTransportReady(true);
 
         // Resize the window to take into account the difference between inner and outer heights (WebKit).
-        this.window.resizeBy(0, this.doc.body.scrollHeight-this.window.innerHeight);
+        if (this.window.innerHeight < CardPunch.windowHeight) {        // Safari bug
+            this.window.resizeBy(0, CardPunch.windowHeight - this.window.innerHeight);
+        }
+
+        setTimeout(() => {
+            this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
+        }, 500);
+
+        // Request the CardReader's screen geometry so we can position the punch's window.
+        setTimeout(() => {
+            const win = this.window.open("", "retro-1620.CardReader");
+            if (win) {
+                win.postMessage({fcn: "CardPunch.RequestGeometry"}, this.origin);
+            }
+        }, 1000);
     }
 
     /**************************************/
@@ -560,6 +593,7 @@ class CardPunch {
         this.$$("NPROSwitch").removeEventListener("dblclick", this.boundNPROSwitchAction);
         this.$$("SelectStopSwitch").removeEventListener("click", this.boundSelectStopSwitchClick);
         this.stackerBar.removeEventListener("click", this.boundStackerBarClick);
+        this.window.removeEventListener("message", this.boundReceiveMessage);
         this.window.removeEventListener("beforeunload", this.beforeUnload, false);
         this.window.close();
     }
