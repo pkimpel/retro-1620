@@ -298,7 +298,7 @@ class Processor {
         buildOpAtts(10, 1, 2, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0);      // 10 BTAM
         buildOpAtts(11, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 11 AM
         buildOpAtts(12, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 12 SM
-        buildOpAtts(13, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 13 MM
+        buildOpAtts(13, 1, 5, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 13 MM
         buildOpAtts(14, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 14 CM
         buildOpAtts(15, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 15 TDM
         buildOpAtts(16, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 16 TFM
@@ -309,7 +309,7 @@ class Processor {
         buildOpAtts(20, 1, 2, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 20 BTA
         buildOpAtts(21, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 21 A
         buildOpAtts(22, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 22 S
-        buildOpAtts(23, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 23 M
+        buildOpAtts(23, 1, 5, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 23 M
         buildOpAtts(24, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 24 C
         buildOpAtts(25, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 25 TD
         buildOpAtts(26, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 26 TF
@@ -321,7 +321,7 @@ class Processor {
         buildOpAtts(31, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 31 TR
         buildOpAtts(32, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 32 SF
         buildOpAtts(33, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 33 CF
-        buildOpAtts(34, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 34 K
+        buildOpAtts(34, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 34 K
         buildOpAtts(35, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 35 DN
         buildOpAtts(36, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 36 RN
         buildOpAtts(37, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 37 RA
@@ -1168,7 +1168,6 @@ class Processor {
 
         if (this.ioSelectNr == 5 && this.gateRD.value) { // must be waiting for CardReader input
             const readNumeric = (this.opBinary == 36);
-            let code = 0;               // 1620 internal character code
 
             this.gateRESP_GATE.value = 1;
             if (readNumeric) {
@@ -2114,6 +2113,13 @@ class Processor {
             this.gateADD_ENT.value = 1;
             break;
 
+        case 13:        // MM - Multiply Immediate
+        case 23:        // M - Multiply
+            this.gate1ST_CYC.value = 1;
+            this.gateEZ.value = 1;
+            this.gateHP.value = 1;
+            break;
+
         case 72:        // TNS - Transmit Numeric Strip
         case 73:        // TNF - Transmit Numeric Fill
             this.gate1ST_CYC.value = 1; // not sure how this gets set, but it must
@@ -2229,6 +2235,28 @@ class Processor {
             this.setProcState(procStateE2);
             break;
 
+        case 13:        // MM - Multiply Immediate
+        case 23:        // M - Multiply
+            // Fetch multiplier digit to MQ, determine multiplier sign.
+            this.gate1ST_MPLY_CYCLE.value = 1;
+            this.gateMC_1.value = 0;                    // reset carry propagation flags
+            this.gateMC_2.value = 0;
+            digit = this.regMBR.getDigit(dx);
+            this.resetDROdd();
+            this.setDREven(0);                          // per ILD, but not clear what should be set ??
+            if (digit & Register.flagMask) {
+                if (this.gate1ST_CYC.value) {
+                    this.gateHP.flip();                 // multiplier sign from low-order digit
+                } else {
+                    this.gateFIELD_MK_1.value = 1;      // last multiplier digit
+                }
+            }
+            this.regMQ.value = digit;
+            this.gateFIELD_MK_2.value = 0;
+            this.regOR1.decr(1);
+            this.setProcState(procStateE3);
+            break;
+
         case 30:        // TRNM - Transmit Record No Record Mark
         case 31:        // TR - Transmit Record
             if (this.gateE_CYC_ENT.value) {
@@ -2335,8 +2363,15 @@ class Processor {
         let dx = this.regOR2.isEven;    // digit index: 0/1
         let nextState = 0;
 
-        this.regMAR.value = this.regOR2.value;
-        this.fetch();
+        const op = this.opBinary;
+        switch (op) {
+        case 13:        // MM - Multiply Immediate
+        case 23:        // M - Multiply
+            break;              // fetch done below
+        default:
+            this.regMAR.value = this.regOR2.value;
+            this.fetch();
+        }
 
         if (this.gate1ST_CYC.value) {
             this.gate1ST_CYC.value = 0;
@@ -2345,7 +2380,6 @@ class Processor {
             this.gate1ST_CYC_DELAYD.value = 0;
         }
 
-        let op = this.opBinary;
         switch (op) {
         case 15:        // TDM - Transmit Digit Immediate
         case 25:        // TD - Transmit Digit
@@ -2512,6 +2546,73 @@ class Processor {
             }
             break;
 
+        case 13:        // MM - Multiply Immediate
+        case 23:        // M - Multiply
+            if (this.gate1ST_MPLY_CYCLE.value) {        // ILD has this as 1ST_CYC, but that can't be right
+                this.gate1ST_MPLY_CYCLE.value = 0;
+                this.regMAR.value = this.regPR1.value;
+                this.regPR1.decr(1);
+            } else {
+                this.regMAR.value = this.regPR2.value
+            }
+
+            this.fetch();
+            dx = this.regMAR.isEven;            // digit index
+            digit = this.regMBR.getDigit(dx);
+            if (this.gate2_DIG_CNTRL.value) {   // first E-2 cycle
+                this.regPR2.value = this.regMAR.value;
+                this.regPR2.decr(1);            // next product digit
+                this.gateCARRY_OUT.value = this.gateMC_2.value;
+            } else {
+                this.shiftDREvenOdd();          // second (and third) E-2 cycle
+                this.setDREven(0);                      // addend will be zero on 3rd E-2 cycle...
+            }
+
+            this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+            digit = this.addDigits(digit);
+            if (digit) {
+                this.gateEZ.value = 0;
+            }
+
+            if (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value) {
+                digit |= Register.flagMask;     // set product sign in low-order digit
+            }
+
+            if (!this.gate2_DIG_CNTRL.value) {
+                // Propagate 2nd E-2 carry 2 cycles ahead.
+                this.gateMC_2.value = this.gateMC_1.value;
+                this.gateMC_1.value = this.gateCARRY_OUT.value;
+                // Determine final digit status.
+                if (this.gateFIELD_MK_2.value) {
+                    if (this.gateFIELD_MK_1.value) {
+                        digit |= Register.flagMask;     // set product area field mark
+                    }
+                }
+            }
+
+            this.regMIR.setDigit(dx, digit);
+            this.store();
+
+            // Now, figure out how to get outta here...
+            if (this.gate2_DIG_CNTRL.value) {
+                this.gate2_DIG_CNTRL.value = 0;         // stay in E-2 for 2nd cycle
+            } else {
+                if (this.gateFIELD_MK_2.value) {
+                    if (this.gateMC_2.value) {          // stay in E-2 for 3rd cycle to add final carry
+                        this.gateCARRY_OUT.value = this.gateMC_2.value;
+                    } else if (this.gateFIELD_MK_1.value) {
+                        this.enterICycle();             // finito
+                    } else {
+                        this.setProcState(procStateE1); // advance to next multiplier digit
+                    }
+                } else if (this.regMQ.isZero && !this.gateFIELD_MK_1.value) {
+                    this.setProcState(procStateE1);     // zero multiplier - advance to next multiplier digit
+                } else {
+                    this.setProcState(procStateE3);     // advance to next multiplicand digit
+                }
+            }
+            break;
+
         case 30:        // TRNM - Transmit Record No Record Mark
         case 31:        // TR - Transmit Record
             if (this.gate2_DIG_CNTRL.value) {
@@ -2644,22 +2745,105 @@ class Processor {
     /**************************************/
     stepECycle3() {
         /* Executes E-Cycle 3 */
+        let digit = 0;
+        let dx = 0;                     // digit index: 0/1
 
-        this.panic("E-3 not implemented");
+        switch (this.opBinary) {
+        case 13:        // MM - Multiply Immediate
+        case 23:        // M - Multiply
+            // Fetch Multiplicand digit to DR-odd, determine multiplicand sign.
+            if (this.gate1ST_MPLY_CYCLE.value) {
+                this.regMAR.value = this.regOR2.value;
+            } else {
+                this.regMAR.value = this.regOR3.value;
+            }
+
+            this.fetch();
+            dx = this.regMAR.isEven;
+            digit = this.regMBR.getDigit(dx);
+            if (digit & Register.flagMask) {
+                if (this.gate1ST_CYC.value) {
+                    this.gateHP.flip();                 // multiplicand sign from low-order digit
+                }
+                if (!this.gate1ST_MPLY_CYCLE.value) {
+                    this.gateFIELD_MK_2.value = 1;      // last multiplicand digit
+                }
+            }
+
+            this.resetDREven();
+            this.setDROdd(digit);
+            this.regMAR.decr(1);
+            this.regOR3.value = this.regMAR.value;
+            this.setProcState(procStateE4);
+            break;
+
+        default:
+            this.panic(`E-3 op not implemented ${this.opBinary}`);
+            break;
+        }
     }
 
     /**************************************/
     stepECycle4() {
         /* Executes E-Cycle 4 */
+        let q2 = 0;                     // multiply table address term
 
-        this.panic("E-4 not implemented");
+        switch (this.opBinary) {
+        case 13:        // MM - Multiply Immediate
+        case 23:        // M - Multiply
+            // Fetch product digits based on multiplier (MQ) and multiplicand (DR-odd).
+            // The table address caculation is adapted from Dave Babcock's CHM 1620 Jr. emulator.
+            this.gate2_DIG_CNTRL.value = 1;
+            q2 = (this.regMQ.value & Register.bcdMask)*2 + 10;
+            this.regMAR.binaryValue =
+                    (q2 - q2%10 +                               // hundreds digit
+                    (this.regDR.odd & Register.bcdMask))*10 +   // tens digit
+                    q2%10;                                      // units digit
+            this.fetch();
+            this.setDREven(this.regMBR.odd);    // product tens digit
+            this.setDROdd(this.regMBR.even);    // product units digit
+            this.setProcState(procStateE2);
+            break;
+
+        default:
+            this.panic(`E-4 op not implemented ${this.opBinary}`);
+            break;
+        }
     }
 
     /**************************************/
     stepECycle5() {
         /* Executes E-Cycle 5 */
 
-        this.panic("E-5 not implemented");
+        switch (this.opBinary) {
+        case 13:        // MM - Multiply Immediate
+        case 23:        // M - Multiply
+            // Clear the product area, 00081-00099
+            if (this.gate1ST_CYC.value) {
+                this.gate1ST_CYC.value = 0;
+                this.regPR1.clear();
+                this.regMAR.binaryValue = 81;
+            } else {
+                this.regMAR.value = this.regPR1.value;
+            }
+
+            this.regMIR.clear();
+            this.store();
+            if (this.regMAR.binaryValue == 99) {
+                this.gate1ST_CYC.value = 1;
+                this.setProcState(procStateE1);
+            } else {
+                this.regMAR.incr(2);
+                this.regPR1.value = this.regMAR.value;
+            }
+            break;
+
+        default:
+            this.panic(`E-5 op not implemented ${this.opBinary}`);
+            break;
+        }
+
+        this.gateE_CYC_ENT.value = 0;
     }
 
 

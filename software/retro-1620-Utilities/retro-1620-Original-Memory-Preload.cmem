@@ -16,6 +16,14 @@
 //      Turn on Program Switch 1 to stop it.
 //      That's all this pre-load does.
 //
+// The code included the following multiplication table, which remains in the emulator:
+//
+//      loadMemory(100,
+//          "00000000000010203040002040608000306090210040802161" +      // 100-149
+//          "00500151020060218142007041128200806142230090817263" +      // 150-199
+//          "00000000005060708090012141618151811242720242822363" +      // 200-249
+//          "52035304540363248445532494653604846546275445362718");      // 250-299
+//
 // The code deleted from the emulator's Processor module was this:
 //
 //      // ?? DEBUG ?? I-Cycle testing
