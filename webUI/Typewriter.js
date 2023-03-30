@@ -114,21 +114,22 @@ class Typewriter {
             Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // F8
             Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow];     // FC
 
-        // Public Instance Properties
+    // Public Instance Properties
 
-        paper = null;                           // the output canvas
-        platen = null;                          // the scrolling area
-        doc = null;                             // window document object
-        paperDoc = null;                        // window paper-area
-        window = null;                          // window object
+    doc = null;                         // window document object
+    innerHeight = 0;                    // window specified innerHeight
+    paper = null;                       // the output canvas
+    paperDoc = null;                    // window paper-area
+    platen = null;                      // the scrolling area
+    window = null;                      // window object
 
-        marginLeft = 0;                         // left margin indent
-        marginRight = Typewriter.maxCols;       // right margin stop
-        printerCol = 0;                         // current print position
-        scrollLines = 0;                        // lines in scroll buffer
-        flagPending = false;                    // FLG key has been pressed, awaiting next char
-        tabStops = [];                          // tab stop columns
-        timer = new Timer();                    // delay management timer
+    marginLeft = 0;                     // left margin indent
+    marginRight = Typewriter.maxCols;   // right margin stop
+    printerCol = 0;                     // current print position
+    scrollLines = 0;                    // lines in scroll buffer
+    flagPending = false;                // FLG key has been pressed, awaiting next char
+    tabStops = [];                      // tab stop columns
+    timer = new Timer();                // delay management timer
 
 
     constructor(context) {
@@ -151,10 +152,18 @@ class Typewriter {
         this.boundSelectricLogoClick = this.selectricLogoClick.bind(this);
 
         // Create the Typewriter window
+        let geometry = this.config.formatWindowGeometry("Typewriter");
+        if (geometry.length) {
+            this.innerHeight = this.config.getNode(`WindowConfig.modes.${this.config.getNode("WindowConfig.mode")}.Typewriter.innerHeight`);
+        } else {
+            this.innerHeight = Typewriter.windowHeight;
+            geometry = `,left=${screen.availWidth-Typewriter.windowWidth}` +
+                       `,top=${screen.availHeight-Typewriter.windowHeight}` +
+                       `,width=${Typewriter.windowWidth},height=${Typewriter.windowHeight}`;
+        }
+
         openPopup(window, "../webUI/Typewriter.html", "retro-1620.Typewriter",
-                "location=no,scrollbars,resizable" +
-                `,width=${Typewriter.windowWidth},height=${Typewriter.windowHeight}` +
-                `,left=${screen.availWidth-Typewriter.windowWidth},top=${screen.availHeight-Typewriter.windowHeight}`,
+                "location=no,scrollbars,resizable" + geometry,
                 this, this.typewriterOnLoad);
 
         this.clear();
@@ -243,14 +252,15 @@ class Typewriter {
         this.$$("SelectricLogo").addEventListener("click", this.boundSelectricLogoClick);
         this.$$("FormatControlsDiv").addEventListener("change", this.boundTextOnChange);
 
-        // Resize the window to take into account the difference between inner and outer heights (WebKit).
-        if (this.window.innerHeight < Typewriter.windowHeight) {        // Safari bug
-            this.window.resizeBy(0, Typewriter.windowHeight - this.window.innerHeight);
+        // Resize the window to take into account the difference between
+        // inner and outer heights (WebKit quirk).
+        if (this.window.innerHeight < this.innerHeight) {        // Safari bug
+            this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
         }
 
         setTimeout(() => {
             this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        }, 500);
+        }, 250);
     }
 
 
@@ -1035,8 +1045,10 @@ class Typewriter {
             this.paper.removeEventListener("dblclick", this.boundUnloadPaperClick);
             this.paperDoc.removeEventListener("keydown", this.boundKeydown);
             this.window.removeEventListener("keydown", this.boundKeydown);
-            this.window.removeEventListener("beforeunload", this.beforeUnload);
+
+            this.config.putWindowGeometry(this.window, "Typewriter");
             this.window.removeEventListener("resize", this.boundResizeWindow);
+            this.window.removeEventListener("beforeunload", this.beforeUnload);
             this.window.close();
         }
     }

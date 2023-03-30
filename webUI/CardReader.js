@@ -35,8 +35,10 @@ class CardReader {
 
     doc = null;                         // window document object
     window = null;                      // window object
-    hopperBar = null;                   // input hopper meter bar
     origin = null;                      // window origin for postMessage()
+    innerHeight = 0;                    // window specified innerHeight
+
+    hopperBar = null;                   // input hopper meter bar
     stackerFrame = null;                // output stacker iframe object
     stacker = null;                     // output stacker view area
     timer = new Timer();                // delay management timer
@@ -86,11 +88,17 @@ class CardReader {
         this.boundStackerDblClick = this.stackerDblClick.bind(this);
 
         this.clear();
+        let geometry = this.config.formatWindowGeometry("CardReader");
+        if (geometry.length) {
+            this.innerHeight = this.config.getNode(`WindowConfig.modes.${this.config.getNode("WindowConfig.mode")}.CardReader.innerHeight`);
+        } else {
+            this.innerHeight = CardReader.windowHeight;
+            geometry = `,left=0,top=${screen.availHeight-CardReader.windowHeight}` +
+                       `,width=${CardReader.windowWidth},height=${CardReader.windowHeight}`;
+        }
 
         openPopup(window, "../webUI/CardReader.html", "retro-1620.CardReader",
-                "location=no,scrollbars,resizable" +
-                `,width=${CardReader.windowWidth},height=${CardReader.windowHeight}` +
-                `,left=0,top=${screen.availHeight-CardReader.windowHeight}`,
+                "location=no,scrollbars,resizable" + geometry,
                 this, this.readerOnLoad);
     }
 
@@ -476,14 +484,15 @@ class CardReader {
         this.hopperBar.addEventListener("click", this.boundHopperBarClick);
         this.stackerFrame.contentDocument.body.addEventListener("dblclick", this.boundStackerDblClick);
 
-        // Resize the window to take into account the difference between inner and outer heights (WebKit).
-        if (this.window.innerHeight < CardReader.windowHeight) {        // Safari bug
-            this.window.resizeBy(0, CardReader.windowHeight - this.window.innerHeight);
+        // Resize the window to take into account the difference between
+        // inner and outer heights (WebKit quirk).
+        if (this.window.innerHeight < this.innerHeight) {        // Safari bug
+            this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
         }
 
         setTimeout(() => {
             this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        }, 500);
+        }, 250);
     }
 
     /**************************************/
@@ -630,6 +639,8 @@ class CardReader {
         this.$$("FileSelector").removeEventListener("change", this.boundFileSelectorChange);
         this.hopperBar.removeEventListener("click", this.boundHopperBarClick);
         this.stackerFrame.contentDocument.body.removeEventListener("dblclick", this.boundStackerDblClick);
+
+        this.config.putWindowGeometry(this.window, "CardReader");
         this.window.removeEventListener("message", this.boundReceiveMessage);
         this.window.removeEventListener("beforeunload", this.beforeUnload, false);
         this.window.close();

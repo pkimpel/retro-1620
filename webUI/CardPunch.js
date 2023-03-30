@@ -61,6 +61,7 @@ class CardPunch {
     doc = null;                         // window document object
     window = null;                      // window object
     origin = null;                      // window origin for postMessage()
+    innerHeight = 0;                    // window specified innerHeight
 
     selectStopSwitch = 0;               // Select Stop switch off (0), on (1)
     stackerBar = null;                  // output stacker meter bar
@@ -114,11 +115,17 @@ class CardPunch {
         this.boundReceiveMessage = this.receiveMessage.bind(this);
 
         this.clear();
+        let geometry = this.config.formatWindowGeometry("CardPunch");
+        if (geometry.length) {
+            this.innerHeight = this.config.getNode(`WindowConfig.modes.${this.config.getNode("WindowConfig.mode")}.CardPunch.innerHeight`);
+        } else {
+            this.innerHeight = CardPunch.windowHeight;
+            geometry = `,left=0,top=${screen.availHeight-CardPunch.cardPunchTop}` +
+                       `,width=${CardPunch.windowWidth},height=${CardPunch.windowHeight}`;
+        }
 
         openPopup(window, "../webUI/CardPunch.html", "retro-1620.CardPunch",
-                "location=no,scrollbars,resizable" +
-                `,width=${CardPunch.windowWidth},height=${CardPunch.windowHeight}` +
-                `,left=0,top=${screen.availHeight-CardPunch.cardPunchTop}`,
+                "location=no,scrollbars,resizable" + geometry,
                 this, this.punchOnLoad);
     }
 
@@ -375,22 +382,25 @@ class CardPunch {
 
         this.setTransportReady(true);
 
-        // Resize the window to take into account the difference between inner and outer heights (WebKit).
-        if (this.window.innerHeight < CardPunch.windowHeight) {        // Safari bug
-            this.window.resizeBy(0, CardPunch.windowHeight - this.window.innerHeight);
+        // Resize the window to take into account the difference between
+        // inner and outer heights (WebKit quirk).
+        if (this.window.innerHeight < this.innerHeight) {        // Safari bug
+            this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
         }
 
         setTimeout(() => {
             this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        }, 500);
+        }, 250);
 
-        // Request the CardReader's screen geometry so we can position the punch's window.
-        setTimeout(() => {
-            const win = this.window.open("", "retro-1620.CardReader");
-            if (win) {
-                win.postMessage({fcn: "CardPunch.RequestGeometry"}, this.origin);
-            }
-        }, 1000);
+        if (!this.config.getNode("persistentWindows")) {
+            // Request the CardReader's screen geometry so we can position the punch's window.
+            setTimeout(() => {
+                const win = this.window.open("", "retro-1620.CardReader");
+                if (win) {
+                    win.postMessage({fcn: "CardPunch.RequestGeometry"}, this.origin);
+                }
+            }, 500);
+        }
     }
 
     /**************************************/
@@ -593,6 +603,8 @@ class CardPunch {
         this.$$("NPROSwitch").removeEventListener("dblclick", this.boundNPROSwitchAction);
         this.$$("SelectStopSwitch").removeEventListener("click", this.boundSelectStopSwitchClick);
         this.stackerBar.removeEventListener("click", this.boundStackerBarClick);
+
+        this.config.putWindowGeometry(this.window, "CardPunch");
         this.window.removeEventListener("message", this.boundReceiveMessage);
         this.window.removeEventListener("beforeunload", this.beforeUnload, false);
         this.window.close();

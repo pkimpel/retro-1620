@@ -31,7 +31,7 @@
 
 <div id=configDiv class=devicePanel>
     <div id=PageHeading>
-        <span id=SysConfigHeading>IBM 1620-2 System Configuration</span>
+        <span id=SysConfigHeading>IBM 1620 Model 2 &ndash; System Configuration</span>
         <div id=retro1620Logo>
             <img id=RetroLogoImage src="./resources/retro-1620-Logo.png" alt="retro-1620 logo">
         </div>
@@ -58,10 +58,12 @@
                <label for=SystemFloatingPoint>Floating Point</label><br>
         <input id=SystemBinaryCaps     type=checkbox value=1 DISABLED>
                <label for=SystemBinaryCaps>Binary Capabilities</label><br>
+        <input id=SystemPersistentWin  type=checkbox value=1>
+               <label for=SystemPersistentWin>Persistent Window Positions</label><br>
     </div>
 
 
-    <div class=heading>731 Typewriter: [change on device panel]</div>
+    <div class=heading>731 Typewriter: [change settings on device panel]</div>
     <div class=details>
         Margin Left=<span id=MarginLeft></span>, Right=<span id=MarginRight></span>,
         Columns=<span id=Columns></span><br>
@@ -100,7 +102,7 @@
                <label for=DiskInstalled>Installed</label><br>
         <br>
         <input id=Disk0Enabled type=checkbox value=1>
-               <label for=Disk0Enabled>Disk 0 Enabled (required)</label><br>
+               <label for=Disk0Enabled>Disk 0 Enabled (required if disk installed)</label><br>
         <input id=Disk1Enabled type=checkbox value=1>
                <label for=Disk1Enabled>Disk 1 Enabled</label><br>
         <input id=Disk2Enabled type=checkbox value=1>

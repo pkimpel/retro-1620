@@ -41,6 +41,10 @@ class ControlPanel {
 
     // Public instance properties
 
+    doc = null;                         // window document object
+    innerHeight = 0;                    // window specified innerHeight
+    window = null;                      // window object
+
     avgInstructionRate = 0;             // running average instructions/sec
     debugView = false;                  // true if Debug View is displaying
     intervalToken = 0;                  // panel refresh timer cancel token
@@ -73,12 +77,17 @@ class ControlPanel {
         this.boundShutDown = this.shutDown.bind(this);
 
         // Create the Control Panel window
-        this.doc = null;
-        this.window = null;
+        let geometry = this.config.formatWindowGeometry("ControlPanel");
+        if (geometry.length) {
+            this.innerHeight = this.config.getNode(`WindowConfig.modes.${this.config.getNode("WindowConfig.mode")}.ControlPanel.innerHeight`);
+        } else {
+            this.innerHeight = ControlPanel.windowHeight;
+            geometry = `,left=${screen.availWidth-ControlPanel.windowWidth},top=0` +
+                       `,width=${ControlPanel.windowWidth},height=${ControlPanel.windowHeight}`;
+        }
+
         openPopup(window, "../webUI/ControlPanel.html", "retro-1620.ControlPanel",
-                "location=no,scrollbars,resizable" +
-                `,width=${ControlPanel.windowWidth},height=${ControlPanel.windowHeight}` +
-                `,top=0,left=${screen.availWidth - ControlPanel.windowWidth}`,
+                "location=no,scrollbars,resizable" + geometry,
                 this, this.panelOnLoad);
     }
 
@@ -382,14 +391,15 @@ class ControlPanel {
             }, 2000);
         }, 1000);
 
-        // Resize the window to take into account the difference between inner and outer heights (WebKit).
-        if (this.window.innerHeight < ControlPanel.windowHeight) {      // Safari bug
-            this.window.resizeBy(0, ControlPanel.windowHeight - this.window.innerHeight);
+        // Resize the window to take into account the difference between
+        // inner and outer heights (WebKit quirk).
+        if (this.window.innerHeight < this.innerHeight) {        // Safari bug
+            this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
         }
 
         setTimeout(() => {
             this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        }, 500);
+        }, 250);
     }
 
     /**************************************/
@@ -568,6 +578,7 @@ class ControlPanel {
             this.$$("CMEMCancelBtn").removeEventListener("click", cancelLoad);
             this.$$("CMEMDumpBtn").removeEventListener("click", initiateCMEMDump);
             this.$$("CMEMSelector").removeEventListener("change", initiateCMEMLoad);
+            this.$$("CMEMSelector").value = null;       // reset the file-picker control
             this.$$("LoadCMEMDiv").style.display = "none";
         };
 
@@ -660,6 +671,10 @@ class ControlPanel {
     updatePanel() {
         /* Updates the panel registers and flip-flops from processor state */
         const p = this.context.processor;
+
+        if (!p) {
+            return;                     // probably got caught in a shutdown
+        }
 
         p.updateLampGlow(0);
 
@@ -1080,11 +1095,12 @@ class ControlPanel {
         this.$$("IBMLogo").removeEventListener("dblClick", this.boundToggleDebugView);
         this.$$("DPSLogo").removeEventListener("dblclick", this.boundLoadCMEMFile);
 
+        this.config.putWindowGeometry(this.window, "ControlPanel");
         this.window.removeEventListener("beforeunload", this.boundBeforeUnload);
         this.window.removeEventListener("unload", this.boundPanelUnload);
         this.context.systemShutDown();
         this.window.setTimeout(() => {
             this.window.close();
-        }, 2000);
+        }, 1500);
     }
 } // class ControlPanel
