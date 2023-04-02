@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   sodipodi:docname="PowerSwitchSkeleton.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="true"
+     showguides="true"
+     inkscape:zoom="2"
+     inkscape:cx="413.5"
+     inkscape:cy="626.5"
+     inkscape:window-width="1920"
+     inkscape:window-height="1057"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid255" />
+  </sodipodi:namedview>
+  <defs
+     id="defs2">
+    <inkscape:perspective
+       sodipodi:type="inkscape:persp3d"
+       inkscape:vp_x="-94.378005 : -1.1557591e-14 : 0"
+       inkscape:vp_y="4.9461025e-14 : -807.78655 : 0"
+       inkscape:vp_z="562.77029 : 121.63112 : 1"
+       inkscape:persp3d-origin="113.05223 : 121.63112 : 1"
+       id="perspective117" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.264583;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       id="rect435"
+       width="68.474167"
+       height="26.458334"
+       x="74.363289"
+       y="186.76141" />
+    <path
+       style="fill:none;stroke:#404040;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 74.335392,186.57711 3.697761,26.68829 61.112587,-0.0771 3.68683,-26.61117 z"
+       id="path1946"
+       sodipodi:nodetypes="ccccc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.22566px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 80.935159,110.32733 c -0.08758,239.26736 0,0 0,0 z"
+       id="path3250" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.22566px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 136.49787,110.32733 c -0.0876,239.26736 0,0 0,0 z"
+       id="path4704" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.235127px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 74.331132,186.60001 3.838337,-11.38226 60.883981,-0.20886 3.83833,11.79996 z"
+       id="path5432" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 78.184374,175.02187 c 0,0 -0.374622,-17.59479 2.645833,-17.59479 h 55.562503 c 2.97041,0 2.51354,17.4625 2.51354,17.4625 z"
+       id="path6160"
+       sodipodi:nodetypes="csscc" />
+  </g>
+</svg>
