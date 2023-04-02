@@ -35,6 +35,7 @@ class SystemConfig {
         floatingPoint: 0,               // for now...
         binaryCapabilities: 0,
         persistentWindows: 0,
+        multiScreen: 0,
 
         ControlPanel: {
             Program1SW: 0,              // Program Switches 0/1
@@ -98,6 +99,7 @@ class SystemConfig {
         /* Constructor for the SystemConfig configuration management object */
 
         this.configData = null;         // the configuration properties
+        this.configReporter = null;     // callback function passed from main window
         this.flushTimerToken = 0;       // timer token for flushing configuration to localStorage
         this.window = null;             // configuration UI window object
         this.alertWin = window;         // current base window for alert/confirm/prompt
@@ -111,6 +113,19 @@ class SystemConfig {
                 this.createConfigData();
                 this.loadConfigDialog();
         };
+    }
+
+    /**************************************/
+    $$(id) {
+        return this.doc.getElementById(id);
+    }
+
+    /**************************************/
+    async activate() {
+        /* Initializes the configuration and determines the window-positioning
+        mode. This is async because multi-screen window positioning, if enabled,
+        must be requested asynchronously. Returns a message describing the
+        window positioning mode */
 
         // Load or create the system configuration data
         let s = localStorage.getItem(SystemConfig.configStorageName);
@@ -120,12 +135,7 @@ class SystemConfig {
             this.loadConfigData(s);
         }
 
-        this.determineWindowConfigMode();
-    }
-
-    /**************************************/
-    $$(id) {
-        return this.doc.getElementById(id);
+        return await this.determineWindowConfigMode();
     }
 
     /**************************************/
@@ -182,40 +192,54 @@ class SystemConfig {
             // Reserved for future use
         }
 
-        /**********/
-        // ?? TEMP cleanup during development ??
-        if ("cpm" in this.configData.Card) {
-            this.configData.Card.cpmRead = this.configData.Card.cpm;
-            this.configData.Card.cpmPunch = this.configData.Card.cpm/2;
-            delete this.configData.Card.cpm;
-        }
+        // Recursively merge any new properties from the defaults.
+        this.sortaDeepMerge(this.configData, SystemConfig.defaultConfig);
+    }
 
-        for (let modeKey in this.configData.WindowConfig.modes) {
-            const mode = this.configData.WindowConfig.modes[modeKey];
-            for (let unitKey in mode) {
-                const unit = mode[unitKey];
-                for (let propKey in unit) {
-                    switch (propKey) {
-                    case "outerWidth":
-                        if ("innerWidth" in unit) {
-                            delete unit[propKey];
+    /**************************************/
+    async determineWindowConfigMode() {
+        /* Attempt to determine the browser's display configuration */
+        const cd = this.configData;
+        let msg = "";
+
+        if (!cd.persistentWindows) {
+            cd.WindowConfig.mode = "Auto";
+        } else {
+            cd.WindowConfig.mode = "Single";    // default to this if anything below fails
+            msg = "-screen persistent";
+            if (cd.multiScreen && window.screen.isExtended && ("getScreenDetails" in window)) {
+                // Check that permission has not already been denied.
+                let permission = null;
+                try { // check the newer permission name
+                    permission = await navigator.permissions.query({name: "window-management"});
+                } catch (e) {
+                    try { // fall back to the older permission name
+                        permission = await navigator.permissions.query({name: "window-placement"});
+                    } catch (e) {
+                        msg += ": Multi-screen positioning NOT AVAILABLE";
+                    }
+                }
+
+                if (permission) {
+                    if (permission.state === "denied") {
+                        msg += ": Multi-screen positioning DISALLOWED";
+                    } else {
+                        // Calling getScreenDetails() is what actually triggers the permission.
+                        // The result object can be saved globally if needed.
+                        try {
+                            const screenDetails = await window.getScreenDetails();
+                            if (screenDetails !== null) {
+                                cd.WindowConfig.mode = "Multiple";
+                            }
+                        } catch (e) {
+                            msg += ": Multi-screen positioning REFUSED";
                         }
-                        break;
-                    case "outerHeight":
-                        if ("innerHeight" in unit) {
-                            delete unit[propKey];
-                        }
-                        break;
                     }
                 }
             }
         }
-        this.flush();
-        // ?? TEMP end of cleanup ??
-        /**********/
 
-        // Recursively merge any new properties from the defaults.
-        this.sortaDeepMerge(this.configData, SystemConfig.defaultConfig);
+        return `Window positioning is ${cd.WindowConfig.mode}${msg}.`;
     }
 
     /**************************************/
@@ -236,6 +260,10 @@ class SystemConfig {
             this.flushHandler();
         }
     }
+
+    /*******************************************************************
+    *   Configuration Node Management                                  *
+    *******************************************************************/
 
     /**************************************/
     getNode(nodeName, index) {
@@ -308,41 +336,24 @@ class SystemConfig {
     }
 
     /**************************************/
-    determineWindowConfigMode() {
-        // Attempt to determine the browser's display configuration
-        const cd = this.configData;
+    getWindowProperty(id, prop) {
+        /* Returns a WindowConfig property value based on the specified unit/
+        window id and the property name. If the property does not exist,
+        returns undefined */
+        const wc = this.configData.WindowConfig;
+        let value;                      // undefined by default
 
-        if (!cd.persistentWindows) {
-            this.putNode("WindowConfig.mode", "Auto");
-        } else if (window.screen.isExtended) {
-            this.putNode("WindowConfig.mode", "Multiple");
-        } else {
-            this.putNode("WindowConfig.mode", "Single");
-        }
-    }
-
-    /**************************************/
-    setWindowGeometry(win, id) {
-        /* Sets the geometry for the specified window under the specified
-        window/unit id. Returns true if the geometry was set, false if not (in
-        which case the caller should do its automatic window placement). If the
-        configuration has no data for the specified window or id, returns false */
-        const cd = this.configData;
-        let doAuto = false;
-
-        if (cd.persistentWindows) {
-            const mode = cd.WindowConfig.mode;
-            if (mode in cd.WindowConfig.modes) {
-                if (id in cd.WindowConfig.modes[mode]) {
-                    const unit = WindowConfig.modes[mode][id];
-                    win.moveTo(unit.screenX ?? 0, unit.screenY ?? 0);
-                    win.resizeTo(unit.outerWidth ?? 250, unit.outerHeight ?? 250);
-                    doAuto = true;
+        const mode = wc.mode;
+        if (mode in wc.modes) {
+            if (id in wc.modes[mode]) {
+                const unit = wc.modes[mode][id];
+                if (prop in unit) {
+                    value = unit[prop];
                 }
             }
         }
 
-        return doAuto;
+        return value;
     }
 
     /**************************************/
@@ -356,10 +367,11 @@ class SystemConfig {
         let geometry = "";
 
         if (cd.persistentWindows) {
-            const mode = cd.WindowConfig.mode;
-            if (mode in cd.WindowConfig.modes) {
-                if (id in cd.WindowConfig.modes[mode]) {
-                    const unit = cd.WindowConfig.modes[mode][id];
+            const wc = cd.WindowConfig;
+            const mode = wc.mode;
+            if (mode in wc.modes) {
+                if (id in wc.modes[mode]) {
+                    const unit = wc.modes[mode][id];
                     geometry = `,left=${unit.screenX ?? 0}` +
                                `,top=${unit.screenY ?? 0}` +
                                `,width=${unit.innerWidth ?? 250}` +
@@ -382,8 +394,6 @@ class SystemConfig {
         this.putNode(`${prefix}.screenY`, win.screenY);
         this.putNode(`${prefix}.innerWidth`, win.innerWidth);
         this.putNode(`${prefix}.innerHeight`, win.innerHeight);
-        //this.putNode(`${prefix}.outerWidth`, win.outerWidth);
-        //this.putNode(`${prefix}.outerHeight`, win.outerHeight);
     }
 
     /***********************************************************************
@@ -421,6 +431,8 @@ class SystemConfig {
         this.$$("SystemFloatingPoint").checked = cd.floatingPoint;
         this.$$("SystemBinaryCaps").checked = cd.binaryCapabilities;
         this.$$("SystemPersistentWin").checked = cd.persistentWindows;
+        this.$$("SystemMultiScreen").checked = cd.multiScreen;
+        this.$$("SystemMultiScreen").disabled = !cd.persistentWindows;
 
         // Typewriter
         this.$$("MarginLeft").textContent = x = cd.Typewriter.marginLeft;
@@ -460,23 +472,18 @@ class SystemConfig {
 
         switch (id) {
         case "SystemPersistentWin":
-            this.putNode("persistentWindows", (ev.target.checked ? 1 : 0));
-            this.determineWindowConfigMode();
+            this.$$("SystemMultiScreen").disabled = !ev.target.checked;
             break;
         case "CardInstalled":
-            this.putNode("Card.hasCard", (ev.target.checked ? 1 : 0));
-            this.$$("CardSpeed").disabled = !cd.Card.hasCard;
-            this.$$("CardPunchStackerLimit").disabled = !cd.Card.hasCard;
+            this.$$("CardSpeed").disabled = !ev.target.checked;
+            this.$$("CardPunchStackerLimit").disabled = !ev.target.checked;
             break;
         case "PrinterInstalled":
-            this.putNode("Printer.hasPrinter", (ev.target.checked ? 1 : 0));
-            this.$$("PrinterSpeed").disabled = !cd.Printer.hasPrinter;
+            this.$$("PrinterSpeed").disabled = !ev.target.checked;
             break;
         case "DiskInstalled":
-            this.putNode("Disk.hasDisk", (ev.target.checked ? 1 : 0));
             for (let x=0; x<4; ++x) {
-                const id = `Disk${x}Enabled`;
-                this.$$(id).disabled = !cd.Disk.hasDisk;
+                this.$$(`Disk${x}Enabled`).disabled = !ev.target.checked;
             }
             break;
         }
@@ -513,6 +520,8 @@ class SystemConfig {
         cd.floatingPoint =      (this.$$("SystemFloatingPoint").checked ? 1 : 0);
         cd.binaryCapabilities = (this.$$("SystemBinaryCaps").checked ? 1 : 0);
         cd.persistentWindows =  (this.$$("SystemPersistentWin").checked ? 1 : 0);
+        this.$$("SystemMultiScreen").enabled = !cd.persistentWindows;
+        cd.multiScreen =        (this.$$("SystemMultiScreen").checked ? 1 : 0);
 
         // Typewriter
             // (nothing to do here -- settings changed on device)
@@ -520,6 +529,7 @@ class SystemConfig {
         // Card Reader/Punch
         cd.Card.hasCard = (this.$$("CardInstalled").checked ? 1 : 0);
         e = this.$$("CardSpeed");
+        e.disabled = !cd.Card.hasCard;
         x = parseInt(e.options[e.selectedIndex].value, 10);
         switch (x) {
         case 500:
@@ -532,7 +542,9 @@ class SystemConfig {
             break;
         }
 
-        x = parseInt(this.$$("CardPunchStackerLimit").value, 10);
+        e = this.$$("CardPunchStackerLimit");
+        e.disabled = !cd.Card.hasCard;
+        x = parseInt(e.value, 10);
         if (x < 100) {
             cd.Card.stackerPunch = 100;
         } else if (x > 999999) {
@@ -544,6 +556,7 @@ class SystemConfig {
         // Printer
         cd.Printer.hasPrinter = (this.$$("PrinterInstalled").checked ? 1 : 0);
         e = this.$$("PrinterSpeed");
+        e.disabled = !cd.Printer.hasPrinter;
         x = parseInt(e.options[e.selectedIndex].value, 10);
         cd.Printer.lpm = (isNaN(x) ? 250 : x);
 
@@ -553,10 +566,17 @@ class SystemConfig {
         cd.Disk.units[1].enabled = (this.$$("Disk1Enabled").checked ? 1 : 0);
         cd.Disk.units[2].enabled = (this.$$("Disk2Enabled").checked ? 1 : 0);
         cd.Disk.units[3].enabled = (this.$$("Disk3Enabled").checked ? 1 : 0);
+        this.$$("Disk0Enabled").disabled = !cd.Disk.hasDisk;
+        this.$$("Disk1Enabled").disabled = !cd.Disk.hasDisk;
+        this.$$("Disk2Enabled").disabled = !cd.Disk.hasDisk;
+        this.$$("Disk3Enabled").disabled = !cd.Disk.hasDisk;
 
-        this.flushHandler();            // store the configuration
-        this.$$("MessageArea").textContent = "1620 System Configuration updated.";
-        this.window.close();
+        this.determineWindowConfigMode().then((msg) => {
+            this.flushHandler();        // store the configuration
+            this.$$("MessageArea").textContent = msg;
+            this?.configReporter(msg);
+            this.window.close();
+        });
     }
 
     /**************************************/
@@ -565,6 +585,7 @@ class SystemConfig {
 
         this.alertWin = window;         // revert alerts to the global window
         window.focus();
+        this.configReporter = null;
         this.$$("SaveBtn").removeEventListener("click", this.boundSaveConfigDialog, false);
         this.$$("CancelBtn").removeEventListener("click", this.boundWindowClose, false);
         this.$$("DefaultsBtn").removeEventListener("click", this.boundSetDefaultConfig, false);
@@ -579,7 +600,7 @@ class SystemConfig {
     }
 
     /**************************************/
-    openConfigUI() {
+    openConfigUI(configReporter) {
         /* Opens the system configuration update dialog and displays the current
         system configuration */
 
@@ -600,8 +621,9 @@ class SystemConfig {
 
         this.doc = null;
         this.window = null;
+        this.configReporter = configReporter;
         openPopup(window, "../webUI/SystemConfig.html", `retro-1620.${SystemConfig.configStorageName}`,
-                "location=no,scrollbars,resizable,width=800,height=800",
+                "location=no,scrollbars,resizable,width=544,height=800",
                 this, configUI_Load);
     }
 } // SystemConfig class

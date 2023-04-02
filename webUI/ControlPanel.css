@@ -15,7 +15,8 @@ BODY {
     position:           relative;
     height:             100%;
     width:              100%;
-    background-color:   white}
+    background-color:   white;
+    overflow:           hidden}
 
 DIV.rowCaption {
     position:           absolute;
@@ -371,8 +372,8 @@ DIV.evenOddCaption {
 #PowerBtn {
     position:           absolute;
     width:              56px;
-    height:             48px;
-    bottom:             3px;
+    height:             46px;
+    bottom:             1px;
     left:               4px;
     border-bottom:      6px solid white;
     cursor:             pointer}
@@ -653,7 +654,7 @@ DIV.evenOddCaption {
 #VersionDiv {
     position:           absolute;
     right:              8px;
-    bottom:             8px;
+    bottom:             4px;
     font-size:          10px;
     color:              black}
 

@@ -117,7 +117,7 @@ class CardPunch {
         this.clear();
         let geometry = this.config.formatWindowGeometry("CardPunch");
         if (geometry.length) {
-            this.innerHeight = this.config.getNode(`WindowConfig.modes.${this.config.getNode("WindowConfig.mode")}.CardPunch.innerHeight`);
+            this.innerHeight = this.config.getWindowProperty("CardPunch", "innerHeight");
         } else {
             this.innerHeight = CardPunch.windowHeight;
             geometry = `,left=0,top=${screen.availHeight-CardPunch.cardPunchTop}` +
@@ -388,9 +388,9 @@ class CardPunch {
             this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
         }
 
-        setTimeout(() => {
-            this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        }, 250);
+        //setTimeout(() => {
+        //    this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
+        //}, 250);
 
         if (!this.config.getNode("persistentWindows")) {
             // Request the CardReader's screen geometry so we can position the punch's window.

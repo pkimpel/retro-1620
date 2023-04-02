@@ -38,10 +38,17 @@ let globalLoad = (ev) => {
     }
 
     /**************************************/
+    function configReporter(msg) {
+        /* Displays a configuration result message */
+
+        $$("ConfigMsg").textContent = msg;
+    }
+
+    /**************************************/
     function configureSystem(ev) {
         /* Opens the system configuration UI */
 
-        config.openConfigUI();
+        config.openConfigUI(configReporter);
     }
 
     /**************************************/
@@ -68,8 +75,26 @@ let globalLoad = (ev) => {
     }
 
     /**************************************/
-    function systemStartup(ev) {
+    async function systemInitialize() {
+        /* Activates the system configuration object (asynchronously) and
+        enables the Start and Configure buttons on the window */
+
+        const msg = await config.activate();
+        configReporter(msg);
+
+        $$("StartUpBtn").disabled = false;
+        $$("StartUpBtn").addEventListener("click", systemStartup, false);
+        $$("StartUpBtn").focus();
+        $$("ConfigureBtn").disabled = false;
+        $$("ConfigureBtn").addEventListener("click", configureSystem, false);
+    }
+
+    /**************************************/
+    async function systemStartup(ev) {
         /* Establishes the system components */
+
+        const msg = await config.activate();
+        configReporter(msg);
 
         $$("StartUpBtn").disabled = true;
         $$("ConfigureBtn").disabled = true;
@@ -149,12 +174,7 @@ let globalLoad = (ev) => {
     $$("StartUpBtn").disabled = true;
     $$("EmulatorVersion").textContent = Version.retro1620Version;
     if (checkBrowser()) {
-        $$("StartUpBtn").disabled = false;
-        $$("StartUpBtn").addEventListener("click", systemStartup, false);
-        $$("StartUpBtn").focus();
-        $$("ConfigureBtn").disabled = false;
-        $$("ConfigureBtn").addEventListener("click", configureSystem, false);
-
+        systemInitialize();
         //$$("StatusMsg").textContent = "??";
         //clearStatusMsg(30);
     }

@@ -263,7 +263,7 @@ BUTTON.panel {
     border-right:       none}
 
 BUTTON.darkBlueButton {
-    color:              white;
+    color:              #FFC;
     cursor:             pointer;
     background-image:   linear-gradient(#0C2340, #000020, #0C2340)}       /* #0C2340=Pantone 289C */
 BUTTON.darkBlueButtonDown {

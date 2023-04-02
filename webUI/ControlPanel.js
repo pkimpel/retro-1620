@@ -79,7 +79,7 @@ class ControlPanel {
         // Create the Control Panel window
         let geometry = this.config.formatWindowGeometry("ControlPanel");
         if (geometry.length) {
-            this.innerHeight = this.config.getNode(`WindowConfig.modes.${this.config.getNode("WindowConfig.mode")}.ControlPanel.innerHeight`);
+            this.innerHeight = this.config.getWindowProperty("ControlPanel", "innerHeight");
         } else {
             this.innerHeight = ControlPanel.windowHeight;
             geometry = `,left=${screen.availWidth-ControlPanel.windowWidth},top=0` +
@@ -257,7 +257,7 @@ class ControlPanel {
 
         this.powerBtn = this.$$("PowerBtn");
         //this.powerBtn = new PanelButton(panel, null, null, "PowerBtn", "POWER", "panel darkBlueButton", "darkBlueButtonDown");
-        this.powerBtn.src = ControlPanel.powerBtnOnImage;
+        this.powerBtn.src = ControlPanel.powerBtnOffImage;
         this.powerBtn.title = "Double-click to power off and shut down the emulator";
         this.resetBtn = new PanelButton(panel, null, null, "ResetBtn", "RESET", "panel darkBlueButton", "darkBlueButtonDown");
         this.modifyBtn = new PanelButton(panel, null, null, "ModifyBtn", "MODIFY", "panel darkBlueButton", "darkBlueButtonDown");
@@ -382,13 +382,16 @@ class ControlPanel {
 
         // Power up and initialize the system.
         setTimeout(() => {
-            p.powerUp();
-            this.powerOnLamp.set(1);
+            this.powerBtn.src = ControlPanel.powerBtnOnImage;
             setTimeout(() => {
-                p.gatePOWER_READY.value = 1;
-                this.powerReadyLamp.set(1);
-                this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
-            }, 2000);
+                this.powerOnLamp.set(1);
+                p.powerUp();
+                setTimeout(() => {
+                    p.gatePOWER_READY.value = 1;
+                    this.powerReadyLamp.set(1);
+                    this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
+                }, 2000);
+            }, 1000);
         }, 1000);
 
         // Resize the window to take into account the difference between
@@ -397,9 +400,9 @@ class ControlPanel {
             this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
         }
 
-        setTimeout(() => {
-            this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        }, 250);
+        //setTimeout(() => {
+        //    this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
+        //}, 250);
     }
 
     /**************************************/

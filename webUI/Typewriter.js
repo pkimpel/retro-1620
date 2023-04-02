@@ -154,7 +154,7 @@ class Typewriter {
         // Create the Typewriter window
         let geometry = this.config.formatWindowGeometry("Typewriter");
         if (geometry.length) {
-            this.innerHeight = this.config.getNode(`WindowConfig.modes.${this.config.getNode("WindowConfig.mode")}.Typewriter.innerHeight`);
+            this.innerHeight = this.config.getWindowProperty("Typewriter", "innerHeight");
         } else {
             this.innerHeight = Typewriter.windowHeight;
             geometry = `,left=${screen.availWidth-Typewriter.windowWidth}` +
@@ -258,9 +258,9 @@ class Typewriter {
             this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
         }
 
-        setTimeout(() => {
-            this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        }, 250);
+        //setTimeout(() => {
+        //    this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
+        //}, 250);
     }
 
 

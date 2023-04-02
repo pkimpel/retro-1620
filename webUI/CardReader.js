@@ -90,7 +90,7 @@ class CardReader {
         this.clear();
         let geometry = this.config.formatWindowGeometry("CardReader");
         if (geometry.length) {
-            this.innerHeight = this.config.getNode(`WindowConfig.modes.${this.config.getNode("WindowConfig.mode")}.CardReader.innerHeight`);
+            this.innerHeight = this.config.getWindowProperty("CardReader", "innerHeight");
         } else {
             this.innerHeight = CardReader.windowHeight;
             geometry = `,left=0,top=${screen.availHeight-CardReader.windowHeight}` +
@@ -490,9 +490,9 @@ class CardReader {
             this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
         }
 
-        setTimeout(() => {
-            this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        }, 250);
+        //setTimeout(() => {
+        //    this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
+        //}, 250);
     }
 
     /**************************************/
