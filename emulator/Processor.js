@@ -274,8 +274,6 @@ class Processor {
         this.ioReadCheckPending = false;                // Read Check condition has occurred but not yet been set
         this.ioWriteCheckPending = false;               // Write Check condition has occurred but not het been set
 
-        // Bound Methods
-
         // Initialization
         const buildOpAtts = (opCode,
                 opValid, eState, rfe1, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4) => {
@@ -303,8 +301,8 @@ class Processor {
         buildOpAtts(15, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 15 TDM
         buildOpAtts(16, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 16 TFM
         buildOpAtts(17, 1, 2, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0);      // 17 BTM
-        buildOpAtts(18, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 18 LDM
-        buildOpAtts(19, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 19 DM
+        buildOpAtts(18, 1, 5, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 18 LDM
+        buildOpAtts(19, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 19 DM
 
         buildOpAtts(20, 1, 2, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 20 BTA
         buildOpAtts(21, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 21 A
@@ -314,8 +312,8 @@ class Processor {
         buildOpAtts(25, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 25 TD
         buildOpAtts(26, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 26 TF
         buildOpAtts(27, 1, 2, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 27 BT
-        buildOpAtts(28, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 28 LD
-        buildOpAtts(29, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 29 D
+        buildOpAtts(28, 1, 5, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 28 LD
+        buildOpAtts(29, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 29 D
 
         buildOpAtts(30, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 30 TRNM
         buildOpAtts(31, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 31 TR
@@ -508,7 +506,7 @@ class Processor {
             this.gateCARRY_OUT.value = 1;
         }
 
-        this.setDROdd(sum);
+        this.regDR.odd = sum;           // don't do setDROdd() -- preserve FL_1 state
         return sum;
     }
 
@@ -2120,9 +2118,18 @@ class Processor {
             this.gateHP.value = 1;
             break;
 
+        case 18:        // LDM - Load Dividend Immediate
+        case 28:        // LD - Load Dividend
         case 72:        // TNS - Transmit Numeric Strip
         case 73:        // TNF - Transmit Numeric Fill
-            this.gate1ST_CYC.value = 1; // not sure how this gets set, but it must
+            this.gate1ST_CYC.value = 1;
+            break;
+
+        case 19:        // DM - Divide Immediate
+        case 29:        // D - Divide
+            this.gateDIV_1_CYC.value = 1;
+            this.enterAdd();            // DO NOT set ADD_ENT for first cycle
+            this.gateCOMP.value = 1;
             break;
         }
 
@@ -2143,7 +2150,6 @@ class Processor {
         this.gateADD_MODE.value = 1;
         this.gateFIELD_MK_1.value = 0;
         this.gateFIELD_MK_2.value = 0;
-        this.gateADD_ENT.value = 0;
 
         switch (this.opBinary) {
         case 12:        // Subtract Immediate, SM
@@ -2177,15 +2183,24 @@ class Processor {
         let digit = 0;
         let dx = this.regOR1.isEven;    // digit index: 0/1
 
-        this.regMAR.value = this.regOR1.value;
-        this.fetch();
+        switch (this.opBinary) {
+        case 19:        // DM - Divide Immediate
+        case 29:        // D - Divide
+            break;              // fetch done below
+        default:
+            this.regMAR.value = this.regOR1.value;
+            this.fetch();
+            break;
+        }
 
         switch (this.opBinary) {
         case  6:        // TFL - Transmit Floating
         case 15:        // TDM - Transmit Digit Immediate
         case 16:        // TFM - Transmit Field Immediate
+        case 18:        // LDM - Load Dividend Immediate
         case 25:        // TD - Transmit Digit
         case 26:        // TF - Transmit Field
+        case 28:        // LD - Load Dividend
             if (this.gateE_CYC_ENT.value) {
                 this.enterTransmit();
             }
@@ -2213,13 +2228,13 @@ class Processor {
         case 22:        // S - Subtract
         case 24:        // C - Compare
             digit = this.regMBR.getDigit(dx);
-            if (this.gateE_CYC_ENT.value) {
+            if (this.gateADD_ENT.value) {
                 this.enterAdd();
-                // If the low-order Q digit is flagged, reverse COMP, CARRY_IN, HP
+                this.gateADD_ENT.value = 0;
+                // If the low-order Q digit is flagged, reverse COMP, CARRY_IN
                 if (digit & Register.flagMask) {
                     this.gateCOMP.flip();
                     this.gateCARRY_IN.value = this.gateCOMP.value;
-                    //this.gateHP.flip();
                 }
             }
 
@@ -2251,10 +2266,42 @@ class Processor {
                     this.gateFIELD_MK_1.value = 1;      // last multiplier digit
                 }
             }
+
             this.regMQ.value = digit;
             this.gateFIELD_MK_2.value = 0;
             this.regOR1.decr(1);
             this.setProcState(procStateE3);
+            break;
+
+        case 19:        // DM - Divide Immediate
+        case 29:        // D - Divide
+            if (this.gateADD_ENT.value) {               // not set initially
+                this.gate1ST_CYC.value = 1;
+                this.gateADD_MODE.value = 1;
+                this.gateFIELD_MK_1.value = 0;
+                this.gateFIELD_MK_2.value = 0;
+                this.gateCOMP.value = this.gateCARRY_OUT.value;
+                this.gateADD_ENT.value = 0;
+            }
+
+            if (this.gate1ST_CYC.value) {
+                this.regMAR.value = this.regPR1.value = this.regOR1.value;
+            } else {
+                this.regMAR.value = this.regPR1.value;
+            }
+
+            this.fetch();
+
+            this.resetDROdd();
+            this.setDREven(this.regMBR.even);
+            if (this.regMAR.isEven) {
+                this.regPR1.decr(1);
+            } else {                    // MAR is odd
+                this.gate2_DIG_CNTRL.value = 1;
+                this.setDROdd(this.regMBR.odd);
+                this.regPR1.decr(2);
+            }
+            this.setProcState(procStateE2);
             break;
 
         case 30:        // TRNM - Transmit Record No Record Mark
@@ -2366,7 +2413,11 @@ class Processor {
         const op = this.opBinary;
         switch (op) {
         case 13:        // MM - Multiply Immediate
+        case 18:        // LDM - Load Dividend Immediate
+        case 19:        // DM - Divide Immediate
         case 23:        // M - Multiply
+        case 28:        // LD - Load Dividend
+        case 29:        // D - Divide
             break;              // fetch done below
         default:
             this.regMAR.value = this.regOR2.value;
@@ -2405,7 +2456,7 @@ class Processor {
                 this.regOR2.decr(1);                    // starting xmit dest address
                 this.enterTransmit();
                 this.setProcState(procStateE1);
-                break;  // out of switch -- NOTE this only occurs for first cyclee
+                break;  // out of switch -- NOTE this only occurs for first cycle
             }
             //--no break
         case  6:        // TFL - Transmit Floating
@@ -2606,10 +2657,132 @@ class Processor {
                         this.setProcState(procStateE1); // advance to next multiplier digit
                     }
                 } else if (this.regMQ.isZero && !this.gateFIELD_MK_1.value) {
-                    this.setProcState(procStateE1);     // zero multiplier - advance to next multiplier digit
+                    this.setProcState(procStateE1);     // zero multiplier - early exit to next multiplier digit
                 } else {
                     this.setProcState(procStateE3);     // advance to next multiplicand digit
                 }
+            }
+            break;
+
+        case 18:        // LDM - Load Dividend Immediate
+        case 28:        // LD - Load Dividend
+            if (this.gateLAST_LD_CYC.value) {           // final LD/LDM cycle
+                this.regMAR.value = this.regPR1.value;
+                this.fetch();                           // fetch product digit at 00099
+                dx = this.regMAR.isEven;
+                digit = this.regMBR.getDigit(dx);
+                if (this.gateFIELD_MK_2.value) {
+                    if (this.gateDVD_SIGN.value) {      // set sign in product field
+                        this.regMIR.setDigit(dx, digit |= Register.flagMask);
+                    }
+                    this.enterICycle();
+                }
+                this.store();
+            } else {                                    // transfer P digit to product field
+                this.regMAR.value = this.regOR2.value;
+                this.fetch();
+                if (this.gate2_DIG_CNTRL.value) {
+                    this.gate2_DIG_CNTRL.value = 0;
+                    digit = this.getDROdd();
+                } else {
+                    digit = this.shiftDREvenOdd();
+                    nextState = procStateE1;
+                }
+
+                if (this.gate1ST_CYC_DELAYD.value) {    // first P digit
+                    digit &= Register.notFlagMask;      // reset flag on low-order P digit
+                    if (this.gateFL_1.value) {
+                        this.gateDVD_SIGN.value = 1;    // save P-field sign for final cycle
+                    }
+                } else if (this.gateFL_1.value) {       // last P digit, set up final cycle
+                    this.gateFIELD_MK_1.value = 1;
+                    this.gateLAST_LD_CYC.value = 1;
+                    this.gateEXMIT_MODE.value = 0;
+                    this.gateFIELD_MK_2.value = 1;
+                }
+
+                this.regMIR.setDigit(dx, digit);
+                this.store();
+                this.regOR2.decr(1);
+
+                if (nextState) {        // do either E1 or continue with E2
+                    this.setProcState(nextState);
+                }
+            }
+            break;
+
+        case 19:        // DM - Divide Immediate
+        case 29:        // D - Divide
+            if (this.gate1ST_CYC_DELAYD.value) {
+                this.regOR2.value = this.regOR3.value;  // reset the dividend digit address
+                this.gateCARRY_IN.value = this.gateCOMP.value;  // preset carry on first cycle
+            }
+
+            this.regMAR.value = this.regOR2.value;
+            dx = this.regMAR.isEven;
+            this.fetch();                               // next dividend/remainder digit
+            digit = this.regMBR.getDigit(dx);
+
+            if (this.gate2_DIG_CNTRL.value) {
+                this.gate2_DIG_CNTRL.value = 0;
+            } else {
+                this.shiftDREvenOdd();
+                nextState = procStateE1;
+            }
+
+            digit = this.addDigits(digit);
+            if (this.gateDVD_L_CYC.value) {
+                if (this.gate1ST_CYC_DELAYD.value) {
+                    digit |= this.regMBR.getDigit(dx) & Register.flagMask; // preserve remainder sign
+                } else if (this.gateFL_1.value) {
+                    digit |= Register.flagMask;         // set remainder field mark
+                }
+            }
+
+            this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+            this.regMIR.setDigit(dx, digit);
+            this.store();
+            this.regOR2.decr(1);                        // update OR1 before chance of early exits
+
+            if (this.gate1ST_CYC_DELAYD.value) {        // this was the first cycle of a divide cycle
+                if (this.gateDVD_L_CYC.value && !this.gateCOMP.value) { // last divide cycle add mode
+                    if (this.gateFL_1.value) {
+                        this.gateHP.flip();             // flip sign if divisor negative
+                    }
+                    if (this.regMBR.getDigit(dx) & Register.flagMask) {
+                        this.gateHP.flip();             // flip sign if dividend negative
+                    }
+                }
+            } else if (this.gateFIELD_MK_1.value) {     // this was the third E2 cycle (see below)
+                this.gateFIELD_MK_2.value = 1;
+                this.gateADD_ENT.value = 1;             // restart field processing in E1
+                if (this.gateCARRY_OUT.value) {         // result from this cycle is still positive, so...
+                    if (this.regMQ.binaryValue < 9) {
+                        this.regMQ.incr(1);             // increment quotient digit
+                        nextState = procStateE1;        // and do another subtraction cycle
+                    } else {                            // exceeded 9 subtractions, set overflow and quit
+                        this.regMQ.value = 0xA;         // MQ actually counted to binary 10 on overflow
+                        this.setIndicator(14, `DIV Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue-12}`);
+                        nextState = 0;                  // inhibit any other state change and exit
+                        this.enterICycle();
+                    }
+                } else {                                // result from this cycle is negative, so...
+                    nextState = procStateE1;            // start the add-correction cycle (COMP turned off in E1)
+                }
+            } else if (this.gateFL_1.value) {           // at the end of the divisor field
+                this.gateFIELD_MK_1.value = 1;
+                if (this.gateCOMP.value) {              // we've been subtracting
+                    this.resetDREven();
+                    this.setDREven(0);                  // addend will be zero for next cycle
+                    nextState = 0;                      // do third E2 cycle to apply borrow to next quotient digit
+                } else {                                // otherwise, this was an add-correction cycle
+                    this.gateFIELD_MK_2.value = 1;
+                    nextState = procStateE3;            // finish this quotient digit in E3
+                }
+            }
+
+            if (nextState) {
+                this.setProcState(nextState);
             }
             break;
 
@@ -2777,6 +2950,34 @@ class Processor {
             this.setProcState(procStateE4);
             break;
 
+        case 19:        // DM - Divide Immediate
+        case 29:        // D - Divide
+            this.regMAR.value = this.regOR2.value;
+            this.fetch();
+
+            this.gateADD_MODE.value = 0;
+            digit = this.regMQ.value;                   // get quotient digit value
+            if (digit & Register.bcdMask) {             // check for non-zero
+                this.gateEZ.value = 0;
+            }
+
+            if (this.gateDIV_1_CYC.value) {
+                digit |= Register.flagMask;             // set quotient field mark
+            }
+
+            if (this.gateDVD_L_CYC.value) {
+                this.enterICycle();                     // last digit -- we're done
+                if (!this.gateHP.value) {
+                    digit |= Register.flagMask;         // set quotient sign
+                }
+            } else {
+                this.setProcState(procStateE4);
+            }
+
+            this.regMIR.setDigit(this.regMAR.isEven, digit);
+            this.store();                               // store quotient digit in product area
+            break;
+
         default:
             this.panic(`E-3 op not implemented ${this.opBinary}`);
             break;
@@ -2805,6 +3006,21 @@ class Processor {
             this.setProcState(procStateE2);
             break;
 
+        case 19:        // DM - Divide Immediate
+        case 29:        // D - Divide
+            this.gateADD_ENT.value = 1;                 // initialize fields on next cycle
+            this.gateCOMP.value = 1;                    // stop adding and enable subtract cycles again
+            this.gateDIV_1_CYC.value = 0;               // not the first division cycle anymore
+            this.regMQ.clear();                         // zero the quotient digit counter
+            this.regMAR.value = this.regOR3.value;
+            if ((this.regMAR.value & 0b001111_000000_000000_001111_001111) == 0b001001_001000) { // MAR == 0XX98
+                this.gateDVD_L_CYC.value = 1;           // next cycle is the last one
+            }
+
+            this.regOR3.incr(1);                        // step to next dividend digit
+            this.setProcState(procStateE1);
+            break;
+
         default:
             this.panic(`E-4 op not implemented ${this.opBinary}`);
             break;
@@ -2817,7 +3033,9 @@ class Processor {
 
         switch (this.opBinary) {
         case 13:        // MM - Multiply Immediate
+        case 18:        // LDM - Load Dividend Immediate
         case 23:        // M - Multiply
+        case 28:        // LD - Load Dividend
             // Clear the product area, 00081-00099
             if (this.gate1ST_CYC.value) {
                 this.gate1ST_CYC.value = 0;
