@@ -6,12 +6,12 @@
 00060*
 00070*         CONTROL ROUTINES
 00080*
-             DORG 00402
+             DORG 00402                                                         00402
 00100 S      B    *+12,,,        RESTART BRANCH                                 00402 49 00414 00000
 00110        RCTY ,,,            RET CARR                                       00414 34 00000 00102
 00120        WATY T1,,,          TYPE TEST NAME                                 00426 39 07987 00100
 12345        RCTY                                                               00438 34 00000 00102
-12345        WATY WRCD1,,,       REMOVE DISK                                    00450 39 0849  00100
+12345        WATY WRCD1,,,       REMOVE DISK                                    00450 39 08049 00100
 12345        RCTY                                                               00462 34 00000 00102
 12345        WATY WRCD2,,,         PACKS                                        00474 39 08119 00100
 12345        BNC3 *,,,           WAIT TILL SW3 IS ON                            00486 47 00486 00300
@@ -19,13 +19,13 @@
 00140*         TYPE OUT SWITCH SETTINGS
 00150*
 00160        RCTY ,,,            RET CARR                                       00498 34 00000 00102
-00170        WATY T20,,,         TYPE SW3 ON                                    00510 39 08635 00100
-00180        RCTY ,,,            RET CARR                                       00534 34 00000 00102
+00170        WATY T30,,,         TYPE SW3 ON                                    00510 39 08635 00100
+00180        RCTY ,,,            RET CARR                                       00522 34 00000 00102
 00190        WATY T2,,,          T/O SW SETTINGS                                00534 39 08181 00100
 00200        RCTY ,,,            RET CARR                                       00546 34 00000 00102
 00210        WATY T3,,,          T/O SENSE - OFF                                00558 39 08213 00100
 00220        RCTY ,,,            RET CARR                                       00570 34 00000 00102
-00230        WATY T4,,,          T/O DATA -PROG                                 00582 39 03255 00100
+00230        WATY T4,,,          T/O DATA -PROG                                 00582 39 08255 00100
 06220        TDM  NOPAD+1,1,,    INSURE NOP                                     00594 15 00883 00001
 00240        H    ,,,            HALT                                           00606 48 00000 00000
 00250*
@@ -50,8 +50,8 @@
 00440*
 06240 SAD1   RCTY                                                               00750 34 00000 00102
 00460        WATY T5,,,          RQT MOD NO.                                    00762 39 08287 00100
-00470        RNTY N,,,           ACCEPT NO.                                     00744 36 11643 00100
-00480        BC3  *-12,,,        SW3 ON,KEY AGAIN                               00786 46 07744 00300
+00470        RNTY N,,,           ACCEPT NO.                                     00774 36 11643 00100
+00480        BC3  *-12,,,        SW3 ON,KEY AGAIN                               00786 46 00774 00300
 00490*
 00500*         COMPUTE DRIVE CODE DIG FROM
 00510*         MOD NO.AND LOAD SUB-INST
@@ -70,7 +70,7 @@
 00630*         RESET THE INDICATORS THAT
 00640*         TURN ON ANY DATA CHECK
 00650*
-00660 J0     BNI  *+24,01900,,   ANY DATA CK                                    00906 47 0930  01900
+00660 J0     BNI  *+24,01900,,   ANY DATA CK                                    00906 47 00930 01900
 00670        BTM  RS,*,,         BRCH TO SUB-ROUT                               00918 17 07744 -0918
 00680*
 00690*         THIS ROUTINE SEEKS CYLINDER 97
@@ -107,12 +107,12 @@
 01000        TD   ER54+22,97,,   LOAD CYL NO.                                   01266 25 09637 00097
 01010        TD   ER54+24,98,,   LOAD CYL NO.                                   01278 25 09639 00098
 01020        BTM  ET,ER54,,      BRCH,LOAD ER T/O                               01290 17 07888 -9615
-01030        BTM  ET,ER80,,`     BRCH,LOAD ER T/O                               01302 17 07888 J1197
+01030        BTM  ET,ER80,,      BRCH,LOAD ER T/O                               01302 17 07888 J1197
 01040        B    J1,,,          TRY AGAIN                                      01314 49 00930 00000
 01050 J5     TFM  S2+8,020,9,    INIT SUB-INST                                  01326 16 12112 00-20
-01060        RN   S2,000706,,    READ TRACK                                     01338 36 12104 00706
+01060        RN   S2,00706,,     READ TRACK                                     01338 36 12104 00706
 01070        SF   A2+1,,,        SET FLAG                                       01350 32 14412 00000
-01080        MM   A2+3,05,10,    MULTIPLY BY 5                                  01362 13 14114 000-5
+01080        MM   A2+3,05,10,    MULTIPLY BY 5                                  01362 13 14414 000-5
 01090        BD   *+24,096,,     BRCH DIGIT                                     01374 43 01398 00096
 01100        B    *+48,,,        BYPASS                                         01386 49 01434 00000
 01110        TD   ER70+104,96,,  LOAD SCTR RANGE                                01398 25 10711 00096
@@ -160,29 +160,29 @@
 01530        BTM  ET,ER55,,      BRCH,LOAD ER T/O                               01854 17 07888 -9671
 01540        B    J6,,,          TRY AGAIN                                      01866 49 01554 00000
 01550 J8     TFM  S+6,*,,        LOAD RESTART                                   01878 16 00408 -1878
-01560        BC2  J6-23,,,       LOOP ROUTINE                                   01890 46 01530 00200
+01560        BC2  J6-24,,,       LOOP ROUTINE                                   01890 46 01530 00200
 01570*
 01580*         COMPUTE GOOD HEAD,AND
 01590*         RESET INDICATORS
 01600*
 01610        MM   S2+4,05,10,    MULTIPLY                                       01902 13 12108 000-5
-01620        TD   *+23,98,,      LOAD MULT.                                     01614 25 01937 00098
-01630 J14    MM   C2,00000,10    MULTIPLY                                       01926 13 11661 000-0
-01640        TF   C2,C1,,        LOAD CYL 11                                    01938 26 11671 11666
+01620        TD   *+23,98,,      LOAD MULT.                                     01914 25 01937 00098
+01630 J14    MM   C2,00000,10,   MULTIPLY                                       01926 13 11661 000-0
+01640        TF   C3,C1,,        LOAD CYL 11                                    01938 26 11671 11666
 01650        A    C3-1,99,,      ADD CORRECT HD                                 01950 21 11670 00099
 01660        BNI  *+24,01900,,   ANY DATA CHECK                                 01962 47 01986 01900
 01670        BTM  RS,*,,         RESET INDICATORS                               01974 17 07744 -1974
-01680 *
-01690 *        THIS ROUTINE TESTS THE
-01700 *        SEEK OPERATIONS
-01710 *
+01680*
+01690*         THIS ROUTINE TESTS THE
+01700*         SEEK OPERATIONS
+01710*
 01720        TF   S2+5,C3,,      LOAD SUB-INST                                  01986 26 12109 11671
-01730        TFM  S2+8,001,0,    LOAD SUB-INST                                  01998 16 12112 00-01
+01730        TFM  S2+8,001,9,    LOAD SUB-INST                                  01998 16 12112 00-01
 01740 J11    K    S2,00701,,     SEEK CYLINDER                                  02010 34 12104 00701
 01750        BNI  *+48,01900,,   ANY DATA CHECK                                 02022 47 02070 01900
 01760        TFM  ERR+18,*-24,,  LOAD RETURN                                    02034 16 07198 -2010
-01770        TFM  E1+6,ER8,,     LOAD OPERATION                                 02046 16 07642 -8898
-01780        B    ERR,,,         BRCH TO ER ROUT                                02058 49 01780 00000
+01770        TFM  E1+6,ER8,,     LOAD OPERATION                                 02046 16 07642 -8891
+01780        B    ERR,,,         BRCH TO ER ROUT                                02058 49 07180 00000
 01790        RN   S2,00702,,     READ SECTOR                                    02070 36 12104 00702
 01792        BI   *+12,00600                                                    02082 46 02094 00600
 01794        BI   *+12,01600                                                    02094 46 02106 01600
@@ -199,7 +199,7 @@
 01890        BTM  ET,ER56,,      BRCH,LOAD ER T/O                               02226 17 07888 -9767
 01900        B    J11-12,,,      TRY AGAIN                                      02238 49 01998 00000
 01910 J10    CM   S2+2,017,10,   SEE IF DONE                                    02250 14 12106 000J7
-01920        BNL  *+23,,,        BRCH IF EQUAL                                  02262 46 02298 01300
+01920        BNL  *+36,,,        BRCH IF EQUAL                                  02262 46 02298 01300
 01930        AM   S2+5,02200,,   UPDATE-NEXT CYL                                02274 11 12109 -2200
 01940        B    J11,,,         TRY NEXT CYL                                   02286 49 02010 00000
 01950        TFM  S+6,*,,        LOAD RESTART                                   02298 16 00408 -2298
@@ -219,8 +219,8 @@
 02090        BE   *+48,,,        BRCH IF EQUAL                                  02394 46 02442 01200
 02100        AM   *-42,100,,     UPDATE                                         02406 11 02364 -0100
 02110        AM   *-42,100,,     UPDATE                                         02418 11 02376 -0100
-02120        B    *-72,,,        LOAD NEXT SECTOR                               02430 46 02358 00000
-02130        TFM  S+6,,,         LOAD RESTART                                   02442 16 00408 -2442
+02120        B    *-72,,,        LOAD NEXT SECTOR                               02430 49 02358 00000
+02130        TFM  S+6,*,,        LOAD RESTART                                   02442 16 00408 -2442
 02140*
 02150*         SEEK CYLINDER 97 FOR ATTEMPTED
 02160*         READ WITH EACH HEAD
@@ -228,21 +228,21 @@
 02180 J15    TFM  S2+5,19400,,   INITIALIZE                                     02454 16 12109 J9400
 02190        TFM  S2+8,001,9,    SET UP SCTR CNT                                02466 16 12112 00-01
 02200        K    S2,00701,,     SEEK CYLINDER 97                               02478 34 12104 00701
-02210        BNI  *+48,01900,,   ANY DATA CHECK                                 02490 47 02538 10900
+02210        BNI  *+48,01900,,   ANY DATA CHECK                                 02490 47 02538 01900
 02220        TFM  ERR+18,*-24,,  LOAD RETURN                                    02502 16 07198 -2478
 02230        TFM  E1+6,ER8,,     LOAD OPERATION                                 02514 16 07642 -8891
 02240        B    ERR,,,         BRCH TO ER ROUT                                02526 49 07180 00000
-02250        RN   S2,000702,,    READ SECTOR                                    02538 36 12104 00702
+02250        RN   S2,00702,,     READ SECTOR                                    02538 36 12104 00702
 02260        BNI  J17-24,03600,, ADRS CHECK                                     02550 47 02706 03600
 02270        TFM  S2+8,020,9,    SET UP SCTR CNT                                02562 16 12112 00-20
 02280        TFM  S2+5,19400,,   RESET ADDRESS                                  02574 16 12109 J9400
-02290        TD   *+23,J14,11,,  PUT DIG IN MULT                                02586 25 02609 01937
+02290        TD   *+23,J14+11,,  PUT DIG IN MULT                                02586 25 02609 01937
 02300        MM   C2,00000,10,   MULTIPLY                                       02598 13 11661 000-0
 02310        A    S2+4,99,,      ADD CORRECT HD                                 02610 21 12108 00099
 02320        RN   S2,00706,,     READ TRACK                                     02622 36 12104 00706
 02330        SF   A2+1,,,        SET FLAG                                       02634 32 14412 00000
 02340        MM   A2+3,05,10,    MULTIPLY BY 5                                  02646 13 14414 000-5
-02350        TD   ER54,22,97,,   LOAD                                           02658 25 09637 00097
+02350        TD   ER54+22,97,,   LOAD                                           02658 25 09637 00097
 02360        TD   ER54+24,98,,     CYLINDER                                     02670 25 09639 00098
 02370        BTM  ET,ER54,,      BRCH,LOAD ER T/O                               02682 17 07888 -9615
 02380        B    J15,,,         TRY AGAIN                                      02694 49 02454 00000
@@ -262,24 +262,24 @@
 02520 J13    RN   S2,00702,,     READ SECTOR                                    02790 36 12104 00702
 02530        BNI  *+48,01900,,   ANY DATA CHECK                                 02802 47 02850 01900
 02540        TFM  ERR+18,J16,,   LOAD RETURN                                    02814 16 07198 -3006
-02550        TFM  E1+6,ER55,,    LOAD ER T/O                                    02826 16 07642 -9453
+02550        TFM  E1+6,ER5S,,    LOAD ER T/O                                    02826 16 07642 -9453
 02560        B    ERR,,,         BRCH TO ER TOUT                                02838 49 07180 00000
 02570*
 02580*         PROGRAM COMPARE OF DATA READ
 02590*
 02600        MM   S2+4,05,,      MULTIPLY BY 5                                  02850 13 12108 -0005
-02610        TD   A1+1,1,98,,    LOAD HD DIGIT                                  02862 25 12310 00098
+02610        TD   A1+1,98,,      LOAD HD DIGIT                                  02862 25 12310 00098
 02620        TDM  A1,00,11,      SET FLAG                                       02874 15 12309 0000-
-02630        TDM  A2,00,11       SET FLAG                                       02886 15 14411 0000-
+02630        TDM  A2,00,11,      SET FLAG                                       02886 15 14411 0000-
 02640        C    A1+100,A2+100,,COMPARE                                        02898 24 12409 14511
 02650        BE   J16,,,         BRCH IF EQUAL                                  02910 46 03006 01200
 02660        C    A1+1,A2+1,,    COMPARE HD                                     02922 24 12310 14412
 02670        TFM  ERR+18,J16,,   LOAD RETURN                                    02934 16 07198 -3006
-02680        TFM  E1+6,ER6,,     LOAD ER T/O                                    02946 16 07642 -8633
+02680        TFM  E1+6,ER6,,     LOAD ER T/O                                    02946 16 07642 -8833
 02690        BE   *+36,,,        BRCH IF EQUAL                                  02958 46 02994 01200
 02700        TDM  ER57+12,A2+1,, INSERT HD NO.                                  02970 15 09835 14412
 02710        BTM  ETO,ER57,,     BRCH,LOAD ER T/O                               02982 17 07552 -9823
-02720        BTN  ETO,ER58,,     BRCH,LOAD ER T/O                               02994 17 07552 -9841
+02720        BTM  ETO,ER58,,     BRCH,LOAD ER T/O                               02994 17 07552 -9841
 02730 J16    CM   S2+5,19580,,   SEE IF DONE                                    03006 14 12109 J9580
 02740        BE   *+36,,,        BRCH IF EQUAL                                  03018 46 03054 01200
 02750        AM   S2+5,00020,,   UPDATE                                         03030 11 12109 -0020
@@ -369,7 +369,7 @@
 03590 K4     WN   S1,00702,,     WRITE 20 SECT                                  03858 38 12090 00702
 03600        BNI  *+84,01900,,   ANY DATA CHECK                                 03870 47 03954 01900
 03610        TFM  ERR+18,K5,,    LOAD RETURN                                    03882 16 07198 -4230
-03620        55   *+36,A1+2101,, CK FOR GM                                      03894 55 03930 14310
+03620        55   *+36,A1+2001,, CK FOR GM                                      03894 55 03930 14310
 03630        TFM  E1+6,ER3,,     LOAD ER T/O                                    03906 16 07642 -8695
 03640        B    ERR,,,         GO TO ER ROUT                                  03918 49 07180 00000
 03650        TFM  E1+6,ER3G,,    LOAD ER T/O                                    03930 16 07642 -9311
@@ -377,10 +377,10 @@
 03670*
 03680*         READ BACK CHECK
 03690*
-03700 K6     RN   S1,--703,,     RD BK CK                                       03954 36 12090 00703
+03700 K6     RN   S1,00703,,     RD BK CK                                       03954 36 12090 00703
 03710        BNI  *+84,01900,,   ANY DATA CK                                    03966 47 04050 01900
 03720        TFM  ERR+18,K5,,    LOAD RETURN                                    03978 16 07198 -4230
-03730        55   *+36,A1+2101,, CK FOR GM                                      03990 55 04026 14310
+03730        55   *+36,A1+2001,, CK FOR GM                                      03990 55 04026 14310
 03740        TFM  E1+6,ER4,,     LOAD ER T/O                                    04002 16 07642 -8731
 03750        B    ERR,,,         GO TO ER ROUT                                  04014 49 07180 00000
 03760        TFM  E1+6,ER4G,,    LOAD ER T/O                                    04026 16 07642 -9349
@@ -412,7 +412,7 @@
 04020        AM   S1+5,20,,      UPDATE                                         04254 11 12095 -0020
 04030        AM   S2+5,20,,      UPDATE                                         04266 11 12109 -0020
 04040        B    K3+12,,,       NEXT HEAD                                      04278 49 03834 00000
-04050        TFM  S3+5,00600,,   INIT SECTOR ADRS                               02490 16 12123 -0600
+04050        TFM  S3+5,00600,,   INIT SECTOR ADRS                               04290 16 12123 -0600
 04060        WN   S3,00702,,     RESET CYL. 3                                   04302 38 12118 00702
 04070        RN   S3,00703,,     READ BACK COMPARE                              04314 36 12118 00703
 04080        BNI  *+60,1900,,    ANY DATA CHECK                                 04326 47 04386 01900
@@ -420,14 +420,14 @@
 04100        TFM  E1+6,ER9,,     LOAD ER T/O                                    04350 16 07642 -8903
 04110        TF   S2+5,S3+5,,    STORE SCTR ADRS                                04362 26 12109 12123
 04120        B    ERR,,,         GO TO ER SUBROUT                               04374 49 07180 00000
-04130        AM   S2+5,20,,      UPDATE SCTR ADRS                               04386 11 12123 -0020
+04130        AM   S3+5,20,,      UPDATE SCTR ADRS                               04386 11 12123 -0020
 04140        CM   S3+5,00800,,   CHK DONE                                       04398 14 12123 -0800
 04150        BNE  *-108,,,       BRCH IF NOT                                    04410 47 04302 01200
 04160        55   *+24,A1+2001,, CK FOR GM                                      04422 55 04446 14310
 04170        B    K9,,,          BRCH DONE                                      04434 49 04518 00000
 04180        TD   A1+2001,GM,,   INSERT GM                                      04446 25 14310 11655
 04190        TD   A2+2001,GM,,   INSERT GM                                      04458 25 16412 11655
-04200        TDM  K4+1,00,,      CHANGE INST                                    04470 15 03896 00000
+04200        TDM  K4+11,00,,     CHANGE INST                                    04470 15 03869 00000
 04210        TDM  K6+11,01,,         FOR                                        04482 15 03965 00001
 04220        TDM  K7+11,00,,     WLR CK                                         04494 15 04061 00000
 04230        B    K8,,,          TRY WITH WLR CK                                04506 49 03558 00000
@@ -439,17 +439,17 @@
 04290*
 04300*         OVERFLOW
 04310*
-04320F2      BNI  *+24,01900,,   ANY DATA CHECK                                 04542 47 04566 01900
+04320 F2     BNI  *+24,01900,,   ANY DATA CHECK                                 04542 47 04566 01900
 04330        BTM  RS,*,,         RESET IND                                      04554 17 07744 -4554
 04340        TFM  S2+8,021,9,    INIT SECT CNT                                  04566 16 12112 00-21
 04350        TFM  S2+5,00780,,   INIT SUB-INST                                  04578 16 12109 -0780
-04360        RN   S2,00702,,     RD 21 SECTORS                                  04690 36 12104 00702
+04360        RN   S2,00702,,     RD 21 SECTORS                                  04590 36 12104 00702
 04370        BNI  *+48,03900,,   CK ANY FILE IND                                04602 47 04650 03900
 04380        BI   F1,03800,,     CK OVFLO IND                                   04614 46 04698 03800
 04390        BTM  ET,ER62,,      BRCH,LOAD ER T/O                               04626 17 07888 J0045
 04400        B    F1,,,          BRCH-NEXT ROUT                                 04638 49 04698 00000
 04410        BI   *+36,03800,,   CK OVFLOW                                      04650 46 04686 03800
-04420        BTM  ET,ER71,,      BRCH,LOAD ER/T/O                               04462 17 07888 J0715
+04420        BTM  ET,ER71,,      BRCH,LOAD ER/T/O                               04662 17 07888 J0715
 04430        B    F1,,,          BRCH-NEXT ROUT                                 04674 49 04698 00000
 04440        BTM  ET,ER72,,      BRCH,LOAD ER T/O                               04686 17 07888 J0773
 04450*
@@ -476,7 +476,7 @@
 04660*
 04670 F3     BNI  *+24,01900,,   ANY DATA CK                                    04890 47 04914 01900
 04680        BTM  RS,*,,         RESET IND                                      04902 17 07744 -4902
-04690        TFM  S2+8,001,9     INIT SECT                                      04914 16 12112 00-01
+04690        TFM  S2+8,001,9,    INIT SECT                                      04914 16 12112 00-01
 04700        TFM  S2+5,00600,,   INIT SUB-INST                                  04926 16 12109 -0600
 04710        TD   A2+102,GM,,    INSERT GM                                      04938 25 14513 11655
 04720        RN   S2,0700,,      RD A SECTOR                                    04950 36 12104 00700
@@ -486,7 +486,7 @@
 04760*         WLR CK VIA EARLY TERM OF GM
 04770*
 04780 F4     TDM  A2+102,00,,    CL GM                                          04986 15 14513 00000
-04790        TD   A2+100,GM,,    LOAD GM                                        04988 25 14511 11655
+04790        TD   A2+100,GM,,    LOAD GM                                        04998 25 14511 11655
 04800        RN   S2,00700,,     RD A SCTR                                      05010 36 12104 00700
 04810        BI   F14,03700,,    CK WLR IND                                     05022 46 05046 03700
 04820        BTM  ET,ER68,,      BRCH,LOAD ER T/O                               05034 17 07888 J0523
@@ -518,7 +518,7 @@
 04917        DC   01,@,*-4                                                      05185 00001
 04917        RN   S2,700,,       READ DATA                                      05190 36 12104 00700
 04917        BNR  GME1,A2+88                                                    05202 45 05262 14499
-04918        BNR  GME,A2+87,,    CK FOR RM                                      05214 45 05262 14498
+04918        BNR  GME1,A2+87,,   CK FOR RM                                      05214 45 05262 14498
 04920        BNR  GME1,A2+86                                                    05226 45 05262 14497
 04921        55   GME2,A2+85,,   CK FOR GM                                      05238 55 05286 14496
 04922        B    *+48                                                          05250 49 05298 00000
@@ -528,7 +528,7 @@
 04930        BI   *+24,3700                                                     05298 46 05322 03700
 04932        BTM  ET,ER92                                                       05310 17 07888 J1511
 04934        BNI  *+24,1900                                                     05322 47 05346 01900
-04936        BTM  rs,*                                                          05334 17 07744 -5334
+04936        BTM  RS,*                                                          05334 17 07744 -5334
 04910*
 04920*         CHECK THAT ADDRESS CK IND
 04930*         36 WILL TURN ON ANY FILE
@@ -603,7 +603,7 @@
 05620        TFM  S2+5,00600,,   INITIALIZE                                     05958 16 12109 -0600
 05630        TFM  S2+8,003,,     INITIALIZE                                     05970 16 12112 -0003
 05640        RN   S2,00702,,     READ SECTORS                                   05982 36 12104 00702
-05650        BI   F7,03600,,     ADRS CK IND                                    05594 46 06018 03600
+05650        BI   F7,03600,,     ADRS CK IND                                    05994 46 06018 03600
 05660        BTM  ET,ER66,,      BRCH,LOAD ER T/O                               06006 17 07888 J0343
 05670 F7     TFM  S2+5,00600,,   INIT                                           06018 16 12109 -0600
 05680        TFM  S2+8,020,9,    INIT                                           06030 16 12112 00-20
@@ -660,7 +660,7 @@
 07040        TD   SAD3-2,CNAR+2,,                                               06438 25 06472 07155
 07050        SF   SAD3-2,                                                       06450 32 06472 00000
 07060        AM   S2+2,00,10,    ADD (20000) X SCTR RNG                         06462 11 12106 000-0
-07070 SAD3   A    S2+2,SAD3-1,,                                                 06472 21 12106 06473
+07070 SAD3   A    S2+2,SAD3-1,,                                                 06474 21 12106 06473
 07075        TF   S3+5,S2+5,,    STORE BEGIN ADRS                               06486 26 12123 12109
 07076        AM   S3+5,200,9,    ADD FOR LAST ADRS                              06498 11 12123 00K00
 07077        TDM  19994,0,11,                                                   06510 15 19994 0000-
@@ -669,9 +669,9 @@
 01100*
 01110        K    S2,00701,,     SEEK CYL.                                      06522 34 12104 00701
 01120*
-01130*         READ TRACK                                                       06534 36 12104 00706
+01130*         READ TRACK
 01135*
-07140 SAD5   RN   S2,00706,,     READ FULL TRACK                                06354 36 12104 00706
+07140 SAD5   RN   S2,00706,,     READ FULL TRACK                                06534 36 12104 00706
 07150        BNI  *+24,1900,,    ANY DATA CHK                                   06546 47 06570 01900
 07160        BTM  RS,*,,         GO TURN OFF IND                                06558 17 07744 -6558
 07170*
@@ -687,7 +687,7 @@
 08100 IS2    TD   19996,99999,,   SECTOR                                        06642 25 19996 99999
 08110 IS3    TD   19997,99999,,    ADDRESS                                      06654 25 19997 99999
 08120 IS4    TD   19998,99999,,                                                 06666 25 19998 99999
-08130 IS5    TD   199999,99999,,                                                06678 25 19999 99999
+08130 IS5    TD   19999,99999,,                                                 06678 25 19999 99999
 08145*         COMPARE SECTOR ADDRESSES
 12345        BI   SAER,01600,,   EVEN CHK                                       06690 46 06810 01600
 12345        BI   SAER,01700,,   ODD CHK                                        06702 46 06810 01700
@@ -704,10 +704,10 @@
 08190        BTM  RS,*,,         TURN OFF IND                                   06834 17 07744 -6834
 08200        RCTY                                                               06846 34 00000 00102
 08210        DNTY 19995,,,       DUMP ADDRESS                                   06858 35 19995 00100
-08220        WATY S/B,,,         TYPE S/B                                       06870 39 07159 00100
+08220        WATY S/B,,,         TYPE S/B                                       06870 39 07159 00100 ORIG. S/B
 08230        TF   SBTOB,S2+5,,                                                  06882 26 07178 12109
 08240        CF   SBTOB-4                                                       06894 33 07174 00000
-08250        WNTY SBTOB-4,,,     TYPE S/B ADRS                                  06906 38 07174 00100
+08250        WNTY SBTOB-4,,,     TYPE S/B ADRS                                  06906 38 07174 00100 ORIG. S/B
 09010*         UPDATE SECTOR ADDRESS TRANSFER
 09020 SAD4   AM   IS1+11,105,,                                                  06918 11 06641 -0105
 09030        AM   IS2+11,105,,                                                  06930 11 06653 -0105
@@ -730,7 +730,7 @@
 10050        DAC  16, DIG.ADRS RNG  @                                           07121 00032
 10060        DC   01,0                                                          07152 00001
 10070 CNAR   DSC  05,0                                                          07153 00005
-10080 S/B    DAC  08,  S/B  @                                                   07159 00016
+10080 S/B    DAC  08,  S/B  @                                                   07159 00016          ORIG. S/B
 10090 SBTOB  DC   05,0                                                          07178 00005
 10100        DC   01,@                                                          07179 00001
 05950*
@@ -766,7 +766,7 @@
 06250        BI   *+12,02100,,   TAS CHECK                                      07504 46 07516 02100
 06260        BI   *+12,02200,,   F R CHECK                                      07516 46 07528 02200
 06270        BI   *+12,02300,,   A O CHECK                                      07528 46 07540 02300
-06280        B    ERR,,,         LOOP BACK                                      07540 46 07180 00000
+06280        B    ERR,,,         LOOP BACK                                      07540 49 07180 00000
 06290*
 06300*         ERROR TYPE OUT ROUTINE
 06310*         FOR THE ABOVE ERROR SUBROUTINE
@@ -797,9 +797,9 @@
 06580        BI   *+12,03800,,   OVFLO CK                                       07768 46 07780 03800
 06590        BI   *+12,00600,,   READ CK                                        07780 46 07792 00600
 06600        BI   *+12,00700,,   WRITE CK                                       07792 46 07804 00700
-06610        BI   *+12,01600,,   MBR-E CK                                       07084 46 07816 01600
+06610        BI   *+12,01600,,   MBR-E CK                                       07804 46 07816 01600
 06620        BI   *+12,01700,,   MBR-O CK                                       07816 46 07828 01700
-06630        BI   *+12,00800,,   MAR CK                                         07282 46 07840 00800
+06630        BI   *+12,00800,,   MAR CK                                         07828 46 07840 00800
 06640        BI   *+12,02100,,   TAS CK                                         07840 46 07852 02100
 06650        BI   *+12,02200,,   F R CK                                         07852 46 07864 02200
 06660        BI   *+12,02300,,   A O CK                                         07864 46 07876 02300
@@ -810,7 +810,7 @@
 06710*
 06720 ET     BC1  *+48,,,        SW1 ON BYPASS                                  07888 46 07936 00100
 06730        TF   *+30,*-13,,    LOAD WATY                                      07900 26 07930 07887
-06740        RCTY ,,             RET CARR                                       07912 34 00000 00102
+06740        RCTY ,,,            RET CARR                                       07912 34 00000 00102
 06750        WATY 99999,,,       TYPE ERROR                                     07924 39 99999 00100
 06760        TD   ERM,RM,,       PUT RM IN MAP                                  07936 25 11657 11654
 06770        TR   00100,TAB,,    REPLACE MATH TAB                               07948 31 00100 11786
@@ -822,7 +822,7 @@
 06830*         DATA,CONSTANTS,WORKING AREAS,
 06840*         TYPEOUTS,AND ERROR MESSAGES
 06850*
-06860 T1     DAC  14,DT 0022 - 1311                                             07978 00028
+06860 T1     DAC  14,DT 0022 - 1311                                             07987 00028
 06870        DAC  17, FAULT ISOLATION@                                          08015 00034
 12345 WRCD1  DAC  35,WARNING-REMOVE CUSTOMER DISK PACKS@                        08049 00070
 12345 WRCD2  DAC  31,FROM ALL MODULES,TURN SW 3 ON.@                            08119 00062
@@ -853,7 +853,7 @@
 07120 ER9    DAC  18,CYL.3 ZERO RESET @                                         08903 00036
 07130 ER10   DAC  14, ADS CK (36) @                                             08939 00028
 07140 ER11   DAC  14, WRL CK (37) @                                             08967 00028
-07150 ER12   DAC  15, OVFO CK (38) @                                            08895 00030
+07150 ER12   DAC  15, OVFO CK (38) @                                            08995 00030
 07160 ER13   DAC  19, FILE NO IND (39) @                                        09025 00038
 07170 ER14   DAC  13, RD CK (06) @                                              09063 00026
 07180 ER15   DAC  13, WR CK (07) @                                              09089 00026
@@ -861,7 +861,7 @@
 07200 ER17   DAC  13, MBR-O (17) @                                              09141 00026
 07210 ER19   DAC  14,SELECT LOCK  @                                             09167 00028
 07220 ER20   DAC  14, CYL 99  HD 9@                                             09195 00028
-07230 ER30   DAC  23,ERROR OCCURRED BUT S1                                      09223 00046
+07230 ER30   DAC  23,ERROR OCCURRED BUT SW 1                                    09223 00046
 07240        DAC  21, WAS ON THUS NO ETO.@                                      09269 00042
 07250 ER3G   DAC  19,WR 20 SCT W/O WLR @                                        09311 00038
 07260 ER4G   DAC  18,RD BK CK W/O WLR @                                         09349 00036
@@ -873,8 +873,8 @@
 07320 ER52   DAC  21,ADRS CK IND (36) WONT                                      09555 00042
 07330        DAC  09, TURN ON@                                                  09597 00018
 07340 ER54   DAC  28,HDS AT CYL 99,SHD BE CYL 97@                               09615 00056
-07350 ER55   DAC  25,MBR-E/O,ADS CK,OR WRNG                                     09671 00050
-07360        DAC  23, HD RD TK,ON ALL  HEADS@                                   09721 00046
+07350 ER55   DAC  25,RD,MBR-E/O,ADS CK,OR WRNG                                  09671 00050
+07360        DAC  23, HD RD TK,ON ALL HEADS@                                    09721 00046
 07370 ER56   DAC  28,HDS AT CYL 99 SHD BE CYL 99@                               09767 00056
 07380 ER57   DAC  09,RD TK 9 @                                                  09823 00018
 07390 ER58   DAC  26,CORRECT TK,DATA NOT COMP @                                 09841 00052
@@ -900,7 +900,7 @@
 07590 ER72   DAC  28,ANY FILE 39 OFF,OVFLO 38 ON@                               10773 00056
 07600 ER73   DAC  27,ANY FILE 39 OFF,WLR 37 OFF@                                10829 00054
 07610 ER74   DAC  26,ANY FILE 39 OFF,WLR 37 ON@                                 10883 00052
-07620 ER75   DAC  28,ANY FILE 39 OFF,ADRS  36 OFF@                              10935 00056
+07620 ER75   DAC  28,ANY FILE 39 OFF,ADRS 36 OFF@                               10935 00056
 07630 ER76   DAC  27,ANY FILE 39 OFF,ADRS 36 ON@                                10991 00054
 07640 ER77   DAC  25,ANY DATA ON,ANY FILE OFF@                                  11045 00050
 07650 ER78   DAC  25,ANY DATA OFF,ANY FILE ON@                                  11095 00050
@@ -920,7 +920,7 @@
 07730 M      DC   2,00,,         DRIVE CODE                                     11647 00002
 07740 M1     DC   5,00000,,      ERROR MAP                                      11652 00005
 07750 RM     DC   2,0@,,         RECORD MARK                                    11654 00002
-07760 GM     DGM                                                                11655 00001
+07760 GM     DC   1,@                                                           11655 00001 ORIG. DGM
 07770 ERM    DC   2,00,,         ERROR MAP                                      11657 00002
 07780 C5     DC   2,05,,         CONSTANT                                       11659 00002
 07790 C2     DC   2,02,,         CONSTANT                                       11661 00002
@@ -933,7 +933,7 @@
 07860        DSC  20,44444444445555555555,,  S                                  11726 00020
 07870        DSC  20,66666666667777777777,,   T                                 11746 00020
 07880        DSC  20,88888888889999999999,,DATA                                 11766 00020
-07890 TAB    DC   2,0                                                           11786 00002
+07890 TAB    DSC  2,0                                                           11786 00002
 07900        DSB  100,3,,        MATH TABLES                                    11887 00300
 07910*
 07920*         SUB-INSTRUCTIONS AND
