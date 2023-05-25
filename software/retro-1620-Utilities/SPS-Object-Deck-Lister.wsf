@@ -1,0 +1,145 @@
+<?XML version="1.0"?>
+<package>
+<job id="SPS-Object-Deck-Lister">
+<reference object="Scripting.FileSystemObject" /> 'Microsoft Scripting Runtime TypeLib (for fso)
+<script language="VBScript">
+<![CDATA[
+
+Option Explicit
+'-----------------------------------------------------------------------
+' retro-1620 SPS-Object-Deck-Lister.wsf
+' Copyright (c) 2023, Paul Kimpel,
+' Licensed under the MIT License, see
+'       http://www.opensource.org/licenses/mit-license.php
+'-----------------------------------------------------------------------
+' VBScript to extract source from SPS assembly listing transcriptions.
+' It reads an assembly transcription file and outputs a SPS assembler
+' card deck.
+'
+' This script should be executed in the current path of the transcription
+' files. Output files will be written to that path as well.
+'
+' Uses Scripting Runtime FileSystemObject.
+' Parameters:
+'   1. Name of the transcription file.
+'   2. Optional started card sequence string.
+'   3. Optional /Q = quiet mode (no MsgBox at end), can be in any position.
+'-----------------------------------------------------------------------
+' Modification Log.
+' 2023-05-23  P.Kimpel
+'   Original version, cloned from retro-1620/software/retro-1620-Utilities/
+'   SPS-Xscript-Reformatter.wsf.
+'-----------------------------------------------------------------------
+
+Dim args
+Dim fileName
+Dim fso
+Dim listName
+Dim quietMode
+
+'---------------------------------------
+Function FormatSourceLine(byVal line)
+  'Reformats a line as an assembler source line and returns it.
+
+  If Mid(line, 6, 1) = "*" Then
+    FormatSourceLine = RTrim(Mid(line, 1, 75))
+  Else
+    FormatSourceLine = Mid(line, 1, 5) & " " & _
+                       Mid(line, 6, 6) & " " & _
+                       Mid(line, 12, 4) & " " & _
+                       Mid(line, 16, 60) & "     "
+  End If
+End Function
+
+'---------------------------------------
+Sub ReformatInstruction(byVal deckFile, byVal listFile, byVal line)
+  'Reformats the group of object deck card images that result form a single
+  'single assembler directive and writes a line to the listing file.
+  Dim text
+
+  text = FormatSourceLine(line)
+
+  End Sub
+
+'---------------------------------------
+Sub FormatListing(byVal fileName, byVal listName)
+  'Extracts source and object code from an assembler object punch deck
+  'and reformats it as an assembler listing. The listing file is created
+  'with the same name as the object deck file, but modified with a ".txt"
+  'extension.
+  Dim card
+  Dim listFile
+  Dim eof
+  Dim line
+  Dim deckFile
+
+  Set listFile = fso.OpenTextFile(listName, ForWriting, True, False)
+  Set deckFile = fso.OpenTextfile(fileName, ForReading, False, False)
+  lineNr = 1
+  line = deckFile.ReadLine
+
+  eof = deckFile.AtEndOfStream
+  Do
+    Select Case Mid(line, 76, 1)
+    Case "]"
+      '-- ignore loader object cards
+    Case "0"
+      ReformatInstruction deckFile, listFile, line
+    Case Else
+      listFile.WriteLine ">> Invalid line type: " & line
+    End Select
+
+    If deckFile.AtEndOfStream Then
+      eof = True
+    Else
+      line = deckFile.ReadLine
+    End If
+  Loop Until eof
+
+  listFile.Close
+  Set listFile = Nothing
+  deckFile.Close
+  Set deckFile = Nothing
+End Sub
+
+'---------------------------------------------------------------
+
+Set fso = WScript.CreateObject("Scripting.FileSystemObject")
+quietMode = False
+
+
+Set args = WScript.Arguments
+For Each listName In args
+  If UCase(Trim(listName)) = "/Q" Then
+    quietMode = True
+  ElseIf Len(fileName) = 0 Then
+    fileName = Trim(listName)
+  End If
+Next
+
+Set args = Nothing
+If Len(fileName) = 0 Then
+  MsgBox "Must supply the name of the object deck file."
+  WScript.Quit 9
+Else
+  '-- Main Line --
+  If Not fso.FileExists(fileName) Then
+    MsgBox "Object deck file does not exist: " & vbCrLf & fileName
+    WScript.Quit 8
+  Else
+    listName = fso.BuildPath(fso.GetParentFolderName(fileName), fso.GetBaseName(fileName)) & ".sps"
+    FormatListing fileName, listName
+    If not quietMode Then
+      MsgBox "SPS assembler card deck created: " & vbCrLf & listName
+    End If
+
+    WScript.Quit 0
+  End If
+End If
+
+Set fso = Nothing
+
+]]>
+</script>
+</job>
+</package>

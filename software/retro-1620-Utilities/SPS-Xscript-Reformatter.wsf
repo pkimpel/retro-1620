@@ -1,0 +1,137 @@
+<?XML version="1.0"?>
+<package>
+<job id="SPS-Xscript-Reformatter">
+<reference object="Scripting.FileSystemObject" /> 'Microsoft Scripting Runtime TypeLib (for fso)
+<script language="VBScript">
+<![CDATA[
+
+Option Explicit
+'-----------------------------------------------------------------------
+' retro-1620 SPS-Xscript-Reformatter.wsf
+' Copyright (c) 2023, Paul Kimpel,
+' Licensed under the MIT License, see
+'       http://www.opensource.org/licenses/mit-license.php
+'-----------------------------------------------------------------------
+' VBScript to extract source from SPS assembly listing transcriptions.
+' It reads an assembly transcription file and outputs a SPS assembler
+' card deck.
+'
+' This script should be executed in the current path of the transcription
+' files. Output files will be written to that path as well.
+'
+' Uses Scripting Runtime FileSystemObject.
+' Parameters:
+'   1. Name of the transcription file.
+'   2. Optional started card sequence string.
+'   3. Optional /Q = quiet mode (no MsgBox at end), can be in any position.
+'-----------------------------------------------------------------------
+' Modification Log.
+' 2023-05-19  P.Kimpel
+'   Original version, cloned from retro-220/software/tools/
+'   BAC-Xscript-Reformatter.wsf.
+'-----------------------------------------------------------------------
+
+Dim args
+Dim deckName
+Dim fileName
+Dim fso
+Dim quietMode
+
+'---------------------------------------
+Sub ExtractCode(byVal xScriptName, byVal deckName)
+  'Extracts source from an assembler transcription file.
+  'The assembler source is written as card images to a file with the same
+  'name as the transcription file, but modified with a ".sps" extension.
+  Dim card
+  Dim cardFile
+  Dim eof
+  Dim line
+  Dim lineNr
+  Dim seq
+  Dim text
+  Dim xFile
+
+  Const seqCol = 1
+  Const seqLen = 5
+  Const starCol = 6
+  Const starLen = 1
+  Const labelCol = 7
+  Const labelLen = 6
+  Const opcodeCol = 14
+  Const opcodeLen = 4
+  Const operandCol = 19
+  Const operandLen = 60
+  Const commentLen = 70
+
+  Set cardFile = fso.OpenTextFile(deckName, ForWriting, True, False)
+  Set xFile = fso.OpenTextfile(xScriptName, ForReading, False, False)
+  lineNr = 1
+  line = xFile.ReadLine
+
+  eof = xFile.AtEndOfStream
+  Do
+    lineNr = lineNr+1
+    seq = Mid(line, seqCol, seqLen)
+    If Mid(line, starCol, starLen) = "*" Then
+      text = seq & RTrim(Mid(line, starCol, commentLen))
+    Else
+      text = seq & Mid(line, labelCol, labelLen) & _
+                   Mid(line, opCodeCol, opcodeLen) & _
+                   RTrim(Mid(line, operandCol, operandLen))
+    End If
+
+    cardFile.WriteLine text
+    If xFile.AtEndOfStream Then
+      eof = True
+    Else
+      line = xFile.ReadLine
+    End If
+  Loop Until eof
+
+  cardFile.Close
+  Set cardFile = Nothing
+  xfile.Close
+  Set xFile = Nothing
+End Sub
+
+'---------------------------------------------------------------
+
+Set fso = WScript.CreateObject("Scripting.FileSystemObject")
+quietMode = False
+
+
+Set args = WScript.Arguments
+For Each deckName In args
+  If UCase(Trim(deckName)) = "/Q" Then
+    quietMode = True
+  ElseIf Len(fileName) = 0 Then
+    fileName = Trim(deckName)
+  End If
+Next
+
+Set args = Nothing
+If Len(fileName) = 0 Then
+  MsgBox "Must supply the name of the transcription file."
+  WScript.Quit 9
+Else
+  '-- Main Line --
+  If Not fso.FileExists(fileName) Then
+    MsgBox "Transcription file does not exist: " & vbCrLf & fileName
+    WScript.Quit 8
+  Else
+    deckName = fso.BuildPath(fso.GetParentFolderName(fileName), fso.GetBaseName(fileName)) & ".sps"
+    ExtractCode fileName, deckName
+    If not quietMode Then
+      MsgBox "SPS assembler card deck created: " & vbCrLf & deckName
+    End If
+
+    WScript.Quit 0
+  End If
+End If
+
+Set fso = Nothing
+
+]]>
+</script>
+</job>
+</package>
