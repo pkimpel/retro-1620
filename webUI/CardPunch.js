@@ -34,7 +34,7 @@ class CardPunch {
     static windowWidth = 575;           // window innerWidth, pixels
 
     static numericGlyphs = [    // indexed as BCD code prefixed with flag bit: F8421
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", "@", "?", "?", "}",         // 00-0F
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", " ", "?", "?", "}",         // 00-0F
         "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "$", "-", "?", "?", "\""];       // 10-1F
 
     static alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit BCD)

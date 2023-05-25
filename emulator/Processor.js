@@ -1520,8 +1520,7 @@ class Processor {
                 this.gateSAVE.value = 0;
                 this.regIR1.value = this.regMAR.value = this.regPR1.value;
             } else {
-                this.regIR1.value = this.regIR2.value;
-                this.regIR2.value = this.regMAR.clear();
+                this.regIR1.value = this.regMAR.value = this.regIR2.value;      // per Germain, p.97
             }
             this.enterICycle();
             break;
