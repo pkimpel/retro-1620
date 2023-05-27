@@ -1,21 +1,21 @@
-00010*         DT 0021 - TEST DATA PROGRAM
-00020*
-00030*
-00040*         THIS PROGRAM WRITES TEST
-00050*         DATA ON CYLINDER 97 OF THE
-00060*         CE DISK PACK FOR 1311
-00070*         DISK STORAGE DRIVE
-00080*
-00090*
-00100*         CONTROL ROUTINES
-00110*
-00120        DORG 00402                                                         00402
+00010*         DT 0021 - TEST DATA PROGRAM           
+00020*           
+00030*           
+00040*         THIS PROGRAM WRITES TEST           
+00050*         DATA ON CYLINDER 97 OF THE           
+00060*         CE DISK PACK FOR 1311           
+00070*         DISK STORAGE DRIVE           
+00080*           
+00090*           
+00100*         CONTROL ROUTINES           
+00110*           
+00120        DORG 00402                                                         00402      
 00140 STA    B    *+12,,,        RESTART                                        00402 49 00414 00000
 00150        RCTY ,,,            RETURN CARRIAGE                                00414 34 00000 00102
 00160        WATY T1,,,          TYPE TEST NAME                                 00426 39 02551 00100
-00170*
-00180*         TYPE OUT SWITCH SETTINGS
-00190*
+00170*           
+00180*         TYPE OUT SWITCH SETTINGS           
+00190*           
 00200        RCTY ,,,            RET CARR                                       00438 34 00000 00102
 00210        WATY T30,,,         TYPE SW3 ON                                    00450 39 02907 00100
 00220        RCTY ,,,            RETURN CARRIAGE                                00462 34 00000 00102
@@ -26,20 +26,20 @@
 00270        WATY T6,,,          TYPE DATA-PROG                                 00522 39 02681 00100
 00280        H    ,,,            HALT                                           00534 48 00000 00000
 00290        TFM  STA+6,*+12,,   LOAD RESTART                                   00546 16 00408 -0558
-00300*
-00310*         REQUEST AND ACCEPT MODULE NO.
-00320*
+00300*           
+00310*         REQUEST AND ACCEPT MODULE NO.           
+00320*           
 00330        RCTY ,,,            RETURN CARRIAGE                                00558 34 00000 00102
 00340        WATY T7,,,          ROT MOD NO.                                    00570 39 02703 00100
 00350        RNTY N,,,           KEY IN NUMBER                                  00582 36 03949 00100
 00360        BC3  *-12,,,        SW3 ON TYP AGAIN                               00594 46 00582 00300
-00370*
-00380*         THIS ROUTINE COMPUTES DRIVE
-00390*         CODE DIGIT FROM MODULE NO.
-00400*         AND LOADS SUB-INST WITH
-00410*         DRIVE CODE DIGIT
-00420*         AND STORE MATH TABLES
-00430*
+00370*           
+00380*         THIS ROUTINE COMPUTES DRIVE           
+00390*         CODE DIGIT FROM MODULE NO.           
+00400*         AND LOADS SUB-INST WITH           
+00410*         DRIVE CODE DIGIT           
+00420*         AND STORE MATH TABLES           
+00430*           
 00440        MM   N,02,10,       MULTIPLY                                       00606 13 03949 000-2
 00450        AM   99,01,8,       ADD 1                                          00618 11 00099 0-001
 00460        TD   M,99,,         RELOAD MOD NO.                                 00630 25 03953 00099
@@ -47,11 +47,11 @@
 00480        TD   S2,M,,         LOAD MOD NO.                                   00654 25 03980 03953
 00490        TD   S3,M,,         LOAD MOD NO.                                   00666 25 03994 03953
 00500        TR   TAB,00100,,    STORE MATH TABLES                              00678 31 03646 00100
-00510*
-00520*         THIS ROUTINE CHECKS THAT
-00530*         THE DISK PACK ON STORAGE
-00540*         UNIT IS THE CE DISK PACK
-00550*
+00510*           
+00520*         THIS ROUTINE CHECKS THAT           
+00530*         THE DISK PACK ON STORAGE           
+00540*         UNIT IS THE CE DISK PACK           
+00550*           
 00570        TFM  S3+5,00000,,   LOAD SUB-INST                                  00690 16 03999 -0000
 00580        TFM  K4+11,CC,,     LOAD INST                                      00702 16 00905 -4012
 00590 K3     K    S3,00701,,     SEEK CYLINDER                                  00714 34 03994 00701
@@ -72,10 +72,10 @@
 00730 K4     TF   S3+5,99999,,   LOAD SUB-INST                                  00894 26 03999 99999
 00740        AM   K4+11,05,,     UPDATE INST                                    00906 11 00905 -0005
 00750        B    K3,,,          LOOP BACK                                      00918 49 00714 00000
-00760*
-00770*         THE NEXT ROUTINE SEEKS CYL 97
-00780*         IN ORDER TO PUT TEST DATA ON IT
-00790*
+00760*           
+00770*         THE NEXT ROUTINE SEEKS CYL 97           
+00780*         IN ORDER TO PUT TEST DATA ON IT           
+00790*           
 00800 K2     TFM  S3+5,19400,,   LOAD SUB-INST                                  00930 16 03999 J9400
 00810        K    S3,00701,,     SEEK CYLINDER 97                               00942 34 03994 00701
 00820        BNI  *+48,01900,,   ANY DATA CHECK                                 00954 47 01002 01900
@@ -97,9 +97,9 @@
 00980        BNC3 *+24,,,        SW 3 ON HALT                                   01146 47 01170 00300
 00990        H    ,,,            HALT                                           01158 48 00000 00000
 01000        B    K2,,,          TRY AGAIN                                      01170 49 00930 00000
-01010*
-01020*         LOAD TEST DATA INTO AREA A1
-01030*
+01010*           
+01020*         LOAD TEST DATA INTO AREA A1           
+01030*           
 01040 K5     TFM  S3+8,001,9,    RESET SCTR CNT                                 01182 16 04002 00-01
 01050        SF   TD,,,          SET FLAG                                       01194 32 03546 00000
 01060        TFM  *+30,A1+100,,  INITIALIZE                                     01206 16 01236 -4131
@@ -111,9 +111,9 @@
 01120        AM   *-42,100,,     UPDATE                                         01278 11 01236 -0100
 01130        AM   *-42,100,,     UPDATE                                         01290 11 01248 -0100
 01140        B    *-72,,,        LOOP BACK                                      01302 49 01230 00000
-01150*
-01160*         RESET INDICATORS
-01170*
+01150*           
+01160*         RESET INDICATORS           
+01170*           
 01180        BNI  *+156,01900,,  ANY DATA CHECK                                 01314 47 01470 01900
 01190        BNI  *+48,03900,,   ANY FILE                                       01326 47 01374 03900
 01200        BI   *+12,03600,,   ADRS CK                                        01338 46 01350 03600
@@ -127,9 +127,9 @@
 01280        BI   *+12,02100,,   TAS CK                                         01434 46 01446 02100
 01290        BI   *+12,02200,,   F R CK                                         01446 46 01458 02200
 01300        BI   *+12,02300,,   A O CK                                         01458 46 01470 02300
-01310*
-01320*         WRITE TRACK OF TEST DATA
-01330*
+01310*           
+01320*         WRITE TRACK OF TEST DATA           
+01330*           
 01340        TD   A2-1,GM,,      PUT IN GM                                      01470 25 06032 03962
 01350        TD   A3-1,GM,,      PUT IN GM                                      01482 25 08034 03962
 01360        TFM  S1+5,19400,,   LOAD SUB-INS.                                  01494 16 03971 J9400
@@ -142,27 +142,27 @@
 01430        TFM  ERR+18,*-24,,  LOAD RETURN                                    01578 16 02040 -1554
 01440        TFM  E1+6,ER3,,     LOAD ERROR T/O                                 01590 16 02448 -2967
 01450        B    ERR,,,         CK FOR ERROR                                   01602 49 02022 00000
-01460*
-01470*         READ BACK CHECK
-01480*
+01460*           
+01470*         READ BACK CHECK           
+01480*           
 01490        RN   S1,00701,,     RD BK CK RLC                                   01614 36 03966 00701
 01500        BNI  *+48,01900,,   ANY DATA CHECK                                 01626 47 01674 01900
 01510        TFM  ERR+18,*-24,,  LOAD RETURN                                    01638 16 02040 -1614
 01520        TFM  E1+6,ER4,,     LOAD ERROR T/O                                 01650 16 02448 -2995
 01530        B    ERR,,,         BRCH TO ERROR                                  01662 49 02022 00000
-01540*
-01550*         READ DATA INTO AREA A2
-01560*
+01540*           
+01550*         READ DATA INTO AREA A2           
+01560*           
 01570        RN   S2,00700,,     RD DISK RLC                                    01674 36 03980 00700
 01580        BNI  *+48,01900,,   ANY DATA CHECK                                 01686 47 01734 01900
 01590        TFM  ERR+18,*-24,,  LOAD RETURN                                    01698 16 02040 -1674
 01600        TFM  E1+6,ER5,,     LOAD ERROR T/O                                 01710 16 02448 -3023
 01610        B    ERR,,,         BRCH TO ERROR                                  01722 49 02022 00000
-01620*
-01630*         THIS ROUTINE DOES A PROGRAM
-01640*         COMPARE OF DATA READ WITH
-01650*         THE DATA THAT WAS WRITTEN
-01660*
+01620*           
+01630*         THIS ROUTINE DOES A PROGRAM           
+01640*         COMPARE OF DATA READ WITH           
+01650*         THE DATA THAT WAS WRITTEN           
+01660*           
 01670        SF   A1+1,,,        SET FLAG                                       01734 32 04032 00000
 01680        SF   A2+1,,,        SET FLAG                                       01746 32 06034 00000
 01690        C    A1+2000,A2+2000,,COMPARE DATA                                 01758 24 06031 08033
@@ -176,9 +176,9 @@
 01770        AM   S1+5,20,,      UPDATE                                         01854 11 03971 -0020
 01780        AM   S2+5,20,,      UPDATE                                         01866 11 03985 -0020
 01790        B    K6-24,,,       LOOP BACK                                      01878 49 01530 00000
-01800*
-01810*         TEST COMPLETE ROUTINES
-01820*
+01800*           
+01810*         TEST COMPLETE ROUTINES           
+01820*           
 01830        BC4  K2+12,,,       SW4 ON LOOP BK                                 01890 46 00942 00400
 01840        BNC1 *+48,,,        SW 1 OFF BYPASS                                01902 47 01950 00100
 01850        BNR  *+36,ERM,,     CK FOR RM IN MAP                               01914 45 01950 03961
@@ -190,9 +190,9 @@
 01910        H    ,,,            HALT                                           01986 48 00000 00000
 01920        TFM  STA+6,STA+12,, LOAD RESTART                                   01998 16 00408 -0414
 01930        B    STA,,,         RESTART TEST                                   02010 49 00402 00000
-01940*
-01950*         ERROR SUBROUTINE
-01960*
+01940*           
+01950*         ERROR SUBROUTINE           
+01960*           
 01970 ERR    BI   *+24,01900,,   ANY DATA CHECK                                 02022 46 02046 01900
 01980        B    99999,,,       RETURN TO PROG                                 02034 49 99999 00000
 01990        BNI  J10,03900,,    ANY FILE CHECK                                 02046 47 02190 03900
@@ -220,9 +220,9 @@
 02210        BI   *+12,02200,,   F R CHECK                                      02310 46 02322 02200
 02220        BI   *+12,02300,,   A O CHECK                                      02322 46 02334 02300
 02230        B    ERR,,,         LOOP BACK                                      02334 49 02022 00000
-02240*
-02250*         ERROR TYPE OUT ROUTINE
-02260*
+02240*           
+02250*         ERROR TYPE OUT ROUTINE           
+02260*           
 02270        NOP  ,,,            NO OPERATION                                   02346 41 00000 00000
 02280 ETO    BC1  J11,,,         SW 1 ON BYPASS                                 02358 46 02478 00100
 02290        MM   S1+5,05,10,    MULTIPLY                                       02370 13 03971 000-5
@@ -240,55 +240,55 @@
 02410        BNC3 *+24,,,        SW3 ON HALT                                    02514 47 02538 00300
 02420        H    ,,,            HALT                                           02526 48 00000 00000
 02430        B    ERR,,,         SEE IF MORE ERS                                02538 49 02022 00000
-02440*
-02450*         DATA,TYPE OUTS,ERROR
-02460*         MESSAGES AND CONSTANTS
-02470*
-02480 T1     DAC  28,DT 0021 - TEST DATA PROGRAM@                               02551 00056
-02490 T4     DAC  16,SWITCH SETTINGS@                                           02607 00032
-02500 T5     DAC  21,PROGRAM - AS DESIRED@                                      02639 00042
-02510 T6     DAC  11,DATA--PROG@                                                02681 00022
-02520 T7     DAC  25,KEY IN 1 DIGIT MODULE NUM                                  02703 00050
-02530        DAC  05,BER @                                                      02753 00010
-02540 T10    DAC  15,TEST COMPLETED@                                            02763 00030
-02550 T20    DAC  24,DISK PACK ON 1311 IS NOT                                   02793 00048
-02560        DAC  23, C E DISK PACK DONT USE                                    02841 00046
-02570        DAC  10, PROGRAM.@                                                 02887 00020
-02580 T30    DAC  22,SW 3 ON FOR CORRECTING                                     02907 00044
-02590        DAC  08, KEY IN@                                                   02951 00016
-02600*
-02610*         ERROR MESSAGES
-02620*
-02630 ER3    DAC  14,WRITE 20 SCT @                                             02967 00028
-02640 ER4    DAC  14,READ BK COMP @                                             02995 00028
-02650 ER5    DAC  14,READ 20 SCTR @                                             03023 00028
-02660 ER6    DAC  14,PROG COMPARE @                                             03051 00028
-02670 ER7    DAC  15,DATA NOT EQUAL@                                            03079 00030
-02680 ER8    DAC  06,SEEK @                                                     03109 00012
-02690 ER10   DAC  14, ADS CK (36) @                                             03121 00028
-02700 ER11   DAC  14, WLR CK (37) @                                             03149 00028
-02710 ER12   DAC  15, OVFO CK (38) @                                            03177 00030
-02720 ER13   DAC  19, FILE NO IND (39) @                                        03207 00038
-02730 ER14   DAC  13, RD CK (06) @                                              03245 00026
-02740 ER15   DAC  13, WR CK (07) @                                              03271 00026
-02750 ER16   DAC  13, MBR-E (16) @                                              03297 00026
-02760 ER17   DAC  13, MBR-O (17) @                                              03323 00026
-02770 ER19   DAC  14,SELECT LOCK  @                                             03349 00028
-02780 ER20   DAC  14, CYL 99  HD 9@                                             03377 00028
-02790 ER30   DAC  23,ERROR OCCURRED BUT SW 1                                    03405 00046
-02800        DAC  21, WAS ON THUS NO ETO.@                                      03451 00042
-02810 ER22   DAC  27,ACCESS ARM AT 99 SHD BE 97@                                03493 00054
-02820*
-02830*         DATA,CONSTANTS,WORKING
-02840*         AREA AND SUB-INSTRUCTIONS
-02850*
+02440*           
+02450*         DATA,TYPE OUTS,ERROR           
+02460*         MESSAGES AND CONSTANTS           
+02470*           
+02480 T1     DAC  28,DT 0021 - TEST DATA PROGRAM@                               02551 00028
+02490 T4     DAC  16,SWITCH SETTINGS@                                           02607 00016
+02500 T5     DAC  21,PROGRAM - AS DESIRED@                                      02639 00021
+02510 T6     DAC  11,DATA--PROG@                                                02681 00011
+02520 T7     DAC  25,KEY IN 1 DIGIT MODULE NUM                                  02703 00025
+02530        DAC  05,BER @                                                      02753 00005
+02540 T10    DAC  15,TEST COMPLETED@                                            02763 00015
+02550 T20    DAC  24,DISK PACK ON 1311 IS NOT                                   02793 00024
+02560        DAC  23, C E DISK PACK DONT USE                                    02841 00023
+02570        DAC  10, PROGRAM.@                                                 02887 00010
+02580 T30    DAC  22,SW 3 ON FOR CORRECTING                                     02907 00022
+02590        DAC  08, KEY IN@                                                   02951 00008
+02600*           
+02610*         ERROR MESSAGES           
+02620*           
+02630 ER3    DAC  14,WRITE 20 SCT @                                             02967 00014
+02640 ER4    DAC  14,READ BK COMP @                                             02995 00014
+02650 ER5    DAC  14,READ 20 SCTR @                                             03023 00014
+02660 ER6    DAC  14,PROG COMPARE @                                             03051 00014
+02670 ER7    DAC  15,DATA NOT EQUAL@                                            03079 00015
+02680 ER8    DAC  06,SEEK @                                                     03109 00006
+02690 ER10   DAC  14, ADS CK (36) @                                             03121 00014
+02700 ER11   DAC  14, WLR CK (37) @                                             03149 00014
+02710 ER12   DAC  15, OVFO CK (38) @                                            03177 00015
+02720 ER13   DAC  19, FILE NO IND (39) @                                        03207 00019
+02730 ER14   DAC  13, RD CK (06) @                                              03245 00013
+02740 ER15   DAC  13, WR CK (07) @                                              03271 00013
+02750 ER16   DAC  13, MBR-E (16) @                                              03297 00013
+02760 ER17   DAC  13, MBR-O (17) @                                              03323 00013
+02770 ER19   DAC  14,SELECT LOCK  @                                             03349 00014
+02780 ER20   DAC  14, CYL 99  HD 9@                                             03377 00014
+02790 ER30   DAC  23,ERROR OCCURRED BUT SW 1                                    03405 00023
+02800        DAC  21, WAS ON THUS NO ETO.@                                      03451 00021
+02810 ER22   DAC  27,ACCESS ARM AT 99 SHD BE 97@                                03493 00027
+02820*           
+02830*         DATA,CONSTANTS,WORKING           
+02840*         AREA AND SUB-INSTRUCTIONS           
+02850*           
 02860 TD     DSC  20,00000000001111111111                                       03546 00020
 02870        DSC  20,22222222223333333333                                       03566 00020
 02880        DSC  20,44444444445555555555                                       03586 00020
 02890        DSC  20,66666666667777777777                                       03606 00020
 02900        DSC  20,88888888889999999999                                       03626 00020
 02910 TAB    DSC  2,0                                                           03646 00002
-02920        DSB  100,3,,        MATH TABLES                                    03747 00300
+02920        DSB  100,3,,        MATH TABLES                                    03747 00100
 02930 N      DC   2,00,,         MODULE                                         03949 00002
 02940        DC   2,00,,         BUFFER                                         03951 00002
 02950 M      DC   2,00,,         MODULE NO.                                     03953 00002
@@ -296,29 +296,29 @@
 02970 RM     DC   2,0@,,         RECORD MARK                                    03957 00002
 02980 CEM    DC   2,00,,         C E MAP                                        03959 00002
 02990 ERM    DC   2,00,,         ERROR MAP                                      03961 00002
-03000 GM     DC   1,@,,          GROUP MARK                                     03962 00001          ORIG. DGM
-03010        DAC  1,0                                                           03965 00002
+03000 GM     DC   1,@,,          GROUP MARK                                     03962 00001
+03010        DAC  1,0                                                           03965 00001
 03020 S1     DSC  9,000000020,,  SUB-INST                                       03966 00009
-03030        DSA  A1+1                                                          03979 00005 -4032
+03030        DSA  A1+1                                                          03979    00005 -4032
 03040 S2     DSC  9,000000020,,  SUB-INST                                       03980 00009
-03050        DSA  A2+1                                                          03993 00005 -6034
+03050        DSA  A2+1                                                          03993    00005 -6034
 03060 S3     DSC  9,000000001,,  SUB-INST                                       03994 00009
-03070        DSA  A3+1                                                          04007 00005 -8036
+03070        DSA  A3+1                                                          04007    00005 -8036
 03080 CC     DC   5,06840,,      CK CYL                                         04012 00005
 03090        DC   5,07080,,      CK CYL                                         04017 00005
 03100        DC   5,07320,,      CK CYL                                         04022 00005
 03110        DC   5,19960,,      CK CYL                                         04027 00005
-03120        DAC  1,0                                                           04029 00002
+03120        DAC  1,0                                                           04029 00001
 03130 A1     DC   2,00,,         LABEL                                          04031 00002
-03140        DSB  20,100,,       DATA AREA                                      04051 02000
+03140        DSB  20,100,,       DATA AREA                                      04051 00020
 03150 A2     DC   2,00,,         LABEL                                          06033 00002
-03160        DSB  20,100,,       DATA AREA                                      06053 02000
+03160        DSB  20,100,,       DATA AREA                                      06053 00020
 03170 A3     DC   2,00,,         LABEL                                          08035 00002
-03180        DSB  20,100,,       DATA AREA                                      08055 02000
+03180        DSB  20,100,,       DATA AREA                                      08055 00020
       MON    DS   ,18117                                                        18117 00000
       MONIT  DS   ,18000                                                        18000 00000
-12345        DAC  04,DT21                                                       10037 00008
-12345        DSA  LAST                                                          10048 00005 J0218
+12345        DAC  04,DT21                                                       10037 00004
+12345        DSA  LAST                                                          10048    00005 J0218
       DIPAL  BNR  DIPAL6      ,MON                                              10050 45 10194 18117
              B    *+48                                                          10062 49 10110 00000
 12345        NOP  K2+12,,,                                                      10074 41 00942 00000
@@ -334,4 +334,4 @@
       DIPAL6 H                                                                  10194 48 00000 00000
              B    STA                                                           10206 49 00402 00000
 12345 LAST   DC   01,0,,                                                        10218 00001
-07970        DEND DIPAL                                                         10050
+07970        DEND DIPAL                                                         10050      

@@ -958,7 +958,7 @@
            B   S
            TF  F5+18       ,DIPAL1+6
            B   MONIT
-     DIPAL6H
+     DIPAL6H   
            B   S
            DORG*-4
      DIPAL1B   DIPAL2,,0

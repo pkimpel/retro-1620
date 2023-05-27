@@ -47,19 +47,34 @@ Function FormatSourceLine(byVal line)
     FormatSourceLine = Mid(line, 1, 5) & " " & _
                        Mid(line, 6, 6) & " " & _
                        Mid(line, 12, 4) & " " & _
-                       Mid(line, 16, 60) & "     "
+                       Mid(line, 16, 60) & "  "
   End If
 End Function
 
 '---------------------------------------
-Sub ReformatInstruction(byVal deckFile, byVal listFile, byVal line)
+Sub ReformatInstruction(byVal deckFile, byVal listFile, byVal source)
   'Reformats the group of object deck card images that result form a single
   'single assembler directive and writes a line to the listing file.
+  Dim line
   Dim text
 
-  text = FormatSourceLine(line)
-
-  End Sub
+  text = FormatSourceLine(source)
+  line = deckFile.ReadLine
+  If Not deckFile.AtEndOfStream Then
+    Select Case Mid(line, 76, 1)
+    Case "9"
+      listFile.WriteLine text & Mid(line, 6, 5) & " " & Mid(line, 13, 5)    '-- may need digit/char adjustment
+    Case "R"
+      listFile.WriteLine text & _
+          Mid(line, 6, 5) & " " & _
+          Replace(Mid(line, 11, 2), "]", "-") & " " & _
+          Replace(Mid(line, 13, 5), "]", "-") & " " & _
+          Replace(Mid(line, 18, 5), "]", "-")
+    Case Else
+      listFile.WriteLine ">> Invalid instruction line: " & line
+    End Select
+  End If
+End Sub
 
 '---------------------------------------
 Sub FormatListing(byVal fileName, byVal listName)
@@ -75,7 +90,6 @@ Sub FormatListing(byVal fileName, byVal listName)
 
   Set listFile = fso.OpenTextFile(listName, ForWriting, True, False)
   Set deckFile = fso.OpenTextfile(fileName, ForReading, False, False)
-  lineNr = 1
   line = deckFile.ReadLine
 
   eof = deckFile.AtEndOfStream
@@ -127,7 +141,7 @@ Else
     MsgBox "Object deck file does not exist: " & vbCrLf & fileName
     WScript.Quit 8
   Else
-    listName = fso.BuildPath(fso.GetParentFolderName(fileName), fso.GetBaseName(fileName)) & ".sps"
+    listName = fso.BuildPath(fso.GetParentFolderName(fileName), fso.GetBaseName(fileName)) & ".lsx"
     FormatListing fileName, listName
     If not quietMode Then
       MsgBox "SPS assembler card deck created: " & vbCrLf & listName
