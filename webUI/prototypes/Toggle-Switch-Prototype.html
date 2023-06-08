@@ -1,0 +1,146 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<style>
+/***** Original from https://codepen.io/garetmckinley/pen/YmxYZr *****
+.toggle-control {
+  display: block;
+  position: relative;
+  padding-left: 100px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  font-size: 22px;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
+}
+.toggle-control input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+.toggle-control input:checked ~ .control {
+  background-color: dodgerblue;
+}
+.toggle-control input:checked ~ .control:after {
+  left: 55px;
+}
+.toggle-control .control {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 50px;
+  width: 100px;
+  border-radius: 25px;
+  background-color: darkgray;
+  transition: background-color 0.15s ease-in;
+}
+.toggle-control .control:after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 40px;
+  height: 40px;
+  border-radius: 25px;
+  background: white;
+  transition: left 0.15s ease-in;
+}
+*****************************************************************/
+
+.simpleToggleSwitch {
+    display:            block;
+    position:           relative;
+    padding-top:        20px;           /* was 50px */
+    margin-right:       12px;
+    cursor:             pointer;
+    font-size:          8px;
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none}
+.simpleToggleSwitch input {
+    position:           absolute;
+    opacity:            0;
+    cursor:             pointer;
+    height:             0;
+    width:              0}
+.simpleToggleSwitch input:checked ~ .simpleToggleControl {
+    /**********
+    background-image:   linear-gradient(to bottom, #3330, #3330 50%, #333 75%, #333),
+                        linear-gradient(to right, #666, silver, #666);
+    **********/
+    background-color:   green}
+.simpleToggleSwitch input:checked ~ .simpleToggleControl:after {
+    top:                1px}
+.simpleToggleSwitch .simpleToggleControl {
+    position:           absolute;
+    top:                -1px;
+    left:               0;
+    width:              11px;
+    height:             20px;           /* was 50px */
+    border:             1px solid black;
+    border-radius:      6px;
+    /**********
+    background-image:   linear-gradient(to top, #3330, #3330 50%, #333 75%, #333),
+                        linear-gradient(to right, #666, silver, #666);
+    **********/
+    background-color:   #999;
+    transition:         background 0.15s ease-in}
+.simpleToggleSwitch .simpleToggleControl:after {
+    content:            "";
+    position:           absolute;
+    left:               0;
+    top:                8px;            /* was 36px */
+    width:              9px;
+    height:             9px;
+    border:             1px solid black;
+    border-radius:      50%;
+    background-color:   white;
+    transition:         top 0.15s ease-in}
+
+
+/* Center the control */
+body {
+    display:            flex;
+    justify-content:    center;
+    align-items:        center;
+    min-height:         100vh;
+    background-color:   white;
+    color:              black}
+
+.outerToggleControl {
+    position:           relative;
+    width:              64px;
+    height:             26px;
+    border:             1px solid black}
+.outerToggleControl .simpleToggleSwitch {
+    position:           absolute;
+    left:               2px;
+    top:                50%;
+    transform:          translate(0, -50%)}
+.outerToggleControl .toggleControlCaption {
+    position:           absolute;
+    right:              2px;
+    top:                50%;
+    transform:          translate(0, -50%);
+    line-height:        100%}
+</style>
+</head>
+
+<body>
+
+
+<div class=outerToggleControl>
+    <label class="simpleToggleSwitch">
+        <input type="checkbox" checked="checked">
+        <span class="simpleToggleControl"></span>
+    </label>
+    <span class=toggleControlCaption>Enable</span>
+</div>
+
+</body>
+</html>

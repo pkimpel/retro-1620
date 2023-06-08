@@ -1,0 +1,101 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<style>
+.diskUnitPanel {
+    position:           absolute;
+    height:             28px;
+    width:              280px;
+    background-color:   #CCC;
+    border:             1px solid #333;
+    box-shadow:         3px 3px 3px #666}
+.diskUnitStatus {
+    position:           absolute;
+    left:               4px;
+    top:                50%;
+    height:             20px;
+    width:              20px;
+    transform:          translate(0,-50%);
+    text-align:         center;
+    color:              #3F3;
+    background-color:   #3F3;
+    box-shadow:         2px 2px 2px #666}
+.diskUnitStatus .diskUnitNumber {
+    position:           absolute;
+    left:               50%;
+    top:                50%;
+    transform:          translate(-50%,-50%);
+    line-height:        100%;
+    font-family:        Arial, Helvetica, sans-serif;
+    text-shadow:        -1px 1px 0 black, 1px 1px 0 black,
+                        1px -1px 0 black, -1px -1px 0 black}
+.diskUnitSectorNr {
+    position:           absolute;
+    top:                50%;
+    left:               32px;
+    height:             15px;
+    width:              5ch;
+    transform:          translate(0,-50%);
+    line-height:        100%;
+    font-family:        Arial, Helvetica, sans-serif;
+    font-size:          14px;
+    font-weight:        bold;
+    color:              black;
+    text-align:         right;
+    border:             none}
+.diskUnitSeekPosition {
+    position:           absolute;
+    top:                50%;
+    right:              28px;
+    height:             20px;
+    width:              166px;
+    transform:          translate(0,-50%);
+    border:             1px solid white}
+.diskUnitMenuIcon {
+    position:           absolute;
+    top:                50%;
+    right:              4px;
+    height:             16px;
+    width:              16px;
+    transform:          translate(0,-50%)}
+
+/* Center the control */
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: white;
+  color: black;
+}
+</style>
+
+<script>
+document.addEventListener("load", (ev) => {
+    const d0 = document.querySelector(".diskUnitPanel");
+
+    function diskUnit_dragStart(ev) {
+        ev.dataTransfer.setData("text/plain", ev.target.id);
+    }
+
+    d0.addEventListener("dragstart", diskUnit_dragStart);
+});
+</script>
+</head>
+
+<body>
+
+<div class=diskUnitPanel draggable=true>
+    <div class=diskUnitStatus title="Disk Drive 0">
+        <div class=diskUnitNumber>0</div>
+    </div>
+    <input class=diskUnitSectorNr type=text size=5 value=06600
+           title="Sector number">
+    <meter class=diskUnitSeekPosition min=0 max=100 value=33
+           title="Cylinder position"></meter>
+    <img class=diskUnitMenuIcon src="./menu-burger-icons8.png"
+         alt="Disk unit menu" title="Click to open disk unit menu">
+</div>
+
+</body>
+</html>
