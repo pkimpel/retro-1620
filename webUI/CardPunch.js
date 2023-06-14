@@ -19,6 +19,7 @@ export {CardPunch};
 import {Envir} from "../emulator/Envir.js";
 import {Register} from "../emulator/Register.js";
 import {Timer} from "../emulator/Timer.js";
+import {WaitSignal} from "../emulator/WaitSignal.js";
 import {PanelButton} from "./PanelButton.js";
 import {openPopup} from "./PopupUtil.js";
 
@@ -114,6 +115,9 @@ class CardPunch {
         this.boundStackerBarClick = this.stackerBarClick.bind(this);
         this.boundReceiveMessage = this.receiveMessage.bind(this);
 
+        this.waitForBuffer = new WaitSignal();
+        this.waitForTransport = new WaitSignal();
+
         this.clear();
         let geometry = this.config.formatWindowGeometry("CardPunch");
         if (geometry.length) {
@@ -136,11 +140,7 @@ class CardPunch {
 
         this.punchReady = false;        // status of PUNCH READY lamp
         this.transportReady = false;    // ready status: cards loaded and START or LOAD pressed
-        this.signalTransportReady = null;// function that resolves the transport-ready Promise
-        this.transportRequested = false;// waiting for punch transport ready
         this.bufferReady = false;       // punch card buffer is ready to be punched
-        this.signalBufferReady = null;  // function that resolves the buffer-ready Promise
-        this.bufferRequested = false;   // waiting for cardBuffer (this.bufferReady)
         this.punchCheck = false;        // true if a punch check has occurred
         this.punchCheckPending = false; // true if a punch check has been detected
         this.cardBuffer = "";           // card data to send to Processor
@@ -212,8 +212,8 @@ class CardPunch {
         if (!this.transportReady) {
             this.setTransportReady(true);
             if (this.punchReady) {
-                if (this.transportRequested) {
-                    this.signalTransportReady(false);
+                if (this.waitForTransport.requested) {
+                    this.waitForTransport.signal(false);
                 } else if (this.bufferReady) {
                     this.initiateCardPunch();
                 }
@@ -404,52 +404,12 @@ class CardPunch {
     }
 
     /**************************************/
-    async waitForTransport() {
-        /* Constructs and waits for a Promise that resolves when
-        this.signalTransportReady() is called, then invalidates the transport-
-        ready signaling mechanism. The parameter to that function is a Boolean
-        that is returned to the caller indicating whether the wait has been
-        canceled. See:
-        https://stackoverflow.com/questions/26150232/resolve-javascript-promise-
-        outside-the-promise-constructor-scope */
-
-        this.transportRequested = true;
-        const result = await new Promise((resolve) => {
-            this.signalTransportReady = resolve;
-        });
-
-        this.signalTransportReady = null;
-        this.transportRequested = false;
-        return result ?? false;
-    }
-
-    /**************************************/
-    async waitForBuffer() {
-        /* Constructs and waits for a Promise that resolves when
-        this.signalBufferReady() is called, then invalidates the buffer-ready
-        signaling mechanism. The parameter to that function is a Boolean
-        that is returned to the caller indicating whether the wait has been
-        canceled. See:
-        https://stackoverflow.com/questions/26150232/resolve-javascript-promise-
-        outside-the-promise-constructor-scope */
-
-        this.bufferRequested = true;
-        const result = await new Promise((resolve) => {
-            this.signalBufferReady = resolve;
-        });
-
-        this.signalBufferReady = null;
-        this.bufferRequested = false;
-        return result ?? false;
-    }
-
-    /**************************************/
     async initiateCardPunch() {
         /* Initiates the punching of the card from the card buffer */
 
         if (!this.transportReady) {
             this.processor.updateLampGlow(1);   // freeze the state of the lamps
-            if (await this.waitForTransport()) {
+            if (await this.waitForTransport.request()) {
                 return;                         // wait canceled
             }
         }
@@ -489,10 +449,10 @@ class CardPunch {
                 this.$$("StackerLamp").classList.add("annunciatorLit");
         }
 
-        this.cardBuffer = "";           // clear the internal card buffer
-        this.bufferReady = false;       // buffer is ready to receive more data
-        if (this.bufferRequested) {     // if data transfer is waiting for buffer
-            this.signalBufferReady(false);      // tell 'em it's ready
+        this.cardBuffer = "";                   // clear the internal card buffer
+        this.bufferReady = false;               // buffer is ready to receive more data
+        if (this.waitForBuffer.requested) {     // if data transfer is waiting for buffer
+            this.waitForBuffer.signal(false);   // tell 'em it's ready
         }
     }
 
@@ -504,7 +464,7 @@ class CardPunch {
         let eob = 0;                    // end-of-block signal to Processor
 
         if (this.bufferReady) {         // buffer not available to receive now
-            if (await this.waitForBuffer()) {
+            if (await this.waitForBuffer.request()) {
                 return 1;                       // wait canceled
             }
         }
@@ -539,7 +499,7 @@ class CardPunch {
         let eob = 0;                    // end-of-block signal to Processor
 
         if (this.bufferReady) {         // buffer not available to receive now
-            if (await this.waitForBuffer()) {
+            if (await this.waitForBuffer.request()) {
                 return 1;                       // wait canceled
             }
         }
@@ -581,12 +541,12 @@ class CardPunch {
     release () {
         /* Called by Processor to indicate the device has been released */
 
-        if (this.bufferRequested) {         // in case we've been manually released
-            this.signalBufferReady(true);
+        if (this.waitForBuffer.requested) {     // in case we've been manually released
+            this.waitForBuffer.signal(true);
         }
 
-        if (this.transportRequested) {      // ditto
-            this.signalTransportReady(true);
+        if (this.waitForTransport.requested) {  // ditto
+            this.waitForTransport.signal(true);
         }
     }
 
