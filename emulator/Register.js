@@ -220,6 +220,12 @@ class Register {
         return ((this.intVal & Register.bcdValueMask) ? 1 : 0);
     }
 
+    get isZero() {
+        /* Returns 1 if the register is zero, 0 otherwise */
+
+        return ((this.intVal & Register.bcdValueMask) ? 0 : 1);
+    }
+
     get isOdd() {
         /* Returns 1 if the register is an odd value, 0 otherwise */
 

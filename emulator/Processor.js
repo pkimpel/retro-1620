@@ -174,7 +174,7 @@ class Processor {
         // Check Indicators
         this.diskAddrCheck =        new FlipFlop(this.envir, true);
         this.diskCylOflowCheck =    new FlipFlop(this.envir, true);
-        this.diskWRLRBCCheck =      new FlipFlop(this.envir, true);
+        this.diskWLRRBCCheck =      new FlipFlop(this.envir, true);
         this.dummy1Check =          new FlipFlop(this.envir, true);
         this.dummy2Check =          new FlipFlop(this.envir, true);
         this.dummy3Check =          new FlipFlop(this.envir, true);
@@ -271,6 +271,7 @@ class Processor {
         this.ioDevice = null;                           // I/O device object
         this.ioSelectNr = 0;                            // I/O channel from Q8/Q9
         this.ioVariant = 0;                             // I/O function variant from Q10/Q11
+        this.ioDiskDriveCode = 0;                       // Module number for disk I/O
         this.ioReadCheckPending = false;                // Read Check condition has occurred but not yet been set
         this.ioWriteCheckPending = false;               // Write Check condition has occurred but not het been set
 
@@ -770,7 +771,7 @@ class Processor {
         // Check Indicators
         this.diskAddrCheck.updateLampGlow(gamma);
         this.diskCylOflowCheck.updateLampGlow(gamma);
-        this.diskWRLRBCCheck.updateLampGlow(gamma);
+        this.diskWLRRBCCheck.updateLampGlow(gamma);
         this.dummy1Check.updateLampGlow(gamma);
         this.dummy2Check.updateLampGlow(gamma);
         this.dummy3Check.updateLampGlow(gamma);
@@ -884,7 +885,7 @@ class Processor {
         switch (device) {
         case 1:         // Typewriter
             this.ioDevice = this.devices.typewriter;
-            this.ioVariant = variant;
+            this.ioVariant = variant & Register.bcdMask;
             this.gateTWPR_SELECT.value = 1;
             break;
         case 2:         // Paper Tape Punch / Plotter
@@ -900,10 +901,13 @@ class Processor {
             this.ioDevice = this.devices.cardReader;
             break;
         case 7:         // Disk Drive
-            this.ioDevice = null;
+            this.ioDevice = this.devices.diskDrive;
+            this.ioVariant = variant & Register.bcdMask;
+            this.gateDISK_OP.value = 1;
             break;
         case 9:         // Printer
             this.ioDevice = null;
+            this.ioVariant = variant & Register.bcdValueMask;
             break;
         case 33:        // Binary Paper Tape Reader
             this.ioDevice = null;
@@ -1236,6 +1240,660 @@ class Processor {
     }
 
     /**************************************/
+    loadDiskControl() {
+        /* Loads the fields of the Disk Control Field addressed by OR-2 to the
+        OR-1, OR-2, and PR-2 registers. The drive code is converted to a disk
+        module number and stored in this.ioDiskDriveCode. This process involves 10
+        memory cycles which are not visible when doing STOP/SCE. Returns true if
+        there is an error */
+        let result = false;
+
+        this.regMAR.value = this.regOR2.value;
+        if (this.regMAR.isOdd) {
+            result = true;
+            this.marCheck("Disk Control Field at odd address");
+        }
+
+        this.gateDISK_LD_ZERO.value = 1;
+        this.fetch();
+        let driveCode = this.regMBR.even & Register.bcdMask;
+        this.regOR1.clear();
+        this.regOR2.clear();
+        this.regPR2.clear();
+        this.envir.tick();
+        this.gateDISK_LD_ZERO.value = 0;
+
+        // Load OR-1.
+
+        this.gateDISK_ADDR.value = 1;
+        this.fetch();   // no MAR increment
+        this.regOR1.setDigit(4, this.regMBR.odd);
+        this.envir.tick();
+
+        this.gateDISK_HUND.value = 1;
+        this.regMAR.incr(2);
+        this.fetch();
+        this.regOR1.setDigit(3, this.regMBR.even);
+        this.regOR1.setDigit(2, this.regMBR.odd);
+        this.envir.tick();
+        this.gateDISK_HUND.value = 0;
+
+        this.gateDISK_UNIT.value = 1;
+        this.regMAR.incr(2);
+        this.fetch();
+        this.regOR1.setDigit(1, this.regMBR.even);
+        this.regOR1.setDigit(0, this.regMBR.odd);
+        this.envir.tick();
+        this.gateDISK_UNIT.value = 0;
+        this.gateDISK_ADDR.value = 0;
+
+        // Load PR-2.
+
+        this.gateSCTR_COUNT.value = 1;
+        this.gateDISK_HUND.value = 1;
+        this.regMAR.incr(2);
+        this.fetch();
+        this.regPR2.setDigit(2, this.regMBR.even);
+        this.regPR2.setDigit(1, this.regMBR.odd);
+        this.envir.tick();
+        this.gateDISK_HUND.value = 0;
+
+        this.gateDISK_UNIT.value = 1;
+        this.regMAR.incr(2);
+        this.fetch();
+        this.regPR2.setDigit(0, this.regMBR.even);
+        this.envir.tick();
+        this.gateDISK_UNIT.value = 0;
+        this.gateSCTR_COUNT.value = 0;
+
+        // Load OR-2.
+
+        this.gateMEM_ADDR.value = 1;
+        this.fetch();   // no MAR increment
+        this.regOR2.setDigit(4, this.regMBR.odd);
+        this.envir.tick();
+
+        this.gateDISK_HUND.value = 1;
+        this.regMAR.incr(2);
+        this.fetch();
+        this.regOR2.setDigit(3, this.regMBR.even);
+        this.regOR2.setDigit(2, this.regMBR.odd);
+        this.envir.tick();
+        this.gateDISK_HUND.value = 0;
+
+        this.gateDISK_UNIT.value = 1;
+        this.regMAR.incr(2);
+        this.fetch();
+        this.regOR2.setDigit(1, this.regMBR.even);
+        this.regOR2.setDigit(0, this.regMBR.odd);
+        this.envir.tick();
+        this.gateDISK_UNIT.value = 0;
+        this.gateMEM_ADDR.value = 0;
+
+        // Finish load.
+
+        this.gateSCTR_CYC.value = 1;
+        if (driveCode < 8) {
+            this.ioDiskDriveCode = driveCode;
+        } else {
+            result = true;
+            this.ioDiskDriveCode = 9;
+            this.checkStop(`Disk invalid drive code ${driveCode}`);
+        }
+
+        this.envir.tick();
+        this.gateDISK_OP.value = 0;
+        return result;
+    }
+
+    /**************************************/
+    initiateDiskControl() {
+        /* Initiates a seek operation to the disk drive. Module selection errors
+        are ignored */
+
+        if (this.loadDiskControl()) {
+            // Check Stop occurred during load of registers
+        } else if (this.ioVariant == 1) {
+            this.gateSCTR_CYC.value = 0;
+            if (this.ioDevice.selectModule(this.ioDiskDriveCode, this.regOR1.value)) {
+                this.ioDevice.initiateSeek();   // async, returns immediately
+            }
+            this.ioExit();
+        } else {
+            this.gateWRITE_INTERLOCK.value = 1;
+            this.enterLimbo();                  // just hang on undefined variant
+        }
+    }
+
+    /**************************************/
+    async readDiskSectors(check, wlrc) {
+        /* Reads one or more disk sectors from the currently selected disk
+        module at the address specified by OR-1 for the number of sectors
+        specified by PR-2 to the memory address specified by OR-2.
+            check: compare data to memory instead of storing data to memory
+            wlrc: detect group marks and wrong-length records.
+        Runs in Limbo, so restarts this.run() on completion */
+
+        const storeSector = (finished, error, data) => {
+            /* Callback function to receive disk sector data into memory:
+                finished: disk module has no more sectors to send (usually sector overflow)
+                error: disk module detected a fatal error during read
+                data: Uint8Array buffer holding the disk sector digits
+            Returns false to indicate the disk module should continue reading
+            sectors; returns true on error or after the sector count has been
+            exhausted */
+            let terminate = false;
+
+            if (finished) {
+                terminate = true;
+            } else if (error) {
+                terminate = true;
+            } else {
+                for (let x=Processor.diskAddressSize; x<Processor.diskSectorSize; x+=2) {
+                    const d1 = data[x] & Register.notParityMask;
+                    const d2 = data[x+1] & Register.notParityMask;
+                    this.regMAR.value = this.regOR2.value;
+                    this.fetch();
+                    if (check) {
+                        const m1 = this.regMBR.even & Register.notParityMask;
+                        const m2 = this.regMBR.odd & Register.notParityMask;
+                        if (wlrc && ((d1 & Register.bcdMask) == Envir.numGroupMark ||
+                                     (m1 & Register.bcdMask) == Envir.numGroupMark)) {
+                            terminate = true;
+                            this.setIndicator(37, `Disk check WLRC compare group mark at ${x}`);
+                        } else if (d1 != m1) {
+                            terminate = true;
+                            this.setIndicator(37, `Disk check compare mismatch at ${x}`);
+                        } else if (wlrc && ((d2 & Register.bcdMask) == Envir.numGroupMark ||
+                                            (m2 & Register.bcdMask) == Envir.numGroupMark)) {
+                            terminate = true;
+                            this.setIndicator(37, `Disk check WLRC compare group mark at ${x+1}`);
+                        } else if (d2 != m2) {
+                            terminate = true;
+                            this.setIndicator(37, `Disk check compare mismatch at digit ${x+1}`);
+                        }
+                    } else {
+                        this.regMIR.even = d1;
+                        if (wlrc && (d1 & Register.bcdMask) == Envir.numGroupMark) {
+                            terminate = true;
+                            this.setIndicator(37, `Disk read WLRC group mark at ${x}`);
+                        } else {
+                            this.regMIR.odd = d2;
+                            if (wlrc && (d2 & Register.bcdMask) == Envir.numGroupMark) {
+                                terminate = true;
+                                this.setIndicator(37, `Disk read WLRC group mark at ${x+1}`);
+                            }
+                        }
+                    }
+
+                    this.store();
+                    this.envir.tick();
+                    this.regOR2.incr(2);
+                    if (terminate) {
+                        break;          // out of for loop
+                    }
+                } // for x
+            }
+
+            this.regOR1.incr(1);                                // increment sector address
+            this.ioDevice.sectorAddr = this.regOR1.value;       // tell device what address should be
+            if (this.regPR2.isZero) {
+                terminate = true;
+            } else {
+                this.regPR2.decr(1);    // decrement count for next sector
+                if (wlrc && !terminate) {
+                    this.regMAR.value = this.regOR2.value;
+                    this.fetch();
+                    if ((this.regMBR.even & Register.bcdMask) == Envir.numGroupMark) {
+                        terminate = true;
+                        this.setIndicator(37, "Disk early end-of-sector group mark in memory");
+                    }
+                }
+            }
+
+            return terminate;
+        }; // storeSector
+
+        this.regPR2.decr(1);            // decrement count for initial sector
+        await this.ioDevice.readSectors(storeSector);
+        if (wlrc && this.regPR2.isZero) {
+            this.regMAR.value = this.regOR2.value;
+            this.fetch();
+            if ((this.regMBR.even & Register.bcdMask) != Envir.numGroupMark) {
+                this.setIndicator(37, "Disk read WLRC no memory group mark after end of read");
+            }
+        }
+
+        this.ioExit();                  // exits Limbo state; will reset INSERT if it's set
+        if (!this.gateMANUAL.value) {
+            this.run();
+        }
+    }
+
+    /**************************************/
+    async readDiskTrack(wlrc) {
+        /* Reads one track of disk sectors from the currently selected disk
+        module at the address specified by OR-1 to the memory address specified
+        by OR-2.
+            wlrc: detect group marks and wrong-length records.
+        Runs in Limbo, so restarts this.run() on completion */
+        let evenAddr = 0;               // even/odd half of memory digit pair
+
+        const storeTrack = (finished, error, data) => {
+            /* Callback function to receive disk sector data into memory:
+                finished: disk module has no more sectors to send (usually sector overflow)
+                error: disk module detected a fatal error during read
+                data: Uint8Array buffer holding the disk sector digits
+            Returns false to indicate the disk module should continue reading
+            sectors; returns true on error */
+            let terminate = false;
+
+            if (finished) {
+                terminate = true;
+            } else if (error) {
+                terminate = true;
+            } else {
+                for (let x=0; x<Processor.diskSectorSize; ++x) {
+                    const d = data[x] & Register.notParityMask;
+
+                    evenAddr = 1-evenAddr;
+                    if (evenAddr) {
+                        this.regMAR.value = this.regOR2.value;
+                        this.fetch();
+                    }
+
+                    this.regMIR.setDigit(evenAddr, d);
+                    if (wlrc && (d & Register.bcdMask) == Envir.numGroupMark) {
+                        terminate = true;
+                        this.setIndicator(37, `Disk readTrack WLRC group mark at ${x}`);
+                    }
+
+                    if (!evenAddr || terminate) {
+                        this.store();
+                        this.envir.tick();
+                        this.regOR2.incr(2);
+                        if (terminate) {
+                            break;      // out of for loop
+                        }
+                    }
+                } // for x
+            }
+
+            this.ioDevice.sectorAddr = this.regOR1.value;       // tell device what address should be
+            if (wlrc && !terminate) {
+                if (!evenAddr) {        // if even address, digit is already in MBR
+                    this.regMAR.value = this.regOR2.value;
+                    this.fetch();
+                }
+                if ((this.regMBR.getDigit(evenAddr) & Register.bcdMask) == Envir.numGroupMark) {
+                    terminate = true;
+                    this.setIndicator(37, "Disk readTrack early end-of-sector group mark in memory");
+                }
+            }
+
+            return terminate;
+        }; // storeTrack
+
+        this.regPR2.decr(1);            // decrement count for initial sector
+        await this.ioDevice.readTrack(storeTrack);
+        if (wlrc) {
+            this.regMAR.value = this.regOR2.value;
+            this.fetch();
+            if ((this.regMBR.even & Register.bcdMask) != Envir.numGroupMark) {
+                this.setIndicator(37, "Disk WLRC no memory group mark after end of read");
+            }
+        }
+
+        this.ioExit();                  // exits Limbo state; will reset INSERT if it's set
+        if (!this.gateMANUAL.value) {
+            this.run();
+        }
+    }
+
+    /**************************************/
+    async checkDiskTrack(wlrc) {
+        /* Reads one track of disk sectors from the currently selected disk
+        module at the address specified by OR-1 and compares the sector data to
+        the memory address specified by OR-2.
+            wlrc: detect group marks and wrong-length records.
+        Runs in Limbo, so restarts this.run() on completion */
+        let evenAddr = 0;               // even/odd half of memory digit pair
+
+        const compareTrack = (finished, error, data) => {
+            /* Callback function to receive disk sector data and compare it with
+            core memory:
+                finished: disk module has no more sectors to send (usually sector overflow)
+                error: disk module detected a fatal error during read
+                data: Uint8Array buffer holding the disk sector digits
+            Returns false to indicate the disk module should continue reading
+            sectors; returns true on error */
+            let terminate = false;
+
+            if (finished) {
+                terminate = true;
+            } else if (error) {
+                terminate = true;
+            } else {
+                for (let x=0; x<Processor.diskSectorSize; ++x) {
+                    const d = data[x] & Register.notParityMask;
+
+                    evenAddr = 1-evenAddr;
+                    if (evenAddr) {
+                        this.regMAR.value = this.regOR2.value;
+                        this.fetch();
+                    }
+
+                    const m = this.regMBR.getDigit(evenAddr) & Register.notParityMask;
+                    if (wlrc && ((d & Register.bcdMask) == Envir.numGroupMark ||
+                                 (m & Register.bcdMask) == Envir.numGroupMark)) {
+                        terminate = true;
+                        this.setIndicator(37, `Disk checkTrack WLRC compare group mark at ${x}`);
+                    } else if (d != m) {
+                        terminate = true;
+                        this.setIndicator(37, `Disk check compare mismatch at ${x}`);
+                    }
+
+                    if (!evenAddr) {
+                        this.envir.tick();
+                        this.regOR2.incr(2);
+                    }
+
+                    if (terminate) {
+                        break;          // out of for loop
+                    }
+                } // for x
+            }
+
+            this.regOR1.incr(1);                                // increment sector address
+            this.ioDevice.sectorAddr = this.regOR1.value;       // tell device what address should be
+            if (wlrc && !terminate) {
+                if (!evenAddr) {        // if even address, digit is already in MBR
+                    this.regMAR.value = this.regOR2.value;
+                    this.fetch();
+                }
+                if ((this.regMBR.getDigit(evenAddr) & Register.bcdMask) == Envir.numGroupMark) {
+                    terminate = true;
+                    this.setIndicator(37, "Disk compare track early end-of-sector group mark in memory");
+                }
+            }
+
+            return terminate;
+        }; // compareTrack
+
+        await this.ioDevice.readTrack(compareTrack);
+        if (wlrc) {
+            this.regMAR.value = this.regOR2.value;
+            this.fetch();
+            if ((this.regMBR.even & Register.bcdMask) != Envir.numGroupMark) {
+                this.setIndicator(37, "Disk WLRC no memory group mark after end of read");
+            }
+        }
+
+        this.ioExit();                  // exits Limbo state; will reset INSERT if it's set
+        if (!this.gateMANUAL.value) {
+            this.run();
+        }
+    }
+
+    /**************************************/
+    initiateDiskRead() {
+        /* Initiates a read operation to the disk drive. The individual read
+        functions are defined as async, but we don't await them as we are in
+        Limbo state -- they will run asynchronously and restart the processor
+        on completion */
+
+        if (this.loadDiskControl()) {
+            // Check Stop occurred during load of registers
+        } else if (this.regOR2.isOdd) {
+            this.checkStop(`Disk read buffer at odd address ${this.regOR2.binaryValue}`);
+        } else if (!this.ioDevice.selectModule(this.ioDiskDriveCode, this.regOR1.value)) {
+            this.gateWRITE_INTERLOCK.value = 1; // just hang on invalid disk module
+        } else {
+            this.gateREAD_INTERLOCK.value = 1;
+            this.gateSCTR_CYC.value = 0;
+            switch (this.ioVariant) {
+            case 0:     // read disk sectors WLRC
+                this.readDiskSectors(false, true);
+                break;
+            case 1:     // check disk sectors WLRC
+                this.readDiskSectors(true, true);
+                break;
+            case 2:     // read disk sectors No WLRC
+                this.readDiskSectors(false, false);
+                break;
+            case 3:     // check disk sectors No WLRC
+                this.readDiskSectors(true, false);
+                break;
+            case 4:     // read disk track WLRC
+                this.readDiskTrack(true);
+                break;
+            case 5:     // check disk track WLRC
+                this.checkDiskTrack(true);
+                break;
+            case 6:     // read disk track No WLRC
+                this.readDiskTrack(false);
+                break;
+            case 7:     // check disk track No WLRC
+                this.checkDiskTrack(false);
+                break;
+            default:
+                // undefined operation -- just hang in Limbo
+                break;
+            }
+        }
+    }
+
+    /**************************************/
+    async writeDiskSectors(wlrc) {
+        /* Writes one or more disk sectors to the currently selected disk module
+        at the address specified by OR-1 for the number of sectors specified by
+        PR-2 from the memory address specified by OR-2.
+            wlrc: detect group marks and wrong-length records.
+        Runs in Limbo, so restarts this.run() on completion */
+
+        const loadSector = (finished, error, data) => {
+            /* Callback function to send disk sector data from memory:
+                finished: disk module has no more sectors to send (usually sector overflow)
+                error: disk module detected a fatal error during write
+                data: Uint8Array buffer holding the disk sector digits
+            Returns false to indicate the disk module should continue writing
+            sectors; returns true on error or after the sector count has been
+            exhausted */
+            let terminate = false;
+
+            //console.debug(`writeSectors fin=${finished}, err=${error}, OR1=${this.regOR1.binaryValue}, PR2=${this.regPR2.binaryValue}, OR2=${this.regOR2.binaryValue}`);
+            if (finished) {
+                terminate = true;
+            } else if (error) {
+                terminate = true;
+            } else {
+                for (let x=Processor.diskAddressSize; x<Processor.diskSectorSize; x+=2) {
+                    this.regMAR.value = this.regOR2.value;
+                    this.fetch();
+                    const m1 = this.regMBR.even & Register.notParityMask;
+                    const m2 = this.regMBR.odd & Register.notParityMask;
+                    data[x] = m1;
+                    data[x+1] = m2;
+                    if (wlrc) {
+                        if ((m1 & Register.bcdMask) == Envir.numGroupMark) {
+                            terminate = true;
+                            this.setIndicator(37, `Disk write WLRC group mark at ${x}`);
+                        } else if ((m2 & Register.bcdMask) == Envir.numGroupMark) {
+                            terminate = true;
+                            this.setIndicator(37, `Disk write WLRC group mark at ${x+1}`);
+                        }
+                    }
+
+                    this.envir.tick();
+                    this.regOR2.incr(2);
+                } // for x
+            }
+
+            this.regOR1.incr(1);                                // increment sector address
+            this.ioDevice.sectorAddr = this.regOR1.value;       // tell device what address should be
+            if (this.regPR2.isZero) {
+                terminate = true;
+            } else {
+                this.regPR2.decr(1);    // decrement count for next sector
+                if (wlrc && !terminate) {
+                    this.regMAR.value = this.regOR2.value;
+                    this.fetch();
+                    if ((this.regMBR.even & Register.bcdMask) == Envir.numGroupMark) {
+                        terminate = true;
+                        this.setIndicator(37, "Disk write early end-of-sector group mark in memory");
+                    }
+                }
+            }
+
+            return terminate;
+        }; // loadSector
+
+        this.regPR2.decr(1);            // decrement count for initial sector
+        await this.ioDevice.writeSectors(loadSector);
+        if (wlrc && this.regPR2.isZero) {
+            this.regMAR.value = this.regOR2.value;
+            this.fetch();
+            if ((this.regMBR.even & Register.bcdMask) != Envir.numGroupMark) {
+                this.setIndicator(37, "Disk write WLRC no memory group mark after end of write");
+            }
+        }
+
+        this.ioExit();                  // exits Limbo state; will reset INSERT if it's set
+        if (!this.gateMANUAL.value) {
+            this.run();
+        }
+    }
+
+    /**************************************/
+    async writeDiskTrack(wlrc) {
+        /* Writes one track of disk sectors to the currently selected disk module
+        at the address specified by OR-1 to the memory address specified by OR-2.
+            wlrc: detect group marks and wrong-length records.
+        Runs in Limbo, so restarts this.run() on completion */
+        let evenAddr = 0;               // even/odd half of memory digit pair
+
+        const loadTrack = (finished, error, data) => {
+            /* Callback function to receive disk sector data into memory:
+                finished: disk module has no more sectors to send (usually sector overflow)
+                error: disk module detected a fatal error during write
+                data: Uint8Array buffer holding the disk sector digits
+            Returns false to indicate the disk module should continue writing
+            sectors; returns true on error */
+            let terminate = false;
+
+            //console.debug(`writeTrack fin=${finished}, err=${error}, OR1=${this.regOR1.binaryValue}, PR2=${this.regPR2.binaryValue}, OR2=${this.regOR2.binaryValue}`);
+            if (finished) {
+                terminate = true;
+            } else if (error) {
+                terminate = true;
+            } else {
+                for (let x=0; x<Processor.diskSectorSize; ++x) {
+                    evenAddr = 1-evenAddr;
+                    if (evenAddr) {
+                        this.regMAR.value = this.regOR2.value;
+                        this.fetch();
+                    }
+
+                    const d = this.regMBR.getDigit(evenAddr);
+                    data[x] = d;
+                    if (wlrc) {
+                        if ((d & Register.bcdMask) == Envir.numGroupMark) {
+                            terminate = true;
+                            this.setIndicator(37, `Disk writeTrack WLRC group mark at ${x}`);
+                        }
+                    }
+
+                    if (!evenAddr) {
+                        this.envir.tick();
+                        this.regOR2.incr(2);
+                    }
+                } // for x
+            }
+
+            this.regOR1.incr(1);                                // increment sector address
+            this.ioDevice.sectorAddr = this.regOR1.value;       // tell device what address should be
+            if (wlrc && !terminate) {
+                if (!evenAddr) {        // if even address, digit is already in MBR
+                    this.regMAR.value = this.regOR2.value;
+                    this.fetch();
+                }
+                if ((this.regMBR.getDigit(evenAddr) & Register.bcdMask) == Envir.numGroupMark) {
+                    terminate = true;
+                    this.setIndicator(37, "Disk writeTrack early end-of-sector group mark in memory");
+                }
+            }
+
+            return terminate;
+        }; // loadTrack
+
+        await this.ioDevice.writeTrack(loadTrack);
+        if (wlrc) {
+            this.regMAR.value = this.regOR2.value;
+            this.fetch();
+            if ((this.regMBR.even & Register.bcdMask) != Envir.numGroupMark) {
+                this.setIndicator(37, "Disk writeTrack WLRC no memory group mark after end of write");
+            }
+        }
+
+        this.ioExit();                  // exits Limbo state; will reset INSERT if it's set
+        if (!this.gateMANUAL.value) {
+            this.run();
+        }
+    }
+
+    /**************************************/
+    initiateDiskWrite() {
+        /* Initiates a write operation to the disk drive. The individual write
+        functions are defined as async, but we don't await them as, unlike other
+        write operations, we are in Limbo state -- they will run asynchronously
+        and restart the processor on completion */
+
+        if (this.loadDiskControl()) {
+            // Check Stop occurred during load of registers
+        } else if (this.regOR2.isOdd) {
+            this.checkStop(`Disk write buffer at odd address ${this.regOR2.binaryValue}`);
+        } else if (!this.ioDevice.selectModule(this.ioDiskDriveCode, this.regOR1.value)) {
+            this.gateWRITE_INTERLOCK.value = 1; // just hang on invalid disk module
+        } else {
+            this.gateWRITE_INTERLOCK.value = 1;
+            this.gateSCTR_CYC.value = 0;
+            switch (this.ioVariant) {
+            case 0:     // write disk sectors WLRC
+                if (this.ioDevice.writeAddress) {
+                    return;             // just hang in Limbo
+                } else {
+                    this.writeDiskSectors(true);
+                }
+                break;
+            case 2:     // write disk sectors No WLRC
+                if (this.ioDevice.writeAddress) {
+                    return;             // just hang in Limbo
+                } else {
+                    this.writeDiskSectors(false);
+                }
+                break;
+            case 4:     // write disk track WLRC
+                if (this.ioDevice.writeAddress) {
+                    this.writeDiskTrack(true);
+                } else {
+                    return;             // just hang in Limbo
+                }
+                break;
+            case 6:     // write disk track No WLRC
+                if (this.ioDevice.writeAddress) {
+                    this.writeDiskTrack(false);
+                } else {
+                    return;             // just hang in Limbo
+                }
+                break;
+            default:
+                // undefined operation -- just hang in Limbo
+                break;
+            }
+        }
+    }
+
+    /**************************************/
     ioExit() {
         /* Releases and terminates an I/O operation, resetting state */
 
@@ -1333,7 +1991,7 @@ class Processor {
             isSet = this.ioReadCheck.value | this.ioWriteCheck.value |
                     this.parityMBREvenCheck.value | this.parityMBROddCheck.value |
                     this.ioPrinterCheck.value | this.diskAddrCheck.value |
-                    this.diskWRLRBCCheck.value | this.diskCylOflowCheck.value;
+                    this.diskWLRRBCCheck.value | this.diskCylOflowCheck.value;
             break;
         case 30:        // IX Band 0 (indexing off)
             isSet = ((this.gateIX_BAND_1.value | this.gateIX_BAND_2.value) ? 0 : 1);
@@ -1349,15 +2007,15 @@ class Processor {
             this.diskAddrCheck.value = 0;
             break;
         case 37:        // 1311 Wrong-length Record / Read-back Check
-            isSet = this.diskWRLRBCCheck.value;
-            this.diskWRLRBCCheck.value = 0;
+            isSet = this.diskWLRRBCCheck.value;
+            this.diskWLRRBCCheck.value = 0;
             break;
         case 38:        // 1311 Cylinder Overflow
             isSet = this.diskCylOflowCheck.value;
             this.diskCylOflowCheck.value = 0;
             break;
         case 39:        // 1311 Any Disk Error (36, 37, 38)
-            isSet = this.diskAddrCheck.value | this.diskWRLRBCCheck.value | this.diskCylOflowCheck.value;
+            isSet = this.diskAddrCheck.value | this.diskWLRRBCCheck.value | this.diskCylOflowCheck.value;
             break;
         case 25:        // 1443 Printer Check
             isSet = this.ioPrinterCheck.value;
@@ -1394,6 +2052,7 @@ class Processor {
 
         if (!(this.gateSAVE_CTRL.value || this.gateDISPLAY_MAR.value ||
                 this.gateINSERT.value || this.gateCLR_MEM.value)) {
+            this.gateDISK_OP.value = 0;         // ILD 10.00.30.1
             this.setProcState(procStateI1);
         }
 
@@ -1485,7 +2144,7 @@ class Processor {
         this.opBinary = this.regOP.binaryValue;
         if (this.regOP.invalidBCD) {
             console.log(`I-1: invalid opcode BCD ${this.regOP.toBCDString()} @${this.regMAR.toBCDString()}`);
-            if (this.opAtts[this.opBinary] ?? this.opAtts[this.opBinary].opValid) {
+            if (this.opAtts[this.opBinary] && this.opAtts[this.opBinary].opValid) {
                 this.opBinary = 99;     // to be sure it's not been 8/9 coerced to a valid opcode
             }
         } else if (this.opBinary == 0) {
@@ -1711,18 +2370,18 @@ class Processor {
         switch (this.opBinary) {
         case 34:        // K, Control I/O device [handled in exitAddressing()]
             this.gateWR.value = 1;
-            this.ioSelect(this.regDR.binaryValue, this.regMBR.odd & Register.bcdMask);
+            this.ioSelect(this.regDR.binaryValue, this.regMBR.value);
             break;
         case 36:        // RN, Read Numerically
         case 37:        // RA, Read Alphanumerically
             this.gateRD.value = 1;
-            this.ioSelect(this.regDR.binaryValue, this.regMBR.odd & Register.bcdMask);
+            this.ioSelect(this.regDR.binaryValue, this.regMBR.value);
             break;
         case 35:        // DN, Dump Numerically
         case 38:        // WN, Write Numerically
         case 39:        // WA, Write Alphanumerically
             this.gateWR.value = 1;
-            this.ioSelect(this.regDR.binaryValue, this.regMBR.odd & Register.bcdMask);
+            this.ioSelect(this.regDR.binaryValue, this.regMBR.value);
             break;
 
         case 46:        // BI, Branch Indicator
@@ -1997,16 +2656,29 @@ class Processor {
         } else {                        // finish with Q address
             switch(this.opBinary) {
             case 34:    // K, Control
-                this.enterLimbo();      // stop run() while control() runs async
                 if (!this.ioDevice) {
+                    this.enterLimbo();
                     this.gateWRITE_INTERLOCK.value = 1;
                 } else {
-                    this.ioDevice.control(this.ioVariant).then(() => {
+                    switch (this.ioSelectNr) {
+                    case 1:     // Typewriter
+                        this.enterLimbo();      // stop run() while control() runs async
+                        this.ioDevice.control(this.ioVariant).then(() => {
+                            this.ioExit();
+                            if (!this.gateMANUAL.value) {
+                                this.run();     // exit Limbo state
+                            }
+                        });
+                        break;
+                    case 7:     // Disk Drive
+                        this.initiateDiskControl();
                         this.ioExit();
-                        if (!this.gateMANUAL.value) {
-                            this.run(); // exit Limbo state
-                        }
-                    });
+                        break;
+                    default:
+                        this.gateWRITE_INTERLOCK.value = 1;
+                        this.enterLimbo();      // just hang on an undefined device
+                        break;
+                    }
                 }
                 break;
             case 36:    // RN, Read Numerically
@@ -2018,15 +2690,25 @@ class Processor {
                     switch (this.ioSelectNr) {
                     case 1:     // Typewriter
                         this.updateLampGlow(1);         // freeze the lamp states
+                        this.enterLimbo(this.ioDevice, this.ioDevice.initiateRead);
                         break;
                     case 3:     // Paper Tape Reader
                     case 5:     // Card Reader
-                    case 7:     // Disk Drive
-                        this.gateREAD_INTERLOCK.value = 1;      // card or paper tape
+                        this.gateREAD_INTERLOCK.value = 1;
+                        this.enterLimbo(this.ioDevice, this.ioDevice.initiateRead);
                         break;
+                    case 7:     // Disk Drive
+                        if (this.opBinary == 36) {      // disk reads only numerically
+                            this.enterLimbo(this, this.initiateDiskRead);
+                        } else {
+                            this.gateREAD_INTERLOCK.value = 1;
+                            this.enterLimbo();          // just hang if not Read Numerically
+                        }
+                        break;
+                    default:
+                        this.gateREAD_INTERLOCK.value = 1;
+                        this.enterLimbo();              // just hang on an undefined device
                     }
-                    // Enter Limbo state to service input device memory cycles.
-                    this.enterLimbo(this.ioDevice, this.ioDevice.initiateRead);
                 }
                 break;
             case 35:    // DN, Dump Numerically
@@ -2038,13 +2720,27 @@ class Processor {
                 } else {
                     this.setProcState(procStateE2);     // no E-cycle entry for I/O
                     switch (this.ioSelectNr) {
+                    case 1:     // Typewriter
+                        this.ioDevice.initiateWrite();
+                        break;
                     case 4:     // Card Punch
-                    case 7:     // Disk Drive
                     case 9:     // Printer
                         this.gateWRITE_INTERLOCK.value = 1;
+                        this.ioDevice.initiateWrite();
+                        break;
+                    case 7:     // Disk Drive
+                        if (this.opBinary == 38) {
+                            this.enterLimbo(this, this.initiateDiskWrite);
+                        } else {
+                            this.gateWRITE_INTERLOCK.value = 1;
+                            this.enterLimbo();          // just hang if not Write Numerically
+                        }
+                        break;
+                    default:
+                        this.gateWRITE_INTERLOCK.value = 1;
+                        this.enterLimbo();              // just hang on an undefined device
                         break;
                     }
-                    this.ioDevice.initiateWrite();
                 }
                 break;
             case 41:    // NOP, No Operation
@@ -2342,7 +3038,7 @@ class Processor {
             break;
 
         case 55:        // BNG - Branch No Group Mark
-            if ((this.regMBR.getDigit(dx) & Envir.bcdMask) != Envir.numGroupMark) {
+            if ((this.regMBR.getDigit(dx) & Register.bcdMask) != Envir.numGroupMark) {
                 this.gateBR_EXEC.value = 1;
             }
             this.enterICycle();
@@ -3155,10 +3851,10 @@ class Processor {
         /* Examines all of the conditions that can cause a check stop and turns
         off the lamp if none exist any longer */
 
-        let disk = this.diskAddrCheck.value || this.diskCylOflowCheck.value || this.diskWRLRBCCheck.value;
-        let parity = this.parityMBREvenCheck.value || this.parityMBROddCheck.value;
-        let io = this.ioPrinterCheck.value || this.ioReadCheck.value || this.ioWriteCheck.value;
-        let oflow = this.oflowArithCheck.value || this.oflowExpCheck.value;
+        const disk = this.diskAddrCheck.value || this.diskCylOflowCheck.value || this.diskWLRRBCCheck.value;
+        const parity = this.parityMBREvenCheck.value || this.parityMBROddCheck.value;
+        const io = this.ioPrinterCheck.value || this.ioReadCheck.value || this.ioWriteCheck.value;
+        const oflow = this.oflowArithCheck.value || this.oflowExpCheck.value;
 
         if (!this.parityMARCheck.value &&
                 !(disk && this.diskStopSwitch) && !(parity && this.parityStopSwitch) &&
@@ -3243,7 +3939,7 @@ class Processor {
             }
             break;
         case 37:        // 1311 Wrong-length Record / Read-back Check
-            this.diskWRLRBCCheck.value = 1;
+            this.diskWLRRBCCheck.value = 1;
             if (this.diskStopSwitch) {
                 this.checkStop(`Disk WRL/RBC Check: ${text}`);
             }
@@ -3300,7 +3996,7 @@ class Processor {
             this.diskAddrCheck.value = 0;
             break;
         case 37:        // 1311 Wrong-length Record / Read-back Check
-            this.diskWRLRBCCheck.value = 0;
+            this.diskWLRRBCCheck.value = 0;
             break;
         case 38:        // 1311 Cylinder Overflow
             this.diskCylOflowCheck.value = 0;
@@ -3516,9 +4212,6 @@ class Processor {
         this.regXR.clear();
         this.regXBR.clear();
 
-        this.diskAddrCheck.value = 0;
-        this.diskCylOflowCheck.value = 0;
-        this.diskWRLRBCCheck.value = 0;
         this.parityMARCheck.value = 0;
         this.oflowArithCheck.value = 0;
         this.oflowExpCheck.value = 0;
@@ -3542,6 +4235,20 @@ class Processor {
         this.parityMBREvenCheck.value = 0;
         this.parityMBROddCheck.value = 0;
         this.verifyCheckStop();
+    }
+
+    /**************************************/
+    diskReset() {
+        /* Resets the Disk Check indicators */
+
+        this.release();
+        this.diskAddrCheck.value = 0;
+        this.diskCylOflowCheck.value = 0;
+        this.diskWLRRBCCheck.value = 0;
+        this.verifyCheckStop();
+        if (this.devices.diskDrive) {
+            this.devices.diskDrive.diskReset();
+        }
     }
 
     /**************************************/
@@ -3823,6 +4530,9 @@ class Processor {
 
 Processor.delayAlpha = 0.001;           // throttling delay average decay factor
 Processor.delayAlpha1 = 1-Processor.delayAlpha;
+
+Processor.diskAddressSize = 5;          // size of address field in disk sectors
+Processor.diskSectorSize = 105;         // size of a disk sector including address digits
 
 // Typewriter numeric input keystroke digit codes.
 Processor.twprASCIInumeric1620 = {

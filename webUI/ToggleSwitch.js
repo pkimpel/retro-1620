@@ -5,7 +5,7 @@
 * Licensed under the MIT License, see
 *       http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* JavaScript class module for two-position toggle switch objects.
+* JavaScript class module for a two-position toggle switch objects.
 ************************************************************************
 * 2022-07-19  P.Kimpel
 *   Original version, from retro-g15 webUI/ToggleSwitch.js.
@@ -14,6 +14,13 @@
 export {ToggleSwitch};
 
 class ToggleSwitch {
+
+    // Static class properties
+
+    static boxClass = "toggleSwitchBox";
+    static topCaptionClass = "toggleSwitchTopCaption";
+    static bottomCaptionClass = "toggleSwitchBottomCaption";
+
 
     constructor(parent, x, y, id, offImage, onImage) {
         /* Parameters:
@@ -50,17 +57,17 @@ class ToggleSwitch {
     }
 
     /**************************************/
-    addEventListener(eventName, handler, useCapture) {
+    addEventListener(eventName, handler, options) {
         /* Sets an event handler on the image element */
 
-        this.element.addEventListener(eventName, handler, useCapture);
+        this.element.addEventListener(eventName, handler, options);
     }
 
     /**************************************/
-    removeEventListener(eventName, handler, useCapture) {
+    removeEventListener(eventName, handler, options) {
         /* Removess an event handler from the image element */
 
-        this.element.removeEventListener(eventName, handler, useCapture);
+        this.element.removeEventListener(eventName, handler, options);
     }
 
     /**************************************/
@@ -78,10 +85,8 @@ class ToggleSwitch {
     /**************************************/
     flip() {
         /* Complements the visible state of the switch */
-        let newState = this.state ^ 1;
 
-        this.state = newState;
-        this.elementImage.src = (newState ? this.onImage : this.offImage);
+        this.set(this.state ^ 1);
     }
 
     /**************************************/
@@ -107,10 +112,3 @@ class ToggleSwitch {
     }
 
 } // class ToggleSwitch
-
-
-// Static class properties
-
-ToggleSwitch.boxClass = "toggleSwitchBox";
-ToggleSwitch.topCaptionClass = "toggleSwitchTopCaption";
-ToggleSwitch.bottomCaptionClass = "toggleSwitchBottomCaption";

@@ -50,7 +50,8 @@ class ControlPanel {
     intervalToken = 0;                  // panel refresh timer cancel token
     lastInstructionCount = 0;           // prior total instruction count (for average)
     lastRunTime = 0;                    // prior total run time (for average), ms
-    modifyLatch = 0;                    // MODIFY key was pressed, awaiting CHECK RESET key
+    modifyLatch = 0;                    // MODIFY / CHECK RESET simultaneous sequence pending
+    diskResetLatch = 0;                 // RESET / RELEASE simultaneous sequence pending
 
     /**************************************/
     constructor(context) {
@@ -69,7 +70,7 @@ class ControlPanel {
         this.boundMARSelectorChange = this.marSelectorChange.bind(this);
         this.boundBeforeUnload = this.beforeUnload.bind(this);
         this.boundControlSwitchClick = this.controlSwitchClick.bind(this);
-        this.boundModifyResetDrag = this.modifyResetDrag.bind(this);
+        this.boundSimultaneousButtonDrag = this.simultaneousButtonDrag.bind(this);
         this.boundToggleDebugView = this.toggleDebugView.bind(this);
         this.boundLoadCMEMFile = this.loadCMEMFile.bind(this);
         this.boundEmergencyOffClick = this.emergencyOffClick.bind(this);
@@ -284,8 +285,8 @@ class ControlPanel {
         this.oflowDummyCheckLamp = new GateLamp(panel, null, null, "OflowDummyCheckLamp");
 
         this.dummy2Lamp = new GateLamp(panel, null, null, "Dummy2Lamp");
-        this.diskWRLRBCCheckLamp = new GateLamp(panel, null, null, "DiskWRLRBCCheckLamp");
-        this.diskWRLRBCCheckLamp.setCaption("WRL RBC", false);
+        this.diskWLRRBCCheckLamp = new GateLamp(panel, null, null, "DiskWLRRBCCheckLamp");
+        this.diskWLRRBCCheckLamp.setCaption("WLR RBC", false);
         this.parityMBREvenCheckLamp = new GateLamp(panel, null, null, "ParityMBREvenCheckLamp");
         this.parityMBREvenCheckLamp.setCaption("MBR-E CHK", false);
         this.ioReadCheckLamp = new GateLamp(panel, null, null, "IOReadCheckLamp");
@@ -370,10 +371,10 @@ class ControlPanel {
         this.window.addEventListener("beforeunload", this.boundBeforeUnload);
         this.window.addEventListener("unload", this.boundPanelUnload);
         this.$$("OperatorContainer").addEventListener("click", this.boundControlSwitchClick);
-        this.$$("OperatorContainer").addEventListener("mouseover", this.boundModifyResetDrag);
-        this.$$("OperatorContainer").addEventListener("mouseout", this.boundModifyResetDrag);
-        this.$$("OperatorContainer").addEventListener("mousedown", this.boundModifyResetDrag);
-        this.$$("OperatorContainer").addEventListener("mouseup", this.boundModifyResetDrag);
+        this.$$("OperatorContainer").addEventListener("mouseover", this.boundSimultaneousButtonDrag);
+        this.$$("OperatorContainer").addEventListener("mouseout", this.boundSimultaneousButtonDrag);
+        this.$$("OperatorContainer").addEventListener("mousedown", this.boundSimultaneousButtonDrag);
+        this.$$("OperatorContainer").addEventListener("mouseup", this.boundSimultaneousButtonDrag);
         this.powerBtn.addEventListener("dblclick", this.boundControlSwitchClick);
         this.marSelectorKnob.setChangeListener(this.boundMARSelectorChange);
         this.$$("EmergencyOffSwitch").addEventListener("dblclick", this.boundEmergencyOffClick);
@@ -483,7 +484,7 @@ class ControlPanel {
             line = "// Checks: ";
             if (p.diskAddrCheck.value)          {line += "DISK-ADDR "}
             if (p.diskCylOflowCheck.value)      {line += "CYL-OFLOW "}
-            if (p.diskWRLRBCCheck.value)        {line += "WRLRBC "}
+            if (p.diskWLRRBCCheck.value)        {line += "WLRRBC "}
             if (p.ioPrinterCheck.value)         {line += "PRINTER "}
             if (p.ioReadCheck.value)            {line += "READ "}
             if (p.ioWriteCheck.value)           {line += "WRITE "}
@@ -505,9 +506,9 @@ class ControlPanel {
             if (config.Card.hasCard) {line += ` Card ${config.Card.cpmRead}/${config.Card.cpmPunch} CPM,`}
             if (config.Printer.hasPrinter) {line += ` Printer ${config.Printer.lpm} LPM,`}
             if (config.Disk.hasDisk) {
-                line += " Disk units ";
-                for (let x=0; x<config.Disk.units.length; ++x) {
-                    if (config.Disk.units[x].enabled) {line += `${x},`}
+                line += " Disk modules ";
+                for (let x=0; x<config.Disk.module.length; ++x) {
+                    if (config.Disk.module[x].enabled) {line += `${x},`}
                 }
             }
             putLine(line.slice(0, -1));
@@ -830,7 +831,7 @@ class ControlPanel {
         this.ioPrinterCheckLamp.set(p.ioPrinterCheck.glow);
         //this.oflowDummyCheckLamp.set(p.oflowDummyCheck.glow);
         //this.dummy2Lamp.set(p.dummy2Lamp.glow);
-        this.diskWRLRBCCheckLamp.set(p.diskWRLRBCCheck.glow);
+        this.diskWLRRBCCheckLamp.set(p.diskWLRRBCCheck.glow);
         this.parityMBREvenCheckLamp.set(p.parityMBREvenCheck.glow);
         this.ioReadCheckLamp.set(p.ioReadCheck.glow);
         this.oflowExpCheckLamp.set(p.oflowExpCheck.glow);
@@ -883,38 +884,34 @@ class ControlPanel {
     controlSwitchClick(ev) {
         /* Event handler for the pane's switch controls */
         let e = ev.target;
-
-        if (ev.type == "dblclick") {
-            switch (e.id) {
-            case "PowerBtn":
-                this.shutDown();
-                break;
-            }
-            return;
-        }
-
-        let modified = false;           // MODIFY button was pressed this time
+        let modifyClicked = false;      // MODIFY button was pressed this time
+        let resetClicked = false;       // RESET button was pressed this time
         const p = this.context.processor;
 
-        if (e.tagName == "IMG") {
+        if (e.tagName == "IMG" && e.parentElement.id.endsWith("Switch")) {
             e = e.parentElement;        // adjust for clicking image of ToggleSwitch objects
         }
 
         switch (e.id) {
+        case "PowerBtn":
+            if (ev.type == "dblclick") {
+                this.shutDown();
+            }
+            break;
         case "ResetBtn":
             p.manualReset();
             break;
         case "ModifyBtn":
-            modified = true;
+            modifyClicked = true;
             this.modifyLatch = 1;
             this.modifyBtn.setButtonDown();     // show that it's now armed
             break;
         case "CheckResetBtn":
-            if (this.modifyLatch) {
+            if (!this.modifyLatch) {
+                p.checkReset();
+            } else {
                 p.enableMemoryClear();
                 this.modifyBtn.setButtonUp();   // clear the armed appearance
-            } else {
-                p.checkReset();
             }
             break;
         case "DisplayMARBtn":
@@ -988,20 +985,27 @@ class ControlPanel {
             break;
         }
 
-        if (!modified) {                // reset latch if any key other than MODIFY was pressed
+        if (!modifyClicked) {           // reset latch if any key other than MODIFY was pressed
             this.modifyLatch = 0;
+        }
+
+        if (!resetClicked) {            // reset latch if any key other than RESET was pressed
+            this.diskResetLatch = 0;
         }
     }
 
     /**************************************/
-    modifyResetDrag(ev) {
-        /* Event handler simulating the simultaneous press of the MODIFY and
-        CHECK RESET keys to initiate a clear-memory operation. If there is a
-        mouse-down on the MODIFY button, and the very next mouse-up on the lower
-        panel is on the CHECK RESET button, then that is interpreted as a
-        simultaneous press of the two buttons. This works independently of the
+    simultaneousButtonDrag(ev) {
+        /* Event handler simulating the simultaneous press of two buttons on the
+        lower panel of the Control Panel. If there is a mouse-down on button A
+        and the very next mouse-up on the lower panel is on button B, then that
+        is interpreted as a simultaneous press of the two buttons. This approach
+        was suggested by Dave Babcock. It currently works for these combinations:
+            Button A: MODIFY, Button B: CHECK RESET -- clear memory
+            Burron A: RESET,  Button B: RELEASE     -- reset Disk Check indicators
+        For MODIFY and CHECK RESET, this mechanism works independently of the
         original method, clicking MODIFY and then clicking CHECK RESET, which
-        still works. The approach was suggested by Dave Babcock */
+        still works */
         let e = ev.target;
 
         switch (e.id) {
@@ -1017,18 +1021,18 @@ class ControlPanel {
                 }
             }
             break;
+
         case "CheckResetBtn":
             if (this.modifyLatch) {
                 switch (ev.type) {
-                case "mousedown":
-                    break;
                 case "mouseup":
                     this.modifyBtn.setButtonUp();       // cancel the effect of its mousedown
+                    this.modifyLatch = 0;
                     this.context.processor.enableMemoryClear();
                     break;
                 case "mouseover":
                     this.checkResetBtn.setButtonDown();
-                    this.modifyBtn.setButtonDown();     // make sure the Modify button shows down
+                    this.modifyBtn.setButtonDown();     // make sure the MODIFY button shows down
                     break;
                 case "mouseout":
                     this.checkResetBtn.setButtonUp();
@@ -1036,6 +1040,39 @@ class ControlPanel {
                 }
             }
             break;
+
+        case "ResetBtn":
+            switch (ev.type) {
+            case "mousedown":
+                this.diskResetLatch = 1;
+                break;
+            case "mouseover":
+                if (this.diskResetLatch) {
+                    this.resetBtn.setButtonDown();
+                    break;
+                }
+            }
+            break;
+
+        case "ReleaseBtn":
+            if (this.diskResetLatch) {
+                switch (ev.type) {
+                case "mouseup":
+                    this.resetBtn.setButtonUp();        // cancel the effect of its mousedown
+                    this.diskResetLatch = 0;
+                    this.context.processor.diskReset();
+                    break;
+                case "mouseover":
+                    this.releaseBtn.setButtonDown();
+                    this.resetBtn.setButtonDown();      // make sure the RESET button shows down
+                    break;
+                case "mouseout":
+                    this.releaseBtn.setButtonUp();
+                    break;
+                }
+            }
+            break;
+
         default:
             switch (ev.type) {
             case "mousedown":
@@ -1087,10 +1124,10 @@ class ControlPanel {
         }
 
         this.$$("OperatorContainer").removeEventListener("click", this.boundControlSwitchClick);
-        this.$$("OperatorContainer").removeEventListener("mouseover", this.boundModifyResetDrag);
-        this.$$("OperatorContainer").removeEventListener("mouseout", this.boundModifyResetDrag);
-        this.$$("OperatorContainer").removeEventListener("mousedown", this.boundModifyResetDrag);
-        this.$$("OperatorContainer").removeEventListener("mouseup", this.boundModifyResetDrag);
+        this.$$("OperatorContainer").removeEventListener("mouseover", this.boundSimultaneousButtonDrag);
+        this.$$("OperatorContainer").removeEventListener("mouseout", this.boundSimultaneousButtonDrag);
+        this.$$("OperatorContainer").removeEventListener("mousedown", this.boundSimultaneousButtonDrag);
+        this.$$("OperatorContainer").removeEventListener("mouseup", this.boundSimultaneousButtonDrag);
         this.powerBtn.removeEventListener("dblclick", this.boundControlSwitchClick);
         this.marSelectorKnob.removeChangeListener(this.boundMARSelectorChange);
         this.$$("EmergencyOffSwitch").removeEventListener("dblclick", this.boundEmergencyOffClick);

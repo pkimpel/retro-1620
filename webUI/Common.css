@@ -275,7 +275,7 @@ BUTTON.device {
     position:           absolute;
     font-family:        DejaVuSansWeb, sans-serif;
     font-size:          7pt;
-    font-weight:        normal;
+    font-weight:        bold;
     line-height:        120%;
     width:              56px;
     height:             42px;
@@ -300,6 +300,8 @@ BUTTON.greenButtonDown {
 BUTTON.yellowButton {
     color:              black;
     background-image:   linear-gradient(#CC3, #993, #CC3)}
+BUTTON.yellowLit {
+    background-image:   linear-gradient(#FF0, #CC0, #FF0)}
 BUTTON.yellowButtonDown {
     background-color:   #990;
     background-image:   none}
@@ -307,6 +309,8 @@ BUTTON.yellowButtonDown {
 BUTTON.whiteButton {
     color:              black;
     background-image:   linear-gradient(#CCC, #999, #CCC)}
+BUTTON.whiteLit {
+    background-image:   linear-gradient(#FFF, #CCC, #FFF)}
 BUTTON.whiteButtonDown {
     background-color:   #999;
     background-image:   none}

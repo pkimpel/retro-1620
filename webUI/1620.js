@@ -16,6 +16,7 @@ import {Processor} from "../emulator/Processor.js";
 
 import {CardReader} from "./CardReader.js";
 import {CardPunch} from "./CardPunch.js";
+import {DiskDrive} from "./DiskDrive.js";
 import {ControlPanel} from "./ControlPanel.js";
 import {SystemConfig} from "./SystemConfig.js";
 import {Typewriter} from "./Typewriter.js";
@@ -106,6 +107,10 @@ let globalLoad = (ev) => {
         if (config.getNode("Card.hasCard")) {
             context.devices.cardReader = new CardReader(context);
             context.devices.cardPunch = new CardPunch(context);
+        }
+
+        if (config.getNode("Disk.hasDisk")) {
+            context.devices.diskDrive = new DiskDrive(context);
         }
 
         context.controlPanel = new ControlPanel(context);

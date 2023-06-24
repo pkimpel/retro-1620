@@ -75,9 +75,8 @@
 
     <div class=heading>1622 Card Reader/Punch:</div>
     <div class=details>
-        <input id=CardInstalled type=checkbox value=1>
-               <label for=CardInstalled>Installed</label><br>
         <select id=CardSpeed>
+            <option value=0  >None
             <option value=250>Model 1: 250/125 CPM
             <option value=500>Model 2: 500/250 CPM
         </select> Reader/Punch Speed<br>
@@ -88,9 +87,8 @@
 
     <div class=heading>1443 Printer:</div>
     <div class=details>
-        <input id=PrinterInstalled type=checkbox value=1 DISABLED>
-               <label for=PrinterInstalled>Installed</label><br>
-        <select id=PrinterSpeed>
+        <select id=PrinterSpeed DISABLED>
+            <option value=0  >None
             <option value=240>240 LPM, 52-character set
             <option value=300>300 LPM, 39-character set
             <option value=600>600 LPM, 13-character set
@@ -100,17 +98,40 @@
 
     <div class=heading>1311 Disk:</div>
     <div class=details>
-        <input id=DiskInstalled type=checkbox value=1 DISABLED>
-               <label for=DiskInstalled>Installed</label><br>
-        <br>
-        <input id=Disk0Enabled type=checkbox value=1>
-               <label for=Disk0Enabled>Disk 0 Enabled (required if disk installed)</label><br>
-        <input id=Disk1Enabled type=checkbox value=1>
-               <label for=Disk1Enabled>Disk 1 Enabled</label><br>
-        <input id=Disk2Enabled type=checkbox value=1>
-               <label for=Disk2Enabled>Disk 2 Enabled</label><br>
-        <input id=Disk3Enabled type=checkbox value=1>
-               <label for=Disk3Enabled>Disk 3 Enabled</label><br>
+        <input id=Disk0Exists type=checkbox value=1>
+               <label for=Disk0Exists>Disk 0 Exists</label>,
+               <input id=Disk0Started type=checkbox value=1>
+               <label for=Disk0Started>Started</label>,
+               <input id=Disk0Enabled type=checkbox value=1>
+               <label for=Disk0Enabled>Enabled</label>,
+               Image: <span id=Disk0ImageName></span>
+               <br>
+        <input id=Disk1Exists type=checkbox value=1>
+               <label for=Disk1Exists>Disk 1 Exists</label>,
+               <input id=Disk1Started type=checkbox value=1>
+               <label for=Disk1Started>Started</label>,
+               <input id=Disk1Enabled type=checkbox value=1>
+               <label for=Disk1Enabled>Enabled</label>,
+               Image: <span id=Disk1ImageName></span>
+               <br>
+        <input id=Disk2Exists type=checkbox value=1>
+               <label for=Disk2Exists>Disk 2 Exists</label>,
+               <input id=Disk2Started type=checkbox value=1>
+               <label for=Disk2Started>Started</label>,
+               <input id=Disk2Enabled type=checkbox value=1>
+               <label for=Disk2Enabled>Enabled</label>,
+               Image: <span id=Disk2ImageName></span>
+               <br>
+        <input id=Disk3Exists type=checkbox value=1>
+               <label for=Disk3Exists>Disk 3 Exists</label>,
+               <input id=Disk3Started type=checkbox value=1>
+               <label for=Disk3Started>Started</label>,
+               <input id=Disk3Enabled type=checkbox value=1>
+               <label for=Disk3Enabled>Enabled</label>,
+               Image: <span id=Disk3ImageName></span>
+               <br>&nbsp;<br>
+        <input id=DiskCompareDisable type=checkbox value=1>
+               <label for=DiskCompareDisable>Compare Disable</label>
     </div>
 </div>
 

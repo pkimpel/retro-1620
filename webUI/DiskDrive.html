@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>IBM 1311 Disk Drive</title>
+<!--
+/***********************************************************************
+* retro-1620/webUI DiskDrive.html
+************************************************************************
+* Copyright (c) 2023, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1311 Disk Storage Unit device page.
+*
+* Implements the IBM 1311 Disk Storage peripheral device.
+*
+************************************************************************
+* 2023-05-27  P.Kimpel
+*   Original version, from CardPunch.html.
+***********************************************************************/
+-->
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link id=defaultStyleSheet rel=stylesheet type="text/css" href="Common.css">
+<link id=diskDriveStyleSheet rel=stylesheet type="text/css" href="DiskDrive.css">
+</head>
+
+<body id=diskBody class=deviceBody>
+
+<div id=DiskDiv class="ibmGray">
+    <div id=ControlsDiv class="ibmBlue">
+        <div id=DiskDrivePanel>
+            <div class=outerToggleControl>
+                <label class="simpleToggleSwitch">
+                    <input id=DiskCompareDisableSwitch type="checkbox">
+                    <span class="simpleToggleControl"></span>
+                </label>
+                <label class=toggleControlCaption for=DiskCompareDisableSwitch>COMPARE DISABLE</label>
+            </div>
+        </div>
+
+        <div id=DiskModule0 class="diskModulePanel ibmGray">
+            <div class=diskModuleStatus title="Disk Drive 0">
+                <div class=diskModuleNumber>0</div>
+            </div>
+            <input class=diskModuleSectorNr type=text size=5 value="00000"
+                   title="Sector number">
+            <meter class=diskModuleSeekPosition min=0 max=99 value 0
+                   title="Cylinder position"></meter>
+            <div class=outerToggleControl>
+                <label class="simpleToggleSwitch">
+                    <input id=DiskModule0EnableSwitch type="checkbox">
+                    <span class="simpleToggleControl"></span>
+                </label>
+                <label class=toggleControlCaption for=DiskModule0EnableSwitch>ENABLE</label>
+            </div>
+        </div>
+
+        <div id=DiskModule1 class="diskModulePanel ibmGray">
+            <div class=diskModuleStatus title="Disk Drive 1">
+                <div class=diskModuleNumber>1</div>
+            </div>
+            <input class=diskModuleSectorNr type=text size=5 value="00000"
+                   title="Sector number">
+            <meter class=diskModuleSeekPosition min=0 max=99 value 0
+                   title="Cylinder position"></meter>
+            <div class=outerToggleControl>
+                <label class="simpleToggleSwitch">
+                    <input id=DiskModule1EnableSwitch type="checkbox">
+                    <span class="simpleToggleControl"></span>
+                </label>
+                <label class=toggleControlCaption for=DiskModule1EnableSwitch>ENABLE</label>
+            </div>
+        </div>
+
+        <div id=DiskModule2 class="diskModulePanel ibmGray">
+            <div class=diskModuleStatus title="Disk Drive 2">
+                <div class=diskModuleNumber>2</div>
+            </div>
+            <input class=diskModuleSectorNr type=text size=5 value="00000"
+                   title="Sector number">
+            <meter class=diskModuleSeekPosition min=0 max=99 value 0
+                   title="Cylinder position"></meter>
+            <div class=outerToggleControl>
+                <label class="simpleToggleSwitch">
+                    <input id=DiskModule2EnableSwitch type="checkbox">
+                    <span class="simpleToggleControl"></span>
+                </label>
+                <label class=toggleControlCaption for=DiskModule2EnableSwitch>ENABLE</label>
+            </div>
+        </div>
+
+        <div id=DiskModule3 class="diskModulePanel ibmGray">
+            <div class=diskModuleStatus title="Disk Drive 3">
+                <div class=diskModuleNumber>3</div>
+            </div>
+            <input class=diskModuleSectorNr type=text size=5 value="00000"
+                   title="Sector number">
+            <meter class=diskModuleSeekPosition min=0 max=99 value 0
+                   title="Cylinder position"></meter>
+            <div class=outerToggleControl>
+                <label class="simpleToggleSwitch">
+                    <input id=DiskModule3EnableSwitch type="checkbox">
+                    <span class="simpleToggleControl"></span>
+                </label>
+                <label class=toggleControlCaption for=DiskModule3EnableSwitch>ENABLE</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

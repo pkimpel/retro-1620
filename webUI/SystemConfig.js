@@ -66,16 +66,17 @@ class SystemConfig {
 
         Printer: {
             hasPrinter: 0,
-            lpm: 240
+            lpm: 0
         },
 
         Disk: {
             hasDisk: 0,
-            units: [
-                {enabled: 0},
-                {enabled: 0},
-                {enabled: 0},
-                {enabled: 0}
+            compareDisable: 0,
+            module: [
+                {exists: 0, started: 0, enabled: 0, imageName: null},
+                {exists: 0, started: 0, enabled: 0, imageName: null},
+                {exists: 0, started: 0, enabled: 0, imageName: null},
+                {exists: 0, started: 0, enabled: 0, imageName: null}
             ]
         },
 
@@ -149,23 +150,32 @@ class SystemConfig {
 
     /**************************************/
     sortaDeepMerge(destNode, sourceNode) {
-        /* Both destNode and sourceNode must be non-null Objects and not Arrays
-        or Functions. Recursively merges into destNode any properties of
+        /* Both destNode and sourceNode must be non-null Objects and not
+        Functions. Recursively merges into destNode any properties of
         sourceNode missing in destNode. Does not alter any existing elementary
         properties of destNode or its sub-objects. If either parameter is not
-        an object, does nothing. This isn't a complete recursive merge, but
-        it's good enough for SystemConfig data */
+        an Object or Array, does nothing. This isn't a complete recursive merge,
+        but it's good enough for SystemConfig data */
 
         for (let key in sourceNode) {
             if (!(key in destNode)) {
                 destNode[key] = structuredClone(sourceNode[key]);
             } else {
                 let d = destNode[key];
-                if (typeof d == "object" && d !== null && !Array.isArray(d) &&
-                        Object.isExtensible(d) &&
-                        !(Object.isSealed(d) || Object.isFrozen(d))) {
-                    let s = sourceNode[key];
-                    if (typeof s == "object" && s !== null && !Array.isArray(s)) {
+                let s = sourceNode[key];
+                if (Array.isArray(s) && Array.isArray(d)) {
+                    for (let i=0; i<s.length; ++i) {
+                        if (s[i] !== undefined) {
+                            if (d[i] === undefined) {
+                                d[i] = structuredClone(s[i]);
+                            } else {
+                                this.sortaDeepMerge(d[i], s[i]);
+                            }
+                        }
+                    }
+                } else if (d !== null && typeof d == "object" && !Array.isArray(d) &&
+                        Object.isExtensible(d) && !(Object.isSealed(d) || Object.isFrozen(d))) {
+                    if (s !== null && typeof s == "object" && !Array.isArray(s)) {
                         this.sortaDeepMerge(d, s);
                     }
                 }
@@ -193,6 +203,11 @@ class SystemConfig {
         }
 
         // Recursively merge any new properties from the defaults.
+        if (this.configData.Disk.units) {       // renamed 2023-06-10
+            this.configData.Disk.module = this.configData.Disk.units;
+            delete this.configData.Disk.units;
+        }
+
         this.sortaDeepMerge(this.configData, SystemConfig.defaultConfig);
     }
 
@@ -326,7 +341,7 @@ class SystemConfig {
             if (index === undefined) {
                 lastNode[lastName] = data;
             } else {
-                lastNode[lastNode][index] = data;
+                lastNode[lastName][index] = data;
             }
 
             if (!this.flushTimerToken) {
@@ -441,23 +456,27 @@ class SystemConfig {
         this.$$("TabStops").textContent = cd.Typewriter.tabs;
 
         // Card Reader/Punch
-        this.$$("CardInstalled").checked = cd.Card.hasCard;
         this.setListValue("CardSpeed", cd.Card.cpmRead);
-        this.$$("CardSpeed").disabled = !cd.Card.hasCard;
         this.$$("CardPunchStackerLimit").value = cd.Card.stackerPunch;
         this.$$("CardPunchStackerLimit").disabled = !cd.Card.hasCard;
 
         // Printer
-        this.$$("PrinterInstalled").checked = cd.Printer.hasPrinter;
         this.setListValue("PrinterSpeed", cd.Printer.lpm);
-        this.$$("PrinterSpeed").disabled = !cd.Card.hasPrinter;
 
         // Disk
-        this.$$("DiskInstalled").checked = cd.Disk.hasDisk;
+        this.$$("DiskCompareDisable").checked = cd.Disk.compareDisable;
+        this.$$("DiskCompareDisable").disabled = !cd.Disk.module[0].exists;
         for (let x=0; x<4; ++x) {
-            const id = `Disk${x}Enabled`;
-            this.$$(id).checked = cd.Disk.units[x].enabled;
-            this.$$(id).disabled = !cd.Card.hasDisk;
+            this.$$(`Disk${x}Exists`).checked = cd.Disk.module[x].exists;
+            this.$$(`Disk${x}Started`).checked = cd.Disk.module[x].started;
+            this.$$(`Disk${x}Enabled`).checked = cd.Disk.module[x].enabled;
+            this.$$(`Disk${x}ImageName`).textContent = cd.Disk.module[x].imageName;
+            if (x > 0) {
+                this.$$(`Disk${x}Exists`).disabled = !cd.Disk.module[0].exists;
+            }
+
+            this.$$(`Disk${x}Started`).disabled = !cd.Disk.module[0].exists;
+            this.$$(`Disk${x}Enabled`).disabled = !cd.Disk.module[0].exists;
         }
 
         this.$$("MessageArea").textContent = "1620 System Configuration loaded.";
@@ -474,15 +493,19 @@ class SystemConfig {
         case "SystemPersistentWin":
             this.$$("SystemMultiScreen").disabled = !ev.target.checked;
             break;
-        case "CardInstalled":
-            this.$$("CardSpeed").disabled = !ev.target.checked;
-            this.$$("CardPunchStackerLimit").disabled = !ev.target.checked;
+        case "CardSpeed":
+            this.$$("CardPunchStackerLimit").disabled = !ev.target.selectedIndex <= 0;
             break;
         case "PrinterInstalled":
-            this.$$("PrinterSpeed").disabled = !ev.target.checked;
             break;
-        case "DiskInstalled":
+        case "Disk0Exists":
+            this.$$("DiskCompareDisable").disabled = !ev.target.checked;
             for (let x=0; x<4; ++x) {
+                if (x > 0) {
+                    this.$$(`Disk${x}Exists`).disabled = !ev.target.checked;
+                }
+
+                this.$$(`Disk${x}Started`).disabled = !ev.target.checked;
                 this.$$(`Disk${x}Enabled`).disabled = !ev.target.checked;
             }
             break;
@@ -527,24 +550,26 @@ class SystemConfig {
             // (nothing to do here -- settings changed on device)
 
         // Card Reader/Punch
-        cd.Card.hasCard = (this.$$("CardInstalled").checked ? 1 : 0);
         e = this.$$("CardSpeed");
-        e.disabled = !cd.Card.hasCard;
+        cd.Card.hasCard = (e.selectedIndex > 0 ? 1 : 0);
         x = parseInt(e.options[e.selectedIndex].value, 10);
         switch (x) {
-        case 500:
+        case 250:
+            cd.Card.cpmRead = 250;
+            cd.Card.cpmPunch = 125;
+       case 500:
             cd.Card.cpmRead = 500;
             cd.Card.cpmPunch = 250;
             break;
         default:
-            cd.Card.cpmRead = 250;
-            cd.Card.cpmPunch = 125;
+            cd.Card.cpmRead = 0;
+            cd.Card.cpmPunch = 0;
             break;
         }
 
         e = this.$$("CardPunchStackerLimit");
         e.disabled = !cd.Card.hasCard;
-        x = parseInt(e.value, 10);
+        x = parseInt(e.value, 10) || 100;
         if (x < 100) {
             cd.Card.stackerPunch = 100;
         } else if (x > 999999) {
@@ -554,22 +579,19 @@ class SystemConfig {
         }
 
         // Printer
-        cd.Printer.hasPrinter = (this.$$("PrinterInstalled").checked ? 1 : 0);
         e = this.$$("PrinterSpeed");
-        e.disabled = !cd.Printer.hasPrinter;
+        cd.Printer.hasPrinter = (e.selectedIndex > 0 ? 1 : 0);
         x = parseInt(e.options[e.selectedIndex].value, 10);
         cd.Printer.lpm = (isNaN(x) ? 250 : x);
 
         // Disk
-        cd.Disk.hasDisk = (this.$$("DiskInstalled").checked ? 1 : 0);
-        cd.Disk.units[0].enabled = (this.$$("Disk0Enabled").checked ? 1 : 0);
-        cd.Disk.units[1].enabled = (this.$$("Disk1Enabled").checked ? 1 : 0);
-        cd.Disk.units[2].enabled = (this.$$("Disk2Enabled").checked ? 1 : 0);
-        cd.Disk.units[3].enabled = (this.$$("Disk3Enabled").checked ? 1 : 0);
-        this.$$("Disk0Enabled").disabled = !cd.Disk.hasDisk;
-        this.$$("Disk1Enabled").disabled = !cd.Disk.hasDisk;
-        this.$$("Disk2Enabled").disabled = !cd.Disk.hasDisk;
-        this.$$("Disk3Enabled").disabled = !cd.Disk.hasDisk;
+        cd.Disk.hasDisk = (this.$$("Disk0Exists").checked ? 1 : 0);
+        cd.Disk.compareDisable = (this.$$("DiskCompareDisable").checked ? 1 : 0);
+        for (x=0; x<4; ++x) {
+            cd.Disk.module[x].exists = (this.$$(`Disk${x}Exists`).checked ? 1 : 0);
+            cd.Disk.module[x].started = (this.$$(`Disk${x}Started`).checked ? 1 : 0);
+            cd.Disk.module[x].enabled = (this.$$(`Disk${x}Enabled`).checked ? 1 : 0);
+        }
 
         this.determineWindowConfigMode().then((msg) => {
             this.flushHandler();        // store the configuration

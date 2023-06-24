@@ -1,48 +1,50 @@
 /***********************************************************************
-* retro-1620/webUI PanelButton.js
+* retro-1620/webUI ToggleButton.js
 ************************************************************************
 * Copyright (c) 2022, Paul Kimpel.
 * Licensed under the MIT License, see
 *       http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* JavaScript class module for large panel buttons. The button will
-* subtly highlight when it is clicked and released. The click event can
+* JavaScript class module for large, two-state (push-push) panel buttons.
+* The button light when in the "on" on "set" state. The click event can
 * be captured either by calling this.addEventListener or by registering
-* an event handler that captures events on the DOM element.
+* an event handler that captures events on the DOM element. Note that a
+* click by itself does not change the state -- that must be done by an
+* event handler.
 ************************************************************************
-* 2022-11-16  P.Kimpel
-*   Original version, from ColoredLamp.js.
+* 2023-06-12  P.Kimpel
+*   Original version, from PanelButton.js and ToggleSwitch.js.
 ***********************************************************************/
 
-export {PanelButton}
+export {ToggleButton}
 
-class PanelButton {
+class ToggleButton {
 
     // Static class properties
 
-    static topCaptionClass = "coloredLampTopCaption";
-    static bottomCaptionClass = "coloredLampBottomCaption";
+    static topCaptilitClass = "coloredLampTopCaption";
+    static bottomCaptilitClass = "coloredLampBottomCaption";
 
 
-    constructor(parent, x, y, id, caption, upClass, downClass) {
+    constructor(parent, x, y, id, caption, offClass, litClass) {
         /* Parameters:
             parent      the DOM container element for this button object.
             x & y       coordinates of the button within its containing element.
             id          the DOM id for the button object.
             caption     text to be displayed on the button.
-            upClass     CSS class name for the button in its normal state (up).
-            downClass   CSS class name for the button in its clicked state (down) */
+            offClass    path to image for the switch in the off state.
+            litClass    path to the image for the switch in the on state */
 
+        this.state = 0;                     // current switch state, 0=off
         this.topCaptionDiv = null;          // optional top caption element
         this.bottomCaptionDiv = null;       // optional bottom caption element
-        this.buttonUpClass = upClass;       // css styling for an "off" button
-        this.buttonDownClass = downClass;   // css styling for an "on" button
-        this.buttonDown = false;            // button is currently down
+        this.offClass = offClass;           // image used for the off state
+        this.litClass = litClass;           // image used for the on state
 
         // visible DOM element
         this.element = document.createElement("button");
         this.element.id = id;
-        this.element.className = upClass;
+        this.element.className = offClass;
         this.element.innerHTML = caption;
         if (x !== null) {
             this.element.style.left = x.toString() + "px";
@@ -54,16 +56,6 @@ class PanelButton {
         if (parent) {
             parent.appendChild(this.element);
         }
-
-        this.element.addEventListener("mousedown", (ev) => {
-            this.setButtonDown();
-        }, false);
-        this.element.addEventListener("mouseup", (ev) => {
-            this.setButtonUp();
-        }, false);
-        this.element.addEventListener("mouseout", (ev) => {
-            this.checkButtonDrag();
-        }, false);
     }
 
     /**************************************/
@@ -81,32 +73,26 @@ class PanelButton {
     }
 
     /**************************************/
-    setButtonDown() {
-        /* Sets the styling on the button to make it appear "down" */
+    set(state) {
+        /* Changes the visible state of the switch according to the low-order
+        bit of "state" */
+        let newState = state & 1;
 
-        this.element.classList.add(this.buttonDownClass);
-        this.buttonDown = true;
-    }
-
-    /**************************************/
-    setButtonUp() {
-        /* Removes the styling on the button that makes it appear "down" */
-
-        this.element.classList.remove(this.buttonDownClass);
-        this.buttonDown = false;
-    }
-
-    /**************************************/
-    checkButtonDrag() {
-        /* Handler for the mouseout event. If the user moves the pointer outside
-        the boundaries of the button while holding down the button and then
-        releases it, the button will not get the mouseup event, and the click
-        doesn't happen. We check whether we're halfway through a click, and if
-        so, remove the button-down appearance */
-
-        if (this.buttonDown) {
-            this.setButtonUp();
+        if (this.state ^ newState) {         // the state has changed
+            this.state = newState;
+            if (newState) {
+                this.element.classList.add(this.litClass);
+            } else {
+                this.element.classList.remove(this.litClass);
+            }
         }
+    }
+
+    /**************************************/
+    flip() {
+        /* Complements the visible state of the switch */
+
+        this.set(this.state ^ 1);
     }
 
     /**************************************/
@@ -121,10 +107,10 @@ class PanelButton {
             e = document.createElement("div");
             if (atBottom) {
                 this.bottomCaptionDiv = e;
-                e.className = PanelButton.bottomCaptionClass;
+                e.className = ToggleButton.bottomCaptilitClass;
             } else {
                 this.topCaptionDiv = e;
-                e.className = PanelButton.topCaptionClass;
+                e.className = ToggleButton.topCaptilitClass;
             }
             e.appendChild(document.createTextNode(caption));
             this.element.appendChild(e);
@@ -132,4 +118,4 @@ class PanelButton {
         return e;
     }
 
-} // class PanelButton
+} // class ToggleButton
