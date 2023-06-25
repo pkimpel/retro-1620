@@ -857,7 +857,6 @@ class Typewriter {
         Dump Numerically. Returns a Promise for completion */
         const digit = code & Register.digitMask;
 
-        this.processor.updateLampGlow(1);       // because Typewriter is so slow
         return this.printChar(Typewriter.numericGlyphs[digit & Register.bcdMask],
                 (digit & Register.flagMask), (Envir.oddParity5[digit] != digit));
     }
@@ -870,7 +869,6 @@ class Typewriter {
         const odd = digitPair & Register.digitMask;
 
         const code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
-        this.processor.updateLampGlow(1);       // because Typewriter is so slow
         return this.printChar(Typewriter.alphaGlyphs[code],
                 false, (Envir.oddParity5[even] != even || Envir.oddParity5[odd] != odd));
     }

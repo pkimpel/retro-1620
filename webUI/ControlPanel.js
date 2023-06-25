@@ -15,6 +15,7 @@
 export {ControlPanel};
 
 import * as Version from "../emulator/Version.js";
+import {FlipFlop} from "../emulator/FlipFlop.js";
 import {Register} from "../emulator/Register.js";
 import {Timer} from "../emulator/Timer.js";
 import {openPopup} from "./PopupUtil.js";
@@ -32,6 +33,7 @@ class ControlPanel {
 
     static displayAlpha = 0.01;         // running average decay factor
     static displayRefreshPeriod = 50;   // ms
+    static lampFreezeThreshold = FlipFlop.lampPersistence/4;
     static offSwitchImage = "./resources/ToggleLargeDown.png";
     static onSwitchImage = "./resources/ToggleLargeUp.png";
     static powerBtnOnImage = "./resources/PowerSwitchOn.png";
@@ -47,11 +49,12 @@ class ControlPanel {
 
     avgInstructionRate = 0;             // running average instructions/sec
     debugView = false;                  // true if Debug View is displaying
+    diskResetLatch = 0;                 // RESET / RELEASE simultaneous sequence pending
     intervalToken = 0;                  // panel refresh timer cancel token
+    lastETime = 0;                      // last emulation clock value
     lastInstructionCount = 0;           // prior total instruction count (for average)
     lastRunTime = 0;                    // prior total run time (for average), ms
     modifyLatch = 0;                    // MODIFY / CHECK RESET simultaneous sequence pending
-    diskResetLatch = 0;                 // RESET / RELEASE simultaneous sequence pending
 
     /**************************************/
     constructor(context) {
@@ -678,9 +681,15 @@ class ControlPanel {
 
         if (!p) {
             return;                     // probably got caught in a shutdown
+        } else {
+            const eTime = p.envir.eTime;
+            if (eTime - this.lastETime <= ControlPanel.lampFreezeThreshold) {
+                p.updateLampGlow(1);    // Processor is not executing: freeze lamps
+            } else {
+                this.lastETime = eTime;
+                p.updateLampGlow(0);
+            }
         }
-
-        p.updateLampGlow(0);
 
         // Control Gates panel
         this.gateI_CYC_ENT.set(p.gateI_CYC_ENT.glow);

@@ -869,7 +869,6 @@ class Processor {
         this.gateCLR_MEM.value = 0;
         this.regMAR.clear();
         this.enterManual();
-        this.updateLampGlow(1);         // freeze the lamp states
     }
 
 
@@ -1143,7 +1142,6 @@ class Processor {
 
             this.gateRESP_GATE.value = 0;
             this.envir.restartTiming(); // restart the throttling clock (because Typewriter is so slow)
-            this.updateLampGlow(1);
         } else {                        // check for local action
             switch (code) {
             case -4:                    // INSERT key
@@ -1389,6 +1387,7 @@ class Processor {
             } else if (error) {
                 terminate = true;
             } else {
+                this.gateRESP_GATE.value = 1;
                 for (let x=Processor.diskAddressSize; x<Processor.diskSectorSize; x+=2) {
                     const d1 = data[x] & Register.notParityMask;
                     const d2 = data[x+1] & Register.notParityMask;
@@ -1433,6 +1432,8 @@ class Processor {
                         break;          // out of for loop
                     }
                 } // for x
+
+                this.gateRESP_GATE.value = 0;
             }
 
             this.regOR1.incr(1);                                // increment sector address
@@ -1493,6 +1494,7 @@ class Processor {
             } else if (error) {
                 terminate = true;
             } else {
+                this.gateRESP_GATE.value = 1;
                 for (let x=0; x<Processor.diskSectorSize; ++x) {
                     const d = data[x] & Register.notParityMask;
 
@@ -1517,6 +1519,8 @@ class Processor {
                         }
                     }
                 } // for x
+
+                this.gateRESP_GATE.value = 0;
             }
 
             this.ioDevice.sectorAddr = this.regOR1.value;       // tell device what address should be
@@ -1574,6 +1578,7 @@ class Processor {
             } else if (error) {
                 terminate = true;
             } else {
+                this.gateRESP_GATE.value = 1;
                 for (let x=0; x<Processor.diskSectorSize; ++x) {
                     const d = data[x] & Register.notParityMask;
 
@@ -1602,6 +1607,8 @@ class Processor {
                         break;          // out of for loop
                     }
                 } // for x
+
+                this.gateRESP_GATE.value = 0;
             }
 
             this.regOR1.incr(1);                                // increment sector address
@@ -1701,12 +1708,13 @@ class Processor {
             exhausted */
             let terminate = false;
 
-            //console.debug(`writeSectors fin=${finished}, err=${error}, OR1=${this.regOR1.binaryValue}, PR2=${this.regPR2.binaryValue}, OR2=${this.regOR2.binaryValue}`);
             if (finished) {
                 terminate = true;
             } else if (error) {
                 terminate = true;
             } else {
+                this.gateCHAR_GATE.value = 1;
+                this.gateRESP_GATE.value = 0;
                 for (let x=Processor.diskAddressSize; x<Processor.diskSectorSize; x+=2) {
                     this.regMAR.value = this.regOR2.value;
                     this.fetch();
@@ -1727,6 +1735,9 @@ class Processor {
                     this.envir.tick();
                     this.regOR2.incr(2);
                 } // for x
+
+                this.gateCHAR_GATE.value = 0;
+                this.gateRESP_GATE.value = 1;
             }
 
             this.regOR1.incr(1);                                // increment sector address
@@ -1781,12 +1792,13 @@ class Processor {
             sectors; returns true on error */
             let terminate = false;
 
-            //console.debug(`writeTrack fin=${finished}, err=${error}, OR1=${this.regOR1.binaryValue}, PR2=${this.regPR2.binaryValue}, OR2=${this.regOR2.binaryValue}`);
             if (finished) {
                 terminate = true;
             } else if (error) {
                 terminate = true;
             } else {
+                this.gateCHAR_GATE.value = 1;
+                this.gateRESP_GATE.value = 0;
                 for (let x=0; x<Processor.diskSectorSize; ++x) {
                     evenAddr = 1-evenAddr;
                     if (evenAddr) {
@@ -1808,6 +1820,9 @@ class Processor {
                         this.regOR2.incr(2);
                     }
                 } // for x
+
+                this.gateCHAR_GATE.value = 0;
+                this.gateRESP_GATE.value = 1;
             }
 
             this.regOR1.incr(1);                                // increment sector address
@@ -1909,11 +1924,10 @@ class Processor {
 
             this.gateREL.value = 1;
             this.gateIO_FLAG.value = 0;         // not sure about this...
-            this.gateRESP_GATE.value = 0;       // not sure about this, either...
             this.gateRD.value = 0;
             this.gateWR.value = 0;
             this.gateCHAR_GATE.value = 0;
-            this.gateRESP_GATE.value = 0;       // not sure about this...
+            this.gateRESP_GATE.value = 0;       // not sure about this, either...
             this.ioDevice?.release();
             this.ioDevice = null;
             this.ioSelectNr = 0;
@@ -2689,7 +2703,6 @@ class Processor {
                 } else {
                     switch (this.ioSelectNr) {
                     case 1:     // Typewriter
-                        this.updateLampGlow(1);         // freeze the lamp states
                         this.enterLimbo(this.ioDevice, this.ioDevice.initiateRead);
                         break;
                     case 3:     // Paper Tape Reader
@@ -4092,7 +4105,6 @@ class Processor {
 
             case procStateLimbo:
                 await this.envir.throttle();
-                this.updateLampGlow(0);
                 this.running = false;
                 if (this.limboEntryFcn) {
                     this.limboEntryFcn.call(this.limboEntryContext, this.limboEntryFcn);
@@ -4126,7 +4138,6 @@ class Processor {
 
         this.running = false;
         this.envir.restartTiming();
-        this.updateLampGlow(1);         // freeze current state in the lamps
     }
 
 
@@ -4222,7 +4233,6 @@ class Processor {
         this.gateSTOP.value = 0;
         this.enterICycle();
         this.enterManual();             // will turn off this.gateRUN
-        this.updateLampGlow(1);
     }
 
     /**************************************/
@@ -4264,7 +4274,6 @@ class Processor {
 
         if (this.gatePOWER_ON.value && this.gateMANUAL.value) {
             this.gateCLR_MEM.value = 1;
-            this.updateLampGlow(1);
         }
     }
 
@@ -4278,7 +4287,6 @@ class Processor {
             this.gateDISPLAY_MAR.value = 1;
             this.gateRUN.value = 1;
             this.regMAR.value = this.marsRegisters[this.marSelectorKnob].value;
-            this.updateLampGlow(1);
 
             // ?? Not sure how DISPLAY_MAR gets reset, other than the RESET key,
             // so for now just reset it after once clock tick here.
@@ -4296,7 +4304,6 @@ class Processor {
             this.gateSAVE.value = 1;
             this.gateRUN.value = 1;
             this.regPR1.value = this.regMAR.value = this.regIR1.value;
-            this.updateLampGlow(1);
         }
     }
 
@@ -4334,8 +4341,7 @@ class Processor {
                     this.gateREAD_INTERLOCK.value = 1;
                 }
 
-                this.updateLampGlow(1);
-                   this.ioDevice.initiateRead(true);
+                this.ioDevice.initiateRead(true);
             }
         }
     }
@@ -4347,7 +4353,6 @@ class Processor {
         if (this.gatePOWER_ON.value && (this.gateRD.value || this.gateWR.value)) {
             this.gateSTOP.value = 1;
             this.ioExit();              // STOP will force MANUAL mode in I-Cycle Entry
-            this.updateLampGlow(1);
         }
     }
 
@@ -4425,7 +4430,6 @@ class Processor {
             this.devices = this.context.devices;        // I/O device objects
             this.loadMemory();                          // >>> DEBUG ONLY <<<
             this.envir.startTiming();
-            this.updateLampGlow(1);
         }
     }
 
@@ -4447,8 +4451,6 @@ class Processor {
                 this[prop].intVal = 0;
             }
         }
-
-        this.updateLampGlow(1);
     }
 
     /**************************************/

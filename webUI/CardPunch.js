@@ -408,7 +408,6 @@ class CardPunch {
         /* Initiates the punching of the card from the card buffer */
 
         if (!this.transportReady) {
-            this.processor.updateLampGlow(1);   // freeze the state of the lamps
             if (await this.waitForTransport.request()) {
                 return;                         // wait canceled
             }
@@ -451,9 +450,7 @@ class CardPunch {
 
         this.cardBuffer = "";                   // clear the internal card buffer
         this.bufferReady = false;               // buffer is ready to receive more data
-        if (this.waitForBuffer.requested) {     // if data transfer is waiting for buffer
-            this.waitForBuffer.signal(false);   // tell 'em it's ready
-        }
+        this.waitForBuffer.signal(false);       // tell 'em it's ready
     }
 
     /**************************************/
