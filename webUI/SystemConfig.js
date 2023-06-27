@@ -71,7 +71,6 @@ class SystemConfig {
 
         Disk: {
             hasDisk: 0,
-            compareDisable: 0,
             module: [
                 {exists: 0, started: 0, enabled: 0, imageName: null},
                 {exists: 0, started: 0, enabled: 0, imageName: null},
@@ -202,12 +201,15 @@ class SystemConfig {
             // Reserved for future use
         }
 
-        // Recursively merge any new properties from the defaults.
-        if (this.configData.Disk.units) {       // renamed 2023-06-10
+        if ("compareDisable" in this.configData.Disk) {         // removed 2023-06-25
+            delete this.configData.Disk.compareDisable;
+        }
+        if ("units" in this.configData.Disk) {                  // renamed 2023-06-10
             this.configData.Disk.module = this.configData.Disk.units;
             delete this.configData.Disk.units;
         }
 
+        // Recursively merge any new properties from the defaults.
         this.sortaDeepMerge(this.configData, SystemConfig.defaultConfig);
     }
 
@@ -464,8 +466,6 @@ class SystemConfig {
         this.setListValue("PrinterSpeed", cd.Printer.lpm);
 
         // Disk
-        this.$$("DiskCompareDisable").checked = cd.Disk.compareDisable;
-        this.$$("DiskCompareDisable").disabled = !cd.Disk.module[0].exists;
         for (let x=0; x<4; ++x) {
             this.$$(`Disk${x}Exists`).checked = cd.Disk.module[x].exists;
             this.$$(`Disk${x}Started`).checked = cd.Disk.module[x].started;
@@ -499,7 +499,6 @@ class SystemConfig {
         case "PrinterInstalled":
             break;
         case "Disk0Exists":
-            this.$$("DiskCompareDisable").disabled = !ev.target.checked;
             for (let x=0; x<4; ++x) {
                 if (x > 0) {
                     this.$$(`Disk${x}Exists`).disabled = !ev.target.checked;
@@ -586,7 +585,6 @@ class SystemConfig {
 
         // Disk
         cd.Disk.hasDisk = (this.$$("Disk0Exists").checked ? 1 : 0);
-        cd.Disk.compareDisable = (this.$$("DiskCompareDisable").checked ? 1 : 0);
         for (x=0; x<4; ++x) {
             cd.Disk.module[x].exists = (this.$$(`Disk${x}Exists`).checked ? 1 : 0);
             cd.Disk.module[x].started = (this.$$(`Disk${x}Started`).checked ? 1 : 0);

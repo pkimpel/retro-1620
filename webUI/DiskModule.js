@@ -21,9 +21,10 @@ export {DiskModule};
 
 import {Envir} from "../emulator/Envir.js";
 import {Register} from "../emulator/Register.js";
+import {DiskDrive} from "./DiskDrive.js";
+import {openPopup} from "./PopupUtil.js";
 import {Timer} from "../emulator/Timer.js";
 import {ToggleButton} from "./ToggleButton.js";
-import {DiskDrive} from "./DiskDrive.js";
 
 class DiskModule {
 
@@ -261,7 +262,9 @@ class DiskModule {
 
         if (this.startBtn.state) {
             this.startBtn.set(0);
-            //.. later we'll worry about unloading the disk image
+            if (this.drive.window.confirm(`Do you want to dump the disk contents for ${this.moduleName}?`)) {
+                this.dumpModule();
+            }
         } else {
             this.startBtn.set(1);
             //.. later we'll worry about loading the disk image from a file
@@ -273,6 +276,60 @@ class DiskModule {
         this.config.putNode("Disk.module", config, this.moduleNr);
         this.setModuleReadyStatus();
     }
+
+    /**************************************/
+    dumpModule() {
+        /* Extracts the contents of the module storage and converts it to text
+        in a new temporary window so it can be copied, printed, or saved by the
+        user. All characters are ASCII according to the convention used by the
+        card punch for the 1620-Jr project */
+        const title = "retro-1620 Disk Dump";
+
+        const exportModule = (ev) => {
+            const doc = ev.target;
+            const win = doc.defaultView;
+            const content = doc.getElementById("Paper");
+
+            doc.title = title;
+            win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
+
+            const txn = this.db.transaction(this.moduleName, "readonly");
+            const store = txn.objectStore(this.moduleName);
+            let text = "";
+
+            txn.onerror = (ev) => {
+                this.processor.setIndicator(36, `Disk readTrack ${this.moduleName} error: addr=${this.sectorKey}, ${ev.target.error.name}`);
+            };
+
+            txn.onabort = (ev) => {
+                this.processor.setIndicator(36, `Disk readTrack ${this.moduleName} abort: addr=${this.sectorKey}, ${ev.target.error.name}`);
+            };
+
+            txn.oncomplete = (ev) => {
+                content.textContent = text;
+            };
+
+            store.openCursor().onsuccess = (ev) => {
+                const cursor = ev.target.result;
+                if (cursor) {
+                    const data = cursor.value;
+                    const key = cursor.key;
+                    let line = key.toString().padStart(DiskModule.addressSize, " ") + ","
+                    for (let byte of data) {
+                        line += DiskModule.numericGlyphs[byte & 0x1F];
+                    }
+
+                    text += line + "\n";
+                    cursor.continue();  // advance to next sector
+                }
+            };
+        };
+
+        openPopup(this.drive.window, "./FramePaper.html", "",
+                "scrollbars,resizable,width=660,height=500",
+                this, exportModule);
+    }
+
 
     /**************************************/
     countSectors() {
@@ -350,7 +407,6 @@ class DiskModule {
         disk module. Determines and updates the status of the module */
 
         let count = await this.countSectors();
-        //console.debug(`DiskModule ${this.moduleName} sector count = ${count}`);
 
         if (count <= 0) {
             this.panel.classList.add("dimmed");
@@ -362,7 +418,7 @@ class DiskModule {
         this.startBtn.set(this.started);
 
         this.setModuleReadyStatus();
-        console.debug(`DiskModule ${this.moduleName} opened successfully`);
+        console.debug(`DiskModule ${this.moduleName} opened successfully, ${count} sectors`);
     }
 
     /**************************************/
@@ -553,8 +609,12 @@ class DiskModule {
                 if (!storeSector(false, findResult.error, findResult.data)) {
                     // More sectors needed, so open a cursor for the rest of the cylinder.
                     const cylinderEndKey = (this.seekCylinderNr+1)*DiskModule.cylinderTracks*DiskModule.trackSectors - 1;
-                    const range = IDBKeyRange.bound(lastKey+1, cylinderEndKey);
+                    if (lastKey >= cylinderEndKey) {
+                        this.processor.setIndicator(38, `Disk read cylinder overflow at key ${lastKey}`);
+                        return;
+                    }
 
+                    const range = IDBKeyRange.bound(lastKey+1, cylinderEndKey);
                     store.openCursor(range).onsuccess = (ev) => {
                         const cursor = ev.target.result;
                         if (!cursor) {
@@ -785,8 +845,12 @@ class DiskModule {
                     if (!finito) {
                         // More sectors needed, so open a cursor for the rest of the cylinder.
                         const cylinderEndKey = (this.seekCylinderNr+1)*DiskModule.cylinderTracks*DiskModule.trackSectors - 1;
-                        const range = IDBKeyRange.bound(lastKey+1, cylinderEndKey);
+                        if (lastKey >= cylinderEndKey) {
+                            this.processor.setIndicator(38, `Disk read cylinder overflow at key ${lastKey}`);
+                            return;
+                        }
 
+                        const range = IDBKeyRange.bound(lastKey+1, cylinderEndKey);
                         store.openCursor(range).onsuccess = (ev) => {
                             const cursor = ev.target.result;
                             if (!cursor) {

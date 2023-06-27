@@ -118,12 +118,12 @@ class DiskDrive {
         this.innerHeight = DiskDrive.diskModuleTop;
 
         this.compareDisableSwitch = this.$$("DiskCompareDisableSwitch");
-        this.compareDisableSwitch.checked = diskConfig.compareDisable;
+        this.compareDisableSwitch.checked = false;      // always initializes to off
         this.compareDisableSwitch.addEventListener("click", this.boundCompareDisableClick);
 
         this.writeAddressBtn = new ToggleButton(this.$$("DiskDrivePanel"), null, null,
                 "DiskWriteAddressBtn", "WRITE<br>ADDRESS", "device yellowButton", "yellowLit");
-        this.writeAddressBtn.set(0);     // no config setting: always initializes to off
+        this.writeAddressBtn.set(0);                    // always initializes to off
         this.writeAddressBtn.addEventListener("click", this.boundWriteAddressClick);
 
         const panel = this.$$("ControlsDiv");

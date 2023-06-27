@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<head>
+<title>SimH Disk Pack File Decoder</title>
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+
+<script>
+/***********************************************************************
+* retro-1620/software/retro-1620-Utilities/SimH-Disk-Pack-File-Decoder.html
+************************************************************************
+* Copyright (c) 2023, Paul Kimpel.
+* Licensed under the MIT License,
+*       see http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* Script to convert the SimH I1620 emulator binary disk pack (.dp) image
+* file format to the dump format used by retro-1620.
+*
+* The SimH format has one 8-bit byte per disk digit with bit configuration
+* 000F8421 (i.e. no parity bit). Sectors are stored in physical order, with
+* every 105 bytes representing one sector. The first five bytes for a
+* sector comprise the sector address (which may not match its physical
+* address). The remaining 100 bytes comprise the sector data.
+*
+* To use, select the .dp file using the file selection control on the
+* page. Selecting a file automatically starts the conversion.
+*
+* This version outputs the converted data by opening a browser window and
+* inserting the converted text into a <pre> element in * that window.
+* From there you can copy the text and paste into another program that can
+* save the data to a local filesystem.
+************************************************************************
+* 2023-06-25  P.Kimpel
+*   Original version, from retro-g15 software/tools/Pierce-Paper-Tape-Decoder.html.
+***********************************************************************/
+"use strict";
+
+window.onload = function() {
+    let panel = document.getElementById("TextPanel");
+    let diskBlob = null;                // blob read from .dp file
+    let diskData = null;                // tape blob as a DataView
+
+    const numericGlyphs = [    // indexed as BCD code prefixed with flag bit: F8421
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", "@", "?", "?", "}",         // 00-0F
+        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "$", "-", "?", "?", "\"",        // 10-1F
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", "@", "?", "?", "}",         // 20-2F (parity bit)
+        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "$", "-", "?", "?", "\""];       // 30-3F
+
+
+    function spout(text) {
+        /* Appends "text"+NL as a new text node to the panel DOM element */
+        let e = document.createTextNode(text + "\n");
+
+        panel.appendChild(e);
+    }
+
+    function clearPanel() {
+        /* Clears the text panel */
+        let kid;
+
+        while (kid = panel.firstChild) {
+            panel.removeChild(kid);
+        }
+    }
+
+    function extractFile(data, fileNr, fileName) {
+        /* Extracts the digits from the disk blob, converts the data
+           to ASCII, and writes it to a new window object within the browser.
+           Returns true if no more files should be converted */
+        let box = null;
+        let byte = 0;
+        let len = data.byteLength;
+        let line = "";
+        let result = false;
+        let sectorDigit = 0;
+        let sectorNr = 0;
+        let text = "";
+        let win = null;
+        let x = 0;
+
+        spout(" ");
+        spout("Extracting #" + fileNr + ": " + fileName);
+
+        win = window.open("", fileName, "width=800,height=600,status,scrollbars");
+        win.moveTo((screen.availWidth - 800)/2, (screen.availHeight - 600)/2);
+        win.focus();
+
+        box = win.document.createElement("code");
+        box.appendChild(win.document.createTextNode(fileName));
+        win.document.body.appendChild(box);
+        win.document.body.appendChild(win.document.createElement("br"));
+
+        box = win.document.createElement("textarea");
+        box.cols = 40;
+        box.rows = 30;
+        win.document.body.appendChild(box);
+
+        for (x=0; x<len; ++x) {
+            byte = data.getUint8(x) & 0x1F;
+            line += numericGlyphs[byte];
+            ++sectorDigit;
+            if (sectorDigit >= 105) {
+                text += sectorNr.toString().padStart(5, " ") + "," + line + "\n";
+                ++sectorNr;
+                sectorDigit = 0;
+                line = "";
+            }
+        }
+
+        box.value = text;
+        box.focus();
+        box.select();
+        //result = !confirm("Copy and save " + fileName + " from the sub-window.\n" +
+        //                  "Then click OK to continue or Cancel to quit.");
+        //win.close();
+        return result;
+    }
+
+    function fileLoader_onLoad(ev) {
+        /* Handle the onload event for an ArrayBuffer FileReader */
+        let diskBlob = ev.target.result;
+        let diskData = new DataView(diskBlob);  // use DataView() to avoid problems with little-endians.
+
+        extractFile(diskData, ev.target._fileNr, ev.target._fileName);
+    }
+
+    function fileSelector_onChange(ev) {
+        /* Handle the <input type=file> onchange event when a file is selected */
+        let f = null;
+        let reader = null;
+
+        clearPanel();
+        f = ev.target.files[0];
+        //alert("File selected: " + f.name +
+        //        "\nModified " + f.lastModifiedDate +
+        //        "\nType=" + f.type + ", Size=" + f.size + " octets");
+
+        reader = new FileReader();
+        reader.onload = fileLoader_onLoad;
+        reader._fileNr = 1;
+        reader._fileName = f.name;
+        reader.readAsArrayBuffer(f);
+    }
+
+    function checkBrowser() {
+        /* Checks whether this browser can support the necessary stuff */
+        let missing = "";
+
+        if (!window.File) {missing += ", File"}
+        if (!window.FileReader) {missing += ", FileReader"}
+        if (!window.FileList) {missing += ", FileList"}
+        if (!window.Blob) {missing += ", Blob"}
+        if (!window.ArrayBuffer) {missing += ", ArrayBuffer"}
+        if (!window.DataView) {missing += ", DataView"}
+
+        if (missing.length == 0) {
+            return false;
+        } else {
+            alert("No can do... your browser does not support the following features:\n" +
+                    missing.substring(2));
+            return true;
+        }
+    }
+
+    /* Start of window.onload() */
+    if (checkBrowser()) {
+        return;
+    }
+    document.getElementById("FileSelector").addEventListener("change", fileSelector_onChange, false);
+}
+</script>
+</head>
+
+<body>
+
+<div style="position:relative; width:100%; height:3em">
+    <div style="position:absolute; left:0; top:0; width:auto">
+        SimH Disk Pack Image File Decoder Utility
+    </div>
+    <div style="position:absolute; top:0; right:0; width:auto">
+        <input id=FileSelector type=file size=60 accept=".dp">
+    </div>
+
+</div>
+
+<pre id=TextPanel>
+</pre>
+
+</body>
+</html>
