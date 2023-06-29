@@ -258,23 +258,225 @@ class DiskModule {
 
     /**************************************/
     startClick(ev) {
-        /* Click handler for the Start/Stop toggle button */
+        /* Click handler for the Start/Stop toggle button. Opens the dialog box
+        and wires up the events for the disk module functions */
+        let deltaHeight = 0;
+        let deltaWidth = 0;
 
-        if (this.startBtn.state) {
-            this.startBtn.set(0);
-            if (this.drive.window.confirm(`Do you want to dump the disk contents for ${this.moduleName}?`)) {
-                this.dumpModule();
+        const initiateLoad = (ev) => {
+            const reader = new FileReader();
+            const f = ev.target.files[0];       // the selected file
+
+            const fileLoader_onLoad = (ev) => {
+                /* Handle the onLoad event for a Text FileReader and pass the text
+                of the file to the processsor for loading into memory */
+                const image = ev.target.result;
+
+                if (this.drive.window.confirm(`Are you sure you want to DESTROY THE CONTENTS of module ${this.moduleNr} and reload it from a disk pack image file?`)) {
+                    this.loadModule(image).then((result) => {
+                        if (result) {
+                            this.drive.window.alert("Error during disk pack image load");
+                        } else {
+                            this.started = true;
+                            const config = this.config.getNode("Disk.module", this.moduleNr);
+                            config.imageName = f.name;
+                            this.config.putNode("Disk.module", config, this.moduleNr);
+                            setStatus();
+                            cancelDialog();
+                        }
+                    });
+                }
+            };
+
+            reader.onload = fileLoader_onLoad;
+            reader.readAsText(f);
+        };
+
+        const initiateDump = (ev) => {
+            this.dumpModule();          // no status change
+        };
+
+        const initiateInitialize = (ev) => {
+            if (this.drive.window.confirm(`Are you sure you want to COMPLETELY ERASE and reinitialize module ${this.moduleNr}?`)) {
+                this.initializeModule().then(() => {
+                    this.started = true;
+                    setStatus();
+                    cancelDialog();
+                });
             }
-        } else {
-            this.startBtn.set(1);
-            //.. later we'll worry about loading the disk image from a file
-        }
+        };
 
-        this.started = this.startBtn.state;
-        const config = this.config.getNode("Disk.module", this.moduleNr);
-        config.started = this.started;
-        this.config.putNode("Disk.module", config, this.moduleNr);
-        this.setModuleReadyStatus();
+        const setStatus = () => {
+            const config = this.config.getNode("Disk.module", this.moduleNr);
+            config.started = this.started;
+            this.config.putNode("Disk.module", config, this.moduleNr);
+            this.startBtn.set(this.started);
+            this.setModuleReadyStatus();
+        };
+
+        const cancelDialog = (ev) => {
+            this.drive.$$("DiskPackCancelBtn").removeEventListener("click", cancelDialog);
+            this.drive.$$("DiskPackInitializeBtn").removeEventListener("click", initiateInitialize);
+            this.drive.$$("DiskPackDumpBtn").removeEventListener("click", initiateDump);
+            this.drive.$$("DiskPackSelector").removeEventListener("change", initiateLoad);
+            this.drive.$$("DiskPackSelector").value = null;       // reset the file-picker control
+            this.drive.$$("DiskPackDiv").style.display = "none";
+            this.drive.window.resizeBy(-deltaWidth, -deltaHeight);
+        };
+
+        if (!this.started) {
+            this.started = true;
+            this.openDiskModule();
+        } else {
+            this.started = false;
+            this.startBtn.set(this.started);
+            this.setModuleReadyStatus();
+            this.drive.$$("DiskPackDiv").style.display = "block";
+            this.drive.$$("DiskPackSelector").addEventListener("change", initiateLoad);
+            this.drive.$$("DiskPackDumpBtn").addEventListener("click", initiateDump);
+            this.drive.$$("DiskPackInitializeBtn").addEventListener("click", initiateInitialize);
+            this.drive.$$("DiskPackCancelBtn").addEventListener("click", cancelDialog);
+
+            const rect = this.drive.$$("DiskPackDiv").getBoundingClientRect();
+            deltaHeight = Math.max(rect.height + 64 - this.drive.window.innerHeight, 0);
+            deltaWidth = Math.max(rect.width + 64 - this.drive.window.innerWidth, 0);
+            this.drive.window.resizeBy(deltaWidth, deltaHeight);
+        }
+    }
+
+    /**************************************/
+    loadModule(image) {
+        /* Replaces the contents of the module's object store with new contents
+        from the "image" text blob. Returns a Promise that resolves to true if
+        there is an error, false otherwise */
+        let bufIndex = 0;
+        const eolRex = /([^\n\r\f]*)((:?\r[\n\f]?)|\n|\f)?/g;
+        const validCharsRex = /^[0-9|=@?}\]JKLMNOPQR!$-?"]+$/;
+        let result = false;
+
+        const extractSectorImage = () => {
+            /* Extracts one sector image from the buffer. Returns a pair
+            consisting of an error code, the 5-digit sector key, and the
+            105-digit sector data */
+            let errorCode = 0;
+            let key = 0;
+            let data = "";
+            let match = null;                   // result of eolRex.exec()
+
+            eolRex.lastIndex = bufIndex;
+            match = eolRex.exec(image);
+            if (!match) {
+                data = "";
+                key = DiskModule.maxSectors;
+            } else {
+                bufIndex += match[0].length;
+                const text = match[1].toUpperCase();
+                const parts = text.split(",");
+                if (parts.length != 2) {
+                    errorCode = 1;              // invalid row format
+                } else {
+                    key = parseInt(parts[0], 10);
+                    data = parts[1];
+                    if (data.length < DiskModule.sectorSize) {
+                        data = data.padEnd(DiskModule.sectorSize, "0");
+                    } else if (data.length > DiskModule.sectorSize) {
+                        data = data.subString(0, DiskModule.sectorSize);
+                    }
+
+                    if (isNaN(key)) {
+                        errorCode = 2;          // invalid key field
+                    }
+                }
+            }
+
+            return [errorCode, key, data];
+        };
+
+        const validateImage = () => {
+            /* Validates the image is properly formatted, the digit codes are
+            valid, they keys are numeric, and the keys are in ascending order.
+            Returns true if errors */
+            let lastKey = -1;
+            let result = false;
+
+            bufIndex = 0;
+            while (bufIndex < image.length) {
+                let [errorCode, key, data] = extractSectorImage();
+                if (errorCode > 0) {
+                    result = true;
+                    break;
+                } else if (key < 0 || key >= DiskModule.maxSectors || key <= lastKey) {
+                    result = true;
+                    break;
+                } else if (!validCharsRex.test(data)) {
+                    result = true;
+                } else {
+                    lastKey = key;
+                }
+            }
+
+            return result;
+        };
+
+        return new Promise((resolve, reject) => {
+            if (validateImage()) {
+                console.debug("DiskModule load image invalid");
+                resolve(true);
+            } else {
+                const cylinderSize = DiskModule.cylinderTracks*DiskModule.trackSectors;
+                const buffer = new Uint8Array(DiskModule.sectorSize);
+
+                bufIndex = 0;
+                let row = extractSectorImage();
+
+                const loadCylinder = () => {
+                    /* Initializes one cylinder of sectors. On completion, either
+                    calls self for the next cylinder or terminates if at end. This
+                    is done one cylinder at a time to avoid flooding IDB with requests */
+                    const txn = this.db.transaction(this.moduleName, "readwrite");
+                    const store = txn.objectStore(this.moduleName);
+
+                    txn.onerror = (ev) => {
+                        const msg = `DiskModule ${this.moduleName} load txn onerror: ${ev.target.error.name}`;
+                        console.log(msg);
+                        resolve(true);
+                    };
+
+                    txn.onabort = (ev) => {
+                        const msg = `DiskModule ${this.moduleName} load txn onabort: ${ev.target.error.name}`;
+                        console.log(msg);
+                        resolve(true);
+                    };
+
+                    txn.oncomplete = (ev) => {
+                        if (bufIndex < image.length) {
+                            loadCylinder();
+                        } else {
+                            resolve(false);
+                            console.log(`DiskModule ${this.moduleName} load completed`);
+                        }
+                    };
+
+                    let [error, key, data] = row;
+                    const cylinderNr = Math.floor(key/cylinderSize);
+                    const cylStartKey = cylinderNr*cylinderSize;
+                    const cylEndKey = cylStartKey + cylinderSize - 1;
+
+                    do {
+                        for (let x=0; x<data.length; ++x) {
+                            buffer[x] = DiskModule.numericGlyphs.indexOf(data[x]);
+                        }
+
+                        store.put(buffer, key);
+                        row = extractSectorImage();
+                        key = row[1];
+                        data = row[2];
+                    } while (bufIndex < image.length && key < cylEndKey);
+                };
+
+                loadCylinder();
+            }
+        });
     }
 
     /**************************************/
@@ -353,13 +555,13 @@ class DiskModule {
         standard sector addresses */
 
         console.debug(`DiskModule initializing sectors for ${this.moduleName}`);
-        const moduleConfig =this.config.getNode("Disk.module", this.moduleNr);
-        moduleConfig.imageName = `${this.moduleName}Default`;
-        this.config.putNode("Disk.module", moduleConfig, this.moduleNr);
+        const config = this.config.getNode("Disk.module", this.moduleNr);
+        config.imageName = "(initialized)";
+        this.config.putNode("Disk.module", config, this.moduleNr);
 
         return new Promise((resolve, reject) => {
             let addr = 0;
-            const buffer = new Uint8Array(DiskModule.sectorSize);       // initializes to zeroes
+            const buffer = new Uint8Array(DiskModule.sectorSize);
 
             const fillTrack = () => {
                 /* Initializes one track of sectors. On completion, either resolves
@@ -372,13 +574,13 @@ class DiskModule {
                 txn.onerror = (ev) => {
                     const msg = `DiskModule ${this.moduleName} init txn onerror: addr=${addr}, ${ev.target.error.name}`;
                     console.log(msg);
-                    alert(msg);
+                    this.drive.window.alert(msg);
                 };
 
                 txn.onabort = (ev) => {
                     const msg = `DiskModule ${this.moduleName} init txn onabort: addr=${addr}, ${ev.target.error.name}`;
                     console.log(msg);
-                    alert(msg);
+                    this.drive.window.alert(msg);
                 };
 
                 txn.oncomplete = (ev) => {
@@ -397,7 +599,32 @@ class DiskModule {
                 }
             };
 
-            fillTrack();
+            const wipeDisk = () => {
+                /* Completely erases the IDB object store for the disk module,
+                then calls fillTrack() to begin writing sectors */
+                const txn = this.db.transaction(this.moduleName, "readwrite");
+
+                txn.onerror = (ev) => {
+                    const msg = `DiskModule ${this.moduleName} clear txn onerror: addr=${addr}, ${ev.target.error.name}`;
+                    console.log(msg);
+                    this.drive.window.alert(msg);
+                };
+
+                txn.onabort = (ev) => {
+                    const msg = `DiskModule ${this.moduleName} clear txn onabort: addr=${addr}, ${ev.target.error.name}`;
+                    console.log(msg);
+                    this.drive.window.alert(msg);
+                };
+
+                txn.oncomplete = (ev) => {
+                    fillTrack();
+                };
+
+                txn.objectStore(this.moduleName).clear();
+            };
+
+            buffer.fill(Register.parityMask);   // initialize to 0 with parity
+            wipeDisk();
         });
     }
 
@@ -552,7 +779,7 @@ class DiskModule {
                             this.sectorKey = result.key;
                             result.timing += timing;
                             if (!found) {
-                                this.processor.setIndicator(36, `Disk findSector key not on track=${this.sectorKey} in ${this.moduleName}`);
+                                this.processor.setIndicator(36, `Disk findSector key not on track ${trackStartKey} for ${DiskModule.convertSectorAddress(sectorAddr)} in ${this.moduleName}`);
                                 result.error = true;
                             }
                         }

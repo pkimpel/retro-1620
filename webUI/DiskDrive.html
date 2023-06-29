@@ -109,6 +109,28 @@
             </div>
         </div>
     </div>
+</div> <!-- DiskDiv -->
+
+<div id=DiskPackDiv>
+    <h3>Mount/Load a Disk Pack image file:</h3>
+    <blockquote>
+        <input id=DiskPackSelector type=file size=60
+               title="Replace data on a disk module from a disk pack image file">
+    </blockquote>
+
+    <h3>Unmount/Dump a Disk Pack image:</h3>
+    <blockquote>
+        <button id=DiskPackDumpBtn
+                title="Copy disk module image as text to a temporary window">Dump</button>
+    </blockquote>
+
+    <h3>Initialize/Erase a Disk Pack image:</h3>
+    <blockquote>
+        <button id=DiskPackInitializeBtn
+                title="Erase a disk module and write new sector addresses">Initialize</button>
+        <button id=DiskPackCancelBtn>Cancel</button>
+    </blockquote>
+    </div>
 </div>
 
 </body>

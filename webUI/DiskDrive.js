@@ -128,8 +128,8 @@ class DiskDrive {
 
         const panel = this.$$("ControlsDiv");
         for (let moduleNr=0; moduleNr<diskConfig.module.length; ++moduleNr) {
-            const module = diskConfig.module[moduleNr];
-            if (module.exists) {
+            const mod = diskConfig.module[moduleNr];
+            if (mod.exists) {
                 ++this.moduleCount;
                 this.innerHeight += DiskDrive.diskModuleHeight;
                 this.$$(`DiskModule${moduleNr}`).style.display = "block";
@@ -146,9 +146,9 @@ class DiskDrive {
                 this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
             }
 
-            for (let x=0; x<DiskDrive.moduleMax; ++x) {
-                if (this.module[x]) {
-                    await this.module[x].openDiskModule();
+            for (const mod of this.module) {
+                if (mod) {
+                    await mod.openDiskModule();
                 }
             }
 

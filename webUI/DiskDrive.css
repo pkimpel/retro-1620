@@ -184,3 +184,30 @@
     top:                50%;
     height:             24px;
     transform:          translate(0, -50%)}
+
+
+#DiskPackDiv {
+    position:           fixed;
+    display:            none;
+    left:               50%;
+    top:                50%;
+    transform:          translate(-50%, -50%);
+    z-index:            10;
+    color:              black;
+    background-color:   #FFC;
+    padding:            8px;
+    border:             2px solid black;
+    box-shadow:         4px 4px 4px gray}
+#DiskPackDiv H3 {
+    margin-top:         0;
+    margin-bottom:      1ex;
+    font-size:          12px;
+    font-weight:        bold}
+#DiskPackDiv BLOCKQUOTE {
+    position:           relative;
+    margin-top;         1ex;
+    margin-bottom:      1ex;
+    margin-left:        2em;
+    width:              calc(100% - 4em)}
+#DiskPackCancelBtn {
+    float:              right}
