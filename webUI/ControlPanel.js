@@ -33,7 +33,7 @@ class ControlPanel {
 
     static displayAlpha = 0.01;         // running average decay factor
     static displayRefreshPeriod = 50;   // ms
-    static lampFreezeThreshold = FlipFlop.lampPersistence/4;
+    static lampFreezeThreshold = FlipFlop.lampPersistence*2;
     static offSwitchImage = "./resources/ToggleLargeDown.png";
     static onSwitchImage = "./resources/ToggleLargeUp.png";
     static powerBtnOnImage = "./resources/PowerSwitchOn.png";

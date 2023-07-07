@@ -1,0 +1,121 @@
+/***********************************************************************
+* retro-1620/webUI LinePrinter.css
+************************************************************************
+* Copyright (c) 2023, Paul Kimpel.
+* Licensed under the MIT License,
+*       see http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1433 Line Printer Unit web interface style sheet.
+************************************************************************
+* 203-07-04  P.Kimpel
+*   Original version, from CardPunch.css.
+***********************************************************************/
+
+#printerBody {
+    height:             100%;
+    min-height:         100%;
+    overflow:           hidden}
+
+#PrinterDiv {
+    position:           absolute;
+    top:                0;
+    bottom:             0;
+    left:               0;
+    right:              0}
+
+#ControlsDiv {
+    position:           absolute;
+    top:                4px;
+    left:               4px;
+    right:              4px;
+    height:             64px;
+    }
+
+#ResetBtn {
+    position:           absolute;
+    top:                11px;
+    right:              16px;
+    box-shadow:         inset 2px 2px 2px #333}
+#CarriageSpaceBtn {
+    position:           absolute;
+    top:                11px;
+    right:              88px;
+    box-shadow:         2px 2px 2px #333}
+#CarriageRestoreBtn {
+    position:           absolute;
+    top:                11px;
+    right:              160px;
+    box-shadow:         2px 2px 2px #333}
+#StopBtn {
+    position:           absolute;
+    top:                11px;
+    right:              232px;
+    box-shadow:         2px 2px 2px #333}
+#StartBtn {
+    position:           absolute;
+    top:                11px;
+    right:              304px;
+    box-shadow:         inset 2px 2px 2px #333}
+
+#OptionsDiv {
+    position:           absolute;
+    top:                12px;
+    left:               112px;
+    width:              auto}
+
+#PowerLamp {
+    left:               16px;
+    top:                12px;
+    width:              40px}
+#ReadyLamp {
+    left:               16px;
+    top:                36px;
+    width:              40px}
+#EndOfFormLamp {
+    left:               64px;
+    top:                12px;
+    width:              40px}
+#PrintCheckLamp {
+    left:               64px;
+    top:                36px;
+    width:              40px}
+
+#PaperDiv {
+    position:           absolute;
+    top:                72px;
+    left:               4px;
+    right:              6px;
+    bottom:             6px}
+
+#PaperMeter {
+    position:           absolute;
+    top:                0;
+    left:               0;
+    width:              100%;
+    height:             16px;
+    border:             1px solid white}
+
+#PaperMeterCaption {
+    position:           absolute;
+    display:            none;           /* for now... */
+    right:              2px;
+    top:                30px;
+    z-index:            1;
+    height:             12px;
+    color:              black;
+    font-weight:        bold}
+
+#PaperFrameDiv{
+    position:           absolute;
+    top:                20px;
+    bottom:             0;
+    left:               0;
+    right:              0}
+
+#PaperFrame {
+    position:           absolute;
+    top:                0;
+    left:               0;
+    width:              100%;
+    height:             100%;
+    border:             1px solid white}

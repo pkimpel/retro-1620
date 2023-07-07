@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>IBM 1433 Line Printer Unit</title>
+<!--
+/***********************************************************************
+* retro-1620/webUI LinePrinter.html
+************************************************************************
+* Copyright (c) 2023, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1433 Line Printer Unit device page.
+*
+* Implements the IBM 1433 line printer peripheral.
+*
+************************************************************************
+* 2023-07-04  P.Kimpel
+*   Original version, from retro-1620 CardPunch.html.
+***********************************************************************/
+-->
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link id=defaultStyleSheet rel=stylesheet type="text/css" href="Common.css">
+<link id=printerStyleSheet rel=stylesheet type="text/css" href="LinePrinter.css">
+</head>
+
+<body id=printerBody class=deviceBody>
+
+<div id=PrinterDiv class="ibmGray">
+    <div id=ControlsDiv class="ibmBlue">
+        <div id=PowerLamp       class="annunciator annunciatorLit">POWER</div>
+        <div id=ReadyLamp       class="annunciator">READY</div>
+        <div id=EndOfFormLamp   class="annunciator">END OF<br>FORM</div>
+        <div id=PrintCheckLamp  class="annunciator">PRINT<br>CHECK</div>
+    </div>
+
+    <div id=OptionsDiv>
+      <input id=GreenbarCheck type=checkbox value=1 checked>
+      <label for=GreenbarCheck class="annunciator annunciatorLit">GREENBAR</label>
+    </div>
+
+    <div id=PaperDiv>
+        <label id=PaperMeterCaption for=StackerBar>OUTPUT STACKER</label>
+        <meter id=PaperMeter min=0 max=100 value=0
+               title="Paper stacker level. Click to clear the stacker"></meter>
+        <div id=PaperFrameDiv>
+            <iframe id=PaperFrame class=paper scrolling=auto src="./FramePaper.html"></iframe>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

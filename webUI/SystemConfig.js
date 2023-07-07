@@ -66,7 +66,10 @@ class SystemConfig {
 
         Printer: {
             hasPrinter: 0,
-            lpm: 0
+            greenBar: 1,
+            lpm: 0,
+            columns: 120,
+            carriageControl: {formLength: 66, skipChannel: [1]}
         },
 
         Disk: {
@@ -463,7 +466,11 @@ class SystemConfig {
         this.$$("CardPunchStackerLimit").disabled = !cd.Card.hasCard;
 
         // Printer
-        this.setListValue("PrinterSpeed", cd.Printer.lpm);
+        this.setListValue("PrinterModel", cd.Printer.lpm);
+        this.setListValue("PrinterColumns", cd.Printer.columns);
+        this.$$("PrinterColumns").disabled = !cd.Printer.hasPrinter;
+        this.$$("CarriageControlText").textContent = JSON.stringify(cd.Printer.carriageControl);
+        this.$$("CarriageControlText").style.display = (cd.Printer.hasPrinter ? "inline" : "none");
 
         // Disk
         for (let x=0; x<4; ++x) {
@@ -494,9 +501,11 @@ class SystemConfig {
             this.$$("SystemMultiScreen").disabled = !ev.target.checked;
             break;
         case "CardSpeed":
-            this.$$("CardPunchStackerLimit").disabled = !ev.target.selectedIndex <= 0;
+            this.$$("CardPunchStackerLimit").disabled = ev.target.selectedIndex <= 0;
             break;
-        case "PrinterInstalled":
+        case "PrinterModel":
+            this.$$("PrinterColumns").disabled = ev.target.selectedIndex <= 0;
+            this.$$("CarriageControlText").style.display = (ev.target.selectedIndex <= 0 ? "none" : "inline");
             break;
         case "Disk0Exists":
             for (let x=0; x<4; ++x) {
@@ -578,10 +587,13 @@ class SystemConfig {
         }
 
         // Printer
-        e = this.$$("PrinterSpeed");
+        e = this.$$("PrinterModel");
         cd.Printer.hasPrinter = (e.selectedIndex > 0 ? 1 : 0);
         x = parseInt(e.options[e.selectedIndex].value, 10);
-        cd.Printer.lpm = (isNaN(x) ? 250 : x);
+        cd.Printer.lpm = (isNaN(x) ? 150 : x);
+        e = this.$$("PrinterColumns");
+        x = parseInt(e.options[e.selectedIndex].value, 10);
+        cd.Printer.columns = (isNaN(x) ? 120 : x);
 
         // Disk
         cd.Disk.hasDisk = (this.$$("Disk0Exists").checked ? 1 : 0);

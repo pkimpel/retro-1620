@@ -103,11 +103,32 @@ DIV.paper {
     margin-bottom:      0;
     font-size:          12px;
     line-height:        12pt}
+DIV.printerPaper {
+    font-family:        DejaVuSansMonoBookWeb, monospace;
+    white-space:        pre;
+    margin-top:         0;
+    margin-bottom:      0;
+    font-size:          8pt;
+    line-height:        120%}   /* 12pt? */
 DIV.topOfForm {
     page-break-before:  always;
     margin-top:         1px;
     padding-top:        1px;
     border-top:         1px dashed black}
+DIV.whiteBar {
+    margin-left:        -6px;
+    margin-right:       -6px;
+    padding-left:       6px;
+    padding-right:      6px;
+    white-space:        pre;
+    background-color:   white}
+DIV.greenBar {
+    margin-left:        -6px;
+    margin-right:       -6px;
+    padding-left:       6px;
+    padding-right:      6px;
+    white-space:        pre;
+    background-color:   #CFC}
 
 DIV.caption {
     position:           absolute;

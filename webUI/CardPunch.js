@@ -143,7 +143,7 @@ class CardPunch {
         this.bufferReady = false;       // punch card buffer is ready to be punched
         this.punchCheck = false;        // true if a punch check has occurred
         this.punchCheckPending = false; // true if a punch check has been detected
-        this.cardBuffer = "";           // card data to send to Processor
+        this.cardBuffer = "";           // card data received from Processor
         this.nextLatchPointStamp = 0;   // timestamp when the next physical punch can initiate
         this.lastUseStamp = 0;          // last timestamp that a physical punch cycle occurred
     }
@@ -406,14 +406,13 @@ class CardPunch {
     /**************************************/
     async initiateCardPunch() {
         /* Initiates the punching of the card from the card buffer */
+        let now = performance.now();
 
         if (!this.transportReady) {
             if (await this.waitForTransport.request()) {
                 return;                         // wait canceled
             }
         }
-
-        let now = performance.now();
 
         // First, if the punch has been idle for more than one minute, the
         // motor will have timed out, so wait 500 ms for it to spin back up.
@@ -444,13 +443,22 @@ class CardPunch {
         if (this.punchCheckPending) {
             this.setPunchCheck(true);   // leave buffer in ready state
         } else if (this.stackerCount >= this.stackerLimit) {
-                this.setTransportReady(false);
-                this.$$("StackerLamp").classList.add("annunciatorLit");
+            this.setTransportReady(false);
+            this.$$("StackerLamp").classList.add("annunciatorLit");
         }
 
         this.cardBuffer = "";                   // clear the internal card buffer
         this.bufferReady = false;               // buffer is ready to receive more data
         this.waitForBuffer.signal(false);       // tell 'em it's ready
+    }
+
+    /**************************************/
+    dumpNumeric(digit) {
+        /* Writes one digit to the card buffer. This should be used directly by
+        Dump Numerically (DN, 35). Simply calls this.writeNumeric and returns
+        its Promise result */
+
+        return this.writeNumeric(digit);
     }
 
     /**************************************/
@@ -521,15 +529,6 @@ class CardPunch {
     }
 
     /**************************************/
-    dumpNumeric(digit) {
-        /* Writes one digit to the card buffer. This should be used directly by
-        Dump Numerically (DN, 35) Simply calls this.writeNumeric and returns
-        its Promise result */
-
-        return this.writeNumeric(digit);
-    }
-
-    /**************************************/
     initiateWrite() {
         /* Called by Processor to initiate a write I/O. Not used with CardPunch */
     }
@@ -563,7 +562,7 @@ class CardPunch {
 
         this.config.putWindowGeometry(this.window, "CardPunch");
         this.window.removeEventListener("message", this.boundReceiveMessage);
-        this.window.removeEventListener("beforeunload", this.beforeUnload, false);
+        this.window.removeEventListener("beforeunload", this.beforeUnload);
         this.window.close();
     }
 

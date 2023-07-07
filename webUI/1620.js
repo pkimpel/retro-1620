@@ -17,6 +17,7 @@ import {Processor} from "../emulator/Processor.js";
 import {CardReader} from "./CardReader.js";
 import {CardPunch} from "./CardPunch.js";
 import {DiskDrive} from "./DiskDrive.js";
+import {LinePrinter} from "./LinePrinter.js";
 import {ControlPanel} from "./ControlPanel.js";
 import {SystemConfig} from "./SystemConfig.js";
 import {Typewriter} from "./Typewriter.js";
@@ -113,6 +114,10 @@ let globalLoad = (ev) => {
             context.devices.diskDrive = new DiskDrive(context);
         }
 
+        if (config.getNode("Printer.hasPrinter")) {
+            context.devices.linePrinter = new LinePrinter(context);
+        }
+
         context.controlPanel = new ControlPanel(context);
     }
 
@@ -159,6 +164,7 @@ let globalLoad = (ev) => {
         if (!window.File) {missing += ", File"}
         if (!window.FileReader) {missing += ", FileReader"}
         if (!window.FileList) {missing += ", FileList"}
+        if (!window.indexedDB) {missing += ", IndexedDB"}
         if (!window.JSON) {missing += ", JSON"}
         if (!window.localStorage) {missing += ", LocalStorage"}
         if (!(window.performance && "now" in performance)) {missing += ", performance.now"}

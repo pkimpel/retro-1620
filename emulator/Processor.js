@@ -266,14 +266,13 @@ class Processor {
         this.runTime = 0;                               // actual system run time, ms
 
         // I/O Subsystem
-        this.ioTimer = new Timer();                     // general timer for I/O operations
-        this.ioPromise = Promise.resolve();             // general Promise for I/O operations
         this.ioDevice = null;                           // I/O device object
         this.ioSelectNr = 0;                            // I/O channel from Q8/Q9
         this.ioVariant = 0;                             // I/O function variant from Q10/Q11
         this.ioDiskDriveCode = 0;                       // Module number for disk I/O
         this.ioReadCheckPending = false;                // Read Check condition has occurred but not yet been set
         this.ioWriteCheckPending = false;               // Write Check condition has occurred but not het been set
+        this.ioRMPrinterLatch = 0;                      // Latch for printer buffer management
 
         // Initialization
         const buildOpAtts = (opCode,
@@ -904,8 +903,8 @@ class Processor {
             this.ioVariant = variant & Register.bcdMask;
             this.gateDISK_OP.value = 1;
             break;
-        case 9:         // Printer
-            this.ioDevice = null;
+        case 9:         // Line Printer
+            this.ioDevice = this.devices.linePrinter;
             this.ioVariant = variant & Register.bcdValueMask;
             break;
         case 33:        // Binary Paper Tape Reader
@@ -937,7 +936,7 @@ class Processor {
             }
 
             if (eob) {
-                if (this.gateEND_OF_MODULE.value) {
+                if (this.gateEND_OF_MODULE.value || this.ioSelectNr == 9 /* Printer */) {
                     this.ioExit();
                 } else {
                     // Update emulation clock after each non-final block
@@ -952,16 +951,34 @@ class Processor {
         /* Executes one digit cycle of Write Numerically (WN, 38).
         Terminate the I/O if:
             * For Card Punch, if it returns eob=true (=> 80th column sent)
-            * For all others, if the digit matches a record mark
+            * For Line Printer, if it returns eob=true (=> buffer full)
+            * For all others (not used by Disk Drive), if the digit matches a record mark
             * If a RELEASE occurs
         */
+        let eob = 0;
 
         this.gateRESP_GATE.value = 0;
         this.gateCHAR_GATE.value = 1;
         switch (this.ioSelectNr) {
         case 4:         // Card Punch
-            const eob = await this.ioDevice.writeNumeric(digit);
+            eob = await this.ioDevice.writeNumeric(digit);
             if (eob) {
+                this.ioExit();
+            }
+            break;
+        case 9:         // Line Printer
+            if ((digit & Envir.numRecMark) == Envir.numRecMark) {
+                this.ioRMPrinterLatch = 1;
+            }
+
+            if (this.ioRMPrinterLatch) {
+                eob = await this.ioDevice.writeNumeric(-1);     // dummy buffer fill
+            } else {
+                eob = await this.ioDevice.writeNumeric(digit);
+            }
+
+            if (eob) {
+                this.ioRMPrinterLatch = 0;
                 this.ioExit();
             }
             break;
@@ -985,16 +1002,34 @@ class Processor {
         /* Executes one character cycle of Write Numerically (WN, 39).
         Terminate the I/O if:
             * For Card Punch, if it returns eob=true (=> 80th column sent)
-            * For all others, if the odd digit matches a record mark
+            * For Line Printer, if it returns eob=true (=> buffer full)
+            * For all others (not used by Disk Drive), if the odd digit matches a record mark
             * If a RELEASE occurs
         */
+        let eob = 0;
 
         this.gateRESP_GATE.value = 0;
         this.gateCHAR_GATE.value = 1;
         switch (this.ioSelectNr) {
         case 4:         // Card Punch
-            const eob = await this.ioDevice.writeAlpha(digitPair);
+            eob = await this.ioDevice.writeAlpha(digitPair);
             if (eob) {
+                this.ioExit();
+            }
+            break;
+        case 9:         // Line Printer
+            if ((digitPair & Envir.numRecMark) == Envir.numRecMark) {
+                this.ioRMPrinterLatch = 1;
+            }
+
+            if (this.ioRMPrinterLatch) {
+                eob = await this.ioDevice.writeAlpha(-1);       // dummy buffer fill
+            } else {
+                eob = await this.ioDevice.writeAlpha(digitPair);
+            }
+
+            if (eob) {
+                this.ioRMPrinterLatch = 0;
                 this.ioExit();
             }
             break;
@@ -2688,6 +2723,10 @@ class Processor {
                         this.initiateDiskControl();
                         this.ioExit();
                         break;
+                    case 9:     // Line Printer
+                        this.ioDevice.control(this.ioVariant);  // runs async
+                        this.ioExit();
+                        break;
                     default:
                         this.gateWRITE_INTERLOCK.value = 1;
                         this.enterLimbo();      // just hang on an undefined device
@@ -2739,7 +2778,7 @@ class Processor {
                     case 4:     // Card Punch
                     case 9:     // Printer
                         this.gateWRITE_INTERLOCK.value = 1;
-                        this.ioDevice.initiateWrite();
+                        this.ioDevice.initiateWrite(this.ioVariant);
                         break;
                     case 7:     // Disk Drive
                         if (this.opBinary == 38) {
@@ -3965,6 +4004,9 @@ class Processor {
             break;
         case 25:        // 1443 Printer Check
             this.ioPrinterCheck.value = 1;      // ?? but not if it's a sync check ??
+            if (!this.devices.linePrinter?.printCheck) {
+                this.devices.linePrinter?.setPrintCheck(true);
+            }
             if (this.ioStopSwitch) {
                 this.checkStop(`Printer Check: ${text}`);
             }
@@ -3974,6 +4016,9 @@ class Processor {
             break;
         case 34:        // 1443 Channel 12
             this.ioPrinterChannel12.value = 1;  // also reset by sensing channel 1
+            break;
+        case 35:        // 1443 Printer Busy
+            this.ioPrinterBusy.value = 1;
             break;
         }
     }
@@ -4016,12 +4061,18 @@ class Processor {
             break;
         case 25:        // 1443 Printer Check
             this.ioPrinterCheck.value = 0;      // ?? but not if it's a sync check ??
+            if (this.devices.linePrinter?.printCheck) {
+                this.devices.linePrinter?.setPrintCheck(false);
+            }
             break;
         case 33:        // 1443 Channel 9
             this.ioPrinterChannel9.value = 0;   // also reset by sensing channel 1
             break;
         case 34:        // 1443 Channel 12
             this.ioPrinterChannel12.value = 0;  // also reset by sensing channel 1
+            break;
+        case 35:        // 1443 Printer Busy
+            this.ioPrinterBusy.value = 0;
             break;
         }
     }
@@ -4226,6 +4277,7 @@ class Processor {
         this.parityMARCheck.value = 0;
         this.oflowArithCheck.value = 0;
         this.oflowExpCheck.value = 0;
+        this.resetIndicator(25);        // printer check
         this.ioPrinterChannel9.value = 0;
         this.ioPrinterChannel12.value = 0;
         this.checkReset();              // will turn off this.gateCHECK_STOP
@@ -4425,10 +4477,10 @@ class Processor {
         if (!this.gatePOWER_ON.value) {
             this.gatePOWER_ON.value = 1;
             this.enterManual();                         // must be set for manualReset()
-            this.manualReset();
             this.gateIA_SEL.value = 1;                  // enable indirect addressing
             this.devices = this.context.devices;        // I/O device objects
             this.loadMemory();                          // >>> DEBUG ONLY <<<
+            this.manualReset();
             this.envir.startTiming();
         }
     }

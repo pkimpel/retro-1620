@@ -65,7 +65,7 @@
     </div>
 
 
-    <div class=heading>731 Typewriter: <span class=smaller>[change settings on device panel]</span></div>
+    <div class=heading>731 Typewriter: <span class=smaller>[change on device panel]</span></div>
     <div class=details>
         Margin Left=<span id=MarginLeft></span>, Right=<span id=MarginRight></span>,
         Columns=<span id=Columns></span><br>
@@ -87,12 +87,19 @@
 
     <div class=heading>1443 Printer:</div>
     <div class=details>
-        <select id=PrinterSpeed DISABLED>
+        <select id=PrinterModel>
             <option value=0  >None
-            <option value=240>240 LPM, 52-character set
-            <option value=300>300 LPM, 39-character set
-            <option value=600>600 LPM, 13-character set
-        </select> Printer Speed
+            <option value=150>Model 1, 150 LPM
+            <option value=240>Model 2, 240 LPM
+        </select> Printer Speed,
+        <select id=PrinterColumns>
+            <option value=120 selected>120
+            <option value=144         >144
+        </select> Columns
+        <br>
+        <div>Carriage Control [change on device panel]:
+             <code id=CarriageControlText></code>
+        </div>
     </div>
 
 
