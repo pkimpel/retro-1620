@@ -29,15 +29,15 @@ class LinePrinter {
     // Static Properties
 
     static printerTop = 248;            // top coordinate of LinePrinter window
-    static windowHeight = 300;          // window innerHeight, pixels
-    static windowWidth120 = 810;        // window innerWidth for 120 columns, pixels
-    static windowWidth144 = 966;        // window innerWidth for 144 columns, pixels
+    static windowHeight = 290;          // window innerHeight, pixels
+    static windowWidth120 = 820;        // window innerWidth for 120 columns, pixels
+    static windowWidth144 = 984;        // window innerWidth for 144 columns, pixels
 
     static carriageBaseTime = 45;       // minimum immediate carriage control time, ms
     static carriageExtraTime = 10;      // additional carriage control time per line, ms
     static maxBufferSize = 197;         // maximum number of characters loaded to buffer
     static maxPaperLines = 150000;      // maximum printer scrollback (about a box of paper)
-    static theColorGreen = "#CFC";      // for greenbar shading
+    static greenbarGreen = "#CFC";      // for toggling greenbar shading
 
     static dumpGlyphs = [       // indexed as BCD code prefixed with flag bit: F8421
         "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", Envir.glyphRecMark, " ", "@", " ", " ", "G",  // 00-0F
@@ -72,13 +72,15 @@ class LinePrinter {
     window = null;                      // window object
     innerHeight = 0;                    // window specified innerHeight
 
+    atTopOfForm = false;                // start new page flag
     barGroup = null;                    // current greenbar line group
-    useGreenBar = 0;                    // != 0 => do greenbar formatting
-    linesRemaining = 0;                 // print lines remaining before end-of-paper
-    lpi = 6;                            // lines per inch (actually, lines per bar group)
     formFeedCount = 0;                  // counter for triple-formfeed => rip paper
     groupLinesLeft = 0;                 // lines remaining in current greenbar group
-    atTopOfForm = false;                // start new page flag
+    lastLineDiv = null;                 // <div> of last non-overstruck line
+    linesRemaining = 0;                 // print lines remaining before end-of-paper
+    lpi = 6;                            // lines per inch (actually, lines per bar group)
+    overstrike = false;                 // true if next line is to be overstruck with last
+    useGreenBar = 0;                    // != 0 => do greenbar formatting
 
     paperDoc = null;                    // the content document for the paper frame
     paper = null;                       // the "paper" we print on
@@ -280,21 +282,17 @@ class LinePrinter {
     /**************************************/
     setGreenbar(useGreen) {
         /* Controls the display of "greenbar" shading on the paper */
-        var rule = null;
-        var rules = null;
-        var sheet;
-        var ss = this.paperFrame.contentDocument.styleSheets;
-        var x;
+        const ss = this.paperFrame.contentDocument.styleSheets;
 
         // First, find the style sheet for the paper frame.
         for (const sheet of ss) {
             if (sheet.ownerNode.id == "defaultStyleSheet") {
-                rules = sheet.cssRules;
+                const rules = sheet.cssRules;
                 // Next, search through the rules for the one that controls greenbar shading.
                 for (const rule of rules) {
                     if (rule.selectorText?.toLowerCase() == "div.greenbar") {
                         // Found it: now flip the background color.
-                        rule.style.backgroundColor = (useGreen ? this.theColorGreen : "white");
+                        rule.style.backgroundColor = (useGreen ? LinePrinter.greenbarGreen : "white");
                         break; // out of for loop
                     }
                 }
@@ -328,6 +326,8 @@ class LinePrinter {
             this.setCarriageReady(true);
         };
 
+        this.overstrike = false;
+        this.lastLineDiv = null;
         openPopup(this.window, "./FramePaper.html", "",
                 "scrollbars,resizable,width=660,height=500",
                 this, exportStacker);
@@ -428,7 +428,7 @@ class LinePrinter {
     determineCarriageControl() {
         /* Determines the type of carriage control that should be applied to the
         current print line. Returns a triplet with line space, channel skip, and
-        before (immediate) action */
+        a before (immediate) action flag */
         const digit1 = this.carriageCode >> 6;
         const digit2 = this.carriageCode & 0x0F;
         let space = 1;                  // single-spacing by default
@@ -437,7 +437,9 @@ class LinePrinter {
 
         switch (digit1) {
         case 2:
-            space = this.carriageCode & 1;
+            if (digit2 == 1) {
+                space = 1;
+            }
             break;
         case 0:
         case 3:
@@ -452,18 +454,94 @@ class LinePrinter {
             break;
         case 4:
         case 7:
-            if (digit2) {
-                skip = digit2;
-            } else {
+            if (digit2 == 0) {
                 skip = 10;
+            } else if (digit2 <= 9) {
+                skip = digit2;
             }
         case 5:
         case 6:
-            space = digit2 & 3;
+            switch (digit2) {
+            case 2:
+            case 3:
+                space = digit2;
+                break;
+            }
             break;
         }
 
         return [space, skip, before];
+    }
+
+    /**************************************/
+    overstrikeBoldly(lineText) {
+        /* Formats an overstike print line and appends it to to the <div>
+        referenced by this.lastLineDiv. If the contents of this.lastLineDiv
+        starts with a text node, replaces it with a <div> containing that
+        text node. Then processes all of the line <div>s in the outer <div>
+        to determine which characters in them are the same as a corresponding
+        character in lineText. Any corresponding characters are formatted as
+        bold text */
+
+        // If the first node in the overstrike group is text, convert it to a <div>.
+        if (this.lastLineDiv.firstChild) {
+            const node = this.lastLineDiv.firstChild;
+            if (node.nodeType == Node.TEXT_NODE) {
+                const firstDiv = this.doc.createElement("div");
+                firstDiv.appendChild(this.lastLineDiv.removeChild(node));
+                this.lastLineDiv.appendChild(firstDiv);
+            }
+        }
+
+        // Step through all of the nodes in the overstrike group, building the bold map.
+        const boldMap = [];
+        for (const node of this.lastLineDiv.childNodes) {
+            const divText = node.textContent;
+            const limit = Math.min(divText.length, lineText.length);
+            for (let x=0; x<limit; ++x) {
+                if (divText[x] == lineText[x]) {
+                    boldMap[x] = true;
+                } else if (x >= boldMap.length) {
+                    boldMap[x] = false;
+                }
+            }
+        }
+
+        // Now process the boldMap and format runs of matching characters as bold.
+        const lineDiv = this.doc.createElement("div");
+        const limit = Math.min(lineText.length, boldMap.length);
+        let runStart = 0;
+        let x = 0;
+        while (x < limit) {
+            // Process a non-bold run of text.
+            runStart = x;
+            while (x < limit && !boldMap[x]) {
+                ++x;
+            }
+
+            if (x > runStart) {
+                lineDiv.appendChild(this.doc.createTextNode(lineText.substring(runStart, x)));
+            }
+
+            // Process a bold run of text.
+            runStart = x;
+            while (x < limit && boldMap[x]) {
+                ++x;
+            }
+
+            if (x > runStart) {
+                const boldSpan = this.doc.createElement("b");
+                boldSpan.appendChild(this.doc.createTextNode(lineText.substring(runStart, x)));
+                lineDiv.appendChild(boldSpan);
+            }
+        }
+
+        if (x < lineText.length) {
+            lineDiv.appendChild(this.doc.createTextNode(lineText.substring(x)));
+        }
+
+        lineDiv.className = "overstrikeLine";
+        this.lastLineDiv.appendChild(lineDiv);
     }
 
     /**************************************/
@@ -491,11 +569,18 @@ class LinePrinter {
             this.barGroup.className = "printerPaper whiteBar";
         }
 
-        const lineDiv = this.doc.createElement("div");
-        lineDiv.appendChild(this.doc.createTextNode(((skip + text) || "\xA0") + "\n"));
-        this.barGroup.appendChild(lineDiv);
-        --this.groupLinesLeft;
-        --this.linesRemaining;
+        const lineText = ((skip + text) || "\xA0") + "\n";
+        if (this.overstrike && this.lastLineDiv) {
+            this.overstrikeBoldly(lineText);
+            this.overstrike = false;
+        } else {
+            const lineDiv = this.doc.createElement("div");
+            lineDiv.appendChild(this.doc.createTextNode(lineText));
+            this.barGroup.appendChild(lineDiv);
+            this.lastLineDiv = lineDiv;
+            --this.groupLinesLeft;
+            --this.linesRemaining;
+        }
     }
 
     /**************************************/
@@ -510,7 +595,10 @@ class LinePrinter {
         this.appendLine(text);
 
         // Do any carriage control after printing.
-        if (!this.suppressSpacing) {
+        if (this.suppressSpacing && this.carriageCode == 0) {
+            this.overstrike = true;             // next line will be overstruck with this one
+        } else {
+            this.overstrike = false;            // next line will print after carriage control
             if (skip) {
                 while (this.groupLinesLeft > 0) {
                     this.appendLine("");
@@ -532,6 +620,8 @@ class LinePrinter {
 
             this.carriageCode = 0;
         }
+
+        this.paper.scrollIntoView(false);       // keep last line in view
     }
 
     /**************************************/
@@ -547,6 +637,8 @@ class LinePrinter {
 
         // Wait until the next print cycle occurs.
         let [space, skip, before] = this.determineCarriageControl();
+        //console.debug(`LinePrinter initiateLinePrinter = ${this.suppressSpacing}, s=${space}, k=${skip}, b=${before}`);
+
         if (this.nextPrintStamp > now) {
             await this.timer.delayFor(this.nextPrintStamp - now);
         }
@@ -554,7 +646,6 @@ class LinePrinter {
         // Print the line image.
         this.nextPrintStamp = now + this.linePeriod;  // earliest time next print can occur
         this.printLine(this.printBuffer.substring(0, this.columns).trimEnd(), space, skip);
-        this.paper.scrollIntoView(false);       // keep last line in view
         this.paperMeter.value = this.linesRemaining;
         if (this.printCheckPending) {
             this.setPrintCheck(true);           // leave buffer in ready state
@@ -691,6 +782,8 @@ class LinePrinter {
 
         this.carriageCode =  code & Register.bcdValueMask;
         let [space, skip, before] = this.determineCarriageControl();
+        //console.debug(`LinePrinter control = ${this.carriageCode.toString(8)}, s=${space}, k=${skip}, b=${before}`);
+
         if (before) {                   // do immediate carriage control
             this.carriageCode = 0;      // reset the carriage control code
             if (!this.carriageReady) {
@@ -726,6 +819,7 @@ class LinePrinter {
                 }
             }
 
+            this.overstrike = false;            // next line will always print normally
             this.paper.scrollIntoView(false);   // keep last line in view
             this.paperMeter.value = this.linesRemaining;
             if (this.linesRemaining <= 0) {

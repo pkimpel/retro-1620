@@ -104,7 +104,7 @@ DIV.paper {
     font-size:          12px;
     line-height:        12pt}
 DIV.printerPaper {
-    font-family:        DejaVuSansMonoBookWeb, monospace;
+    font-family:        Lucida Sans Typewriter, Consolas, Courier New, monospace; /* Can't use DejaVu Sans Mono: bad boldface spacing */
     white-space:        pre;
     margin-top:         0;
     margin-bottom:      0;
@@ -116,6 +116,7 @@ DIV.topOfForm {
     padding-top:        1px;
     border-top:         1px dashed black}
 DIV.whiteBar {
+    position:           relative;
     margin-left:        -6px;
     margin-right:       -6px;
     padding-left:       6px;
@@ -123,12 +124,25 @@ DIV.whiteBar {
     white-space:        pre;
     background-color:   white}
 DIV.greenBar {
+    position:           relative;
     margin-left:        -6px;
     margin-right:       -6px;
     padding-left:       6px;
     padding-right:      6px;
     white-space:        pre;
     background-color:   #CFC}
+DIV.whiteBar > DIV,
+DIV.greenBar > DIV {
+    position:           relative}
+DIV.overstrikeLine {
+    position:           absolute;
+    top:                0;
+    left:               0}
+/********** This is needed in Firefox to keep boldface characters aligned with plain ones,
+            but Chrome works properly without it */
+/* DIV.overstrikeLine B {                  Adjust for wider boldface characters -- */
+/*     letter-spacing:     -0.06ch}        this is a kludge specifically for 8pt bold DejaVuSansMono */
+/****************************************/
 
 DIV.caption {
     position:           absolute;

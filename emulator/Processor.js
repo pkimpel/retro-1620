@@ -2851,8 +2851,6 @@ class Processor {
         case 14:        // CM - Compare Immediate
         case 22:        // S - Subtract
         case 24:        // C - Compare
-            this.gateCOMP.value = 1;
-            //--no break
         case 11:        // AM - Add Immediate
         case 21:        // A - Add
             this.gateADD_ENT.value = 1;
@@ -3305,7 +3303,7 @@ class Processor {
 
             if (op % 10 == 4) {                 // doing Compare
                 // Check for compare early exit: sum or Q digit != 0.
-                if ((digit || (this.regDR.odd && Register.bcdMask)) && !this.gateCOMP.value) {
+                if ((digit || (this.regDR.odd & Register.bcdMask)) && !this.gateCOMP.value) {
                     this.gateEZ.value = 0;
                     this.enterICycle();                 // early exit to I-Cycle entry
                     return;
