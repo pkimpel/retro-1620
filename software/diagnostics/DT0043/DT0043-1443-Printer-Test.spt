@@ -1,0 +1,1090 @@
+3400032007013600032007024902402511963611300102 COLD START CARD - 1620 MONITOR I
+||JOB 5                          DT0042 DIAGNOSTIC TEST FOR 1620 1443     |00001
+||SPS 5                                                                   |00002
+**DT0043  1620 1443 DIAGNOSTIC                                             00003
+*LIST PRINTER                                                              00004
+*PRINT SYMBOL TABLE                                                        00005
+00010*
+00020*               DT  0043
+00030*         DIAGNOSTIC TEST FOR
+00040*         1620 ON-LINE PRINTER
+00050*
+00060*         LOGICAL FUNCTIONS PERFORMED
+00070*              CARRIAGE TEST
+00080*              INDICATORS
+00090*              FORCE ERRORS
+00100*              WRITE ALPHA
+00110*              WRITE NUMERIC
+00120*              DUMP NUMERIC
+00130*              REGISTRATION
+00140*
+00150*         CONTROL ROUTINE
+00160*
+00170        DORG 00402                                                         00402
+00180        B    START                                                         00402 49 00500 00000
+00190        DORG 00486                                                         00486
+00200 MON    DS   ,18117                                                        18117 00000
+00210 MONIT  DS   ,18000                                                        18000 00000
+00220        DAC  04,DT43                                                       00487 00008
+00230        DSA  LALAB                                                         00498 00005 J2617
+00240 START  BNR  *+48,MON,,     DIPAL                                          00500 45 00548 18117
+00250        B    MONIT,,,         MONITOR                                      00512 49 18000 00000
+00260        NOP  IND,,,             LINKAGE                                    00524 41 01792 00000
+00270        TDM  *-11,9                                                        00536 15 00525 00009
+00280 ST     B    *+12,,,        **RESTART**                                    00548 49 00560 00000
+00290        DC   01,@,*-4,      RECORD MARK                                    00555 00001
+00300        RCTY                                                               00560 34 00000 00102
+00310        RCTY                                                               00572 34 00000 00102
+00320        WATY NAM,,,         TYPE TEST NAME                                 00584 39 00981 00100
+00330        RCTY                                                               00596 34 00000 00102
+00340        WATY SGR,,,Q        REQUEST GM OR RM                               00608 39 01147 00100
+00350        RNTY GM,,,          ACCEPT GM OR RM                                00620 36 01342 00100
+00360        RCTY                                                               00632 34 00000 00102
+00370        WATY PTRDY,,,       TYPE PRINTER RDY                               00644 39 01037 00100
+00380        RCTY                                                               00656 34 00000 00102
+00390        WATY ,,,            NORMAL SW SETTINGS                             00668 39 01234 00100
+00400        RCTY                                                               00680 34 00000 00102
+00410        WATY PROG,,,        PROG - DESIRED                                 00692 39 01281 00100
+00420        RCTY                                                               00704 34 00000 00102
+00430        WATY DATA,,,        DATA - PROG                                    00716 39 01315 00100
+00440        H    ,,,            HALT                                           00728 48 00000 00000
+00450*         READ CHARACTERS INTO EVEN CORE POSITION
+00460        NOP  *+72,,,        FIRST PASS ONLY                                00740 41 00812 00000
+00470        RACD INV-1,,,       RD INVLD CHAR                                  00752 37 12148 00500
+00480        BI   *+12,0600,,    TURN OFF RD CHK                                00764 46 00776 00600
+00490        BI   *+12,1600,,    TURN OFF MBRE                                  00776 46 00788 01600
+00500        BI   *+12,1700,,    TURN OFF MBRO                                  00788 46 00800 01700
+00510        TDM  *-59,09,,      CHNGE NOP TO 8                                 00800 15 00741 00009
+00520 BYPTO  TD   F1+2,GM,,                                                     00812 25 07022 01342
+00530        TD   F1+3,GM,,      STORE GM OR RM                                 00824 25 07023 01342
+00540        TD   F2+2,GM,,                                                     00836 25 07048 01342
+00550        TD   F2+3,GM,,                                                     00848 25 07049 01342
+00560        SF   F1-2,,,                                                       00860 32 07018 00000
+00570        SF   F1                                                            00872 32 07020 00000
+00580        SF   F1+2                                                          00884 32 07022 00000
+00590        SF   F2-2                                                          00896 32 07044 00000
+00600        SF   F2-1                                                          00908 32 07045 00000
+00610        SF   F2                                                            00920 32 07046 00000
+00620        SF   F2+1                                                          00932 32 07047 00000
+00630        SF   F2+2                                                          00944 32 07048 00000
+00640        SF   F2+3                                                          00956 32 07049 00000
+00650        B    MIMII                                                         00968 49 01346 00000
+00660*
+00670*         TYPEOUTS FOR CONTROL ROUTINE
+00680*
+00690 NAM    DAC  28,DT 0043 - 1620 PRINTER TEST@                               00981 00056
+00700 PTRDY  DAC  22,USE DIAGNOSTIC CARRIAG                                     01037 00044
+00710        DAC  20,E TAPE,PUT PRINTER I                                       01081 00040
+00720        DAC  13,N READY MODE@                                              01121 00026
+00730 SGR    DAC  26,IF SYSTEM HAS A 1311,KEY I                                 01147 00052
+00740        DAC  22,N A GM,IF NOT A RM   @                                     01199 00044
+00750 NORM   DAC  19,NORMAL SW SETTINGS@                                        01234 00038
+00760 PROG   DAC  17,PROG--AS DESIRED@                                          01281 00034
+00770 DATA   DAC  14,DATA--PROGRAM@                                             01315 00028
+00780 GM     DSC  01,@                                                          01342 00001
+00790        DSC  03,0,,                                                        01343 00003
+00800*
+00810*         THIS ROUTINE DETERMINES WHEATHER
+00820*         1620 CPU IS A MOD I OR MOD II
+00830*
+00840 MIMII  TFM  ST+6,*,,       LOAD RESTART                                   01346 16 00554 -1346
+00850        TFM  DAT1+8,09,10,  RESET                                          01358 16 01414 000-9
+00860        TD   0399,DAT1+10,, INSERT RM                                      01370 25 00399 01416
+00870        AM   DAT1+8,09,10,  ADD                                            01382 11 01414 000-9
+00880        BNR  MODII,DAT1+8,, RM IF MOD I                                    01394 45 01442 01414
+00890 DAT1   TDM  0399,8,11      REPLACE ADD TABLE                              01406 15 00399 0000Q
+00900        DC   01,@,*-1                                                      01416 00001
+00910        TDM  TIMDLY,4,,     INSURE DELAY NOP                               01418 15 05860 00004
+00920        B    IND,,,                                                        01430 49 01792 00000
+00930*
+00940*         THIS ROUTINE WILL GENERATE
+00950*         THE INVALID CHAR FOR MOD II
+00960*
+00970 MODII  TDM  TIMDLY,3,,     CHANGE NOP TO TR                               01442 15 05860 00003
+00980        NOP  IND,,,                                                        01454 41 01792 00000
+00990        TFM  INVSUM,04,10,                                                 01466 16 01791 000-4
+01000        A    INVSUM,PFLD,,                                                 01478 21 01791 01755
+01010        TD   PFLD+4,INVSUM,,                                               01490 25 01759 01791
+01020        TF   INVSUM,PFLD                                                   01502 26 01791 01755
+01030        AM   INVSUM,01,10,                                                 01514 11 01791 000-1
+01040        TD   PFLD+14,INVSUM                                                01526 25 01769 01791
+01050        BI   *+12,01600,,,  TURN OFF                                       01538 46 01550 01600
+01060        BI   *+12,01700,,    PARITY IND                                    01550 46 01562 01700
+01070        TR   INV-2,RST2-14,,RESET INVALID AREA                             01562 31 12147 11475
+01080        TFM  M2-1,PFLD                                                     01574 16 01621 -1755
+01090        TFM  M2+11,QFLD,,   INITIALIZE                                     01586 16 01633 -1773
+01100        TFM  M2+18,INV-1,,                                                 01598 16 01640 J2148
+01110        TF   INVSUM,99999,, INSERT P-FIELD                                 01610 26 01791 99999
+01120 M2     A    INVSUM,99999,, ADD Q-FIELD                                    01622 21 01791 99999
+01130        TD   99999,INVSUM,, STORE CHAR                                     01634 25 99999 01791
+01140        BI   *+12,01600,,   TURN OFF                                       01646 46 01658 01600
+01150        BI   *+12,01700,,    PARITY IND                                    01658 46 01670 01700
+01160        AM   M2-1,02,10                                                    01670 11 01621 000-2
+01170        AM   M2+11,02,10,,  UPDATE                                         01682 11 01633 000-2
+01180        AM   M2+18,02,10,                                                  01694 11 01640 000-2
+01190        CM   M2-1,PFLD+18,, CHK DONE                                       01706 14 01621 -1773
+01200        BNE  M2-12,,,                                                      01718 47 01610 01200
+01210        TDM  MODII+13,9,,                                                  01730 15 01455 00009
+01220        B    IND,,,                                                        01742 49 01792 00000
+01230*
+01240*            DATA,AND CONSTANTS
+01250*
+01260 PFLD   DC   02,0@                                                         01755 00002
+01270        DC   02,04                                                         01757 00002
+01280        DC   02,09                                                         01759 00002
+01290        DC   02,0@                                                         01761 00002
+01300        DC   02,0@                                                         01763 00002
+01310        DC   02,08                                                         01765 00002
+01320        DC   02,03                                                         01767 00002
+01330        DC   02,09                                                         01769 00002
+01340        DC   02,01                                                         01771 00002
+01350 QFLD   DC   02,05                                                         01773 00002
+01360        DC   02,0@                                                         01775 00002
+01370        DC   02,01                                                         01777 00002
+01380        DC   02,02                                                         01779 00002
+01390        DC   02,09                                                         01781 00002
+01400        DC   02,0@                                                         01783 00002
+01410        DC   02,0@                                                         01785 00002
+01420        DC   02,05                                                         01787 00002
+01430        DC   02,0@                                                         01789 00002
+01440 INVSUM DC   02,0                                                          01791 00002
+01450*
+01460*            TURN OFF INDICATORS AND
+01470*            INSURE PRINTER IND ARE OFF
+01480*
+01490 IND    TFM  ST+6,*,,       RESTART                                        01792 16 00554 -1792
+01500        TFM  *+23,INDRST,,  INIT                                           01804 16 01827 -1997
+01510        TF   *+21,99999,,   INSERT IND                                     01816 26 01837 99999
+01520        BI   *+12,09900,,   TURN OFF IND                                   01828 46 01840 09900
+01530        AM   *-13,02,10,,   UPDATE                                         01840 11 01827 000-2
+01540        CM   *-25,INDRST+32,,CHK DONE                                      01852 14 01827 -2029
+01550        BNE  *-48,,,        BRCH IF NOT                                    01864 47 01816 01200
+01560        BNI  *+36,2500,,    PTR CHK                                        01876 47 01912 02500
+01570        BTM  ETO,ER1,,      ERROR I/O                                      01888 17 09064 -2029
+01580        BC2  *-24,,,        SW2 ON REPEAT                                  01900 46 01876 00200
+01590        BNI  *+36,3300,,    CH 9 IND                                       01912 47 01948 03300
+01600        BTM  ETO,ER2,,      ERROR T/O                                      01924 17 09064 -2081
+01610        BC2  *-24,,,        SW2 ON REPEAT                                  01936 46 01912 00200
+01620        BNI  *+36,3400,,    CH 12 IND                                      01948 47 01984 03400
+01630        BTM  ETO,ER3,,      ERROR T/O                                      01960 17 09064 -2123
+01640        BC2  *-24,,,        SW 2 ON REPEAT                                 01972 46 01948 00200
+01650        B    CARR,,,        BRCH TO CARRIAGE TEST                          01984 49 02164 00000
+01660*
+01670*            CONSTANTS AND ERROR TYPEOUTS
+01680*
+01690 INDRST DC   02,06,,        INDICATOR                                      01997 00002
+01700        DC   02,07,,         NUMBERS                                       01999 00002
+01710        DC   02,08                                                         02001 00002
+01720        DC   02,16                                                         02003 00002
+01730        DC   02,17                                                         02005 00002
+01740        DC   02,21                                                         02007 00002
+01750        DC   02,22                                                         02009 00002
+01760        DC   02,23                                                         02011 00002
+01770        DC   02,36                                                         02013 00002
+01780        DC   02,37                                                         02015 00002
+01790        DC   02,38                                                         02017 00002
+01800        DC   02,66                                                         02019 00002
+01810        DC   02,67                                                         02021 00002
+01820        DC   02,25                                                         02023 00002
+01830        DC   02,33                                                         02025 00002
+01840        DC   02,34                                                         02027 00002
+01850 ER1    DAC  26,PTR CK (25) WONT TURN OFF@                                 02029 00052
+01860 ER2    DAC  21,IND 33 WONT TURN OFF@                                      02081 00042
+01870 ER3    DAC  21,IND 34 WONT TURN OFF@                                      02123 00042
+01880*
+01890*            CARRIAGE CONTROL TEST
+01900*            WITH THE IMMEDIATE OP
+01910*            AND CONTROL CODES
+01920*
+01930 CARR   TFM  ST+6,*,,       RESTART                                        02164 16 00554 -2164
+01940        K    ,0971,,        NEXT PAGE                                      02176 34 00000 00971
+01950        TR   PNT-1,RST1,,   RESET PRINT AREA                               02188 31 11642 11344
+01960        TR   PNT+81,TT2-1,, INSERT TITLE                                   02200 31 11724 02896
+01970        K    ,0942,,        SKIP TO CH 2                                   02212 34 00000 00942
+01980        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  02224 17 08464 -2236
+01990 J5     TFM  CNT,001,9,     RESET CNTR                                     02236 16 05842 00-01
+02000        TFM  J6+11,CIM,,    INIT                                           02248 16 02355 -3129
+02010        TFM  J8+6,PNT+55,,  INIT                                           02260 16 02326 J1698
+02020        TR   PNT-1,RST1,,   RESET PRINT AREA                               02272 31 11642 11344
+02030        TR   PNT+19,EX1-1,, INSERT MESSAGE                                 02284 31 11662 02956
+02040 J7     TD   CH+04,CNT-1,,  INSERT                                         02296 25 03021 05841
+02050        TD   CH+06,CNT,,      DIGITS                                       02308 25 03023 05842
+02060 J8     TR   99999,CH-1,,   INSERT MESSAGE                                 02320 31 99999 03016
+02070        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  02332 17 08464 -2344
+02080 J6     TF   *+23,99999,,   INIT                                           02344 26 02367 99999
+02090        K    ,0900,,        NEXT CHANNEL                                   02356 34 00000 00900
+02100        AM   CNT,01,10,     UPDATE CNTR                                    02368 11 05842 000-1
+02110        AM   J6+11,01,10,   UPDATE NEXT CNTRL                              02380 11 02355 000-2
+02120        AM   J8+6,04,10,    UPDATE SHIFT                                   02392 11 02326 000-4
+02130        CM   CNT,12,9       CHK DONE                                       02404 14 05842 00-12
+02140        BNI  J7,,,          BRCH IF NOT                                    02416 47 02296 01200
+02150*
+02160*            TEST IND 33 CHANNEL 9
+02170*
+02180        TFM  ST+6,*,,       RESTART                                        02428 16 00554 -2428
+02190        BI   *+36,3300,,    CHK IND 33                                     02440 46 02476 03300
+02200        BTM  ETO,ER7,,      ERROR TYPEOUT                                  02452 17 09064 -3027
+02210        B    *+36                                                          02464 49 02500 00000
+02220        BNI  *+24,3300,,    CHK IND 33                                     02476 47 02500 03300
+02230        BTM  ETO,ER8,,      ERROR TYPEOUT                                  02488 17 09064 -3083
+02240*
+02250*            TEST SPACE IMMEDIATES
+02260*
+02270        TFM  ST+6,*,,       RESTART                                        02500 16 00554 -2500
+02280        TR   PNT-1,RST1,,   RST PRINT AREA                                 02512 31 11642 11344
+02290        TR   PNT+19,SP-1,,  INSERT MESSAGE                                 02524 31 11662 03158
+02300        TFM  J10+11,IMSP,,  INIT                                           02536 16 02595 -3153
+02310        TFM  *+23,SP1-1,,   INIT                                           02548 16 02571 -3200
+02320 J9     TR   PNT+59,99999,, INSERT SPACE NO.                               02560 31 11702 99999
+02330        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  02572 17 08464 -2584
+02340 J10    TF   *+23,99999,,   INSERT SPACE                                   02584 26 02607 99999
+02350        K    ,0900,,        SPACE                                          02596 34 00000 00900
+02360        AM   J9+11,18,10,   UPDATE                                         02608 11 02571 000J8
+02370        AM   J10+11,02,10,  UPDATE                                         02620 11 02595 000-2
+02380        CM   J10+11,IMSP+6,,CHK DONE                                       02632 14 02595 -3159
+02390        BNE  J9,,,          BRCH IF NOT                                    02644 47 02560 01200
+02400*
+02410*            TEST IND 34 CHANNEL 12
+02420*
+02430        TFM  ST+6,*,,       RESTART                                        02656 16 00554 -2656
+02440        TR   PNT-1,RST1,,   RST PRINT AREA                                 02668 31 11642 11344
+02450        TR   PNT+19,EX1-1,, INSERT MESSAGE                                 02680 31 11662 02956
+02460        TDM  CH+04,1,,      INSERT CH                                      02692 15 03021 00001
+02470        TDM  CH+06,2,,        DIGITS                                       02704 15 03023 00002
+02480        TR   PNT+55,CH-1,,  INSERT MESSAGE                                 02716 31 11698 03016
+02490        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  02728 17 08464 -2720
+02500        K    ,0934,,        CHANNEL 12                                     02740 34 00000 00934
+02510        BI   *+36,3400,,    IND 34 CH 12                                   02752 46 02788 03400
+02520        BTM  ETO,ER9,,      ER T/O                                         02764 17 09064 -3287
+02530        B    *+36                                                          02776 49 02812 00000
+02540        BNI  *+24,3400,,    IND34 CH 12                                    02788 47 02812 03400
+02550        BTM  ETO,ER10,,     ER T/O                                         02800 17 09064 -3345
+02560        TR   PNT-1,RST1,,   RST PRINT AREA                                 02812 31 11642 11344
+02570        TR   PNT+19,REF-1,, INSET MESSAGE                                  02824 31 11662 03254
+02580        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  02836 17 08464 -2848
+02590        BNC2 SKIP,,,        SW2 ON REPEAT                                  02848 47 03390 00200
+02600        K    ,0971,,        NEXT PAGE                                      02860 34 00000 00971
+02610        TR   PNT-1,RST1,,   RST PNT AREA                                   02872 31 11642 11344
+02620        B    J5-24,,,                                                      02884 49 02212 00000
+02630*
+02640*            CONSTANTS AND TYPEOUTS
+02650*
+02660 TT2    DAC  16,CARRIAGE TEST WI                                           02897 00032
+02670        DAC  14,TH IMMEDIATES@                                             02929 00028
+02680 EX1    DAC  20,SKIP IMMEDIATE TO CH                                       02957 00040
+02690        DAC  10,ANNEL    @                                                 02997 00020
+02700 CH     DAC  05,  99@                                                      03019 00010
+02710 ER7    DAC  28,CH 9 PNCH WNT TRN ON IND 33@                               03027 00056
+02720 ER8    DAC  23,IND 33 NOT RESET BY BI@                                    03083 00046
+02730 CIM    DC   02,71,,        IMMEDIATE                                      03129 00002
+02740        DC   02,72,,         SKIPS                                         03131 00002
+02750        DC   02,73                                                         03133 00002
+02760        DC   02,74                                                         03135 00002
+02770        DC   02,75                                                         03137 00002
+02780        DC   02,76                                                         03139 00002
+02790        DC   02,77                                                         03141 00002
+02800        DC   02,78                                                         03143 00002
+02810        DC   02,79                                                         03145 00002
+02820        DC   02,70                                                         03147 00002
+02830        DC   02,33                                                         03149 00002
+02840        DC   02,34                                                         03151 00002
+02850 IMSP   DC   02,51                                                         03153 00002
+02860        DC   02,52                                                         03155 00002
+02870        DC   02,53                                                         03157 00002
+02880 SP     DAC  21,IMMEDIATE SPACE OF  @                                      03159 00042
+02890 SP1    DAC  09,1 SPACE @                                                  03201 00018
+02900        DAC  09,2 SPACES@                                                  03219 00018
+02910        DAC  09,3 SPACES@                                                  03237 00018
+02920 REF    DAC  16,REFERENCE LINE @                                           03255 00032
+02930 ER9    DAC  29,CH 12 PNCH WNT TURN ON IN 34@                              03287 00058
+02940 ER10   DAC  23,IND 34 NOT RESET BY BI@                                    03345 00046
+02950*
+02960*            CARRIAGE CONTROL TEST OF
+02970*            SKIP AFTER PRINT TO CH. XX
+02980*
+02990 SKIP   TFM  ST+6,*,,       RESTART                                        03390 16 00554 -3390
+03000        K    ,0971,,        NEXT PAGE                                      03402 34 00000 00971
+03010        TR   PNT-1,RST1,,   RST PRINT AREA                                 03414 31 11642 11344
+03020        TR   PNT+81,TT3-1,, INSERT TITLE                                   03426 31 11724 04098
+03030        K    ,0942,,        SKIP TO CH 2                                   03438 34 00000 00942
+03040        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  03450 17 04864 -3462
+03050 H5     TFM  CNT,001,9,     RST CNTR                                       03462 16 05842 00-01
+03060        TFM  H6+11,SAP,,    INIT                                           03474 16 03569 -4383
+03070        TFM  H8+6,PNT+59,,  INIT                                           03486 16 03552 J1702
+03080        TR   PNT-1,RST1,,   RST PRNT AREA                                  03498 31 11642 11344
+03090        TR   PNT+19,EX2-1,, INSERT MESSAGE                                 03510 31 11622 04170
+03100 H7     TD   CH+04,CNT-1,,  INSERT                                         03522 25 03021 05841
+03110        TD   CH+06,CNT,,    DIGITS                                         03534 25 03023 05842
+03120 H8     TR   99999,CH-1,,   INSERT MESSAGE                                 03546 31 99999 03016
+03130 H6     TF   *+23,99999,,   INIT                                           03558 26 03581 99999
+03140        K    ,0900,,        SKIP AFTER PRINT                               03570 34 00000 00900
+03150        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  03582 17 08464 -3594
+03160        AM   CNT,01,10,     UPDATE                                         03594 11 05842 000-1
+03170        AM   H6+11,02,10,   UPDATE                                         03606 11 03569 000-2
+03180        AM   H8+6,04,10,    UPDATE                                         03618 11 03552 000-4
+03190        CM   CNT,12,9,      CHK DONE                                       03630 14 05842 00-12
+03200        BNE  H7,,,          BRCH IF NOT                                    03642 47 03522 01200
+03210*
+03220*            TEST SPACE AFTER PRINT
+03230*
+03240        TFM  ST+6,*,,       RESTART                                        03654 16 00554 -3654
+03250        TR   PNT-1,RST1,,   RST PRINT AREA                                 03666 31 11642 11344
+03260        TR   PNT+19,SPP-1,, INSERT MESSAGE                                 03678 38 11662 04234
+03270        TFM  H10+11,PTSP,,  INIT                                           03690 16 03737 -4407
+03280        TFM  *+23,SP1-1,,   INIT                                           03702 16 03725 -3200
+03290 H9     TR   PNT+59,99999,, INSERT MESSAGE                                 03714 31 11702 99999
+03300 H10    TF   *+23,99999,,   INIT                                           03726 26 03749 99999
+03310        K    ,0900,,        SPACE                                          03738 34 00000 00900
+03320        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  03750 17 08464 -3762
+03330        AM   H9+11,18,10,   UPDATE                                         03762 11 03725 000J8
+03340        AM   H10+11,02,10,  UPDATE                                         03774 11 03737 000-2
+03350        CM   H10+11,PTSP+6,,CHK DONE                                       03786 14 03737 -4413
+03360        BNE  H9,,,          BRCH IF NOT                                    03798 47 03714 01200
+03370*
+03380*            CHECK CHANNEL 12 AND IND 35
+03390*
+03390*
+03400        TFM  ST+6,*,,       RESTART                                        03810 16 00554 -3810
+03410        TR   PNT-1,RST1,,   RST PRINT AREA                                 03822 31 11642 11344
+03420        TR   PNT+19,EX2-1,, INSERT MESSAGE                                 03834 31 11662 04170
+03430        TDM  CH+04,1,,      INSERT                                         03846 15 03021 00001
+03440        TDM  CH+06,2,,       CH.DIGITS                                     03858 15 03023 00002
+03450        TR   PNT+59,CH-1,,  INSERT MESSAGE                                 03870 31 11702 03016
+03460        K    ,0904,,        CHANNEL 12                                     03882 34 00000 00904
+03470        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  03894 17 08464 -3906
+03480        TR   PNT-1,RST1,,   RST PRINT AREA                                 03906 31 11642 11344
+03490        TR   PNT+19,REF-1,, INSERT MESSAGE                                 03918 31 11662 03254
+03500        K    ,00921,,       WAIT FOR CARR                                  03930 34 00000 00921
+03510        WA   PNT,900,,      PRINT DATA                                     03942 39 11643 00900
+03520        BNI  *+24,1900,,    ANY DATA CHK                                   03954 47 03978 01900
+03530        BTM  ERR,*+12,,     GO TO ER SUBROUT                               03966 17 08650 -3978
+03540        BI   *+36,3500,,    IND 35 PNTR BUSY                               03978 46 04014 03500
+03550        BTM  ETO,ER13,,     ER T/O                                         03990 17 09064 -4277
+03560        B    *+48,,,        BYPASS                                         04002 49 04050 00000
+03570        BTM  TIMDLY,0,,     GO TO TIME DELAY                               04014 17 05860 -0000
+03580        BNI  *+24,3500,,    PNTR BUSY                                      04026 47 04050 03500
+03590        BTM  ETO,ER14,,     ER T/O                                         04038 17 09064 -4329
+03600        BNC2 CH1,,,         SW2 ON REPEAT                                  04050 47 04412 00200
+03610        K    ,0971,,        NEXT PAGE                                      04062 34 00000 00971
+03620        TR   PNT-1,RST1,,   RST PNT AREA                                   04074 31 11642 11344
+03630        B    H5-24,,,                                                      04086 49 03438 00000
+03640*
+03650*            CONSTANTS AND TYPEOUTS
+03660*
+03670 TT3    DAC  17,CARRIAGE TEST WIT                                          04099 00034
+03680        DAC  19,H SKIP AFTER PRINT@                                        04133 00038
+03690 EX2    DAC  22,SKIP AFTER PRINT TO CH                                     04171 00044
+03700        DAC  10,ANNEL    @                                                 04215 00020
+03710 SPP    DAC  21,SPACE AFTER PRINT   @                                      04235 00042
+03720 ER13   DAC  26,IND 35 P-BSY WONT TURN ON@                                 04277 00052
+03730 ER14   DAC  27,IND 35 P-BSY WONT TURN OFF@                                04329 00054
+03740 SAP    DC   02,41,,        SKIP AFTER                                     04343 00002
+03750        DC   02,42,,         PRINT CODES                                   04385 00002
+03760        DC   02,43                                                         04387 00002
+03770        DC   02,44                                                         04389 00002
+03780        DC   02,45                                                         04391 00002
+03790        DC   02,46                                                         04393 00002
+03800        DC   02,47                                                         04395 00002
+03810        DC   02,48                                                         04397 00002
+03820        DC   02,49                                                         04399 00002
+03830        DC   02,40                                                         04401 00002
+03840        DC   02,03                                                         04403 00002
+03850        DC   02,04                                                         04405 00002
+03860 PTSP   DC   02,21                                                         04407 00002
+03870        DC   02,62                                                         04409 00002
+03880        DC   02,63                                                         04411 00002
+03890*
+03900*            CHECK SPACE SUPPRESSION
+03910*
+03920 CH1    TFM  ST+6,*,,                                                      04412 16 00554 -4412
+03930        K    ,0971,,        NEXT PAGE                                      04424 34 00000 00971
+03940        TR   PNT-1,RST1,,   RST PRINT AREA                                 04436 31 11642 11344
+03950        TR   PNT+41,TT4-1,, INSERT TITLE                                   04448 31 11684 04748
+03960        BNI  *+24,03300,,   IND 33                                         04460 47 04484 03300
+03970        BTM  ETO,ER11,,     ER T/O                                         04472 17 09064 -4869
+03980        BNI  *+24,03400,,   IND 34                                         04484 47 04508 03400
+03990        BTM  ETO,ER12,,     ER T/O                                         04496 17 09064 -4925
+04000        K    ,0944,,        SKIP AFTER PRINT                               04508 34 00000 00944
+04010        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  04520 17 08464 -4532
+04020        TFM  B3+6,PNT+41,,  INIT                                           04532 16 04610 J1684
+04030        TR   PNT-1,RST1,,   RST PRINT AREA                                 04544 31 11642 11344
+04040 BO     TFM  B1+11,SS-1,,   INIT                                           04556 16 04591 -4822
+04050        TFM  B2+11,SS,,     INIT                                           04568 16 04603 -4823
+04060 B1     TD   BUF+2,99999,,  INSERT                                         04580 25 04982 99999
+04070 B2     TD   BUF+2,99999,,   DIGITS                                        04592 25 04983 99999
+04080 B3     TR   99999,BUF,,    INSERT CHAR                                    04604 31 99999 04980
+04090        BTM  WAPTR,*+12,711,  GO PRINT                                     04616 17 08464 -4620
+04100        AM   B1+11,02,10,   UPDATE                                         04628 11 04591 000-2
+04110        AM   B2+11,02,10,   UPDATE                                         04640 11 04603 000-2
+04120        AM   B3+6,02,10,    UPDATE                                         04652 11 04610 000-2
+04130        CM   B2+11,SS+44,,  CHK DONE                                       04664 14 04603 -4867
+04140        BNE  B1,,,          BRCH IF DONE                                   04676 47 04580 01200
+04150        CM   B3+6,PNT+173,, CHK DONE                                       04688 14 04610 J1816
+04160        BL   BO,,,          BRCH IF NOT                                    04700 47 04556 01300
+04170        BNC2 FORCE,,,       SW2 ON REPEAT                                  04712 47 04986 00200
+04180        K    ,0953,,        SKIP                                           04724 34 00000 00953
+04190        B    BO-24,,,                                                      04736 49 04532 00000
+04200*
+04210*            CONSTANTS AND TYPEOUTS
+04220*
+04230 TT4    DAC  21,CARRIAGE TEST WITH SP                                      04749 00042
+04240        DAC  16,ACE SUPPRESSION@                                           04791 00032
+04250 SS     DAC  23,  SPACE  SUPPRESSION  @                                    04826 00046
+04260 ER11   DAC  28,IND 33 NOT OFF BY CH 1 PNCH@                               04869 00056
+04270 ER12   DAC  28,IND 34 NOT OFF BY CH 1 PNCH@                               04925 00056
+04280 BUF    DSC  06,0@,,        BUFFER                                         04980 00006
+04290*
+04300*            FORCE ERRORS ROUTINE
+04310*
+04320*            PRINT INCORRECT
+04330*            PARITY CHARACTERS
+04340*
+04350 FORCE  TFM  ST+6,*,,       RESTART                                        04986 16 00554 -4986
+04360        K    ,0972,,        IMMED SKIP CH 2                                04998 34 00000 00972
+04370        TR   PNT-1,RST1,,   RESET PRINT AREA                               05010 31 11642 11344
+04380        TR   PNT+99,TT1-1,, INSERT MESSAGE                                 05022 31 11742 05720
+04390        BTM  WAPTR,*+12,,   BRNCH TO PRINT                                 05034 17 08464 -5046
+04400        K    ,0972,,        IMMED SKIP CH 2                                05046 34 00000 00972
+04410 J4     TFM  CNT,001,9,     SET CNTR                                       05058 16 05842 00-01
+04420        TFM  J3+11,INV-1,,  INIT                                           05070 16 05165 J2148
+04430        TR   PNT,RST1,,     RESET PRINT AREA                               05082 31 11643 11344
+04440        TD   FER+18,CNT-1,, INSERT                                         05094 25 05557 05841
+04450        TD   FER+20,CNT,,    ERROR DIGITS                                  05106 25 05559 05842
+04460        TR   PNT+31,FER-1,, INSERT MESSAGE                                 05118 31 11674 05538
+04470        BTM  WAPTR,*+12,711,,GO TO PRINT                                   05130 17 08464 -514K
+04480        TR   ERG-1,FER-1,,  INSERT TYPEOUT                                 05142 31 05746 05538
+04490 J3     TD   S1+1,99999,,   INSERT INV CHAR                                05154 25 05853 99999
+04500        TR   PNT,S1-9,,     PUT INTO PRINT                                 05166 31 11643 05843
+04510        BI   *+12,1600,,    TURN OFF                                       05178 46 05190 01600
+04520        BI   *+12,1700,,      PARITY IND                                   05190 46 05202 01700
+04530        WN   PNT,0900,,     PRINT INV CHAR                                 05202 38 11643 00900
+04540        BI   *,3500,,       WAIT FOR PRINTER BUSY                          05214 46 05214 03500
+04550        BI   *+12,0700,,    TURN                                           05226 46 05238 00700
+04560        BI   *+12,1600,,      OFF                                          05238 46 05250 01600
+04570        BI   *+12,1700,,        IND                                        05250 46 05262 01700
+04580        BNI  *+60,1900,,    ANY DATA CHK                                   05262 47 05322 01900
+04590        BI   J1,2500,,      PNTR CHK                                       05274 46 05394 02500
+04600        TR   ERG+23,ER4-1,, INSERT MESSAGE                                 05286 31 05770 05564
+04610        BTM  ETO,ERG,,      ERROR TYPEOUT                                  05298 17 09064 -5747
+04620        B    J1                                                            05310 49 05394 00000
+04630        BI   J2,02500,,     ANY PNTR CHK                                   05322 46 05370 02500
+04640        TR   ERG+23,ER5-1,, INSERT MESSAGE                                 05334 31 05770 05612
+04650        BTM  ETO,ERG,,      ERROR TYPEOUT                                  05346 17 09064 -5747
+04660        B    J1                                                            05358 49 05394 00000
+04670 J2     TR   ERG+23,ER6-1,, INSERT MESSAGE                                 05370 31 05770 05662
+04680        BTM  ETO,ERG,,      ERROR TYPEOUT                                  05382 17 09064 -5747
+04690 J1     TR   PNT,RST1,,     RESET PRINT                                    05394 31 11643 11344
+04700        BI   *+12,01600,,   TURN OFF                                       05406 46 05418 01600
+04710        BI   *+12,01700,,     IND                                          05418 46 05430 01700
+04720        BNI  *+24,03400,,   CHK FOR PAGE END                               05430 47 05454 03400
+04730        K    ,0971,,        NEXT PAGE                                      05442 34 00000 00971
+04740        BC2  J3,,,          SW 2 ON LOOP                                   05454 46 05154 00200
+04750        K    ,0951,,        IMMEDIATE SPACE                                05466 34 00000 00951
+04760        AM   CNT,01,10,     UPDATE COUNTER                                 05478 11 05842 000-1
+04770        AM   J3+11,02,10,   UPDATE INV CHR                                 05490 11 05165 000-2
+04780        CM   CNT,10,10,     CHK DONE                                       05502 14 05842 000J0
+04790        BNE  J4+24,,,       BRCH IF NOT                                    05514 47 05082 01200
+04800        B    WAR,,,         BRCH TO WR ALPHA                               05526 49 05920 00000
+04810*
+04820*            CONSTANTS AND ERROR TYPEOUTS
+04830*
+04840 FER    DAC  13,FORCE ER 99 @                                              05539 00026
+04850 ER4    DAC  24,PTR CK OFF, ANY DATA ON@                                   05565 00048
+04860 ER5    DAC  25,PTR CK OFF, ANY DATA OFF@                                  05613 00050
+04870 ER6    DAC  29,PTR CK WONT TURN ON ANY DATA@                              05663 00058
+04880 TT1    DAC  13,FORCE ERRORS@                                              05721 00026
+04890 ERG    DAC  01,0                                                          05747 00002
+04900        DSC  45,0                                                          05748 00045
+04910        DSC  45,0                                                          05793 00045
+04920 CNT    DC   05,0,,         COUNTER                                        05842 00005
+04930 S1     DNB  10,                                                           05852 00010
+04940        DC   02,0@                                                         05854 00002
+04950*
+04960*            PROGRAM TIME DELAY
+04970*            ENTERED VIA A BTM
+04980*
+04990        DC   05,0                                                          05859 00005
+05000 TIMDLY NOP  00328,00328,,  TR ON MOD II                                   05860 41 00328 00328
+05010        AM   TIMDLY-1,01,,  ADD 1 TO DELAY                                 05872 11 05859 -0001
+05020        CM   TIMDLY-1,0340,,CHK DELAY DONE                                 05884 14 05859 -0340
+05030        BNE  TIMDLY,,,      BRCH IF NO                                     05896 47 05860 01200
+05040        BB   ,,,            RETURN TO PROG                                 05908 42 00000 00000
+05050*
+05060*            WRITE ALPHAMERIC TEST ROUTINE
+05070*
+05080*            RIPPLE ROUTINE
+05090*
+05100 WAR    TFM  ST+6,*,,       RESTART                                        05920 16 00554 -5920
+05110        K    ,0971,,        NEXT PAGE                                      05932 34 00000 00971
+05120        TR   PNT-1,RST1,,   RST PRINT AREA                                 05944 31 11642 11344
+05130        TR   PNT+99,TT5-1,, INSERT TITLE                                   05956 31 11742 06340
+05140        K    ,0942,,        SKIP AFTER PRINT                               05968 34 00000 00942
+05150        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  05980 17 08464 -5592
+05160        TR   PNT-1,ALPHA-1,,INIT PRINT AREA                                05992 31 11642 06378
+05170 R1     BTM  WAPTR,*+12,,   BRCH TO PRINT                                  06004 17 08464 -6016
+05180        BNI  *+24,03400,,   CHK FOR END OF PG                              06016 47 06040 03400
+05190        K    ,0972,,        NEXT PAGE                                      06028 34 00000 00972
+05200        BC2  R1,,,          SW 2 REPEAT                                    06040 46 06004 00200
+05210        TDM  PNT+289,0,,    INSERT ZERO                                    06052 15 11932 00000
+05220        TD   PNT+290,RM,,   INSERT RM                                      06064 25 11933 06376
+05230        TD   PNT+287,PNT-1,,BRING DIGIT                                    06076 25 11930 11642
+05240        TD   PNT+288,PNT,,    AROUND                                       06088 25 11931 11643
+05250        TR   PNT-1,PNT+1,,  SHIFT                                          06100 31 11642 11644
+05260        CM   PNT,041,10,    CK FOR CMPLT SHFT                              06112 14 11643 000M1
+05270        BNE  R1,,,          BRCH IF NOT                                    06124 47 06004 01200
+05280*
+05290*            LINE PRINT ROUTINE
+05300*
+05310 WAP    TFM  ST+6,*,,       RESTART                                        06136 16 00554 -6136
+05320        K    ,0971,,        NEXT PAGE                                      06148 34 00000 00971
+05330        TR   PNT-1,RST1,,   RST PRINT AREA                                 06160 31 11642 11344
+05340        TR   PNT+99,TT5-1,, INSERT TITLE                                   06172 31 11742 06340
+05350        K    ,0942,,        SKIP AFTER PRINT                               06184 34 00000 00942
+05360        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  06196 17 08464 -6208
+05370        TFM  *+35,ALPHA,,   INIT                                           06208 16 06243 -6379
+05380        TFM  GEN+18,PNT+286,,INIT GENERATOR                                06220 16 08356 J1929
+05390 R2     BT   GEN,99999,,    GENERATE DATA                                  06232 27 08338 99999
+05400        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  06244 17 08464 -6256
+05410        BNI  *+24,03400,,   CHK END OF PG                                  06256 47 06280 03400
+05420        K    ,0972,,        NEXT PAGE                                      06268 34 00000 00972
+05430        BC2  R2+12,,,       SW 2 ON REPEAT                                 06280 46 06244 00200
+05440        AM   R2+11,02,10,   UPDATE                                         06292 11 06243 000-2
+05450        CM   R2+11,ALPHA+104,,CHK DONE                                     06304 14 06243 -6483
+05460        BNE  R2-12,,,       BRCH IF NOT                                    06316 47 06220 01200
+05470        B    WNR,,,         NEXT ROUTINE                                   06328 49 06668 00000
+05480*
+05490*            CONSTANTS
+05500*
+05510 TT5    DAC  18,WRITE  ALPHAMERIC@                                         06341 00036
+05520 RM     DC   01,@,,                                                        06376 00001
+05530 ALPHA  DAC  01,A                                                          06379 00002
+05540        DAC  01,B                                                          06381 00002
+05550        DAC  01,C                                                          06383 00002
+05560        DAC  01,D                                                          06385 00002
+05570        DAC  01,E                                                          06387 00002
+05580        DAC  01,F                                                          06389 00002
+05590        DAC  01,G                                                          06391 00002
+05600        DAC  01,H                                                          06393 00002
+05610        DAC  01,I                                                          06395 00002
+05620        DC   02,0                                                          06397 00002
+05630        DAC  01,J                                                          06399 00002
+05640        DAC  01,K                                                          06401 00002
+05650        DAC  01,L                                                          06403 00002
+05660        DAC  01,M                                                          06405 00002
+05670        DAC  01,N                                                          06407 00002
+05680        DAC  01,O                                                          06409 00002
+05690        DAC  01,P                                                          06411 00002
+05700        DAC  01,Q                                                          06413 00002
+05710        DAC  01,R                                                          06415 00002
+05720        DC   02,50                                                         06417 00002
+05730        DC   02,0                                                          06419 00002
+05740        DAC  01,S                                                          06421 00002
+05750        DAC  01,T                                                          06423 00002
+05760        DAC  01,U                                                          06425 00002
+05770        DAC  01,V                                                          06427 00002
+05780        DAC  01,W                                                          06429 00002
+05790        DAC  01,X                                                          06431 00002
+05800        DAC  01,Y                                                          06433 00002
+05810        DAC  01,Z                                                          06435 00002
+05820        DC   02,0                                                          06437 00002
+05830        DAC  01,.                                                          06439 00002
+05840        DAC  01,)                                                          06441 00002
+05850        DAC  01,+                                                          06443 00002
+05860        DAC  01,$                                                          06445 00002
+05870        DAC  01,*                                                          06447 00002
+05880        DAC  01,-                                                          06449 00002
+05890        DAC  01,/                                                          06451 00002
+05900        DAC  01,,                                                          06453 00002
+05910        DAC  01,(                                                          06455 00002
+05920        DAC  01,=                                                          06457 00002
+05930        DC   02,34                                                         06459 00002
+05940        DC   02,0                                                          06461 00002
+05950        DAC  01,0                                                          06463 00002
+05960        DAC  01,1                                                          06465 00002
+05970        DAC  01,2                                                          06467 00002
+05980        DAC  01,3                                                          06469 00002
+05990        DAC  01,4                                                          06471 00002
+06000        DAC  01,5                                                          06473 00002
+06010        DAC  01,6                                                          06475 00002
+06020        DAC  01,7                                                          06477 00002
+06030        DAC  01,8                                                          06479 00002
+06040        DAC  01,9                                                          06481 00002
+06050        DC   02,0                                                          06483 00002
+06060        DC   02,0                                                          06485 00002
+06070        DAC  24,RIPPLE TEST 1620 PRINTER                                   06487 00048
+06080        DAC  27,  BCDEFGHI JKLMNOPQR STUVWX                                06535 00054
+06090        DAC  24,YZ .)+$*-/,(= 0123456789                                   06589 00048
+06100        DC   02,50                                                         06637 00002
+06110        DAC  15, 1620 PRINTER @                                            06639 00030
+06120*
+06130*            WRITE NUMERIC TEST ROUTINE
+06140*
+06150 WNR    TFM  ST+6,*,,       RESTART                                        06668 16 00554 -6668
+06160        K    ,0971,,        NEXT PAGE                                      06680 34 00000 00971
+06170        TR   PNT-1,RST1,,   RST PRINT AREA                                 06692 31 11642 11344
+06180        TR   PNT+99,TT6-1,, INSERT TITLE                                   06704 31 11742 06968
+06190        K    ,0942,,        SKIP AFTER PRINT                               06716 34 00000 00942
+06200        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  06728 17 08464 -6740
+06210        TFM  GEN+1,33,10,   NOP TO CF                                      06740 16 08339 000L3
+06220        TFM  *+35,NUM,,     INIT                                           06752 16 06787 -6999
+06230        TFM  GEN+18,PNT+144,,INIT GEN                                      06764 16 08356 J1787
+06240 R3     BT   GEN,99999,,    GENERATE DATA                                  06776 27 08338 99999
+06250        WN   PNT,0900,,     PRINT DATA                                     06788 38 11643 00900
+06260        BI   *,3500,,       WAIT FOR PNTR NOT BUSY                         06800 46 06800 03500
+06270        BNI  *+24,01900,,   ANY DATA CHK                                   06812 47 06836 01900
+06280        BTM  ERR,*+12,,     ERR SUBROUT                                    06824 17 08650 -6836
+06290        BNI  *+24,03400,,   CHK END OF PAGE                                06836 47 06860 03400
+06300        K    ,0972,,        NEXT PAGE                                      06848 34 00000 00972
+06310        BC2  R3+12,,,       SW2 ON REPEAT                                  06860 46 06788 00200
+06320        AM   R3+11,02,10,   UPDATE GEN                                     06872 11 06787 000-2
+06330        CM   R3+11,NUM+26,, CHK FOR NEG                                    06896 47 06920 -7025
+06340        BL   *+24,,,        BRCH IF NOT                                    06896 47 06920 01300
+06350        TFM  GEN+1,41,10,   CF TO NOP                                      06908 16 08339 000M1
+06360        CM   R3+11,NUM+52,, CHK DONE                                       06920 14 06787 -7051
+06370        BNE  R3-12,,,       BRCH IF NOT                                    06932 47 06764 01200
+06380        TFM  GEN+1,33,10,                                                  06944 16 08339 000L3
+06390        B    DNR,,,         NEXT ROUT                                      06956 49 07050 00000
+06400*
+06410*            CONSTANTS AND TYPEOUTS
+06420*
+06430 TT6    DAC  15,WRITE  NUMERIC@                                            06969 00030
+06440 NUM    DC   02,11                                                         06999 00002
+06450        DC   02,22                                                         07001 00002
+06460        DC   02,33                                                         07003 00002
+06470        DC   02,44                                                         07005 00002
+06480        DC   02,55                                                         07007 00002
+06490        DC   02,66                                                         07009 00002
+06500        DC   02,77                                                         07011 00002
+06510        DC   02,88                                                         07013 00002
+06520        DC   02,99                                                         07015 00002
+06530        DC   02,00                                                         07017 00002
+06540        DNB  02,,,          NUMERIC BLANK                                  07019 00002
+06550 F1     DC   01,@,,         RM                                             07020 00001
+06560        DC   01,@,,         RM                                             07021 00001
+06570        DC   01,@,,         GROUP MARK                                     07022 00001
+06580        DC   01,@,,         GROUP MARK                                     07023 00001
+06590        DC   02,-11                                                        07025 00002
+06600        DC   02,-22                                                        07027 00002
+06610        DC   02,-33                                                        07029 00002
+06620        DC   02,-44                                                        07031 00002
+06630        DC   02,-55                                                        07033 00002
+06640        DC   02,-66                                                        07035 00002
+06650        DC   02,-77                                                        07037 00002
+06660        DC   02,-88                                                        07039 00002
+06670        DC   02,-99                                                        07041 00002
+06680        DC   02,-00                                                        07043 00002
+06690        DNB  02,,,          FLG NUMERIC BLANK                              07045 00002
+06700 F2     DC   01,@,,         FLG RM                                         07046 00001
+06710        DC   01,@,,         FLG RM                                         07047 00001
+06720        DC   01,@,,         FLG GM                                         07048 00001
+06730        DC   01,@,,         FLG GM                                         07049 00001
+06740*
+06750*            DUMP NUMERIC TEST ROUTINE
+06760*
+06770 DNR    TFM  ST+6,*,,       RESTART                                        07050 16 00054 -7050
+06780        K    ,0971,,        NEXT PAGE                                      07062 34 00000 00971
+06790        TR   PNT-1,RST2,,   RST PRINT AREA                                 07074 31 11642 11489
+06800        TR   PNT+99,TT7-1,, INSERT TITLE                                   07086 31 11742 07602
+06810        K    ,0942,,        SKIP AFTER PNT                                 07098 34 00000 00942
+06820        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  07110 17 08464 -7122
+06830        TDM  0,0,,          INIT                                           07122 15 00000 00000
+06840        TR   19999,CRSZ,,   MOVE RM                                        07134 31 19999 07662
+06850        BNR  *+36,0,,       CHK FOR RM                                     07146 45 07182 00000
+06860        TFM  CS+11,044,,    INIT FOR 20 K                                  07158 16 07241 -0044
+06870        B    *+24,,,                                                       07170 49 07194 00000
+06880        TFM  CS+11,20044,,  LRGR THAN 20K                                  07182 16 07241 K0044
+06890        TFM  GEN+1,33,10,   INIT                                           07194 16 08339 000L3
+06900        TFM  G1+11,19898,,  INIT                                           07206 16 08433 J9898
+06910        TFM  *+35,NUM,,     INIT                                           07218 16 07253 -6999
+06920 CS     TFM  GEN+18,99999,, INIT GEN                                       07230 16 08356 R9999
+06930 R4     BT   GEN,99999,,    GENERATOR                                      07242 27 08338 99999
+06940        DN   19900,0900,,   DUMP                                           07254 35 19900 00900
+06950        BI   *,3500,,       WAIT FOR PNTR NOT BUSY                         07266 46 07266 03500
+06960        BNI  *+24,01900,,   ANY DATA CHK                                   07278 47 07302 01900
+06970        BTM  ERR,*+12,,     ERR SUBROUT                                    07290 17 08650 -7302
+06980        BNI  *+24,03400,,   CK END OF PAGE                                 07302 47 07326 03400
+06990        K    0972,,         NEXT PAGE                                      07314 34 00000 00972
+07000        BC2  R4+12,,,       SW 2 ON REPEAT                                 07326 46 07254 00200
+07010        AM   R4+11,02,10,   UPDATE                                         07338 11 07253 000-2
+07020        CM   R4+11,NUM+26,, CHK FOR NEG                                    07350 14 07253 -7025
+07030        BL   *+12                                                          07362 47 07386 01300
+07040        TFM  GEN+1,41,10,   CF TO NOP                                      07374 16 08339 000M1
+07050        CM   R4+11,NUM+52,, CHK DONE                                       07386 14 07253 -7051
+07060        BNE  R4-12,,,       BRCH IF NOT                                    07398 47 07230 01200
+07070        TFM  G1+11,PNT-2,,  REINIT                                         07410 16 08433 J1641
+07080        TFM  GEN+1,33,10,   INIT                                           07422 16 08339 000L3
+07090        TFM  *+35,NUM,,     INIT                                           07434 16 07469 -6999
+07100        TFM  GEN+18,PNT+144,,INIT                                          07446 16 08356 J1787
+07110 R5     BT   GEN,99999,,    GENERATE                                       07458 27 08338 99999
+07120        DN   PNT,0900,,     DUMP                                           07470 35 11643 00900
+07130        BI   *,3500,,       WAIT FOR PNTR NOT BUSY                         07482 46 07482 03500
+07140        BNI  *+24,01900,,   ANY DATA CK                                    07494 47 07518 01900
+07150        BTM  ERR,*+12,,     ERR SUBROUT                                    07506 17 08650 -7518
+07160        BNI  *+24,03400,,   CHK END OF PAGE                                07518 47 07542 03400
+07170        K    ,0972,,        NEXT PAGE                                      07530 34 00000 00972
+07180        BC2  R5+12,,,       SW 2 ON REPEAT                                 07542 46 07470 00200
+07190        AM   R5+11,02,10,   UPDATE                                         07554 11 07469 000-2
+07200        CM   R5+11,NUM+26,, CHK DONE                                       07566 14 07469 -7025
+07210        BNE  R5-12,,,       BRCH IF NOT                                    07578 47 07446 01200
+07220        B    RTR,,,                                                        07590 49 07664 00000
+07230*
+07240*            CONSTANTS AND TIMEOUTS
+07250*
+07260 TT7    DAC  14,DUMP  NUMERIC@                                             07603 00028
+07270 CMPLT  DAC  16,TEST  COMPLETED@                                           07631 00032
+07280 CRSZ   DSC  02,0@                                                         07662 00002
+07290*
+07300*            REGISTRATION TEST ROUTINE
+07310*
+07320 RTR    TFM  ST+6,*,,       RESTART                                        07664 16 00554 -7664
+07330        K    ,0971,,        NEXT PAGE                                      07676 34 00000 00971
+07340        TR   PNT-1,RST1,,   RESET PNTR AREA                                07688 31 11642 11344
+07350        TR   PNT+99,TT8-1,, INSERT TITLE                                   07700 31 11742 07916
+07360        K    ,0942,,        SKIP AFTER PNT                                 07712 34 00000 00942
+07370        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  07724 17 08464 -7736
+07380        TFM  GEN+18,PNT+286,,INIT GEN                                      07736 16 08356 J1929
+07390 RG     BTM  GEN,49,10,     GENERATE AREA                                  07748 17 08338 000M9
+07400        TFM  *+30,PNT-2,,   INIT NEXT                                      07760 16 07790 J1641
+07410        TFM  *+30,PNT,,      INST.                                         07772 16 07802 J1643
+07420        TF   99999,RG+11,,  RESET OLD DIGIT                                07784 26 99999 07759
+07430 RG1    TFM  99999,79,10,   INSERT WORST CASE                              07796 16 99999 000P9
+07440        BTM  WAPTR,*+12,,   GO PRINT                                       07808 17 08464 -7820
+07450        BNI  *+24,03400,,   CK END OF PG                                   07820 47 07844 03400
+07460        K    ,0972,,        SKIP TO NXT PG                                 07832 34 00000 00972
+07470        BC2  RG1+12,,,      SW 2 ON REPEAT                                 07844 46 07808 00200
+07480        AM   RG1+6,02,10,   UPDATE                                         07856 11 07802 000-2
+07490        AM   RG1-6,02,10,                                                  07868 11 07790 000-2
+07500        CM   RG1+6,PNT+288,,CK DONE                                        07880 14 07802 J1931
+07510        BNE  RG1-12,,,                                                     07892 47 07784 01200
+07520        B    TC,,,                                                         07904 49 08094 00000
+07530*
+07540*            DATA,CONSTANTS,AND TYPE OUTS
+07550*
+07560 TT8    DAC  26,REGISTRATION TEST ROUTINE@                                 07917 00052
+07570 TERR   DAC  32,SW 2 ON TO ENTER RANDOM ROUTINE@                           07969 00064
+07580 TEUM   DAC  31,SW 4 ON TO ENTER USERS ROUTINE@                            08033 00062
+07590*
+07600*            TEST COMPLETED ROUTINE
+07600*            TEST COMPLETED ROUTINE
+07610*
+07620 TC     BC4  IND,,,         SW 4 RERUN                                     08094 46 01792 00400
+07630        BNR  *+24,MON,,     DIPAL                                          08106 45 08130 18117
+07640        B    MONIT,,,         LINKAGE                                      08118 49 18000 00000
+07650        TFM  ST+6,*,,       RESTART                                        08130 16 00554 -1830
+07660        K    ,0953,,        SKIP 3 SPACES                                  08142 34 00000 00953
+07670        TR   PNT-1,RST1,,   RST PRINT AREA                                 08154 31 00164 11344
+07680        TR   PNT+101,CMPLT-1,,INSERT MESSAGE                               08166 31 11744 07630
+07690        K    ,0941,,        SKIP AFTER PRINT                               08178 34 00000 00941
+07700        BTM  WAPTR,*+12,,   PRINT                                          08190 17 08464 -8202
+07710        RCTY                                                               08202 34 00000 00102
+07720        WATY CMPLT,,,       TYPE                                           08214 39 07631 00100
+07730        TFM  ST+6,ST+12,,   RESTART                                        08226 16 00554 -0560
+07740        RCTY                                                               08238 34 00000 00102
+07750        WATY TERR,,,        SW 2 ON TO ENTER RANDOM                        08250 39 07969 00100
+07760        RCTY                                                               08262 34 00000 00102
+07770        WATY TEUM,,,        SW 4 ON TO ENTER USERS                         08274 39 08033 00100
+07780        H    ,,,            HALT                                           08286 48 00000 00000
+07790        BC2  RCP,,,                                                        08298 46 09554 00200
+07800        BC4  MAN,,,                                                        08310 46 10154 00400
+07810        B    ST,,,          RERUN                                          08322 49 00548 00000
+07820*
+07830*            CHARACTER GENERATION
+07840*
+07850        DC   03,0                                                          08336 00003
+07860 GEN    CF   GEN-2,,,       CLEAR FLAG                                     08338 33 08336 00000
+07870        TF   99999,GEN-1,,  TRANSFER CHAR                                  08350 26 99999 08337
+07880        CM   *-6,0,,        CK FOR DN                                      08362 14 08356 -0000
+07890        BNE  *+36,,,        BRCH IF NOT                                    08374 47 08410 01200
+07900        TFM  GEN+18,19998,, REINIT                                         08386 16 08356 J9998
+07910        B    GEN+12,,,                                                     08398 49 08350 00000
+07920        SM   GEN+18,02,10,  UPDATE                                         08410 12 08356 000-2
+07930 G1     CM   GEN+18,PNT-2,, CHK DONE                                       08422 14 08356 J1641
+07940        BNE  GEN+12,,,      BRCH IF NOT                                    08434 47 08350 01200
+07950        BB   ,,,            RETURN                                         08446 42 00000 00000
+07960*
+07970*            WRITE ALPHAMERIC ROUTINE
+07980*            ENTERED VIA BTM FOR PRINTING
+07990*
+08000        DC   05,0                                                          08462 00005
+08010 WAPTR  TDM  WAPTR+11,0,,   NO SPACE SUPPRESS                              08464 15 08523 00000
+08020        BNF  *+36,WAPTR-1,,                                                08476 44 08512 08463
+08030        TDM  WAPTR1+11,1,,  SPACE SUPPRESS                                 08488 15 08523 00001
+08040        CF   WAPTR-1,,,                                                    08500 33 08463 00000
+08050 WAPTR1 WA   PNT,0900,,     PRINT                                          08512 39 11643 00900
+08060        TFM  ERR-1,0                                                       08524 16 08649 -0000
+08070        BNI  *+72,3500,,    WAIT FOR PNTR NOT BUSY                         08536 47 08608 03500
+08080        AM   ERR-1,01                                                      08548 11 08649 -0001
+08090        CM   ERR-1,3000,,   TIME OUT INDICATOR                             08560 14 08649 -3000
+08100        BNE  *-36                                                          08572 47 08536 01200
+08110        BTM  ETO,ER14,,     ERROR P-BSY WONT TURN OFF                      08584 17 09064 -4329
+08120        B    *+24                                                          08596 49 08620 00000
+08130        BNI  *+24,1900,,    ANY DATA CHK                                   08608 47 08632 01900
+08140        BT   ERR,WAPTR-1,,  ERR SUBROUTINE                                 08620 28 08650 08463
+08150        BB   ,,,            BRCH-BACK                                      08632 42 00000 00000
+08160*
+08170*            ERROR SUBROUTINE ENTERED
+08180*            WHEN ANY DATA CHECK IS
+08190*            FOUND ON
+08200*
+08210        DC   05,0                                                          08648 00005
+08220 ERR    BI   *+36,1900,,    ANY DATA CHK                                   08650 46 08686 01900
+08230        TF   *+18,ERR-1,,   LOAD RETURN                                    08662 26 08680 08649
+08240        B    99999,,,       RETURN                                         08674 49 99999 00000
+08250        BNI  *+24,0600,,    RD CK                                          08686 47 08710 00600
+08260        BTM  ETO,Z5,,                                                      08698 17 09064 -9261
+08270        BNI  *+24,0700,,    WR CK                                          08710 47 08734 00700
+08280        BTM  ETO,Z6,,                                                      08722 17 09064 -9287
+08290        BNI  *+24,0800,,    MAR CK                                         08734 47 08758 00800
+08300        BTM  ETO,Z7,,                                                      08746 17 09064 -9313
+08310        BNI  *+24,1600,,    EVEN CK                                        08758 47 08782 01600
+08320        BTM  ETO,Z8,,                                                      08770 17 09064 -9341
+08330        BNI  *+24,1700,,    ODD CK                                         08782 47 08806 01700
+08340        BTM  ETO,Z9,,                                                      08794 17 09064 -9373
+08350        BNI  *+24,2100,,    TAS CK                                         08806 47 08830 02100
+08360        BTM  ETO,Z10,,                                                     08818 17 09064 -9405
+08370        BNI  *+24,2200,,    F R CK                                         08830 47 08854 02200
+08380        BTM  ETO,Z11,,                                                     08842 17 09064 -9433
+08390        BNI  *+24,2300,,    A O CK                                         08854 47 08878 02300
+08400        BTM  ETO,Z12,,                                                     08866 17 09064 -9469
+08410        BNI  *+60,2500,,    PTR CHK                                        08878 47 08938 02500
+08420        BNI  *+36,2500,,    PTR CHK                                        08890 47 08926 02500
+08430        BTM  ETO,Z14,,                                                     08902 17 09064 -9525
+08440        B    *+24,,,                                                       08914 49 08938 00000
+08440        B    *+24,,,                                                       08914 49 08938 00000
+08450        BTM  ETO,Z13,,                                                     08926 17 09064 -9497
+08460        BI   *+12,06600,,   P C CHK                                        08938 46 08950 06600
+08470        BI   *+12,06700,,   LCO CHK                                        08950 46 08962 06700
+08480        BNI  Y1,3900,,      ANY FILE CHK                                   08962 47 09046 03900
+08480        BNI  Y1,3900,,      ANY FILE CHK                                   08962 47 09046 03900
+08490        BNI  *+24,3600,,    ADRS CHK                                       08974 47 08998 03600
+08500        BTM  ETO,Z1,,                                                      08986 17 09064 -9173
+08510        BNI  *+24,3700,,    WLR CHK                                        08988 47 09022 03700
+08520        BTM  ETO,Z2,,                                                      09010 17 09064 -9201
+08530        BNI  *+24,3800,,    OVFLO CK                                       09022 47 09046 03800
+08540        BTM  ETO,Z3,,                                                      09034 17 09064 -9229
+08550 Y1     B    ERR,,,         RETURN                                         09046 49 08650 00000
+08560*
+08570*            ERROR TYPEOUT ROUTINE
+08580*            FOR ERROR SUBROUTINE
+08590*
+08600        DC   05,0                                                          09062 00005
+08610 ETO    BC1  Y2,,,          SWITCH 1                                       09064 46 09136 00100
+08620        RCTY                                                               09076 34 00000 00102
+08630        TF   Y3+6,ETO-1,,   INSERT ER T/O                                  09088 26 09130 09063
+08640        WNTY ST+2,,,        TYPE ADDRESS                                   09100 38 00550 00100
+08650        SPTY                                                               09112 34 00000 00101
+08660 Y3     WATY 99999,,        TYPE ERR                                       09124 39 99999 00100
+08670 Y2     BNC3 *+24,,,        SWITCH 3                                       09136 47 09160 00300
+08680        H    ,,,            HALT                                           09148 48 00000 00000
+08690        BB   ,,,            BRCH-BACK                                      09160 42 00000 00000
+08700*
+08710*            ERROR MESSAGES FOR
+08720*            ERROR SUBROUTINE
+08730*
+08740 Z1     DAC  14, ADRS CK (36)@                                             09173 00028
+08750 Z2     DAC  14, WLR CK (37) @                                             09021 00028
+08760 Z3     DAC  16, OVFLO CK (36) @                                           09229 00032
+08770 Z5     DAC  13, RD CK (06) @                                              09261 00026
+08780 Z6     DAC  13, WR CK (07) @                                              09287 00026
+08790 Z7     DAC  14, MAR CK (08) @                                             09313 00028
+08800 Z8     DAC  16, MBR-E CK (16) @                                           09341 00032
+08810 Z9     DAC  16, MBR-O CK (17) @                                           09373 00032
+08820 Z10    DAC  14, TAS CK (21) @                                             09405 00028
+08830 Z11    DAC  18, FUN REG CK (22) @                                         09433 00036
+08840 Z12    DAC  14, A O CK (23) @                                             09469 00028
+08850 Z13    DAC  14, PTR CK (25) @                                             09497 00028
+08860 Z14    DAC  15, SYNC CK (25) @                                            09525 00030
+08870*
+08880*            RANDOM CHARACTER PRINTING
+08890*            ENTERED VIA BRANCH
+08900*            IN THE INSERT AREA
+08910*
+08920 RCP    TFM  ST+6,*,,       RESTART                                        09554 16 00554 -9554
+08930        K    ,0971,,        NEW PAGE                                       09566 34 00000 00971
+08940        TR   PNT-1,RST1,,   RESET PNTR AREA                                09578 31 11642 11344
+08950        TR   PNT+99,TT9-1,, INSERT TITLE                                   09590 31 11742 09986
+08960        K    ,0942,,        SKIP AFTER PRINT                               09602 34 00000 00942
+08970        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  09614 17 08464 -9626
+08980 RCP1   TFM  RCP4+18,PNT,,                                                 09626 16 09848 J1643
+08990        M    PR2,PR1,,      MULTIPLY                                       09638 23 10045 10041
+09000 RCP2   SF   95,,,          SET FLAG                                       09650 32 00095 00000
+09010 RCP3   CM   98,0,8,        CHK FOR ZERO                                   09662 14 00098 0-000
+09020        BNE  *+36,,,                                                       09674 47 09710 01200
+09030        AM   PR2,131,9,     NXT SETTING                                    09686 11 10045 00J31
+09040        B    *+24,,,                                                       09698 49 09722 00000
+09050        TF   PR2,98,,       NXT MULT.                                      09710 26 10045 00098
+09060        SF   PR2-2,,,                                                      09722 32 10043 00000
+09070        AM   PR1,47,10,     CHNG NO.                                       09734 11 10041 000M7
+09080        BI   *+12,01400,,   TURN OFF OVFLO                                 09746 46 09758 01400
+09090        TF   RCP4+11,PR2-1,,                                               09758 26 09841 10044
+09100        MM   PR2-1,05,10,   COMPUTE EVEN-ODD                               09770 13 10044 000-5
+09110        CF   PR2-2,,,                                                      09782 33 10043 00000
+09120        BD   *+24,99,,                                                     09794 43 09818 00099
+09130        AM   RCP4+11,01,10, EVEN ADD 1                                     09806 11 09841 000-1
+09140        TFM  *+35,RANCH,,   INSERT START                                   09818 16 09853 J0046
+09150 RCP4   AM   *+23,99,10,    ADD RAN.NO.                                    09380 11 09853 000R9
+09160        TF   99999,99999,,  INSERT CHAR.                                   09842 26 99999 99999
+09170        AM   *-6,02,10,                                                    09854 11 09848 000-2
+09180        CM   RCP4+18,PNT+288,,CHK DONE                                     09866 14 09848 J1931
+09190        BNE  RCP1+12,,,                                                    09878 47 09638 01200
+09200        BNI  *+24,03400,,   CHK END OF PG                                  09890 47 09914 03400
+09210        K    ,0942,,        NXT PAGE                                       09902 34 00000 00942
+09220        BTM  WAPTR,*+12,,   GO TO PRINT                                    09914 17 08464 -9926
+09230        BC2  *-36,,,        SW 2 ON LOOP                                   09926 46 09890 00200
+09240        BC4  RCP1,,,        SW 4 ON LOOP                                   09938 46 09626 00400
+09250        TFM  ST+6,ST+12,,   RESTART                                        09950 16 00554 -0560
+09260        H                                                                  09962 48 00000 00000
+09270        B    ST,,,          GO TO START                                    09974 49 00548 00000
+09280*
+09290*            DATA,CONSTANTS,AND TYPEOUTS
+09300*
+09310 TT9    DAC  26,RANDOM CHARACTER PRINTING@                                 09987 00052
+09320 PR1    DC   04,2999,,                                                     10041 00004
+09330 PR2    DC   04,1231,,      VARIABLE NO.                                   10045 00004
+09340 RANCH  70   03041,01314,0246810,C                                         10046 P0 -3-4J 0J3J4
+09350        20   21232,43334,0246810, H                                        10058 K0 K1K3K 4L3L4
+09360        41   42434,44546,0246810,  A                                       10070 M1 M2M3M 4M5M6
+09370        47   48495,05152,0246810,   R.                                     10082 M7 M8M9N 0N1N2
+09380        53   54555,65758,0246810,                                          10094 N3 N4N5N 6N7N8
+09390        59   62636,46566,0246810,                                          10106 N9 O2O3O 4O5O6
+09400        67   68697,07172,0246810,                                          10118 O7 O8O9P 0P1P2
+09410        73   74757,67778,0246810,                                          10130 P3 P4P5P 6P7P8
+09420        79   70700,00000,0246810,                                          10142 P9 P0P0- 0-0-0
+09430*
+09440*            USERS INSERT AND
+09450*            PRINT OUT ROUTINE
+09460*            ENTERED VIA BRANCH
+09470*            IN THE INSERT AREA
+09480*
+09490*            FOR 52 CHAR SET BAR ONLY
+09500*            FOR ALL PRINT HAMMERS
+09510*            TO FIRE ON THE 1443
+09520*            MODE = WA
+09530*            MSGE = RELEASE AND START
+09540*
+09550 MAN    TFM  ST+6,*,,       RESTART                                        10154 16 00554 J0154
+09560        K    ,0971,,        NEW PAGE                                       10166 34 00000 00971
+09570        TR   PNT-1,RST1,,   RST PRINT AREA                                 10178 31 11642 11344
+09580        TR   PNT+99,MESS-1,,INSERT TITLE                                   10190 31 11742 10934
+09590        K    ,0943,,        SKIP AFTER PRINT                               10202 34 00000 00943
+09600        BTM  WAPTR,*+12,,   BRCH TO PRINT                                  10214 17 08464 J0226
+09610        TR   PNT-1,RST1,,   RST PRINT AREA                                 10226 31 11642 11344
+09620        TR   PNT-001,WCAH-2,,                                              10238 31 11642 11144
+09630        TR   PNT+103,WCAH-1,,INSERT SPECIAL CASE                           10250 31 11746 11144
+09640        TR   PNT+207,WCAH-1,,                                              10262 31 11850 11144
+09650 REP    RCTY                                                               10274 34 00000 00102
+09660        WATY MODE,,,                                                       10286 39 10965 00100
+09670        RCTY ANS,,,         ACCEPT ANSWER                                  10298 37 11135 00100
+09680        BC3  *-12,,,        SW 3 OOPS                                      10310 46 10298 00300
+09690        SF   ANS-1,,,                                                      10322 32 11134 00000
+09700        TFM  P1+1,36,10,    RN                                             10334 16 10515 000L6
+09710        CM   ANS+2,4455,8,  CHK DN                                         10346 14 11137 0M455
+09720        BNE  *+36                                                          10358 47 10394 01200
+09730        TFM  P+1,35,10,                                                    10370 16 10539 000L5
+09740        B    NXT                                                           10382 49 10466 00000
+09750        CM   ANS+2,6655,8,  CHK WN                                         10394 14 11137 00655
+09760        BNE  *+36                                                          10406 47 10442 01200
+09770        TFM  P+1,38,10,                                                    10418 16 10539 000L8
+09780        B    NXT                                                           10430 49 10466 00000
+09790        TFM  P+1,39,10,     WA                                             10442 16 10539 000L9
+09800        TFM  P1+1,37,10,    RA                                             10454 16 10515 000L7
+09810 NXT    RCTY                                                               10466 34 00000 00102
+09820        WATY REQT,,,        REQUEST                                        10478 39 11021 00100
+09830        H                                                                  10490 48 00000 00000
+09840        RCTY                                                               10502 34 00000 00102
+09850 P1     99   PNT,00100,,    ACCEPT                                         10514 99 11643 00100
+09860        BC3  *-12,,,        SW 3 OOPS SWITCH                               10526 46 10514 00300
+09870 P      99   PNT,0900,,     PRINT                                          10538 99 11643 00900
+09880        BNI  *+24,1900,,    ANY DATA CHK                                   10550 47 10574 01900
+09890        BTM  ERR,*+12,,     ERR SUBROUT                                    10562 17 08650 J0574
+09900        BNI  *+24,3400,,    END OF PAGE                                    10574 47 10598 03400
+09910        K    ,0972,,        NEXT PAGE                                      10586 34 00000 00972
+09920        BC2  P,,,           SW 2 ON REPEAT                                 10598 46 10538 00200
+09930        BC4  REP,,,         SW 4 ON NEW MSSGE                              10610 46 10274 00400
+09940        TFM  ST+6,ST+12,,   LOAD RESTART                                   10622 16 00554 -0560
+09950        H                                                                  10634 48 00000 00000
+09960        B    ST,,,          RETURN                                         10646 49 00548 00000
+09970*
+09980*
+09990*            1443 WORST CASE BUFFER PATTERN TEST
+10000*            THIS ROUTINE IS ENTERED VIA BRANCHC
+10010*            INSTRUCTION IN THE INSERT AREA.
+10020*            THIS ROUTINE ALLOWS THE USER TO SET
+10030*            THE 1443 BUFFER VOLTAGES.
+10040*
+10050 WORST  TFM  ST+6,*,,       SET RESTART                                    10658 16 00554 J0658
+10060        K    ,0971,,        NEW PAGE                                       10670 34 00000 00971
+10070        TR   PNT-1,RST1,,   RESET PRINT AREA                               10682 31 11642 11344
+10080        TR   PNT+99,WRST1-1,,INSERT TITLE                                  10694 31 11742 11250
+10090        K    ,0943,,        SKIP AFTER PRINT                               10706 34 00000 00943
+10100        BTM  WAPTR,*+12,,   GO PRINT                                       10718 17 08464 J0730
+10110        TR   PNT-1,RST1,,   RESET PRINT AREA                               10730 31 11642 11344
+10120        TFM  *+18,PNT-1                                                    10742 16 10760 J1642
+10130        TR   99999,WRST2,,  GENERATE                                       10754 31 99999 11302
+10140        AM   *-6,40,10,     WORST CASE                                     10766 11 10760 000M0
+10150        CM   *-18,PNT+359,, BUFFER                                         10778 14 10760 J2002
+10160        BNE  *-36,,,              PATTERN                                  10790 47 10754 01200
+10170        BTM  WAPTR,*+12,,   PRINT LINE                                     10802 17 08464 J0814
+10180        WA   PNT+20,900,,   PRINT COMPLEMENT                               10814 39 11663 00900
+10190        BI   *,2500,,       WAIT FOR BUSY                                  10826 46 10826 02500
+10200        BNI  *+24,1900,,    CHK FOR ERROR                                  10838 47 10862 01900
+10210        BTM  ERR,*+12                                                      10850 17 08650 J0862
+10220        BNI  *+24,3400,,     CHK END OF PAGE                               10862 47 10886 03400
+10230        K    ,971                                                          10874 34 00000 00971
+10240        BC2  *-84,,,        SW 2 ON LOOP                                   10886 46 10802 00200
+10250        TFM  ST+6,ST+12                                                    10898 16 00554 -0560
+10260        H                                                                  10910 48 00000 00000
+10270        B    ST                                                            10922 49 00548 00000
+10280*
+10290*            CONSTANTS AND TYPEOUTS
+10300*
+10310 MESS   DAC  15,USERS MESSAGE @                                            10935 00030
+10320 MODE   DAC  28,KEY IN PRINT MODE DN,WN,WA @                               10965 00056
+10330 REQT   DAC  27,PRESS START,KEY IN MSGE,MAX                                11021 00054
+10340        DAC  30, OF 144 CHAR.,TERM. WITH A RM@                             11075 00060
+10350 ANS    DAC  05,XXXXX,,     ANSWER                                         11135 00010
+10360 WCAH   DAC  27,+-1/AJ2SBK3TCL4UDM5VEN6WF07                                11145 00054
+10370        DAC  19,XGP8YHQ9ZIR0   =,.$                                        11199 00038
+10380        DSC  02,34                                                         11236 00002
+10390        DAC  06,()*  @                                                     11239 00012
+10400 WRST1  DAC  26,WORST CASE BUFFER PATTERN@                                 11251 00052
+10410 WRST2  DSC  42,66666659596666665966595959666659595966590@                 11032 00042
+10420 RST1   DSC  45,0,,         R                                              11344 00045
+10430        DSC  50,0,,           E                                            11389 00050
+10440        DSC  50,0,,         P   S                                          11439 00050
+10450 RST2   DSC  45,0,,           R   E                                        11489 00045
+10460        DSC  50,0,,             I   T                                      11534 00050
+10470        DSC  50,0,,               N                                        11584 00050
+10480        DSC  02,@,,                 T                                      11634 00002
+10490        DC   05,0,,                                                        11640 00005
+10500 PNT    DAC  01, ,,         PRINT AREA                                     11643 00002
+10510        DS   500                                                           12143 00500
+10520        DC   01,9,,                                                        12145 00002
+10530 INV    DC   04,0,,         READ AREA INVLD CHAR                           12149 00004
+10540        DS   200                                                           12349 00200
+10550*            IF MONITOR LOAD,READ INVALID CHAR
+10560 DIPAL  TFM  18,START                                                      12350 16 00018 -0500
+10570        BNR  START,MON                                                     12362 45 00500 18117
+10580        RACD 16000                                                         12374 37 16000 00500
+10590        BI   *+12,1600                                                     12386 46 12398 01600
+10600        BI   *+12,1700                                                     12398 46 12410 01700
+10610        BI   *+12,0600                                                     12410 46 12422 00600
+10620        TR   DCF,19880                                                     12422 31 12602 19880
+10630        AM   DCF+5,180                                                     12434 11 12607 -0180
+10640        TFM  DCF+8,001,9                                                   12446 16 12610 00-01
+10650        TFM  DCF+13,16000                                                  12458 16 12615 J6000
+10660        SK   DCF,701                                                       12470 34 12602 00701
+10670        38   DCF,702                                                       12482 38 12602 00702
+10690        TR   16000,DIPAL                                                   12494 31 16000 12350
+10700        BI   *+12,0600                                                     12506 46 12518 00600
+10710        BI   *+12,0700                                                     12518 46 12530 00700
+10720        BI   *+12,1600                                                     12530 46 12542 01600
+10730        BI   *+12,1700                                                     12542 46 12554 01700
+10740        TF   BYPTO-49,RDSK+11                                              12554 26 00763 12601
+10750        TFM  DCF+13,INV-1                                                  12566 16 12615 J2148
+10760        B    MONIT                                                         12578 49 18000 00000
+10770 RDSK   36   DCF,702,0                                                     12590 L6 12602 00702
+10780 DCF    DSC  15,@                                                          12602 00015
+10790 LALAB  DC   01,0                                                          12617 00001
+10800        DEND DIPAL,,,       END  END  END                                  12350
+||||
