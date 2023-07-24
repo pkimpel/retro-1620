@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Build Odd Parity Tables</title>
+</head>
+<body>
+<script>
+
+function parity(c) {
+    /* Compute even parity over six bits. Returns the original code
+    with the parity bit inserted in the 6th bit */
+
+    let p = (c & 1) ^ ((c >>> 1) & 1) ^ ((c >>> 2) & 1) ^
+            ((c >>> 3) & 1) ^ ((c >>> 4) & 1) ^ 1;
+    return (c & 0b011111) | (p << 5);
+}
+
+function pic9n(v, n) {
+    /* Formats a value padded with leading zeroes to length "n" */
+    let text = v.toString();
+
+    if (text.length > n) {
+        text = text.substring(-n);
+    } else {
+        while (text.length < n) {
+            text = "0" + text;
+        }
+    }
+    return text;
+}
+
+
+document.write("<h3>Build Odd Parity Table</h3>");
+
+// Build the odd parity codes
+document.write("<pre>");
+for (let c=0; c<64; ++c) {
+    document.write("0b" + pic9n(parity(c).toString(2), 6) + ",\n");
+}
+document.write("</pre>");
+
+</script>
+</body>
+</html>

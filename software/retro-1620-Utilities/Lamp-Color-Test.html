@@ -1,0 +1,72 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>Incandescent Lamp Glow-Color Test</title>
+<style>
+HTML {
+    height:             100%}
+BODY {
+    position:           relative;
+    height:             100%}
+
+#OuterBox {
+    position:           absolute;
+    width:              60%;
+    height:             25%;
+    left:               50%;
+    top:                50%;
+    transform:          translate(-50%, -50%);
+    background-color:   #3576BA}
+
+#InnerBorder {
+    position:           absolute;
+    top:                32px;
+    bottom:             32px;
+    left:               32px;
+    right:              32px;
+    background-color:   #222}
+
+#Pallette {
+    position:           absolute;
+    top:                2px;
+    bottom:             2px;
+    left:               2px;
+    right:              2px;
+    background-image:   linear-gradient(to right, #FE9, #986 67%, #666)}
+
+#Box1, #Box2, #Box3, #Box4, #Box5 {
+    position:           absolute;
+    top:                0;
+    bottom:             0;
+    width:              5px;
+    transform:          translate(-50%, 0);
+    border:             1px solid black}
+#Box1 {
+    left:               89px}
+#Box2 {
+    left:               178px}
+#Box3 {
+    left:               268px}
+#Box4 {
+    left:               357px}
+#Box5 {
+    left:               446px}
+</style>
+</head>
+
+<body>
+<div id=OuterBox>
+    <div id=InnerBorder>
+        <div id=Pallette>
+            <div id=Box1></div>
+            <div id=Box2></div>
+            <div id=Box3></div>
+            <div id=Box4></div>
+            <div id=Box5></div>
+            <div id=Box6></div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
