@@ -1,3 +1,50 @@
+
+
+
+  (ID)  **DT0043  1620 1443 DIAGNOSTIC
+        *LIST PRINTER
+        *PRINT SYMBOL TABLE
+
+
+
+DT0043  1620 1443 DIAGNOSTIC                                                      PAGE   1
+
+WAPTR1 08512    TIMDLY 05860    INVSUM 01791    INDRST 01997     ALPHA 06379
+ ANS   11135     BO    04556     BUF   04980     BYPTO 00812     B1    04580
+ B2    04592     B3    04604     CARR  02164     CH    03017     CH1   04412
+ CIM   03129     CMPLT 07631     CNT   05842     CRSZ  07662     CS    07230
+ DATA  01315     DAT1  01406     DCF   12602     DIPAL 12350     DNR   07050
+ ERG   05747     ERR   08650     ER1   02029     ER10  03345     ER11  04869
+ ER12  04925     ER13  04277     ER14  04329     ER2   02081     ER3   02123
+ ER4   05565     ER5   05613     ER6   05663     ER7   03027     ER8   03083
+ ER9   03287     ETO   09064     EX1   02957     EX2   04171     FER   05539
+ FORCE 04986     F1    07020     F2    07046     GEN   08338     GM    01342
+ G1    08422     H10   03726     H5    03462     H6    03558     H7    03522
+ H8    03546     H9    03714     IMSP  03153     IND   01792     INV   12149
+ J1    05394     J10   02584     J2    05370     J3    05154     J4    05058
+ J5    02236     J6    02344     J7    02296     J8    02320     J9    02560
+ LALAB 12617     MAN   10154     MESS  10935     MIMII 01346     MODE  10965
+ MODII 01442     MON   18117     MONIT 18000     M2    01622     NAM   00981
+ NORM  01243     NUM   06999     NXT   10466     P     10538     PFLD  01755
+ PNT   11643     PROG  01281     PR1   10041     PR2   10045     PTRDY 01037
+ PTSP  04407     P1    10514     QFLD  01773     RANCH 10046     RCP   09554
+ RCP1  09626     RCP2  09650     RCP3  09662     RCP4  09830     RDSK  12590
+ REF   03255     REP   10274     REQT  11021     RG    07748     RG1   07796
+ RM    06376     RST1  11344     RST2  11489     RTR   07664     R1    06004
+ R2    06232     R3    06776     R4    07242     R5    07458     SAP   04383
+ SGR   01147     SKIP  03390     SP    03159     SPP   04235     SP1   03201
+ SS    04823     ST    00548     START 00500     S1    05852     TC    08094
+ TERR  07969     TEUM  08033     TT1   05721     TT2   02897     TT3   04099
+ TT4   04749     TT5   06341     TT6   06969     TT7   07603     TT8   07917
+ TT9   09987     WAP   06136     WAPTR 08464     WAR   05920     WCAH  11145
+ WNR   06668     WORST 10658     WRST1 11251     WRST2 11302     Y1    09046
+ Y2    09136     Y3    09124     Z1    09173     Z10   09405     Z11   09433
+ Z12   09469     Z13   09497     Z14   09525     Z2    09201     Z3    09229
+ Z5    09261     Z6    09287     Z7    09313     Z8    09341     Z9    09373
+
+
+DT0043  1620 1443 DIAGNOSTIC                                                      PAGE   1
+
 00010*
 00020*               DT  0043
 00030*         DIAGNOSTIC TEST FOR
@@ -1079,3 +1126,8 @@
 10780 DCF    DSC  15,@                                                           12602 00015
 10790 LALAB  DC   01,0                                                           12617 00001
 10800        DEND DIPAL,,,       END  END  END                                   12350
+
+12618
+      CORE POSITIONS REQUIRED
+01081
+      STATEMENTS PROCESSED
