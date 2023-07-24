@@ -69,7 +69,7 @@ class SystemConfig {
             greenBar: 1,
             lpm: 0,
             columns: 120,
-            carriageControl: {formLength: 66, skipChannel: [1]}
+            carriageControl: {formLength: 0, channelSpecs: {"1": 0b111111111111}}
         },
 
         Disk: {
@@ -204,12 +204,29 @@ class SystemConfig {
             // Reserved for future use
         }
 
-        if ("compareDisable" in this.configData.Disk) {         // removed 2023-06-25
-            delete this.configData.Disk.compareDisable;
-        }
+        // Delete/modify obsolete configuration properties.
         if ("units" in this.configData.Disk) {                  // renamed 2023-06-10
             this.configData.Disk.module = this.configData.Disk.units;
             delete this.configData.Disk.units;
+            this.flush();
+        }
+        if ("compareDisable" in this.configData.Disk) {         // removed 2023-06-25
+            delete this.configData.Disk.compareDisable;
+            this.flush();
+        }
+        if ("carriageControl" in this.configData.Printer) {     // changed 2023-07-14
+            const cc = this.configData.Printer.carriageControl;
+            if (cc.formLength == 66) {
+                cc.formLength = 0;
+                this.flush();
+            }
+            if (Array.isArray(cc.skipChannel)) {
+               if (cc.skipChannel.length == 1 && cc.skipChannel[0] == 1) {
+                   delete cc.skipChannel;
+                   cc.channelSpecs = {"1": 0b111111111111};     // all channels at top-of-form
+                   this.flush();
+               }
+            }
         }
 
         // Recursively merge any new properties from the defaults.
@@ -469,7 +486,7 @@ class SystemConfig {
         this.setListValue("PrinterModel", cd.Printer.lpm);
         this.setListValue("PrinterColumns", cd.Printer.columns);
         this.$$("PrinterColumns").disabled = !cd.Printer.hasPrinter;
-        this.$$("CarriageControlText").textContent = JSON.stringify(cd.Printer.carriageControl);
+        this.$$("CarriageControlText").textContent = JSON.stringify(cd.Printer.carriageControl).replace(/,/g, ", ");
         this.$$("CarriageControlText").style.display = (cd.Printer.hasPrinter ? "inline" : "none");
 
         // Disk
@@ -655,7 +672,7 @@ class SystemConfig {
         this.window = null;
         this.configReporter = configReporter;
         openPopup(window, "../webUI/SystemConfig.html", `retro-1620.${SystemConfig.configStorageName}`,
-                "location=no,scrollbars,resizable,width=544,height=800",
+                "location=no,scrollbars,resizable,width=640,height=800",
                 this, configUI_Load);
     }
 } // SystemConfig class

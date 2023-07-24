@@ -62,6 +62,16 @@
     top:                12px;
     left:               112px;
     width:              auto}
+#CCLoadBtn {
+    position:           absolute;
+    top:                20px;
+    right:              0;
+    font-size:          10px;
+    font-weight:        bold;
+    background-color:   #CCC;
+    border:             1px solid black;
+    border-radius:      6px;
+    box-shadow:         inset 2px 2px 2px #333}
 
 #PowerLamp {
     left:               16px;
@@ -119,3 +129,48 @@
     width:              100%;
     height:             100%;
     border:             1px solid white}
+
+
+#CarriageControlDiv {
+    position:           absolute;
+    display:            none;
+    left:               50%;
+    top:                8px;
+    bottom:             8px;
+    transform:          translate(-50%, 0);
+    z-index:            10;
+    font-size:          10pt;
+    color:              black;
+    background-color:   #FFC;
+    padding:            8px;
+    overflow:           auto;
+    border:             2px solid black;
+    box-shadow:         4px 4px 4px #666}
+#CarriageControlDiv H2 {
+    margin-top:         1ex;
+    margin-bottom:      1ex;
+    font-size:          10pt}
+#CarriageControlDiv TABLE {
+    border-spacing:     0;
+    border-collapse:    collapse}
+#CarriageControlDiv TABLE>THEAD>TR>TH,
+#CarriageControlDiv TABLE>TBODY>TR>TD {
+    border:             1px solid #CCC}
+#CCControls {
+    position:           relative;
+    height:             2em;
+    width:              100%}
+#CCUseDefaultBtn {
+    position:           absolute;
+    left:               0}
+#CCFormLengthDiv {
+    position:           absolute;
+    left:               50%;
+    top:                50%;
+    transform:          translate(-50%, -50%)}
+#CCCloseBtn {
+    position:           absolute;
+    right:              0}
+#CCTapeBody TD {
+    min-width:          2ch;
+    text-align:         center}

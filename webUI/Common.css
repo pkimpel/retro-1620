@@ -13,26 +13,34 @@
 
 @font-face {
     font-family: "DejaVuSansMonoBookWeb";
+    font-weight: normal;
+    font-style: normal;
     src: url("./resources/DejaVuSansMono-webfont.woff") format("woff"),
          url("./resources/DejaVuSansMono-webfont.ttf") format("truetype");
-    font-weight: normal;
-    font-style: normal;
 }
 
 @font-face {
-    font-family: "DejaVuSansWeb";
-    src: url("./resources/DejaVuSans-webfont.woff") format("woff"),
-         url("./resources/DejaVuSans-webfont.ttf") format("truetype");
-    font-weight: normal;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: "DejaVuSansWeb";
-    src: url("./resources/DejaVuSans-Bold-webfont.woff") format("woff"),
-         url("./resources/DejaVuSans-Bold-webfont.ttf") format("truetype");
+    font-family: "DejaVuSansMonoBookWeb";
     font-weight: bold;
     font-style: normal;
+    src: url("./resources/DejaVuSansMono-Bold-webfont.woff") format("woff"),
+         url("./resources/DejaVuSansMono-Bold-webfont.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: "DejaVuSansWeb";
+    font-weight: normal;
+    font-style: normal;
+    src: url("./resources/DejaVuSans-webfont.woff") format("woff"),
+         url("./resources/DejaVuSans-webfont.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: "DejaVuSansWeb";
+    font-weight: bold;
+    font-style: normal;
+    src: url("./resources/DejaVuSans-Bold-webfont.woff") format("woff"),
+         url("./resources/DejaVuSans-Bold-webfont.ttf") format("truetype");
 }
 
 HTML {
@@ -104,14 +112,14 @@ DIV.paper {
     font-size:          12px;
     line-height:        12pt}
 DIV.printerPaper {
-    font-family:        Lucida Sans Typewriter, Consolas, Courier New, monospace; /* Can't use DejaVu Sans Mono: bad boldface spacing */
+    font-family:        DejaVuSansMonoBookWeb, monospace;
     white-space:        pre;
     margin-top:         0;
     margin-bottom:      0;
     font-size:          8pt;
     line-height:        120%}   /* 12pt? */
 DIV.topOfForm {
-    page-break-before:  always;
+    break-before:       always;
     margin-top:         1px;
     padding-top:        1px;
     border-top:         1px dashed black}
@@ -138,11 +146,6 @@ DIV.overstrikeLine {
     position:           absolute;
     top:                0;
     left:               0}
-/********** This is needed in Firefox to keep boldface characters aligned with plain ones,
-            but Chrome works properly without it */
-/* DIV.overstrikeLine B {                  Adjust for wider boldface characters -- */
-/*     letter-spacing:     -0.06ch}        this is a kludge specifically for 8pt bold DejaVuSansMono */
-/****************************************/
 
 DIV.caption {
     position:           absolute;

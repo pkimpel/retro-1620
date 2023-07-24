@@ -21,34 +21,39 @@ class WaitSignal {
 
     requested = false;                  // wait has been requested
     resolver = null;                    // function reference to signal completion
+    waitPromise = null;                 // promise we're waiting on
 
 
     /**************************************/
-    async request() {
+    request() {
         /* Constructs and waits for a Promise that resolves when this.signal()
         is called, then invalidates the signaling mechanism. The parameter to
         that function is a Boolean that is returned to the caller -- false
         indicates the wait resolved normally, true indicates the wait was canceled.
         See: https://stackoverflow.com/questions/26150232/resolve-javascript-
         promise-outside-the-promise-constructor-scope */
-        let result = true;
+        if (!this.waitPromise) {
+            let result = true;
 
-        this.requested = true;
-        result = await new Promise((resolve, reject) => {
-            this.resolver = resolve;
-        });
+            this.requested = true;
+            this.waitPromise = new Promise((resolve, reject) => {
+                this.resolver = resolve;
+            });
+        }
 
-        this.resolver = null;
-        this.requested = false;
-        return result ?? false;
+        return this.waitPromise;
     }
 
     /**************************************/
     signal(result) {
         /* Method to call signaling the wait has been completed */
 
-        if (this.requested) {
-            this.resolver(result);
+        if (this.waitPromise) {
+            const resolver = this.resolver;
+            this.resolver = null;
+            this.waitPromise = null;
+            this.requested = false;
+            resolver(result);
         }
     }
 

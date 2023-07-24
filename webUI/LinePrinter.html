@@ -33,22 +33,48 @@
     <div id=ControlsDiv class="ibmBlue">
         <div id=PowerLamp       class="annunciator annunciatorLit">POWER</div>
         <div id=ReadyLamp       class="annunciator">READY</div>
-        <div id=EndOfFormLamp   class="annunciator">END OF<br>FORM</div>
+        <div id=EndOfFormLamp   class="annunciator"
+             title="Double-click to print the paper area">END OF<br>FORM</div>
         <div id=PrintCheckLamp  class="annunciator">PRINT<br>CHECK</div>
     </div>
 
     <div id=OptionsDiv>
       <input id=GreenbarCheck type=checkbox value=1 checked>
       <label for=GreenbarCheck class="annunciator annunciatorLit">GREENBAR</label>
+      <button id=CCLoadBtn>CARRIAGE<br>CONTROL</button>
     </div>
 
     <div id=PaperDiv>
         <label id=PaperMeterCaption for=StackerBar>OUTPUT STACKER</label>
         <meter id=PaperMeter min=0 max=100 value=0
-               title="Paper stacker level. Click to clear the stacker"></meter>
+               title="Paper supply remaining. Click to clear the stacker"></meter>
         <div id=PaperFrameDiv>
             <iframe id=PaperFrame class=paper scrolling=auto src="./FramePaper.html"></iframe>
         </div>
+    </div>
+</div>
+
+<div id=CarriageControlDiv>
+    <div id=CCControls>
+        <button id=CCCloseBtn>Close</button>
+        <div id=CCFormLengthDiv>
+            Form Length: <span id=CCFormLengthSpan></span>
+        </div>
+        <button id=CCUseDefaultBtn>Use Default</button>
+    </div>
+
+    <h2>Load a JSON carriage-control tape:</h2>
+    <blockquote>
+        <input id=CCTapeSelector type=file size=60 accept=".json">
+    </blockquote>
+
+    <h2>Current carriage-control tape:</h2>
+    <table>
+    <thead>
+        <tr>
+            <th>Line<th colspan=12>Channel
+    <tbody id=CCTapeBody>
+    </table>
     </div>
 </div>
 

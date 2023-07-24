@@ -35,35 +35,41 @@ class LinePrinter {
 
     static carriageBaseTime = 45;       // minimum immediate carriage control time, ms
     static carriageExtraTime = 10;      // additional carriage control time per line, ms
+    static defaultGroupSize = 6;        // default greenbar group size (green+white) for 6 lpi
     static maxBufferSize = 197;         // maximum number of characters loaded to buffer
+    static maxCCLines = 132;            // maximum lines supported on a carriage tape
     static maxPaperLines = 150000;      // maximum printer scrollback (about a box of paper)
     static greenbarGreen = "#CFC";      // for toggling greenbar shading
 
+    static channel1Mask = 0b000000000001;
+    static channel9Mask = 0b000100000000;
+    static channel12Mask= 0b100000000000;
+
     static dumpGlyphs = [       // indexed as BCD code prefixed with flag bit: F8421
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", Envir.glyphRecMark, " ", "@", " ", " ", "G",  // 00-0F
-        "-", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "W",                " ", "*", " ", " ", "X"]; // 10-1F
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", Envir.glyphRecMark, "~", "@", "~", "~", "G",  // 00-0F
+        "-", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "W",                "~", "*", "~", "~", "X"]; // 10-1F
 
     static numericGlyphs = [    // indexed as BCD code prefixed with flag bit: F8421
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", " ", " ", " ", " ", "}",                 // 00-0F
-        "0", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", " ", " ", " ", " ", "\""];               // 10-1F
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "~", " ", "~", "~", "}",                 // 00-0F
+        "0", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "~", " ", "~", "~", "\""];               // 10-1F
 
     static alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit BCD)
-        " ", " ", " ",                ".", ")", " ", " ", " ", " ", " ", "|", " ", " ", " ", " ", "}",  // 00-0F
-        "+", " ", " ",                "$", "*", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",  // 10-1F
-        "-", "/", Envir.glyphRecMark, ",", "(", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",  // 20-2F
-        " ", " ", " ",                "=", "@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",  // 30-3F
-        " ", "A", "B",                "C", "D", "E", "F", "G", "H", "I", " ", " ", " ", " ", " ", " ",  // 40-4F
-        "-", "J", "K",                "L", "M", "N", "O", "P", "Q", "R", " ", " ", " ", " ", " ", " ",  // 50-5F
-        " ", " ", "S",                "T", "U", "V", "W", "X", "Y", "Z", " ", " ", " ", " ", " ", " ",  // 60-6F
-        "0", "1", "2",                "3", "4", "5", "6", "7", "8", "9", " ", " ", " ", " ", " ", " ",  // 70-7F
-        " ", " ", " ",                " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",  // 80-8F
-        " ", " ", " ",                " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",  // 90-9F
-        "?", "?", "?",                "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",  // A0-AF
-        "?", "?", "?",                "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",  // B0-BF
-        "?", "?", "?",                "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",  // C0-CF
-        "?", "?", "?",                "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",  // D0-DF
-        "?", "?", "?",                "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",  // E0-EF
-        "?", "?", "?",                "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"]; // F0-FF
+        " ", "~", "?",                ".", ")", "~", "~", "~", "~", "~", "|", "~", "~", "~", "~", "}",  // 00-0F
+        "+", "~", "!",                "$", "*", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // 10-1F
+        "-", "/", Envir.glyphRecMark, ",", "(", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // 20-2F
+        "~", "~", "~",                "=", "@", ":", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // 30-3F
+        "~", "A", "B",                "C", "D", "E", "F", "G", "H", "I", "~", "~", "~", "~", "~", "~",  // 40-4F
+        "-", "J", "K",                "L", "M", "N", "O", "P", "Q", "R", "~", "~", "~", "~", "~", "~",  // 50-5F
+        "~", "~", "S",                "T", "U", "V", "W", "X", "Y", "Z", "~", "~", "~", "~", "~", "~",  // 60-6F
+        "0", "1", "2",                "3", "4", "5", "6", "7", "8", "9", "~", "~", "~", "~", "~", "~",  // 70-7F
+        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // 80-8F
+        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // 90-9F
+        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // A0-AF
+        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // B0-BF
+        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // C0-CF
+        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // D0-DF
+        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // E0-EF
+        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~"]; // F0-FF
 
 
     // Public Instance Properties
@@ -74,12 +80,14 @@ class LinePrinter {
 
     atTopOfForm = false;                // start new page flag
     barGroup = null;                    // current greenbar line group
-    formFeedCount = 0;                  // counter for triple-formfeed => rip paper
+    carriageTape = [];                  // per-line skip-to-channel marker masks
+    formLength = 0;                     // form length for carriage control (0=>simple CC)
     groupLinesLeft = 0;                 // lines remaining in current greenbar group
     lastLineDiv = null;                 // <div> of last non-overstruck line
-    linesRemaining = 0;                 // print lines remaining before end-of-paper
-    lpi = 6;                            // lines per inch (actually, lines per bar group)
+    lineNr = 0;                         // current print line number (0-relative)
+    lpi = LinePrinter.defaultGroupSize; // lines per inch (actually, lines per bar group)
     overstrike = false;                 // true if next line is to be overstruck with last
+    supplyRemaining = 0;                // print lines remaining before end-of-paper
     useGreenBar = 0;                    // != 0 => do greenbar formatting
 
     paperDoc = null;                    // the content document for the paper frame
@@ -103,9 +111,11 @@ class LinePrinter {
         this.linesPerMinute = this.config.getNode("Printer.lpm");
         this.linePeriod = 60000/this.linesPerMinute;
         this.columns = this.config.getNode("Printer.columns");
-        this.carriageControl = this.config.getNode("Printer.carriageControl");
-        this.formLength = this.carriageControl.formLength;
+        this.createCarriageControl(this.config.getNode("Printer.carriageControl"));
+
         this.boundControlClick = this.controlClick.bind(this);
+        this.boundEndOfFormClick = this.endOfFormClick.bind(this);
+        this.boundLoadCarriageControl = this.loadCarriageControl.bind(this);
 
         this.waitForBuffer = new WaitSignal();
         this.waitForCarriage = new WaitSignal();
@@ -138,9 +148,9 @@ class LinePrinter {
         this.printCheckPending = false; // true if a printer check has been detected
         this.bufferReady = false;       // printer buffer is ready to be printed
         this.bufferOffset = 0;          // offset into the print buffer
-        this.printBuffer = "";          // line data received from Processor
-        this.nextPrintStamp = 0;        // timestamp when the next physical print can initiate
         this.carriageCode = 0;          // carriage control code from control() call
+        this.printBuffer = "";          // line data received from Processor
+        this.printReadyDelay = 0;       // time until printer becomes ready again, ms
         this.suppressSpacing = 0;       // truthy if spacing should be suppressed for current write
     }
 
@@ -162,6 +172,7 @@ class LinePrinter {
             this.processor.setIndicator(35);
         } else {
             this.processor.resetIndicator(35);
+            this.waitForBuffer.signal(false);   // tell 'em it's ready
         }
     }
 
@@ -184,7 +195,7 @@ class LinePrinter {
         /* Controls the ready state of the printer mechanism */
 
         if (ready && !this.carriageReady) {
-            if (this.linesRemaining > 0) {
+            if (this.supplyRemaining > 0) {
                 this.carriageReady = true;
             }
         } else if (this.carriageReady && !ready) {
@@ -304,6 +315,13 @@ class LinePrinter {
     }
 
     /**************************************/
+    endOfFormClick(ev) {
+        /* Handler for double-clicking the END OF FORM lamp and printing the paper area */
+
+        this.paperFrame.contentWindow.print();
+    }
+
+    /**************************************/
     unloadStacker() {
         /* Copies the text contents of the output stacker of the device, opens a
         new temporary window, and pastes that text into the window so it can be
@@ -318,9 +336,9 @@ class LinePrinter {
 
             doc.title = title;
             win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
-            content.textContent = this.paper.textContent;
+            content.textContent = this.paper.textContent.replace(/[\u2021]/g, "|");     // record mark
             this.paper.textContent = "";
-            this.linesRemaining = LinePrinter.maxPaperLines;
+            this.supplyRemaining = LinePrinter.maxPaperLines;
             this.paperMeter.value = LinePrinter.maxPaperLines;
             this.$$("EndOfFormLamp").classList.remove("annunciatorLit");
             this.setCarriageReady(true);
@@ -331,6 +349,132 @@ class LinePrinter {
         openPopup(this.window, "./FramePaper.html", "",
                 "scrollbars,resizable,width=660,height=500",
                 this, exportStacker);
+    }
+
+    /**************************************/
+    createCarriageControl(cc) {
+        /* Creates the carriage control properties from the config structure */
+
+        this.formLength = Math.min(cc.formLength, LinePrinter.maxCCLines);
+        if (this.formLength == 0) {
+            this.carriageTape = [0b111111111111];       // all channels at top of page
+        } else {
+            this.carriageTape = new Array(this.formLength);
+            this.carriageTape.fill(0);
+            for (let lineKey in cc.channelSpecs) {
+                const lineNr = parseInt(lineKey, 10);
+                if (!isNaN(lineNr) && lineNr > 0 && lineNr <= this.formLength) {
+                    const mask = parseInt(cc.channelSpecs[lineKey], 10);
+                    if (!isNaN(mask)) {
+                        this.carriageTape[lineNr-1] = mask;
+                    }
+                }
+            }
+        }
+    }
+
+    /**************************************/
+    loadCarriageControl(ev) {
+        /* Enables the CarriageControl Div overlay to view or select a CC tape file */
+
+        const closeLoad = (ev) => {
+            /* Unwires the local events and closes the load panel */
+
+            this.$$("CCUseDefaultBtn").removeEventListener("click", useDefaultCC);
+            this.$$("CCCloseBtn").removeEventListener("click", closeLoad);
+            this.$$("CCTapeSelector").removeEventListener("change", initiateCCTapeLoad);
+            this.$$("CCTapeSelector").value = null;     // reset the file-picker control
+            this.$$("CarriageControlDiv").style.display = "none";
+        };
+
+        const formatCCTape = () => {
+            /* Formats the current this.formLength and this.carriageTape data */
+            const body = this.$$("CCTapeBody");
+
+            this.$$("CCFormLengthSpan").textContent = this.formLength;
+            body.innerHTML = "";
+            const maxLines = Math.max(Math.min(this.formLength, this.carriageTape.length), 1);
+            for (let x=0; x<maxLines; ++x) {
+                const row = this.doc.createElement("tr");
+                let cell = this.doc.createElement("td");
+                cell.textContent = x+1;
+                row.appendChild(cell);
+                let mask = this.carriageTape[x];
+                for (let ch=1; ch<=12; ++ch) {
+                    cell = this.doc.createElement("td");
+                    cell.textContent = (mask & 1) ? ch : "\xA0";        // &nbsp;
+                    row.appendChild(cell);
+                    mask >>= 1;
+                }
+
+                body.appendChild(row);
+            }
+        };
+
+        const exportCarriageTape = () => {
+            /* Reformats the this.carriageTape line array as a carriageSpecs
+            object for SystemConfig storage */
+            const carriageSpecs = {};
+
+            for (let x=0; x<this.carriageTape.length; ++x) {
+                if (this.carriageTape[x]) {
+                    carriageSpecs[(x+1).toString()] = this.carriageTape[x];
+                }
+            }
+
+            return carriageSpecs;
+        };
+
+        const useDefaultCC = () => {
+            /* Applies a default carriage-control tape: top-of-form only */
+            const cc = {formLength:0}
+
+            this.$$("CCTapeSelector").value = null;
+            this.createCarriageControl(cc);
+            cc.channelSpecs = exportCarriageTape();
+            this.config.putNode("Printer.carriageControl", cc);
+            formatCCTape();
+        };
+
+        const initiateCCTapeLoad = (ev) => {
+            /* Handle the <input type=file> onchange event when a file is selected
+            to initiate a carriage-control tape load */
+
+            const fileLoader_onLoad = (ev) => {
+                /* Handle the onLoad event for a Text FileReader and pass the text
+                of the file to the processsor for loading into memory */
+                let cc = null;
+
+                try {
+                    cc = JSON.parse(ev.target.result);
+                    if ("formLength" in cc) {
+                        this.formLength = parseInt(cc.formLength, 10);
+                        if (!isNaN(this.formLength) && this.formLength >= 0) {
+                            this.createCarriageControl(cc);
+                            formatCCTape();
+                            this.config.putNode("Printer.carriageControl", {
+                                formLength: this.formLength,
+                                channelSpecs: exportCarriageTape()
+                            });
+                        }
+                    }
+                } catch (e) {
+                    this.window.alert(`Invalid JSON file: ${e}`);
+                }
+            };
+
+            const reader = new FileReader();
+            reader.onload = fileLoader_onLoad;
+            reader.readAsText(ev.target.files[0]);
+        };
+
+        if (!this.carriageReady) {
+            this.$$("CarriageControlDiv").style.display = "block";
+            this.$$("CCTapeSelector").addEventListener("change", initiateCCTapeLoad);
+            this.$$("CCCloseBtn").addEventListener("click", closeLoad);
+            this.$$("CCUseDefaultBtn").addEventListener("click", useDefaultCC);
+            formatCCTape();
+        }
     }
 
     /**************************************/
@@ -400,7 +544,7 @@ class LinePrinter {
         this.paperMeter.value = LinePrinter.maxPaperLines;
         this.paperMeter.max = LinePrinter.maxPaperLines;
         this.paperMeter.low = LinePrinter.maxPaperLines*0.02;
-        this.linesRemaining = LinePrinter.maxPaperLines;
+        this.supplyRemaining = LinePrinter.maxPaperLines;
 
         this.window.addEventListener("beforeunload", this.beforeUnload);
         this.startBtn.addEventListener("click", this.boundControlClick);
@@ -410,6 +554,8 @@ class LinePrinter {
         this.carriageSpaceBtn.addEventListener("click", this.boundControlClick);
         this.$$("GreenbarCheck").addEventListener("click", this.boundControlClick);
         this.paperMeter.addEventListener("click", this.boundControlClick);
+        this.$$("EndOfFormLamp").addEventListener("dblclick", this.boundEndOfFormClick);
+        this.$$("CCLoadBtn").addEventListener("click", this.boundLoadCarriageControl);
 
         this.setCarriageReady(true);
 
@@ -419,18 +565,19 @@ class LinePrinter {
             this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
         }
 
-        //setTimeout(() => {
-        //    this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        //}, 250);
+        // Adjust the top margin and padding on the paper area.
+        const paperBody = this.paperFrame.contentDocument.getElementById("PaperBody");
+        paperBody.style.marginTop = 0;
+        paperBody.style.paddingTop = 0;
     }
 
     /**************************************/
-    determineCarriageControl() {
+    determineCarriageControl(carriageCode) {
         /* Determines the type of carriage control that should be applied to the
         current print line. Returns a triplet with line space, channel skip, and
         a before (immediate) action flag */
-        const digit1 = this.carriageCode >> 6;
-        const digit2 = this.carriageCode & 0x0F;
+        const digit1 = (carriageCode >> Register.digitBits) & Register.bcdMask;
+        const digit2 = carriageCode & Register.bcdMask;
         let space = 1;                  // single-spacing by default
         let skip = 0;                   // no channel skip (overrides spacing) by default
         let before = digit1 & 1;        // carriage control before/after print
@@ -548,20 +695,13 @@ class LinePrinter {
     appendLine(text) {
         /* Appends one line to the current greenbar group, this.barGroup.
         This handles top-of-form and greenbar highlighting */
-        var skip = "";
 
         if (this.groupLinesLeft <= 0) {
             // Start the green half of a greenbar group
             this.barGroup = this.doc.createElement("div");
             this.paper.appendChild(this.barGroup);
             this.groupLinesLeft = this.lpi;
-            if (!this.atTopOfForm) {
-                this.barGroup.className = "printerPaper greenBar";
-            } else {
-                skip = "\f";               // prepend a form-feed to the line
-                this.atTopOfForm = false;
-                this.barGroup.className = "printerPaper greenBar topOfForm";
-            }
+            this.barGroup.className = "printerPaper greenBar";
         } else if (this.groupLinesLeft*2 == this.lpi) {
             // Start the white half of a greenbar group
             this.barGroup = this.doc.createElement("div");
@@ -569,17 +709,82 @@ class LinePrinter {
             this.barGroup.className = "printerPaper whiteBar";
         }
 
-        const lineText = ((skip + text) || "\xA0") + "\n";
+        //console.debug(`LinePrinter appendLine: #${this.lineNr}, TOF=${this.atTopOfForm}, OS=${this.overstrike}, mask=${this.carriageTape[this.lineNr]}`);
+        let lineText = text + "\n";
         if (this.overstrike && this.lastLineDiv) {
             this.overstrikeBoldly(lineText);
             this.overstrike = false;
         } else {
             const lineDiv = this.doc.createElement("div");
+            if (this.atTopOfForm) {
+                this.atTopOfForm = false;
+                lineDiv.className = "topOfForm";
+                lineText = "\f" + lineText;
+            }
+
             lineDiv.appendChild(this.doc.createTextNode(lineText));
             this.barGroup.appendChild(lineDiv);
             this.lastLineDiv = lineDiv;
             --this.groupLinesLeft;
-            --this.linesRemaining;
+            --this.supplyRemaining;
+            if (this.formLength) {
+                ++this.lineNr;
+                if (this.lineNr >= this.formLength) {
+                    this.atTopOfForm = true;
+                    this.lineNr = 0;
+                }
+
+                const chan = this.carriageTape[this.lineNr];
+                if (chan & LinePrinter.channel1Mask) {  // channel 1: reset ch. 9 & 12
+                    this.setChannel9(false);
+                    this.setChannel12(false);
+                } else {
+                    if (chan & LinePrinter.channel9Mask) {
+                        this.setChannel9(true);
+                    }
+                    if (chan & LinePrinter.channel12Mask) {
+                        this.setChannel12(true);
+                    }
+                }
+            }
+        }
+    }
+
+    /**************************************/
+    skipToChannel(skip, linesIncluded) {
+        /* Handles the details of a skip-to-channel operation. If no form length
+        is defined, we ignore the skip channel number and just space to the end
+        of the current greenbar group. The first "linesIncluded" lines do not
+        increase the carriage motion time */
+
+        if (this.formLength == 0) {             // use simple carriage control
+            const skipLines = this.groupLinesLeft;
+            while (this.groupLinesLeft > 0) {
+                this.appendLine("");
+            }
+
+            this.atTopOfForm = true;
+            this.supplyRemaining -= skipLines;
+            if (skipLines > linesIncluded) {
+                this.printReadyDelay += LinePrinter.carriageExtraTime*(skipLines-linesIncluded);
+            }
+        } else {
+            const channelMask = 1 << (skip-1);  // create channel bit mask
+            let slewCount = this.formLength*2;  // runaway slew line counter
+            do {
+                this.appendLine("");
+                if (linesIncluded > 0) {
+                    --linesIncluded;
+                } else {
+                    this.printReadyDelay += LinePrinter.carriageExtraTime;
+                }
+
+                --slewCount;
+                if (slewCount <= 0) {
+                    this.setCarriageReady(false);       // runaway skip-to-channel slew
+                    break;
+                }
+            } while (!(this.carriageTape[this.lineNr] & channelMask));
         }
     }
 
@@ -600,16 +805,10 @@ class LinePrinter {
         } else {
             this.overstrike = false;            // next line will print after carriage control
             if (skip) {
-                while (this.groupLinesLeft > 0) {
-                    this.appendLine("");
-                }
-
-                this.atTopOfForm = true;
-                this.linesRemaining -= 20;      // estimated
-                this.nextPrintTime += LinePrinter.carriageExtraTime*20; // estimated
+                this.skipToChannel(skip, 2);
             } else {
                 if (space > 2) {
-                    this.nextPrintTime += LinePrinter.carriageExtraTime*(space-2);
+                    this.printReadyDelay += LinePrinter.carriageExtraTime*(space-2);
                 }
 
                 while (space > 1) {
@@ -622,12 +821,15 @@ class LinePrinter {
         }
 
         this.paper.scrollIntoView(false);       // keep last line in view
+        if (this.supplyRemaining <= 0) {
+            this.setCarriageReady(false);
+            this.$$("EndOfFormLamp").classList.add("annunciatorLit");
+        }
     }
 
     /**************************************/
     async initiateLinePrinter() {
         /* Initiates the printing of the line from the buffer */
-        let now = performance.now();
 
         if (!this.carriageReady) {
             if (await this.waitForCarriage.request()) {
@@ -635,28 +837,22 @@ class LinePrinter {
             }
         }
 
-        // Wait until the next print cycle occurs.
-        let [space, skip, before] = this.determineCarriageControl();
-        //console.debug(`LinePrinter initiateLinePrinter = ${this.suppressSpacing}, s=${space}, k=${skip}, b=${before}`);
-
-        if (this.nextPrintStamp > now) {
-            await this.timer.delayFor(this.nextPrintStamp - now);
-        }
+        this.printReadyDelay = this.linePeriod; // minimum print time
+        let [space, skip, before] = this.determineCarriageControl(this.carriageCode);
+        //console.debug(`LinePrinter initiateLinePrinter = ${this.suppressSpacing}, s=${space}, k=${skip}, b=${before}: "${this.printBuffer.trimEnd()}"`);
 
         // Print the line image.
-        this.nextPrintStamp = now + this.linePeriod;  // earliest time next print can occur
         this.printLine(this.printBuffer.substring(0, this.columns).trimEnd(), space, skip);
-        this.paperMeter.value = this.linesRemaining;
+        this.paperMeter.value = this.supplyRemaining;
         if (this.printCheckPending) {
             this.setPrintCheck(true);           // leave buffer in ready state
-        } else if (this.linesRemaining <= 0) {
-            this.setCarriageReady(false);
-            this.$$("EndOfFormLamp").classList.add("annunciatorLit");
         }
 
-        this.printBuffer = "";                  // clear the internal print buffer
-        this.setPrinterBusy(false);             // buffer is ready to receive more data
-        this.waitForBuffer.signal(false);       // tell 'em it's ready
+        // Wait for printing and carriage motion before resetting Printer Busy.
+        setTimeout(() => {
+            this.printBuffer = "";              // clear the internal print buffer
+            this.setPrinterBusy(false);         // buffer is ready to receive more data
+        }, this.printReadyDelay);
     }
 
     /**************************************/
@@ -674,8 +870,9 @@ class LinePrinter {
 
         ++this.bufferOffset;
         if (this.bufferOffset <= this.columns && code >= 0) {
-            this.printBuffer += LinePrinter.dumpGlyphs[digit & Register.notParityMask];
-            if (Envir.oddParity5[digit] != digit) {
+            const char = LinePrinter.dumpGlyphs[digit & Register.notParityMask];
+            this.printBuffer += char;
+            if (char == "~" || Envir.oddParity5[digit] != digit) {
                 this.printCheckPending = true;
             }
         }
@@ -706,16 +903,17 @@ class LinePrinter {
 
         ++this.bufferOffset;
         if (this.bufferOffset <= this.columns && code >= 0) {
-            this.printBuffer += LinePrinter.numericGlyphs[digit & Register.notParityMask];
-            if (Envir.oddParity5[digit] != digit) {
+            const char = LinePrinter.numericGlyphs[digit & Register.notParityMask];
+            this.printBuffer += char;
+            if (char == "~" || Envir.oddParity5[digit] != digit) {
                 this.printCheckPending = true;
             }
         }
 
         if (this.bufferOffset >= LinePrinter.maxBufferSize) {
             this.setPrinterBusy(true);
-            eob = 1;
             await this.initiateLinePrinter();
+            eob = 1;
         }
 
         return eob;
@@ -741,16 +939,17 @@ class LinePrinter {
 
         ++this.bufferOffset;
         if (this.bufferOffset <= this.columns && digitPair >= 0) {
-            this.printBuffer += LinePrinter.alphaGlyphs[code];
-            if (Envir.oddParity5[even] != even || Envir.oddParity5[odd] != odd) {
+            const char = LinePrinter.alphaGlyphs[code];
+            this.printBuffer += char;
+            if (char == "~" || Envir.oddParity5[even] != even || Envir.oddParity5[odd] != odd) {
                 this.printCheckPending = true;
             }
         }
 
         if (this.bufferOffset >= LinePrinter.maxBufferSize) {
             this.setPrinterBusy(true);
-            eob = 1;
             await this.initiateLinePrinter();
+            eob = 1;
         }
 
         return eob;
@@ -781,38 +980,27 @@ class LinePrinter {
         }
 
         this.carriageCode =  code & Register.bcdValueMask;
-        let [space, skip, before] = this.determineCarriageControl();
+        let [space, skip, before] = this.determineCarriageControl(this.carriageCode);
         //console.debug(`LinePrinter control = ${this.carriageCode.toString(8)}, s=${space}, k=${skip}, b=${before}`);
 
         if (before) {                   // do immediate carriage control
             this.carriageCode = 0;      // reset the carriage control code
+            this.setPrinterBusy(true);
+            this.printReadyDelay = LinePrinter.carriageBaseTime;
+
             if (!this.carriageReady) {
                 if (await this.waitForCarriage.request()) {
                     return;             // wait canceled
                 }
             }
 
-            this.setPrinterBusy(true);
-            let now = performance.now();
-            let ccTime = LinePrinter.carriageBaseTime + LinePrinter.carriageExtraTime;
-            if (skip > 0) {
-                ccTime += LinePrinter.carriageExtraTime*20; // estimated
-            } else if (space > 1) {
-                ccTime += LinePrinter.carriageExtraTime*(space-1);
-            }
-
-            if (this.nextPrintStamp > now) {
-                await this.timer.delayFor(this.nextPrintStamp - now);
-            }
-
             if (skip) {
-                while (this.groupLinesLeft > 0) {
-                    this.appendLine("");
+                this.skipToChannel(skip, 1);
+            } else {
+                if (space > 1) {
+                    this.printReadyDelay += LinePrinter.carriageExtraTime*(space-1);
                 }
 
-                this.atTopOfForm = true;
-                this.linesRemaining -= 20;      // estimated
-            } else {
                 while (space > 0) {
                     this.appendLine("");
                     --space;
@@ -821,15 +1009,15 @@ class LinePrinter {
 
             this.overstrike = false;            // next line will always print normally
             this.paper.scrollIntoView(false);   // keep last line in view
-            this.paperMeter.value = this.linesRemaining;
-            if (this.linesRemaining <= 0) {
+            this.paperMeter.value = this.supplyRemaining;
+            if (this.supplyRemaining <= 0) {
                 this.setCarriageReady(false);
                 this.$$("EndOfFormLamp").classList.add("annunciatorLit");
             }
 
-            this.nextPrintStamp = now + ccTime;
-            this.setPrinterBusy(false);         // buffer is ready to receive more data
-            this.waitForBuffer.signal(false);   // tell 'em it's ready
+            setTimeout(() => {
+                this.setPrinterBusy(false);             // buffer is ready to receive more data
+            }, this.printReadyDelay);
         }
     }
 
@@ -837,13 +1025,8 @@ class LinePrinter {
     release () {
         /* Called by Processor to indicate the device has been released */
 
-        if (this.waitForBuffer.requested) {     // in case we've been manually released
-            this.waitForBuffer.signal(true);
-        }
-
-        if (this.waitForCarriage.requested) {    // ditto
-            this.waitForCarriage.signal(true);
-        }
+        //this.waitForBuffer.signal(true);
+        //this.waitForCarriage.signal(true);
     }
 
     /**************************************/
@@ -857,6 +1040,8 @@ class LinePrinter {
         this.carriageSpaceBtn.removeEventListener("click", this.boundControlClick);
         this.$$("GreenbarCheck").removeEventListener("click", this.boundControlClick);
         this.paperMeter.removeEventListener("click", this.boundControlClick);
+        this.$$("EndOfFormLamp").removeEventListener("dblclick", this.boundEndOfFormClick);
+        this.$$("CCLoadBtn").removeEventListener("click", this.boundLoadCarriageControl);
 
         this.config.putWindowGeometry(this.window, "LinePrinter");
         this.window.removeEventListener("beforeunload", this.beforeUnload);
