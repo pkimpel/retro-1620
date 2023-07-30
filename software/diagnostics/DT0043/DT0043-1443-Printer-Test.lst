@@ -337,7 +337,7 @@ WAPTR1 08512    TIMDLY 05860    INVSUM 01791    INDRST 01997     ALPHA 06379
 02900        DAC  09,2 SPACES@                                                   03219 00018
 02910        DAC  09,3 SPACES@                                                   03237 00018
 02920 REF    DAC  16,REFERENCE LINE @                                            03255 00032
-02930 ER9    DAC  29,CH 12 PNCH WNT TURN ON IN 34@                               03287 00058
+02930 ER9    DAC  29,CH 12 PNCH WNT TRN ON IND 34@                               03287 00058
 02940 ER10   DAC  23,IND 34 NOT RESET BY BI@                                     03345 00046
 02950*
 02960*            CARRIAGE CONTROL TEST OF
