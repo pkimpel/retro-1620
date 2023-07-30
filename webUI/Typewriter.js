@@ -351,9 +351,6 @@ class Typewriter {
         switch (key) {
         case "#":                       // treat as the R/S key
             code = -1;
-            // Print R/S unconditionally now to avoid a time race with the Processor.
-            await this.resetFlagPending(" ");
-            await this.printChar(Typewriter.RSChar, false, false);
             break;
         case "Backspace":               // treat as the CORR key
             code = -2;
@@ -365,6 +362,10 @@ class Typewriter {
         case "|":                       // treat as the record mark key
             code = key.charCodeAt(0);
             key = Envir.glyphRecMark;           // echo the correct glyph
+            break;
+        case "}":                       // treat as the group mark key
+            code = key.charCodeAt(0);
+            key = Envir.glyphGroupMark;         // echo the correct glyph
             break;
         case "Enter":                   // local carriage-return
             code = -5;
@@ -378,7 +379,7 @@ class Typewriter {
         case "Escape":                  // treat as the INSERT key
             code = -4;
             break;
-        case "}":                       // ignore these, not valid from Typewriter: group mark
+                                        // ignore these, not valid from Typewriter:
         case "!":                               // flagged record mark
         case "\"":                              // flagged group mark
         case "~":                               // flagged numeric blank
@@ -404,6 +405,10 @@ class Typewriter {
                 this.indicateKeyboardLock();
                 break;
             case -1:                    // R/S key, echo is handled above
+                await this.resetFlagPending(" ");
+                await this.printChar(Typewriter.RSChar, false, false);
+                this.processor.release();
+                this.processor.start();
                 break;
             case -2:                    // CORR key, print a struck-through space
                 await this.resetFlagPending(" ");
@@ -471,6 +476,15 @@ class Typewriter {
         /* Called by Processor to indicate the device has been released */
 
         this.platen.classList.remove("inputEnabled");
+    }
+
+    /**************************************/
+    manualRelease() {
+        /* Called by Processor to indicate the device has been released manually */
+
+        this.busy = false;              // no I/O is in progress
+        this.canceled = false;          // current I/O canceled
+        this.inputReady = true;         // typewriter is ready for input
     }
 
 

@@ -460,13 +460,19 @@ class DiskDrive {
     }
 
     /**************************************/
-    release () {
-        /* Called by Processor to indicate the device has been released */
-
+    release() {
+        /* Called by Processor to indicate the device has been released.
+        Not used with DiskDrive */
     }
 
     /**************************************/
-    diskReset () {
+    manualRelease() {
+        /* Called by Processor to indicate the device has been released manually.
+        Not used with DiskDrive */
+    }
+
+    /**************************************/
+    diskReset() {
         /* Called by Processor to indicate the device has been RESET-RELEASEd */
 
         this.driveIdle = true;

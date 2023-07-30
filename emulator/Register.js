@@ -142,7 +142,6 @@ class Register {
             this.intBinaryVal = binVal;
             this.intVal = newVal;
         }
-
     }
 
     set correctedValue(value) {
@@ -178,7 +177,6 @@ class Register {
             this.intBinaryVal = binVal;
             this.intVal = newVal;
         }
-
     }
 
     get binaryValue() {
@@ -400,7 +398,7 @@ class Register {
             this.value = BitField.fieldInsert(this.intVal, (d+1)*Register.digitBits-1, Register.digitBits,
                      this.parity ? corr : digit);
             this.parityError = (corr != digit);         // do after this.value= since it checks parity, too
-       }
+        }
 
         return this.intVal;
     }

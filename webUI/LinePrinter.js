@@ -51,7 +51,7 @@ class LinePrinter {
 
     static numericGlyphs = [    // indexed as BCD code prefixed with flag bit: F8421
         "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "~", " ", "~", "~", "}",                 // 00-0F
-        "0", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "~", " ", "~", "~", "\""];               // 10-1F
+        "-", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "~", " ", "~", "~", "\""];               // 10-1F
 
     static alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit BCD)
         " ", "~", "?",                ".", ")", "~", "~", "~", "~", "~", "|", "~", "~", "~", "~", "}",  // 00-0F
@@ -182,7 +182,7 @@ class LinePrinter {
         READY lamp */
         const wasReady = this.printerReady;
 
-        this.printerReady = this.carriageReady && !this.printCheck;
+        this.printerReady = this.carriageReady; // formerly included: && !this.printCheck;
         if (this.printerReady && !wasReady) {
             this.$$("ReadyLamp").classList.add("annunciatorLit");
         } else if (wasReady && !this.printerReady) {
@@ -212,6 +212,7 @@ class LinePrinter {
 
         if (check && !this.printCheck) {
             this.printCheck = true;
+            // Print check does not affect printerReady, was: this.setCarriageReady(false);
             this.processor.setIndicator(25);
             this.$$("PrintCheckLamp").classList.add("annunciatorLit");
         } else if (this.printCheck && !check) {
@@ -468,7 +469,7 @@ class LinePrinter {
             reader.readAsText(ev.target.files[0]);
         };
 
-        if (!this.carriageReady) {
+        if (!this.printerReady) {
             this.$$("CarriageControlDiv").style.display = "block";
             this.$$("CCTapeSelector").addEventListener("change", initiateCCTapeLoad);
             this.$$("CCCloseBtn").addEventListener("click", closeLoad);
@@ -696,30 +697,38 @@ class LinePrinter {
         /* Appends one line to the current greenbar group, this.barGroup.
         This handles top-of-form and greenbar highlighting */
 
-        if (this.groupLinesLeft <= 0) {
-            // Start the green half of a greenbar group
-            this.barGroup = this.doc.createElement("div");
-            this.paper.appendChild(this.barGroup);
-            this.groupLinesLeft = this.lpi;
-            this.barGroup.className = "printerPaper greenBar";
-        } else if (this.groupLinesLeft*2 == this.lpi) {
-            // Start the white half of a greenbar group
-            this.barGroup = this.doc.createElement("div");
-            this.paper.appendChild(this.barGroup);
-            this.barGroup.className = "printerPaper whiteBar";
-        }
-
-        //console.debug(`LinePrinter appendLine: #${this.lineNr}, TOF=${this.atTopOfForm}, OS=${this.overstrike}, mask=${this.carriageTape[this.lineNr]}`);
         let lineText = text + "\n";
         if (this.overstrike && this.lastLineDiv) {
             this.overstrikeBoldly(lineText);
             this.overstrike = false;
         } else {
+            if (this.groupLinesLeft <= 0) {
+                // Start the green half of a greenbar group
+                this.barGroup = this.doc.createElement("div");
+                this.paper.appendChild(this.barGroup);
+                this.groupLinesLeft = this.lpi;
+                this.barGroup.className = "printerPaper greenBar";
+                if (this.atTopOfForm) {
+                    this.atTopOfForm = false;
+                    this.barGroup.classList.add("topOfForm");
+                    if (this.formLength == 0) {
+                        lineText = "\f" + lineText;
+                    }
+                }
+            } else if (this.groupLinesLeft*2 == this.lpi) {
+                // Start the white half of a greenbar group
+                this.barGroup = this.doc.createElement("div");
+                this.paper.appendChild(this.barGroup);
+                this.barGroup.className = "printerPaper whiteBar";
+            }
+
             const lineDiv = this.doc.createElement("div");
             if (this.atTopOfForm) {
                 this.atTopOfForm = false;
                 lineDiv.className = "topOfForm";
-                lineText = "\f" + lineText;
+                if (this.formLength == 0) {
+                    lineText = "\f" + lineText;
+                }
             }
 
             lineDiv.appendChild(this.doc.createTextNode(lineText));
@@ -839,7 +848,6 @@ class LinePrinter {
 
         this.printReadyDelay = this.linePeriod; // minimum print time
         let [space, skip, before] = this.determineCarriageControl(this.carriageCode);
-        //console.debug(`LinePrinter initiateLinePrinter = ${this.suppressSpacing}, s=${space}, k=${skip}, b=${before}: "${this.printBuffer.trimEnd()}"`);
 
         // Print the line image.
         this.printLine(this.printBuffer.substring(0, this.columns).trimEnd(), space, skip);
@@ -981,7 +989,6 @@ class LinePrinter {
 
         this.carriageCode =  code & Register.bcdValueMask;
         let [space, skip, before] = this.determineCarriageControl(this.carriageCode);
-        //console.debug(`LinePrinter control = ${this.carriageCode.toString(8)}, s=${space}, k=${skip}, b=${before}`);
 
         if (before) {                   // do immediate carriage control
             this.carriageCode = 0;      // reset the carriage control code
@@ -1022,11 +1029,18 @@ class LinePrinter {
     }
 
     /**************************************/
-    release () {
-        /* Called by Processor to indicate the device has been released */
+    manualRelease () {
+        /* Called by Processor to indicate the device has been released manually */
 
-        //this.waitForBuffer.signal(true);
-        //this.waitForCarriage.signal(true);
+        this.waitForBuffer.signal(true);
+        this.waitForCarriage.signal(true);
+        this.setPrinterBusy(false);
+    }
+
+    /**************************************/
+    release () {
+        /* Called by Processor to indicate the device has been released.
+        Not used by LinePrinter */
     }
 
     /**************************************/

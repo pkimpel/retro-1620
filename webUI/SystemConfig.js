@@ -216,21 +216,26 @@ class SystemConfig {
         }
         if ("carriageControl" in this.configData.Printer) {     // changed 2023-07-14
             const cc = this.configData.Printer.carriageControl;
-            if (cc.formLength == 66) {
-                cc.formLength = 0;
-                this.flush();
-            }
             if (Array.isArray(cc.skipChannel)) {
                if (cc.skipChannel.length == 1 && cc.skipChannel[0] == 1) {
                    delete cc.skipChannel;
+                   cc.formLength = 0;
                    cc.channelSpecs = {"1": 0b111111111111};     // all channels at top-of-form
                    this.flush();
                }
             }
         }
 
+        // Preserve the exsiting LinePrinter channelSpecs so they don't get merged with the default.
+        let channelSpecs = Object.assign({}, this.configData?.Printer?.carriageControl?.channelSpecs);
+
         // Recursively merge any new properties from the defaults.
         this.sortaDeepMerge(this.configData, SystemConfig.defaultConfig);
+
+        // Restore the prior LinePrinter channelSpecs.
+        if (channelSpecs) {
+            this.configData.Printer.carriageControl.channelSpecs = channelSpecs;
+        }
     }
 
     /**************************************/

@@ -534,16 +534,17 @@ class CardPunch {
     }
 
     /**************************************/
-    release () {
-        /* Called by Processor to indicate the device has been released */
+    release() {
+        /* Called by Processor to initiate the device has been released.
+        Not used by CardPunch */
+    }
 
-        if (this.waitForBuffer.requested) {     // in case we've been manually released
-            this.waitForBuffer.signal(true);
-        }
+    /**************************************/
+    manualRelease() {
+        /* Called by Processor to indicate the device has been released manually */
 
-        if (this.waitForTransport.requested) {  // ditto
-            this.waitForTransport.signal(true);
-        }
+        this.waitForBuffer.signal(true);
+        this.waitForTransport.signal(true);
     }
 
     /**************************************/

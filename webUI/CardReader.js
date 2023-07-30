@@ -623,6 +623,12 @@ class CardReader {
     }
 
     /**************************************/
+    manualRelease () {
+        /* Called by Processor to indicate the device has been released manually.
+        Not used with CardReader */
+    }
+
+    /**************************************/
     shutDown() {
         /* Shuts down the device */
 

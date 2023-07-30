@@ -363,7 +363,7 @@ class ControlPanel {
                 ControlPanel.offSwitchImage, ControlPanel.onSwitchImage);
         this.program4Switch.setCaption("4<br>ON", false);
         this.program4Switch.setCaption("OFF", true);
-        this.program4Switch.set(this.config.getNode("ControlPanel.Program3SW"));
+        this.program4Switch.set(this.config.getNode("ControlPanel.Program4SW"));
         p.program4Switch = this.program4Switch.state;
 
         this.debugView = this.config.getNode("ControlPanel.DebugView");
