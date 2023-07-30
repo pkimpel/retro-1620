@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Build Adder Complement Table</title>
+<!--
+/***********************************************************************
+* retro-1620/software True-Complement-Gen.html
+************************************************************************
+* Copyright (c) 2023, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 test page to generate a complete set of true and complement
+* digit codes from Drawing 10.01.32.1 of the Model 2 ILD manual.
+************************************************************************
+* 2023-07-25  P.Kimpel
+*   Original version.
+***********************************************************************/
+-->
+    <meta name="Author" content="Paul Kimpel">
+
+<style>
+BODY {
+    font-family:        Arial, Helvetica, sans serif;
+    font-size:          8pt}
+TABLE {
+    border-collapse:    collapse;
+    border-spacing:     0}
+#AdderBody TD {
+    font-family:        DejaVu Sans Mono, Consolas, monospace;
+    font-size:          8pt;
+    text-align:         right}
+#AdderBody TR TD.centered{
+    text-align:         center}
+#AdderBody TR TD.caseHeader {
+    background-color:   white;
+    font-weight:        bold;
+    text-align:         center}
+.base10 {
+    background-color:   #CFC;
+    border:             2px solid black}
+.bold {
+    font-weight:        bold}
+.parityIn {
+    background-color:   #CCC}
+.parityOut {
+    color:              red}
+</style>
+
+<script>
+
+window.addEventListener("load", (ev) => {
+    const bcdMask  = 0b0001111;
+    const compCarryBit = 0b100000;
+    const compCheckBit = 0b010000;
+    const fullSpan = 34;                // number of columns in table
+
+    const body = document.getElementById("AdderBody");
+
+    const oddParity5 = [
+        0b100000, 0b000001, 0b000010, 0b100011, 0b000100, 0b100101, 0b100110, 0b000111,     // 0-7
+        0b001000, 0b101001, 0b101010, 0b001011, 0b101100, 0b001101, 0b001110, 0b101111,     // 8-15
+        0b010000, 0b110001, 0b110010, 0b010011, 0b110100, 0b010101, 0b010110, 0b110111,     // 16-23
+        0b111000, 0b011001, 0b011010, 0b111011, 0b011100, 0b111101, 0b111110, 0b011111,     // 24-31
+        0b100000, 0b000001, 0b000010, 0b100011, 0b000100, 0b100101, 0b100110, 0b000111,     // 32-30
+        0b001000, 0b101001, 0b101010, 0b001011, 0b101100, 0b001101, 0b001110, 0b101111,     // 40-47
+        0b010000, 0b110001, 0b110010, 0b010011, 0b110100, 0b010101, 0b010110, 0b110111,     // 48-55
+        0b111000, 0b011001, 0b011010, 0b111011, 0b011100, 0b111101, 0b111110, 0b011111];    // 56-63
+
+    function pDigit(p, comp, carryIn) {
+        /* Compute the complement of a 5-bit P digit "p", where the high-order
+        bit is the check bit, "comp" is true (for complement) or false (for
+        true, i.e., not complement). Returns a 6-bit result, yc08421, where
+        "y" is the carry-out bit, "c" is the check (add-parity) bit, and "0"
+        is the flag bit, which is always zero */
+        const pc = (p & 0b10000) >> 4;
+        const p8 = (p & 0b01000) >> 3;
+        const p4 = (p & 0b00100) >> 2;
+        const p2 = (p & 0b00010) >> 1;
+        const p1 = (p & 0b00001);
+        const ci = carryIn & 1;
+        const co = (comp ? 1 : 0);
+        const tr = (comp ? 0 : 1);
+        const nba = 1;                  // not block adder
+
+        let dc = (tr & pc) |
+                 (co & pc & ~p4) |
+                 (co & p4 & ~p1);
+
+        let d8 = (co & pc & ~p1 & ~p2) |
+                 (tr & p8) |
+                 (co & p1 & ~pc & ~p2);
+
+        let d4 = (co & pc & p1 & ~p8) |
+                 (co & ~pc & ~p1 & ~p8) |
+                 (tr & p4 & ~p8);
+
+        let d2 = p2 & nba;
+
+        let d1 = (tr & p1) |
+                 (co & ~p1);
+
+        let dy = 0;                     // carry-out bit
+
+        return (((((((((dy << 1) | dc) << 1) | d8) << 1) | d4) << 1) | d2) << 1) | d1;
+    }
+
+    function qDigit(q, comp, carryIn) {
+        /* Compute the complement of a 5-bit Q digit "q", where the high-order
+        bit is the check bit, "comp" is true (for complement) or false (for
+        true, i.e., not complement). Returns a 6-bit result, yc08421, where
+        "y" is the carry-out bit, "c" is the check (add-parity) bit, and "0"
+        is the flag bit, which is always zero */
+        const qc = (q & 0b10000) >> 4;
+        const q8 = (q & 0b01000) >> 3;
+        const q4 = (q & 0b00100) >> 2;
+        const q2 = (q & 0b00010) >> 1;
+        const q1 = (q & 0b00001);
+        const ci = carryIn & 1;
+        const co = (comp ? 1 : 0);
+        const tr = (comp ? 0 : 1);
+        const nba = 1;                  // not block adder
+
+        let dc = (tr & ci & q8) |
+                 (tr & ~ci & qc) |
+                 (ci & q4 & ~q2 & nba) |
+                 (tr & ci & ~qc & ~q1) |
+                 (co & ~ci & qc & ~q4) |
+                 (co & ~ci & q4 & ~q1) |
+                 (co & ci & ~qc & q1) |
+                 (co & ci & ~q8 & ~q2);
+
+        let d8 = (tr & ~qc & q8) |
+                 (tr & ~ci & q8) |
+                 (tr & ci & ~qc & q4 & q1) |
+                 (co & ~ci & ~q8 & ~q4 & ~q2) |
+                 (co & ci & ~qc & ~q8 & ~q4);
+
+        let d4 = (nba & ~q2 & q4) |
+                 (ci & qc & q2 & nba) |
+                 (tr & ~ci & q4) |
+                 (co & ~ci & ~q4 & q2);
+
+        let d2 = (~ci & q2 & nba) |
+                 (tr & ci & qc & q4) |
+                 (tr & ci & ~q4 & ~q8 & ~qc) |
+                 (co & q2 & ~q4 & qc) |
+                 (co & ci & ~qc & q8) |
+                 (co & ci & ~qc & q4);
+
+        let d1 = (nba & ~q1 & ~((tr & ~ci) | (co & ci))) |
+                 (q1 & ((tr & ~ci) | (co & ci)));
+
+        let dy = (tr & ci & qc & q8) |  // carry-out bit
+                 (co & ci & qc & ~q4 & ~q1);
+
+        return (((((((((dy << 1) | dc) << 1) | d8) << 1) | d4) << 1) | d2) << 1) | d1;
+    }
+
+    function digitGroup(func, tbl, comp, carryIn) {
+        /* Compute the complement of a set of BCD digits, where "comp" is true
+        (for complement) or false (for true, er, ah, not complement). Returns a 6-bit result, yc08421, where
+        "y" is the carry-out bit, "c" is the check (add-parity) bit, and "0"
+        is the flag bit, which is always zero */
+        const co = (comp ? 1 : 0);
+
+        let row = document.createElement("tr");
+        let cell = document.createElement("td");
+        cell.className = "centered";
+        cell.textContent = (comp ? "COMP" : "TRUE");
+        row.appendChild(cell);
+        cell = document.createElement("td");
+        cell.className = "centered";
+        cell.textContent = carryIn;
+        row.appendChild(cell);
+
+        for (let a=0; a<32; ++a) {
+            const v = func(a, comp, carryIn);
+            const cell = document.createElement("td");
+            const digit = (v & compCarryBit ? "+" : " ") +
+                          (v & compCheckBit ? "c" : " ") +
+                          (v & bcdMask).toString(16).toUpperCase();
+            cell.textContent = digit;
+            if (oddParity5[a] != a) {
+                cell.classList.add("parityIn");
+            } else if ((a & bcdMask) >= 0 && (a & bcdMask) <= 9 &&
+                       (a & bcdMask) >= 0 && (a & bcdMask) <= 9) {
+                cell.classList.add("base10");
+            }
+
+            const v5 = v & (compCheckBit | bcdMask);
+            if (oddParity5[v5] != v5) {
+                cell.classList.add("parityOut");
+            }
+
+            tbl[co][carryIn][a] = v;
+            row.appendChild(cell);
+        }
+
+        body.appendChild(row);
+    }
+
+    function buildTable() {
+        /* Creates the 3D table for true/comp results and returns it */
+        const t = new Array(2);
+
+        for (let tc=0; tc<2; ++tc) {
+            const t2 = new Array(2);
+            for (let ci=0; ci<2; ++ci) {
+                const t3 = new Array(32);
+                t3.fill(0);
+                t2[ci] = t3;
+            }
+            t[tc] = t2;
+        }
+
+        return t;
+    }
+
+    function adjFlagParity(v, flag) {
+        /* Adjusts the check bit in "v" to compensate for flag bits not being
+        considered in the development of complements for the P and Q digits */
+
+        return v ^ (flag ? compCheckBit : 0);
+    }
+
+    function dumpTable(name, tbl) {
+        /* Dumps the true/comp results in a 3D table indexed by true/comp,
+        carry-in, and the P or Q digit value with high-order check and flag bits.
+        Adjusts the check bit in the output to eliminate the effect of a flag
+        on the resulting addTable index */
+
+        const resultsPre = document.getElementById("CompResults");
+        resultsPre.appendChild(document.createTextNode(`const ${name} = [\n`));
+        for (let tc=0; tc<2; ++tc) {
+            resultsPre.appendChild(document.createTextNode("    [\n"));
+            for (let ci=0; ci<2; ++ci) {
+                let line = "        [";
+                for (flag=0; flag<2; ++flag) {
+                    for (let q=0; q<16; ++q) {
+                        line += "0x" + adjFlagParity(tbl[tc][ci][q], flag).toString(16).padStart(2, "0") + ",";
+                    }
+                    line += "\n         ";
+                }
+                for (flag=0; flag<2; ++flag) {
+                    for (let q=16; q<32; ++q) {
+                        line += "0x" + adjFlagParity(tbl[tc][ci][q], flag).toString(16).padStart(2, "0") + ",";
+                    }
+                    line += "\n         ";
+                }
+
+                resultsPre.appendChild(document.createTextNode(line.slice(0, -1) + "],\n"));
+            }
+
+            resultsPre.appendChild(document.createTextNode("    ],\n"));
+        }
+
+        resultsPre.appendChild(document.createTextNode("];\n\n"));
+    }
+
+    let row = document.createElement("tr");
+    let cell = document.createElement("td");
+    cell.colSpan = fullSpan;
+    cell.className = "caseHeader";
+    cell.textContent = "P Digit"
+    row.appendChild(cell);
+    body.appendChild(row);
+
+    const pTable = buildTable();
+    digitGroup(pDigit, pTable, false, 0);
+    digitGroup(pDigit, pTable, false, 1);
+    digitGroup(pDigit, pTable, true,  0);
+    digitGroup(pDigit, pTable, true,  1);
+    dumpTable("pCompTable", pTable);
+
+    row = document.createElement("tr");
+    cell = document.createElement("td");
+    cell.colSpan = fullSpan;
+    cell.className = "caseHeader";
+    cell.textContent = "Q Digit"
+    row.appendChild(cell);
+    body.appendChild(row);
+
+    const qTable = buildTable();
+    digitGroup(qDigit, qTable, false, 0);
+    digitGroup(qDigit, qTable, false, 1);
+    digitGroup(qDigit, qTable, true,  0);
+    digitGroup(qDigit, qTable, true,  1);
+    dumpTable("qCompTable", qTable);
+}, {once: true});
+</script>
+</head>
+
+<body>
+<h2>Build True-Complement Table</h2>
+<table border=1 cellspacing=0 cellpadding=2>
+    <thead>
+        <tr><th rowspan=2>T/C
+            <th rowspan=2>Carry<br>In
+            <th colspan=32>Digit In
+        <tr><th class=parityIn>0
+            <th>1
+            <th>2
+            <th class=parityIn>3
+            <th>4
+            <th class=parityIn>5
+            <th class=parityIn>6
+            <th>7
+            <th>8
+            <th class=parityIn>9
+            <th class=parityIn>A
+            <th>B
+            <th class=parityIn>C
+            <th>D
+            <th>E
+            <th class=parityIn>F
+            <th>c0
+            <th class=parityIn>c1
+            <th class=parityIn>c2
+            <th>c3
+            <th class=parityIn>c4
+            <th>c5
+            <th>c6
+            <th class=parityIn>c7
+            <th class=parityIn>c8
+            <th>c9
+            <th>cA
+            <th class=parityIn>cB
+            <th>cC
+            <th class=parityIn>cD
+            <th class=parityIn>cE
+            <th>cF
+    <tbody id=AdderBody>
+</table>
+<h2>Complement Table Results</h2>
+<pre id=CompResults></pre>
+</body>
+</html>

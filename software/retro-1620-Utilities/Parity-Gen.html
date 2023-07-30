@@ -1,13 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>Build Odd Parity Tables</title>
+<!--
+/***********************************************************************
+* retro-1620/software Parity-Gen.html
+************************************************************************
+* Copyright (c) 2023, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 generate a table of 6-bit binary codes where the high-order
+* bit is forced to odd parity.
+************************************************************************
+* 2022-11-05  P.Kimpel
+*   Original version.
+***********************************************************************/
+-->
+    <meta name="Author" content="Paul Kimpel">
+
 </head>
 <body>
 <script>
 
 function parity(c) {
-    /* Compute even parity over six bits. Returns the original code
+    /* Compute odd parity over six bits. Returns the original code
     with the parity bit inserted in the 6th bit */
 
     let p = (c & 1) ^ ((c >>> 1) & 1) ^ ((c >>> 2) & 1) ^
@@ -20,11 +38,9 @@ function pic9n(v, n) {
     let text = v.toString();
 
     if (text.length > n) {
-        text = text.substring(-n);
+        text = text.slice(-n);
     } else {
-        while (text.length < n) {
-            text = "0" + text;
-        }
+        text = text.padStart(n, "0");
     }
     return text;
 }
