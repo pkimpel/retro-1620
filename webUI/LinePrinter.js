@@ -428,12 +428,15 @@ class LinePrinter {
 
         const useDefaultCC = () => {
             /* Applies a default carriage-control tape: top-of-form only */
-            const cc = {formLength:0}
+            const cc = {formLength: 0};
 
             this.$$("CCTapeSelector").value = null;
             this.createCarriageControl(cc);
             cc.channelSpecs = exportCarriageTape();
             this.config.putNode("Printer.carriageControl", cc);
+            this.atTopOfForm = true;
+            this.setChannel9(false);
+            this.setChannel12(false);
             formatCCTape();
         };
 
@@ -622,6 +625,27 @@ class LinePrinter {
     }
 
     /**************************************/
+    updateEOPChannels() {
+        /* Checks the end-of-page channels 9 and 12. If the current line of the
+        channel tape has a 1 punch, resets indicators 33 (channel 9) and 34
+        (channel 12). Otherwise, sets indicators 33 and/or 34 if the current
+        line has a corresonding 9 or 12 punch. Channel 1 action takes precedence */
+
+        const chan = this.carriageTape[this.lineNr];
+        if (chan & LinePrinter.channel1Mask) {  // channel 1: reset ch. 9 & 12
+            this.setChannel9(false);
+            this.setChannel12(false);
+        } else {
+            if (chan & LinePrinter.channel9Mask) {
+                this.setChannel9(true);
+            }
+            if (chan & LinePrinter.channel12Mask) {
+                this.setChannel12(true);
+            }
+        }
+    }
+
+    /**************************************/
     overstrikeBoldly(lineText) {
         /* Formats an overstike print line and appends it to to the <div>
         referenced by this.lastLineDiv. If the contents of this.lastLineDiv
@@ -737,23 +761,11 @@ class LinePrinter {
             --this.groupLinesLeft;
             --this.supplyRemaining;
             if (this.formLength) {
+                this.updateEOPChannels();
                 ++this.lineNr;
                 if (this.lineNr >= this.formLength) {
                     this.atTopOfForm = true;
                     this.lineNr = 0;
-                }
-
-                const chan = this.carriageTape[this.lineNr];
-                if (chan & LinePrinter.channel1Mask) {  // channel 1: reset ch. 9 & 12
-                    this.setChannel9(false);
-                    this.setChannel12(false);
-                } else {
-                    if (chan & LinePrinter.channel9Mask) {
-                        this.setChannel9(true);
-                    }
-                    if (chan & LinePrinter.channel12Mask) {
-                        this.setChannel12(true);
-                    }
                 }
             }
         }
@@ -794,6 +806,8 @@ class LinePrinter {
                     break;
                 }
             } while (!(this.carriageTape[this.lineNr] & channelMask));
+
+            this.updateEOPChannels();
         }
     }
 
