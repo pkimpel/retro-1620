@@ -1,0 +1,234 @@
+IBM 1620 Jr. SPS Assembler (v0.991)    Source: retro-1620\software\demos\EQTCD\EQTCD.sps    Assembled: 8/01/2023 @ 11:39
+
+      1                        34000 32007013600032007024902402511963611300102 COLD START CARD - 1620 MONIT  OR I
+                             ^^^ Error: invalid operation (1360)
+      2                        ||JOB  5                        EQTCD - DISK DIRECTORY LIST UTILITY
+                             ^^^ Error: invalid character(s) in statement
+      3                        -KIMP EL                  1304-091
+                             ^^^ Error: missing operation
+      4                        ||DUP
+                             ^^^ Error: invalid character(s) in statement
+      5                        *DELE TEQTCD
+                             ^^^ Error: missing operation
+      6                        ||SPS X5
+                             ^^^ Error: invalid character(s) in statement
+      7                        *NAME  EQTCD
+                             ^^^ Error: missing operation
+      8                        *STOR E RELOADABLE
+                             ^^^ Error: invalid operation (ADAB)
+      9  00402 29 00000 00000  *OUTP UT CAR D
+                             ^^^ Error: invalid label (UT CAR)
+     10                        *LIST  PRINTER
+                             ^^^ Error: invalid operation (ER)
+     11                        *PRIN T SYMBOL TABLE
+                             ^^^ Error: invalid operation (OL T)
+     12                        ***** *****      KIMPEL               |
+                             ^^^ Error: invalid character(s) in statement
+     13                        00010 **********************************************************************
+     14                        00020 *
+     15                        00030 *                                 EQTCD
+     16                        00040 *
+     17                        00050 *          PUNCH THE SYMBOL TABLE IN ALPHA ORDER WITH -DIM- NO.
+     18                        00060 *             ONTO CARDS.
+     19                        00070 *          MODIFIED FROM BRUCE KITCHEN-S  -EQTBL-
+     20                        00080 *
+     21                        00090 *          VERSION 2             12 DEC 1968          P H KIMPEL
+     22                        00100 *
+     23                        00110 **********************************************************************
+     24                        00120 *
+     25                        00130 EQ    DDA ,0,5000,80,20000
+                             ^^^ Error: invalid operation (DDA)
+               _             
+     26  00425 999999999999    00140 NINES  DC   12,999999999999
+     27  00430    00005        00150 NT     DS   5
+     28  00435    00005        00160 ST     DS   5
+     29  00437    00162        00170 ALP    DAS  81
+               _             
+     30  00599 565745..56590@  00180 M1     DAC  9,OPERATOR@
+               _             
+     31  00617 636857..00000@  00190 M2     DAC  30,TYPE IN DATE AS DD MMM YYYY  @
+               _             
+     32  00677 444163..005454  00200 DATE   DAC  12,DATE  DDD MMM
+                             ^^^ Error: operand value too long
+               _             
+     33  00701 00717976780@    00210        DAC  6, 1968@
+               _             
+     34  00713 636857..00000@  00220 M3     DAC  23,TYPE IN TIME AS HHMM  @
+               _             
+     35  00759 634954..54540@  00230 TIME   DAC  11,TIME  HHMM@
+               _             
+     36  00781 626266..59630@  00240 ER     DAC  28,SSW 4 IF ERRORS, ELSE START@
+               _             
+     37  00837 141414..14140@  00250 TITLE  DAC  26,*** EQUIVALENCE TABLE ***@
+               _             
+     38  00889 465659..45140@  00260 FORT   DAC  44,FORTRAN LIBRARY FUNCTIONS   *DO NOT DELETE*@
+               _             
+     39  00977 646245..55620@  00270 USER   DAC  42,USER PROGRAMS, SUBROUTINES, AND FUNCTIONS@
+               _             
+     40  01061 000000..000000  00280 BLANK  DAC  40,                                        ,
+               _             
+     41  01141 000000..00000@  00290        DAC  41,                                        @
+     42                        00300 **********************************************************************
+     43                        00310 *            EXECUTION BEGINS HERE
+     44                        00320 **********************************************************************
+     45  01222 34 00000 00701  00330 START  SK   EQ,,                 ,READ OCCURS JUST BEFORE HALT
+                             ^^^ Error: undefined symbol (EQ)
+     46  01234 34 00000 00102  00340        RCTY
+     47  01246 39 00599 00100  00350        WATY M1
+     48  01258 34 00000 00102  00360        RCTY
+     49  01270 39 00617 00100  00370 DMSG   WATY M2
+     50  01282 37 00689 00100  00380        RATY DATE+12
+     51  01294 34 00000 00102  00390        RCTY
+     52  01306 39 00713 00100  00400        WATY M3
+     53  01318 37 00771 00100  00410        RATY TIME+12
+     54  01330 34 00000 00102  00420        RCTY
+     55  01342 34 00000 00102  00430        RCTY
+     56  01354 39 00781 00100  00440        WATY ER
+     57  01366 36 00000 00702  00450        RDN  EQ,,                 ,READ THE AWFUL MESS....
+                             ^^^ Error: undefined symbol (EQ)
+     58  01378 48 00000 00000  00460        H
+     59  01390 34 00000 00102  00470        RCTY
+     60  01402 46 01270 00400  00480        BC4  DMSG,,               ,BR BACK TO TYPE-IN ON SSW 4
+     61  01414 31 00436 01060  00490        TR   ALP-1,BLANK-1
+     62  01426 30 00490 00836  00500        TRNM ALP+53,TITLE-1
+     63  01438 15 00437 00001  00510        TDM   ALP,1,              ,CARRIAGE CONTROL
+     64  01450 15 00436 00007  00520        TDM   ALP-1,7
+     65  01462 39 00437 00400  00530        WACD ALP
+     66  01474 39 01061 00400  00540        WACD BLANK
+     67  01486 39 01061 00400  00550        WACD BLANK
+     68  01498 31 00436 01060  00560        TR   ALP-1,BLANK-1
+     69  01510 30 00438 00888  00570        TRNM ALP+1,FORT-1
+     70  01522 39 00437 00400  00580        WACD ALP
+     71  01534 39 01061 00400  00590        WACD BLANK
+     72                        00600 *
+     73  01546 60 01558 00009  00610        BSIA *+12,,               ,SELECT INDIRECT ADDRESSING
+     74  01558 60 01570 00009  00620        BSIA *+12,,               ,SELECT XR BAND -A-
+                           _ 
+     75  01570 66 01582 00016  00630 INIT   BLXM *+12,16(A1),          ,,CARD COL POINTER IN XA1
+                          _  
+     76  01582 66 01594 00005  00640        BLXM *+12,5(A2)           ,POINTER FOR NO. OF ENTRIES ON CARD
+                             ^^^ Error: invalid flags (POINTERFORNO.OFENTRIESONCARD)
+     77  01594 31 00436 01060  00650        TR   ALP-1,BLANK-1,       ,BLANK CARD AREA
+                        _    
+     78  01606 16 00435 02011  00660        TFM  ST,2011
+                        _    
+     79  01618 16 00430 20027  00670        TFM  NT,20027
+                      _     _
+     80  01630 24 00435 00430  00680 LOOP   C    -ST,-NT
+     81  01642 47 01666 01100  00690        BNH  *+24
+     82  01654 26 00435 00430  00700        TF   ST,NT
+                           _ 
+     83  01666 11 00430 00016  00710        AM   NT,16,10
+                            _
+     84  01678 45 01698 00430  00720        BNR  *+20,-NT             ,TEST FOR END OF USER TABLE
+                             ^^^ Error: invalid flags (TESTFORENDOFUSERTABLE)
+     85                        00730       B7  L1
+                             ^^^ Error: invalid operation (B7)
+                      _      
+     86  01690 24 00430 00425  00740        C    -NT,NINES
+     87  01702 47 01630 01200  00750        BNE  LOOP,,               ,TEST FOR END OF TABLE
+                     _      _
+     88  01714 26 00437 00435  00760  L1    TF   ALP(A1),-ST,         , TRANSFER ALPHA NAME TO CARD AREA
+                             ^^^ Error: invalid label ( L1)
+                           _ 
+     89  01726 11 00435 00004  00770        AM   ST,4,10
+                     _      _
+     90  01738 73 00449 00435  00780        TNF  ALP+12(A1),-ST,      ,TRANSFER DIM NO.
+                           _ 
+     91  01750 62 01762 00032  00790        BXM  *+12,32(A1),         ,INCR CARD COL POINTER
+                          _ _
+     92  01762 64 01822 00001  00800        BCXM *+60,-1(A2),         ,CK FOR FULL CARD AREA
+     93  01774 39 00437 00400  00810        WACD ALP,,                ,PUNCH A LINE
+     94  01786 31 00436 01060  00820        TR   ALP-1,BLANK-1        ,BLANK CARD AREA
+                             ^^^ Error: invalid flags (BLANKCARDAREA)
+                          _  
+     95  01798 66 01810 00005  00830        BLXM *+12,5(A2),          ,RESTORE  ))
+                           _ 
+     96  01810 66 01822 00016  00840        BLXM *+12,16(A1),         ,POINTERS ))
+     97  01822 26 00430 00435  00850        TF   NT,ST
+                           _ 
+     98  01834 12 00430 00015  00860        SM   NT,15,10
+                           _ 
+     99  01846 11 00435 00001  00870        AM   ST,1,10
+                      _     _
+    100  01858 31 00430 00435  00880        TR   -NT,-ST,             ,WIPE OUT SORTED ITEM
+                        _    
+    101  01870 16 00435 20011  00890        TFM  ST,20011
+                        _    
+    102  01882 16 00430 20027  00900        TFM  NT,20027
+                            _
+    103  01894 45 01926 00430  00910        BNR   *+32,-NT,           ,CK  FOR END OF USER TABLE
+                            _
+    104  01906 45 01950 00435  00920        BNR   *+44,-ST,
+    105                        00930       B7   QUIT,,              , ALL DONE IF RECORD MARKS AT BOTH
+                             ^^^ Error: invalid operation (B7)
+                      _      
+    106  01918 24 00430 00425  00940        C     -NT,NINES,          ,CK FOR END OF FORT TABLE
+    107  01930 47 01630 01200  00950        BNE   LOOP
+                      _      
+    108  01942 24 00435 00425  00960        C     -ST,NINES
+    109  01954 47 00000 01200  00970        BNE   L1
+                             ^^^ Error: undefined symbol (L1)
+    110  01966 39 00437 00400  00980        WACD  ALP,,               ,PUNCH LAST LINE OF FORT TABLE
+    111  01978 39 01061 00400  00990        WACD BLANK
+    112  01990 31 20000 20016  01000        TR   20000,20016,         ,LOOK FOR USER TABLE
+    113  02002 24 20011 00425  01010        C    20011,NINES
+    114  02014 46 01990 01200  01020        BE   *-24
+    115  02026 39 01061 00400  01030        WACD BLANK
+    116  02038 31 00436 01060  01040        TR   ALP-1,BLANK-1
+    117  02050 30 00438 00976  01050        TRNM ALP+1,USER-1
+    118  02062 39 00437 00400  01060        WACD ALP
+    119  02074 39 01061 00400  01070        WACD BLANK
+    120                        01080       B7  INIT
+                             ^^^ Error: invalid operation (B7)
+    121                        01090 *
+    122                        01100 *
+    123  02086 39 00437 00400  01110 QUIT   WACD ALP,,                ,PUNCH LAST LINE OF USER TABLE
+    124  02098 39 01061 00400  01120        WACD BLANK
+    125  02110 39 01061 00400  01130        WACD BLANK
+    126  02122 31 00436 01060  01140        TR   ALP-1,BLANK-1
+    127  02134 30 00438 00676  01150        TRNM ALP+1,DATE-1
+    128  02146 39 00437 00400  01160        WACD ALP
+    129  02158 31 00436 01060  01170        TR   ALP-1,BLANK-1
+    130  02170 30 00438 00758  01180        TRNM ALP+1,TIME-1
+    131  02182 39 00437 00400  01190        WACD ALP
+    132  02194 39 01061 00400  01200        WACD BLANK
+    133                        01210       CALLEXIT
+                             ^^^ Error: invalid operation (CALL)
+    134  01222                 01220        DEND START
+    135                        ||||
+                             ^^^ Error: invalid character(s) in statement
+                             ^^^ Error: statement(s) beyond DEND
+
+                                 Symbol Cross-Reference Table
+                                 ============================
+
+
+  Symbol   Addr.  Type    Defined  References
+  -------  -----  ------  -------  -------------------------------------------------------------
+  ALP      00437  DAS          29       61       62       63       64       65       68       69
+                                        70       77       88       90       93       94      110
+                                       116      117      118      123      126      127      128
+                                       129      130      131
+  BLANK    01061  DAC          40       61       66       67       68       71       77       94
+                                       111      115      116      119      124      125      126
+                                       129      132
+  DATE     00677  DAC          32       50      127
+  DMSG     01270  <inst>       49       60
+  ER       00781  DAC          36       56
+  FORT     00889  DAC          38       69
+  INIT     01570  <inst>       75
+  LOOP     01630  <inst>       80       87      107
+  M1       00599  DAC          30       47
+  M2       00617  DAC          31       49
+  M3       00713  DAC          34       52
+  NINES    00425  DC           26       86      106      108      113
+  NT       00430  DS           27       79       80       82       83       84       86       97
+                                        98      100      102      103      106
+  QUIT     02086  <inst>      123
+  ST       00435  DS           28       78       80       82       88       89       90       97
+                                        99      100      101      104      108
+  START    01222  <inst>       45      134      134
+  TIME     00759  DAC          35       53      130
+  TITLE    00837  DAC          37       62
+  USER     00977  DAC          39      117

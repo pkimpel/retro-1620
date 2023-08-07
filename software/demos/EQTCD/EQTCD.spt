@@ -1,0 +1,124 @@
+00010**********************************************************************
+00020*
+00030*                                 EQTCD
+00040*
+00050*          PUNCH THE SYMBOL TABLE IN ALPHA ORDER WITH -DIM- NO.
+00060*             ONTO CARDS.
+00070*          MODIFIED FROM BRUCE KITCHEN-S  -EQTBL-
+00080*
+00090*          VERSION 2             12 DEC 1968          P H KIMPEL
+00100*
+00110**********************************************************************
+00120*
+00130 EQ     DDA  ,0,5000,80,20000                                               02402 00006 0-5000
+                                                                                 02408 00003 -80
+                                                                                 02411 00005 K0000
+00140 NINES  DC   12,999999999999                                                02427 00012
+00150 NT     DS   5                                                              02432 00005
+00160 ST     DS   5                                                              02437 00005
+00170 ALP    DAS  81                                                             02439 00162
+00180 M1     DAC  9,OPERATOR@                                                    02601 00018
+00190 M2     DAC  30,TYPE IN DATE AS DD MMM YYYY  @                              02619 00060
+00200 DATE   DAC  12,DATE  DD MMM                                                02679 00024
+00210        DAC  6, 1968@                                                       02703 00012
+00220 M3     DAC  23,TYPE IN TIME AS HHMM  @                                     02715 00046
+00230 TIME   DAC  11,TIME  HHMM@                                                 02761 00022
+00240 ER     DAC  28,SSW 4 IF ERRORS, ELSE START@                                02783 00056
+00250 TITLE  DAC  26,*** EQUIVALENCE TABLE ***@                                  02839 00052
+00260 FORT   DAC  44,FORTRAN LIBRARY FUNCTIONS   *DO NOT DELETE*@                02891 00088
+00270 USER   DAC  42,USER PROGRAMS, SUBROUTINES, AND FUNCTIONS@                  02979 00084
+00280 BLANK  DAC  40,                                        ,                   03063 00080
+00290        DAC  41,                                        @                   03143 00082
+00300**********************************************************************
+00310*            EXECUTION BEGINS HERE
+00320**********************************************************************
+00330 START  SK   EQ,,                 ,READ OCCURS JUST BEFORE HALT             03224 34 02402 00701
+00340        RCTY                                                                03236 34 00000 00102
+00350        WATY M1                                                             03248 39 02601 00100
+00360        RCTY                                                                03260 34 00000 00102
+00370 DMSG   WATY M2                                                             03272 39 02619 00100
+00380        RATY DATE+12                                                        03284 37 02691 00100
+00390        RCTY                                                                03296 34 00000 00102
+00400        WATY M3                                                             03308 39 02715 00100
+00410        RATY TIME+12                                                        03320 37 02773 00100
+00420        RCTY                                                                03332 34 00000 00102
+00430        RCTY                                                                03344 34 00000 00102
+00440        WATY ER                                                             03356 39 02783 00100
+00450        RDN  EQ,,                 ,READ THE AWFUL MESS....                  03368 36 02402 00702
+00460        H                                                                   03380 48 00000 00000
+00470        RCTY                                                                03392 34 00000 00102
+00480        BC4  DMSG,,               ,BR BACK TO TYPE-IN ON SSW 4              03404 46 03272 00400
+00490        TR   ALP-1,BLANK-1                                                  03416 31 02438 03062
+00500        TRNM ALP+53,TITLE-1                                                 03428 30 02492 02838
+00510        TDM   ALP,1,              ,CARRIAGE CONTROL                         03340 15 02439 00001
+00520        TDM   ALP-1,7                                                       03452 15 02438 00007
+00530        WACD ALP                                                            03464 39 02439 00400
+00540        WACD BLANK                                                          03476 39 03063 00400
+00550        WACD BLANK                                                          03488 39 03063 00400
+00560        TR   ALP-1,BLANK-1                                                  03500 31 02438 03062
+00570        TRNM ALP+1,FORT-1                                                   03512 30 02440 02890
+00580        WACD ALP                                                            03524 39 02439 00400
+00590        WACD BLANK                                                          03536 39 03063 00400
+00600*
+00610        BSIA  *+12,,              ,SELECT INDIRECT ADDRESSING               03548 60 03560 00009
+00620        BSBA *+12,,               ,SELECT XR BAND -A-                       03560 60 03572 00001
+00630 INIT   BLXM *+12,16(A1),          ,,CARD COL POINTER IN XA1                03572 66 03584 000J6
+00640        BLXM *+12,5(A2)           ,POINTER FOR NO. OF ENTRIES ON CARD       03584 66 03596 00-05
+00650        TR    ALP-1,BLANK-1,      ,BLANK CARD AREA                          03596 31 02438 03062
+00660        TFM  ST,2011                                                        03608 16 02437 K0011
+00670        TFM  NT,20027                                                       03620 16 02432 K0027
+00680 LOOP   C    -ST,-NT                                                        03622 24 0243P 0243K
+00690        BNH  *+24                                                           03644 47 03668 01100
+00700        TF   ST,NT                                                          03656 26 02437 02432
+00710        AM   NT,16,10                                                       03668 11 02432 000J6
+00720        BNR  *+20,-NT             ,TEST FOR END OF USER TABLE               03680 45 03700 0243K
+00730        B7   L1                                                             03692 49 03724 00000
+00740        C    -NT,NINES                                                      03700 24 0243K 02427
+00750        BNE  LOOP,,               ,TEST FOR END OF TABLE                    03712 47 03632 01200
+00760 L1     TF   ALP(A1),-ST,         , TRANSFER ALPHA NAME TO CARD AREA        03724 26 024L9 0243P
+00770        AM   ST,4,10                                                        03736 11 02437 000-4
+00780        TNF  ALP+12(A1),-ST,      ,TRANSFER DIM NO.                         03748 73 024N1 02439
+00790        BXM  *+12,32(A1),         ,INCR CARD COL POINTER                    03760 62 03772 000L2
+00800        BCXM *+60,-1(A2),         ,CK FOR FULL CARD AREA                    03772 64 03832 00-0J
+00810        WACD ALP,,                ,PUNCH A LINE                             03784 39 02439 00400
+00820        TR    ALP-1,BLANK-1       ,BLANK CARD AREA                          03796 31 02438 03062
+00830        BLXM *+12,5(A2),          ,RESTORE  ))                              03808 66 03820 00-05
+00840        BLXM *+12,16(A1),         ,POINTERS ))                              03820 66 03832 000J6
+00850        TF   NT,ST                                                          03832 26 02432 02437
+00860        SM   NT,15,10                                                       03844 12 02432 000J5
+00870        AM   ST,1,10                                                        03856 11 02437 000-1
+00880        TR   -NT,-ST,             ,WIPE OUT SORTED ITEM                     03868 31 0243K 0243P
+00890        TFM  ST,20011                                                       03880 16 02437 K0011
+00900        TFM  NT,20027                                                       03892 16 02432 K0027
+00910        BNR   *+32,-NT,           ,CK  FOR END OF USER TABLE                03904 45 03936 0243K
+00920        BNR   *+44,-ST,                                                     03916 45 03960 0243P
+00930        B7    QUIT,,              , ALL DONE IF RECORD MARKS AT BOTH        03928 49 04112 00000
+00940        C     -NT,NINES,          ,CK FOR END OF FORT TABLE                 03936 24 0243K 02427
+00950        BNE   LOOP                                                          03948 47 03632 01200
+00960        C     -ST,NINES                                                     03960 24 0243P 02427
+00970        BNE   L1                                                            03972 47 03724 01200
+00980        WACD  ALP,,               ,PUNCH LAST LINE OF FORT TABLE            03984 39 02439 00400
+00990        WACD BLANK                                                          03996 39 03063 00400
+01000        TR   20000,20016,         ,LOOK FOR USER TABLE                      04008 31 20000 20016
+01010        C    20011,NINES                                                    04020 24 20011 02427
+01020        BE   *-24                                                           04032 46 04008 01200
+01030        WACD BLANK                                                          04044 39 03063 00400
+01040        TR   ALP-1,BLANK-1                                                  04056 31 02438 03062
+01050        TRNM ALP+1,USER-1                                                   04068 30 02440 02978
+01060        WACD ALP                                                            04080 39 02439 00400
+01070        WACD BLANK                                                          04092 39 03063 00400
+01080        B7   INIT                                                           04104 49 03572 00000
+01090*
+01100*
+01110 QUIT   WACD ALP,,                ,PUNCH LAST LINE OF USER TABLE            04112 39 02439 00400
+01120        WACD BLANK                                                          04124 39 03063 00400
+01130        WACD BLANK                                                          04136 39 03063 00400
+01140        TR   ALP-1,BLANK-1                                                  04048 31 02438 03062
+01150        TRNM ALP+1,DATE-1                                                   04160 30 02440 02678
+01160        WACD ALP                                                            04172 39 02439 00400
+01170        TR   ALP-1,BLANK-1                                                  04184 31 02438 03062
+01180        TRNM ALP+1,TIME-1                                                   04916 30 02440 02760
+01190        WACD ALP                                                            04208 39 02439 00400
+01200        WACD BLANK                                                          04220 39 03063 00400
+01210        CALL EXIT                                                           04232 49 00796 00000
+01220        DEND START                                                          03224
