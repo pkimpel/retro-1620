@@ -1,0 +1,1502 @@
+        *LIST PRINTER
+        *PRINT SYMBOL TABLE
+  (ID)  **XR01 - INDEX REGISTERS DIAGNOSTIC TEST
+
+
+
+XR01 - INDEX REGISTERS DIAGNOSTIC TEST                                            PAGE   1
+
+SW4OFF 02999    SW3OFF 02961    SW2OFF 02923    SW1OFF 02885    SETSWS 03019
+ BAND1 00300     BAND2 00340     ETEST 16652     ETM1  16781     ETM2  16831
+ HEAD1 02751     HEAD2 02807     PROD  00099     P0    14872     P1    14882
+ P2    14892     Q0    14877     Q1    14887     Q2    14897     R00   03082
+ R00E  03154     R00OK 03202     R01   03246     R01E  03282     R01OK 03330
+ R02   03374     R02E  03542     R02OK 03590     R03   03614     R10   03650
+ R10E  03758     R10OK 03806     R11   03854     R11E  03974     R11OK 04022
+ R12   04070     R12E  04262     R12OK 04310     R13   04350     R13E  04458
+ R13OK 04506     R14   04546     R14E  04666     R14OK 04714     R15   04754
+ R15E  04946     R15OK 04994     R16   05032     R16E  05152     R16OK 05200
+ R17   05224     R20   05260     R20E  05404     R20OK 05452     R21   05500
+ R21E  05656     R21OK 05704     R22   05752     R22E  06040     R22OK 06088
+ R23   06136     R23E  06280     R23OK 06328     R24   06352     R30   06388
+ R30E  06520     R30OK 06568     R31   06616     R31E  06748     R31OK 06796
+ R32   06844     R32E  07000     R32OK 07048     R33   07096     R33E  07252
+ R33OK 07300     R34   07348     R34E  07504     R34OK 07552     R35   07620
+ R35E  07848     R35OK 07896     R36   07964     R36E  08192     R36OK 08240
+ R37   08310     R37E  08538     R37OK 08586     R38   08610     R40   08638
+ R40E  08770     R40OK 08818     R41   08858     R41E  08990     R41OK 09038
+ R42   09078     R42E  09234     R42OK 09282     R43   09322     R43E  09490
+ R43OK 09538     R44   09578     R44E  09734     R44OK 09782     R45   09836
+ R45E  10064     R45OK 10112     R46   10166     R46E  10394     R46OK 10442
+ R47   10466     R50   10502     R50E  10646     R50OK 10694     R51   10742
+ R51E  10898     R51OK 10946     R52   10994     R52E  11174     R52OK 11222
+ R53   11270     R53E  11438     R53OK 11486     R54   11534     R54E  11714
+ R54OK 11762     R55   11830     R55E  12070     R55OK 12118     R56   12186
+ R56E  12438     R56OK 12486     R57   12556     R57E  12808     R57OK 12856
+ R58   12880     R60   12908     R60E  13052     R60OK 13100     R61   13140
+ R61E  13296     R61OK 13344     R62   13384     R62E  13564     R62OK 13612
+ R63   13652     R63E  13832     R63OK 13880     R64   13920     R64E  14100
+ R64OK 14148     R65   14202     R65E  14442     R65OK 14490     R66   14544
+ R66E  14784     R66OK 14832     R67   14856     R70   14898     R70E  15030
+ R70OK 15078     R71   15102     R71E  15234     R71OK 15282     R72   15306
+ R72E  15438     R72OK 15486     R73   15510     R73E  15642     R73OK 15690
+ R74   15714     R74E  15870     R74OK 15918     R75   15942     R75E  16098
+ R75OK 16146     R76   16352     R76E  16568     R76M1 16171     R76M2 16268
+ R76M3 16271     R76OK 16616     R77   16640     START 02402     SW1ON 02867
+ SW2ON 02905     SW3ON 02943     SW4ON 02981     XR0   00004     XR1   00009
+ XR2   00014     XR3   00019     XR4   00024     XR5   00029     XR6   00034
+ XR7   00039
+XR01 - INDEX REGISTERS DIAGNOSTIC TEST                                            PAGE   1
+
+00010*
+00020*         XR01 - INDEX REGISTERS DIAGNOSTIC TEST
+00030*
+00040*         DIAGNOSTIC FOR 1620 MODEL 2 INDEX REGISTERS AND SUPPORTING
+00050*         INSTRUCTIONS - BX, BXM, BCX, BCXM, BLX, BLXM, BSX, MA.
+00060*
+00070*         THIS TEST ASSUMES THE SYSTEM PASSES CU01 AND CU05.
+00080*
+00090*         ROUTINE 100 - TYPE SENSE SWITCH SETTINGS, START TEST
+00100*
+00110 PROD   DS   ,99,,                    PRODUCT AREA (ALSO FOR TEMP USE)      00099 00000
+00120 BAND1  DS   ,300,,                   BAND 1 INDEX REGISTER BASE ADDRESS    00300 00000
+00130 BAND2  DS   ,340,,                   BAND 2 INDEX REGISTER BASE ADDRESS    00340 00000
+00140 XR0    DS   5,4,,                    XR 0 OFFSET                           00004 00005
+00150 XR1    DS   5,9,,                    XR 1 OFFSET                           00009 00005
+00160 XR2    DS   5,14,,                   XR 2 OFFSET                           00014 00005
+00170 XR3    DS   5,19,,                   XR 3 OFFSET                           00019 00005
+00180 XR4    DS   5,24,,                   XR 4 OFFSET                           00024 00005
+00190 XR5    DS   5,29,,                   XR 5 OFFSET                           00029 00005
+00200 XR6    DS   5,34,,                   XR 6 OFFSET                           00034 00005
+00210 XR7    DS   5,39,,                   XR 7 OFFSET                           00039 00005
+00220*
+00230***** DORG00828,,,                 DEFINE START
+00240 START  RCTY                                                                02402 34 00000 00102
+00250        RCTY                                                                02414 34 00000 00102
+00260        WATY HEAD1,,,                 PRINT HEADING                         02426 39 02751 00100
+00270        RCTY                                                                02438 34 00000 00102
+00280        BC1  *+24,,,                  CHECK FOR SW 1 ON                     02450 46 02474 00100
+00290        BNC1 *+36,,,                  CHECK FOR SW 1 OFF                    02462 47 02498 00100
+00300        WATY SW1ON,,,                 SW 1 ON                               02474 39 02867 00100
+00310        B    *+24,,,                                                        02486 49 02510 00000
+00320        WATY SW1OFF,,,                                                      02498 39 02885 00100
+00330        BC2  *+24,,,                  CHECK FOR SW 2 ON                     02510 46 02534 00200
+00340        BNC2 *+36,,,                  CHECK FOR SW 2 OFF                    02522 47 02558 00200
+00350        WATY SW2ON,,,                 SW 2 ON                               02534 39 02905 00100
+00360        B    *+24,,,                                                        02546 49 02570 00000
+00370        WATY SW2OFF,,,                                                      02558 39 02923 00100
+00380        BC3  *+24,,,                  CHECK FOR SW 3 ON                     02570 46 02594 00300
+00390        BNC3 *+36,,,                  CHECK FOR SW 3 OFF                    02582 47 02618 00300
+00400        WATY SW3ON,,,                 SW 3 ON                               02594 39 02943 00100
+00410        B    *+24,,,                                                        02606 49 02630 00000
+00420        WATY SW3OFF,,,                                                      02618 39 02961 00100
+00430        BC4  *+24,,,                  CHECK FOR SW 4 ON                     02630 46 02654 00400
+00440        BNC4 *+36,,,                  CHECK FOR SW 4 OFF                    02642 47 02678 00400
+00450        WATY SW4ON,,,                 SW 4 ON                               02654 39 02981 00100
+00460        B    *+24,,,                                                        02666 49 02690 00000
+00470        WATY SW4OFF,,,                                                      02678 39 02999 00100
+00480        WATY SETSWS,,,                SET SWS FOR XR01 THEN START           02690 39 03019 00100
+00490        H    ,,,                      HALT BEFORE TEST START                02702 48 00000 00000
+00500        RCTY                                                                02714 34 00000 00102
+00510        WATY HEAD2,,,                 START ROUTINES...                     02726 39 02807 00100
+00520        B    R00,,,                   GO TO ROUTINE 00                      02738 49 03082 00000
+00530*
+00540 HEAD1  DAC  28,XR01 - INDEX REGISTERS TEST@                                02751 00056
+00550 HEAD2  DAC  30,START ROUTINES. ETOS FOLLOW. @                              02807 00060
+00560 SW1ON  DAC  09,SW 1 ON @                                                   02867 00018
+00570 SW1OFF DAC  10,SW 1 OFF @                                                  02885 00020
+00580 SW2ON  DAC  09,SW 2 ON @                                                   02905 00018
+00590 SW2OFF DAC  10,SW 2 OFF @                                                  02923 00020
+00600 SW3ON  DAC  09,SW 3 ON @                                                   02943 00018
+00610 SW3OFF DAC  10,SW 3 OFF @                                                  02961 00020
+00620 SW4ON  DAC  09,SW 4 ON @                                                   02981 00018
+00630 SW4OFF DAC  10,SW 4 OFF @                                                  02999 00020
+00640 SETSWS DAC  32,- SET SWS FOR XR01 THEN START. @                            03019 00064
+00650*
+00660*         ROUTINE 00
+00670*         CHECK BAND SELECTION AND INDICATORS
+00680*
+00690 R00    60   *+12,2,,                 BS, SELECT BAND 2                     03082 60 03094 00002
+00700        BNI  R00E,3200,,              CHECK FOR BAND 2                      03094 47 03154 03200
+00710        60   *+12,1,,                 BS, SELECT BAND 1                     03106 60 03118 00001
+00720        BNI  R00E,3100,,              CHECK FOR BAND 1                      03118 47 03154 03100
+00730        60   *+12,0,,                 BS, TURN OFF BAND SELECTION           03130 60 03142 00000
+00740        BI   R00OK,3000,,             CHECK FOR NO BAND SELECTED            03142 46 03202 03000
+00750 R00E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPE OUT     03154 MO -LJPQ --J00
+00760        WATY *+25,,,                                                        03166 39 03191 00100
+00770        BNC3 *+24,,,                  NO HALT ON SW 3                       03178 47 03202 00300
+00780        DAC  6,H00  @,,               HALT H00                              03191 00012
+00790 R00OK  BC2  R00,,,                   LOOP ON SW 2                          03202 46 03082 00200
+00800        B    R01,,,                   CONTINUE TO NEXT ROUTINE              03214 49 03246 00000
+00810*
+00820*         ROUTINE 01
+00830*         MOVE ADDRESS, CHECK THAT EXACTLY 5 DIGITS ARE MOVED
+00840*
+00850        DSC  8,R912345,,              EXPECTED RESULT                       03226 00008
+00860        DSC  12,R90000012L45,,        2 GUARD, 5 DEST, 5 SOURCE DIGITS      03234 00012
+00870 R01    70   R01-6,R01-1,,            MA SOURCE TO DEST                     03246 70 03240 03245
+00880        C    R01-6,R01-13,,           CHECK EXPECTED RESULT                 03258 24 03240 03233
+00890        BE   R01OK,,,                 BR ON SUCCESS                         03270 46 03330 01200
+00900 R01E   BC1  *+24,,                   ERROR - CHECK FOR BYPASS TYPE OUT     03282 MO -LL-O --J00
+00910        WATY *+25,,                                                         03294 39 03319 00100
+00920        BNC3 *+24,,,                  NO HALT ON SW 3                       03306 47 03330 00300
+00930        DAC  6,H01  @,,               HALT H01                              03319 00012
+00940 R01OK  BC2  R01,,,                   LOOP ON SW 2                          03330 46 03246 00200
+00950        B    R02,,,                   CONTINUE TO NEXT ROUTINE              03342 49 03374 00000
+00960*
+00970*         ROUTINE 02
+00980*         MOVE ADDRESS, CHECK THAT FLAGS ARE NOT MOVED
+00990*
+01000        DSC  8,R912L45,,              EXPECTED RESULT                       03354 00008
+01010        DSC  12,R967Q901K3M5,,        2 GUARD, 5 DEST, 5 SOURCE DIGITS      03362 00012
+01020 R02    70   R02-6,R02-1,,            MA SOURCE TO DEST                     03374 70 03368 03373
+01030        BNF  *+24,R02-6,,             CHECK DIGITS THAT HAVE NO FLAGS       03386 44 03410 03368
+01040        B    R02E,,,                                                        03398 49 03542 00000
+01050        BNF  *+24,R02-7,,                                                   03410 44 03434 03367
+01060        B    R02E,,,                                                        03422 49 03542 00000
+01070        BNF  *+24,R02-9,,                                                   03434 44 03458 03365
+01080        B    R02E,,,                                                        03446 49 03542 00000
+01090        BNF  *+24,R02-10,,                                                  03458 44 03482 03364
+01100        B    R02E,,,                                                        03470 49 03542 00000
+01110        BNF  R02E,R02-8,,             CHECK MIDDLE DIGIT HAS FLAG           03482 44 03542 03366
+01120        C    R02-6,R02-13,,           CHECK FOR EXPECTED RESULTS            03494 24 03368 03361
+01130        BNE  R02E,,,                                                        03506 47 03542 01200
+01140        C    R02-9,R02-16,,                                                 03518 24 03365 03358
+01150        BE   R02OK,,,                 BR ON SUCCESS                         03530 46 03590 01200
+01160 R02E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      03542 46 03566 00100
+01170        WATY *+25,,                                                         03554 39 03579 00100
+01180        BNC3 *+24,,,                  NO HALT ON SW 3                       03566 47 03590 00300
+01190        DAC  6,H02  @,,               HALT H02                              03579 00012
+01200 R02OK  BC2  R02,,,                   LOOP ON SW 2                          03590 46 03374 00200
+01210        B    R03,,,                   CONTINUE TO NEXT ROUTINE              03602 49 03614 00000
+01220*
+01230 R03    B    R10,,,                   (RFE)                                 03614 49 03650 00000
+01240*
+01250*         ROUTINE 10
+01260*         BLX - TEST THAT FIVE DIGITS ARE MOVED AND H.O. FLAG IS SET
+01270*
+01280        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   03635 00010
+01290        DSC  6,J2345,,                EXPECTED RESULT                       03636 00006
+01300        DSC  8,R912345,,              2 GUARD, 5 SOURCE DIGITS              03642 00008
+01310 R10    TF   BAND1+XR1,R10-15,,       INITIALIZE BAND 1 XR 0,1              03650 26 00309 03635
+01320        60   *+12,1,,                 BS, SELECT BAND 1                     03662 60 03674 00001
+01330        65   *+12,R10-1,10,           BLX, LOAD XR 1                        03674 65 03686 036M9
+01340        CM   BAND1+XR0,0,,            CHECK THAT XR 0 NOT AFFECTED          03686 14 00304 -0000
+01350        BNE  R10E,,,                                                        03698 47 03758 01200
+01360        C    BAND1+XR1,R10-9,,        CHECK THAT XR 1 HAS EXPECTED RESULT   03710 24 00309 03641
+01370        BNE  R10E,,,                                                        03722 47 03758 01200
+01380        BNF  R10E,BAND1+XR1-4,,       ERROR IF NO H.O. FLAG                 03734 44 03758 00305
+01390        B    R10OK,,,                 HAS FLAG - SUCCESS                    03746 49 03806 00000
+01400 R10E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      03758 46 03782 00100
+01410        WATY *+25,,                                                         03770 39 03795 00100
+01420        BNC3 *+24,,,                  NO HALT ON SW 3                       03782 47 03806 00300
+01430        DAC  6,H10  @,,               HALT H10                              03795 00012
+01440 R10OK  BC2  R10,,,                   LOOP ON SW 2                          03806 46 03650 00200
+01450        B    R11,,,                   CONTINUE TO NEXT ROUTINE              03818 49 03854 00000
+01460*
+01470*         ROUTINE 11
+01480*         BLX - TEST THAT FIVE DIGITS ARE MOVED AND SIGN FLAG IS SET
+01490*
+01500        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   03839 00010
+01510        DSC  6,J234N,,                EXPECTED RESULT                       03840 00006
+01520        DSC  8,R91234N,,              2 GUARD, 5 SOURCE DIGITS              03846 00008
+01530 R11    TF   BAND1+XR1,R11-15,,       INITIALIZE BAND 1 XR 0,1              03854 26 00309 03839
+01540        60   *+12,1,,                 BS, SELECT BAND 1                     03866 60 03878 00001
+01550        65   *+12,R11-1,10,           BLX, LOAD XR 1                        03878 65 03890 038N3
+01560        CM   BAND1+XR0,0,,            CHECK THAT XR 0 NOT AFFECTED          03890 14 00304 -0000
+01570        BNE  R11E,,,                                                        03902 47 03974 01200
+01580        C    BAND1+XR1,R11-9,,        CHECK THAT XR 1 HAS EXPECTED RESULT   03914 24 00309 03845
+01590        BNE  R11E,,,                                                        03926 47 03974 01200
+01600        BNF  R11E,BAND1+XR1-4,,       ERROR IF NO H.O. FLAG                 03938 44 03974 00305
+01610        BNF  R11E,BAND1+XR1,,         ERROR IF NO SIGN FLAG                 03950 44 03974 00309
+01620        B    R11OK,,,                 BR ON SUCCESS                         03962 49 04022 00000
+01630 R11E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      03974 46 03998 00100
+01640        WATY *+25,,                                                         03986 39 04011 00100
+01650        BNC3 *+24,,,                  NO HALT ON SW 3                       03998 47 04022 00300
+01660        DAC  6,H11  @,,               HALT H11                              04011 00012
+01670 R11OK  BC2  R11,,,                   LOOP ON SW 2                          04022 46 03854 00200
+01680        B    R12,,,                   CONTINUE TO NEXT ROUTINE              04034 49 04070 00000
+01690*
+01700*         ROUTINE 12
+01710*         BLX - TEST THAT MIDDLE FLAGS ARE NOT TRANSFERRED
+01720*
+01730        DC   5,0,,                    INITIALIZE XR0 DESTINATION            04050 00005
+01740        DSC  5,67890,,                INITIALIZE XR1 DESTINATION            04051 00005
+01750        DSC  6,J234N,,                EXPECTED RESULT                       04056 00006
+01760        DSC  8,R91KLMN,,              2 GUARD, 5 SOURCE DIGITS              04062 00008
+01770 R12    TF   BAND1+XR1,R12-15,,       INITIALIZE BAND 1 XR 0,1              04070 26 00309 04055
+01780        60   *+12,1,,                 BS, SELECT BAND 1                     04082 60 04094 00001
+01790        65   *+12,R12-1,10,           BLX, LOAD XR 1                        04094 65 04106 040O9
+01800        CM   BAND1+XR0,0,,            CHECK THAT XR 0 NOT AFFECTED          04106 14 00304 -0000
+01810        BNE  R12E,,,                                                        04118 47 04262 01200
+01820        C    BAND1+XR1,R12-9,,        CHECK THAT XR 1 HAS EXPECTED RESULT   04130 24 00309 04061
+01830        BNE  R12E,,,                                                        04142 47 04262 01200
+01840        BNF  R12E,BAND1+XR1-4,,       ERROR IF NO H.O. FLAG                 04154 44 04262 00305
+01850        BNF  *+24,BAND1+XR1-3,,       OK IF NO DIGIT 2 FLAG                 04166 44 04190 00306
+01860        B    R12E,,,                    - SHOULD NOT HAVE FLAG              04178 49 04262 00000
+01870        BNF  *+24,BAND1+XR1-2,,       OK IF NO DIGIT 3 FLAG                 04190 44 04214 00307
+01880        B    R12E,,,                    - SHOULD NOT HAVE FLAG              04202 49 04262 00000
+01890        BNF  *+24,BAND1+XR1-1,,       OK IF NO DIGIT 4 FLAG                 04214 44 04238 00308
+01900        B    R12E,,,                    - SHOULD NOT HAVE FLAG              04226 49 04262 00000
+01910        BNF  R12E,BAND1+XR1,,         ERROR IF NO SIGN FLAG                 04238 44 04262 00309
+01920        B    R12OK,,,                 BR ON SUCCESS                         04250 49 04310 00000
+01930 R12E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      04262 46 04286 00100
+01940        WATY *+25,,                                                         04274 39 04299 00100
+01950        BNC3 *+24,,,                  NO HALT ON SW 3                       04286 47 04310 00300
+01960        DAC  6,H12  @,,               HALT H12                              04299 00012
+01970 R12OK  BC2  R12,,,                   LOOP ON SW 2                          04310 46 04070 00200
+01980        B    R13,,,                   CONTINUE TO NEXT ROUTINE              04322 49 04350 00000
+01990*
+02000*         ROUTINE 13
+02010*         BLXM - TEST THAT FIVE DIGITS ARE MOVED AND H.O. FLAG IS SET
+02020*
+02030        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   04343 00010
+02040        DSC  6,J2345,,                EXPECTED RESULT                       04344 00006
+02050 R13    TF   BAND2+XR1,R13-7,,        INITIALIZE BAND 2 XR 0,1              04350 26 00349 04343
+02060        60   *+12,2,,                 BS, SELECT BAND 2                     04362 60 04374 00002
+02070        66   *+12,12345,10,           BLXM, LOAD XR 1                       04374 66 04386 123M5
+02080        CM   BAND2+XR0,0,,            CHECK THAT XR 0 NOT AFFECTED          04386 14 00344 -0000
+02090        BNE  R13E,,,                                                        04398 47 04458 01200
+02100        C    BAND2+XR1,R13-1,,        CHECK THAT XR 1 HAS EXPECTED RESULT   04410 24 00349 04349
+02110        BNE  R13E,,,                                                        04422 47 04458 01200
+02120        BNF  R13E,BAND2+XR1-4,,       ERROR IF NO H.O. FLAG                 04434 44 04458 00345
+02130        B    R13OK,,,                 HAS FLAG - SUCCESS                    04446 49 04506 00000
+02140 R13E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      04458 46 04482 00100
+02150        WATY *+25,,                                                         04470 39 04495 00100
+02160        BNC3 *+24,,,                  NO HALT ON SW 3                       04482 47 04506 00300
+02170        DAC  6,H13  @,,               HALT H13                              04495 00012
+02180 R13OK  BC2  R13,,,                   LOOP ON SW 2                          04506 46 04350 00200
+02190        B    R14,,,                   CONTINUE TO NEXT ROUTINE              04518 49 04546 00000
+02200*
+02210*         ROUTINE 14
+02220*         BLXM - TEST THAT FIVE DIGITS ARE MOVED AND SIGN FLAG IS SET
+02230*
+02240        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   04539 00010
+02250        DSC  6,J234N,,                EXPECTED RESULT                       04540 00006
+02260 R14    TF   BAND2+XR1,R14-7,,        INITIALIZE BAND 2 XR 0,1              04546 26 00349 04539
+02270        60   *+12,2,,                 BS, SELECT BAND 2                     04558 60 04570 00002
+02280        66   *+12,-12345,10,          BLXM, LOAD XR 1                       04570 66 04582 123MN
+02290        CM   BAND2+XR0,0,,            CHECK THAT XR 0 NOT AFFECTED          04582 14 00344 -0000
+02300        BNE  R14E,,,                                                        04594 47 04666 01200
+02310        C    BAND2+XR1,R14-1,,        CHECK THAT XR 1 HAS EXPECTED RESULT   04606 24 00349 04545
+02320        BNE  R14E,,,                                                        04618 47 04666 01200
+02330        BNF  R14E,BAND2+XR1-4,,       ERROR IF NO H.O. FLAG                 04630 44 04666 00345
+02340        BNF  R14E,BAND2+XR1,,         ERROR IF NO SIGN FLAG                 04642 44 04666 00349
+02350        B    R14OK,,,                 BR ON SUCCESS                         04654 49 04714 00000
+02360 R14E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      04666 46 04690 00100
+02370        WATY *+25,,                                                         04678 39 04703 00100
+02380        BNC3 *+24,,,                  NO HALT ON SW 3                       04690 47 04714 00300
+02390        DAC  6,H14  @,,               HALT H14                              04703 00012
+02400 R14OK  BC2  R14,,,                   LOOP ON SW 2                          04714 46 04546 00200
+02410        B    R15,,,                   CONTINUE TO NEXT ROUTINE              04726 49 04754 00000
+02420*
+02430*         ROUTINE 15
+02440*         BLXM - TEST THAT MIDDLE FLAGS ARE NOT TRANSFERRED
+02450*
+02460        DC   5,0,,                    INITIALIZE XR0 DESTINATION            04742 00005
+02470        DSC  5,67890,,                INITIALIZE XR1 DESTINATION            04743 00005
+02480        DSC  6,J234N,,                EXPECTED RESULT                       04748 00006
+02490 R15    TF   BAND2+XR1,R15-7,,        INITIALIZE BAND 2 XR 0,1              04754 26 00349 04747
+02500        60   *+12,2,,                 BS, SELECT BAND 2                     04766 60 04778 00002
+02510        66   *+12,-12345,10,          BLXM, LOAD XR 1                       04778 66 04790 123MN
+02520        CM   BAND2+XR0,0,,            CHECK THAT XR 0 NOT AFFECTED          04790 14 00344 -0000
+02530        BNE  R15E,,,                                                        04802 47 04946 01200
+02540        C    BAND2+XR1,R15-1,,        CHECK THAT XR 1 HAS EXPECTED RESULT   04814 24 00349 04753
+02550        BNE  R15E,,,                                                        04826 47 04946 01200
+02560        BNF  R15E,BAND2+XR1-4,,       ERROR IF NO H.O. FLAG                 04838 44 04946 00345
+02570        BNF  *+24,BAND2+XR1-3,,       OK IF NO DIGIT 2 FLAG                 04850 44 04874 00346
+02580        B    R15E,,,                    - SHOULD NOT HAVE FLAG              04862 49 04946 00000
+02590        BNF  *+24,BAND2+XR1-2,,       OK IF NO DIGIT 3 FLAG                 04874 44 04898 00347
+02600        B    R15E,,,                    - SHOULD NOT HAVE FLAG              04886 49 04946 00000
+02610        BNF  *+24,BAND2+XR1-1,,       OK IF NO DIGIT 4 FLAG                 04898 44 04922 00348
+02620        B    R15E,,,                    - SHOULD NOT HAVE FLAG              04910 49 04946 00000
+02630        BNF  R15E,BAND2+XR1,,         ERROR IF NO SIGN FLAG                 04922 44 04946 00349
+02640        B    R15OK,,,                 BR ON SUCCESS                         04934 49 04994 00000
+02650 R15E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      04946 46 04970 00100
+02660        WATY *+25,,                                                         04958 39 04983 00100
+02670        BNC3 *+24,,,                  NO HALT ON SW 3                       04970 47 04994 00300
+02680        DAC  6,H15  @,,               HALT H15                              04983 00012
+02690 R15OK  BC2  R15,,,                   LOOP ON SW 2                          04994 46 04754 00200
+02700        B    R16,,,                   CONTINUE TO NEXT ROUTINE              05006 49 05032 00000
+02710*
+02720*         ROUTINE 16
+02730*         BLX - TEST THAT INDEX REGISTER 0 CAN BE LOADED
+02740*
+02750        DSC  6,J2345,,                EXPECTED RESULT                       05018 00006
+02760        DSC  8,R9J2345,,              2 GUARD, 5 SOURCE DIGITS              05024 00008
+02770 R16    TFM  BAND1+XR0,0,,            INITIALIZE BAND 1 XR 0                05032 16 00304 -0000
+02780        TFM  BAND1+XR1,0,,            INITIALIZE BAND 1 XR 1                05044 16 00309 -0000
+02790        60   *+12,1,,                 BS, SELECT BAND 1                     05056 60 05068 00001
+02800        65   *+12,R16-1,,             BLX, LOAD XR 0                        05068 65 05080 05031
+02810        CM   BAND1+XR1,0,,            CHECK THAT XR 1 NOT AFFECTED          05080 14 00309 -0000
+02820        BNE  R16E,,,                                                        05092 47 05152 01200
+02830        C    BAND1+XR0,R16-9,,        CHECK THAT XR 0 HAS EXPECTED RESULT   05104 24 00304 05023
+02840        BNE  R16E,,,                                                        05116 47 05152 01200
+02850        BNF  R16E,BAND1+XR0-4,,       ERROR IF NO H.O. FLAG                 05128 44 05152 00300
+02860        B    R16OK,,,                 HAS FLAG - SUCCESS                    05140 49 05200 00000
+02870 R16E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      05152 46 05176 00100
+02880        WATY *+25,,                                                         05164 39 05189 00100
+02890        BNC3 *+24,,,                  NO HALT ON SW 3                       05176 47 05200 00300
+02900        DAC  6,H16  @,,               HALT H16                              05189 00012
+02910 R16OK  BC2  R16,,,                   LOOP ON SW 2                          05200 46 05032 00200
+02920        B    R17,,,                   CONTINUE TO NEXT ROUTINE              05212 49 05224 00000
+02930*
+02940 R17    B    R20,,,                   (RFE)                                 05224 49 05260 00000
+02950*
+02960*         ROUTINE 20
+02970*         BSX - TEST THAT FIVE DIGITS ARE STORED AND H.O. FLAG IS SET
+02980*
+02990        DC   10,0000067890,,          INITIALIZE DESTINATION FOR 2 REGIST   05245 00010
+03000        DSC  6,J2345,,                EXPECTED RESULT                       05246 00006
+03010        DSC  8,R912345,,              2 GUARD, 5 SOURCE DIGITS              05252 00008
+03020 R20    TF   PROD,R20-15,,            INITIALIZE DEST FIELD                 05260 26 00099 05245
+03030        TFM  BAND1+XR6,99999,,        INITIALIZE XR 6                       05272 16 00334 R9999
+03040        TFM  BAND1+XR7,0,,            INITIALIZE XR 7                       05284 16 00339 -0000
+03050        60   *+12,1,,                 BS, SELECT BAND 1                     05296 60 05308 00001
+03060        65   *+12,R20-1,8910,         BLX, LOAD XR 7                        05308 65 05320 0NKN9
+03070        67   *+12,PROD,8910,          BSX, STORE XR 7                       05320 67 05332 0--R9
+03080        CM   PROD-5,0,,               CHECK THAT LOWER DIGITS NOT AFFECTE   05332 14 00094 -0000
+03090        BNE  R20E,,,                                                        05344 47 05404 01200
+03100        C    PROD,R20-9,,             CHECK THAT DEST HAS EXPECTED RESULT   05356 24 00099 05251
+03110        BNE  R20E,,,                                                        05368 47 05404 01200
+03120        BNF  R20E,PROD-4,,            ERROR IF NO H.O. FLAG                 05380 44 05404 00095
+03130        B    R20OK,,,                 HAS FLAG - SUCCESS                    05392 49 05452 00000
+03140 R20E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      05404 46 05428 00100
+03150        WATY *+25,,                                                         05416 39 05441 00100
+03160        BNC3 *+24,,,                  NO HALT ON SW 3                       05428 47 05452 00300
+03170        DAC  6,H20  @,,               HALT H20                              05441 00012
+03180 R20OK  BC2  R20,,,                   LOOP ON SW 2                          05452 46 05260 00200
+03190        B    R21,,,                   CONTINUE TO NEXT ROUTINE              05464 49 05500 00000
+03200*
+03210*         ROUTINE 21
+03220*         BSX - TEST THAT FIVE DIGITS ARE STORED AND SIGN FLAG IS SET
+03230*
+03240        DC   10,0000067890,,          INITIALIZE DESTINATION FOR 2 REGIST   05485 00010
+03250        DSC  6,J234N,,                EXPECTED RESULT                       05486 00006
+03260        DSC  8,R91234N,,              2 GUARD, 5 SOURCE DIGITS              05492 00008
+03270 R21    TF   PROD,R21-15,,            INITIALIZE DEST FIELD                 05500 26 00099 05485
+03280        TFM  BAND1+XR6,99999,,        INITIALIZE XR 6                       05512 16 00334 R9999
+03290        TFM  BAND1+XR7,0,,            INITIALIZE XR 7                       05524 16 00339 -0000
+03300        60   *+12,1,,                 BS, SELECT BAND 1                     05536 60 05548 00001
+03310        65   *+12,R21-1,8910,         BLX, LOAD XR 7                        05548 65 05560 0NMR9
+03320        67   *+12,PROD,8910,          BSX, STORE XR 7                       05560 67 05572 0--R9
+03330        CM   PROD-5,0,,               CHECK THAT LOWER DIGITS NOT AFFECTE   05572 14 00094 -0000
+03340        BNE  R21E,,,                                                        05584 47 05656 01200
+03350        C    PROD,R21-9,,             CHECK THAT DEST HAS EXPECTED RESULT   05596 24 00099 05491
+03360        BNE  R21E,,,                                                        05608 47 05656 01200
+03370        BNF  R21E,PROD-4,,            ERROR IF NO H.O. FLAG                 05620 44 05656 00095
+03380        BNF  R21E,PROD,,              ERROR IF NO SIGN FLAG                 05632 44 05656 00099
+03390        B    R21OK,,,                 BR ON SUCCESS                         05644 49 05704 00000
+03400 R21E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      05656 46 05680 00100
+03410        WATY *+25,,                                                         05668 39 05693 00100
+03420        BNC3 *+24,,,                  NO HALT ON SW 3                       05680 47 05704 00300
+03430        DAC  6,H21  @,,               HALT H21                              05693 00012
+03440 R21OK  BC2  R21,,,                   LOOP ON SW 2                          05704 46 05500 00200
+03450        B    R22,,,                   CONTINUE TO NEXT ROUTINE              05716 49 05752 00000
+03460*
+03470*         ROUTINE 22
+03480*         BSX - TEST THAT MIDDLE FLAGS ARE NOT TRANSFERRED
+03490*
+03500        DC   5,0,,                    INITIALIZE XR6 DESTINATION            05732 00005
+03510        DSC  5,6PQR0,,                INITIALIZE XR7 DESTINATION            05733 00005
+03520        DSC  6,JKLMN,,                EXPECTED RESULT                       05738 00006
+03530        DSC  8,R91234N,,              2 GUARD, 5 SOURCE DIGITS              05744 00008
+03540 R22    TD   PROD,R22-15,,            INITIALIZE DEST DIGIT 5               05752 25 00099 05737
+03550        TD   PROD-1,R22-16,,                                4               05764 25 00098 05736
+03560        TD   PROD-2,R22-17,,                                3               05776 25 00097 05735
+03570        TD   PROD-3,R22-18,,                                2               05788 25 00096 05734
+03580        TD   PROD-4,R22-19,,                                1               05800 25 00095 05733
+03590        TFM  BAND1+XR6,99999,,        INITIALIZE XR 6                       05812 16 00334 R9999
+03600        TFM  BAND1+XR7,0,,            INITIALIZE XR 7                       05824 16 00339 -0000
+03610        60   *+12,1,,                 BS, SELECT BAND 1                     05836 60 05848 00001
+03620        65   *+12,R22-1,8910,         BLX, LOAD XR 7                        05848 65 05860 0NPN1
+03630        67   *+12,PROD,8910,          BSX, STORE XR 7                       05860 67 05872 0--R9
+03640        CM   PROD-5,0,,               CHECK THAT LOWER DIGITS NOT AFFECTE   05872 14 00094 -0000
+03650        BNE  R22E,,,                                                        05884 47 06040 01200
+03660        C    PROD,R22-9,,             CHECK THAT DEST HAS EXPECTED RESULT   05896 24 00099 05743
+03670        BNE  R22E,,,                                                        05908 47 06040 01200
+03680        C    PROD-2,R22-11,,          CONTINUE CHECK FOR DIGITS 2-3         05920 24 00097 05741
+03690        BNE  R22E,,                                                         05932 47 06040 01200
+03700        C    PROD-3,R22-12,,          CONTINUE CHECK FOR DIGITS 1-2         05944 24 00096 05740
+03710        BNE  R22E,,                                                         05956 47 06040 01200
+03720        BNF  R22E,PROD-4,,            ERROR IF NO H.O. FLAG                 05968 44 06040 00095
+03730        BNF  R22E,PROD-3,,            ERROR IF NO DIGIT 2 FLAG              05980 44 06040 00096
+03740        BNF  R22E,PROD-2,,            ERROR IF NO DIGIT 3 FLAG              05992 44 06040 00097
+03750        BNF  R22E,PROD-1,,            ERROR IF NO DIGIT 4 FLAG              06004 44 06040 00098
+03760        BNF  R22E,PROD,,              ERROR IF NO SIGN FLAG                 06016 44 06040 00099
+03770        B    R22OK,,,                 BR ON SUCCESS                         06028 49 06088 00000
+03780 R22E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      06040 46 06064 00100
+03790        WATY *+25,,                                                         06052 39 06077 00100
+03800        BNC3 *+24,,,                  NO HALT ON SW 3                       06064 47 06088 00300
+03810        DAC  6,H22  @,,               HALT H22                              06077 00012
+03820 R22OK  BC2  R22,,,                   LOOP ON SW 2                          06088 46 05752 00200
+03830        B    R23,,,                   CONTINUE TO NEXT ROUTINE              06100 49 06136 00000
+03840*
+03850*         ROUTINE 23
+03860*         BSX - TEST THAT INDEX REGISTER 0 CAN BE STORED
+03870*
+03880        DC   10,0000067890,,          INITIALIZE DESTINATION FOR 2 REGIST   06121 00010
+03890        DSC  6,J2345,,                EXPECTED RESULT                       06122 00006
+03900        DSC  8,R912345,,              2 GUARD, 5 SOURCE DIGITS              06128 00008
+03910 R23    TF   PROD,R23-15,,            INITIALIZE DEST FIELD                 06136 26 00099 06121
+03920        TFM  BAND1+XR0,99999,,        INITIALIZE XR 0                       06148 16 00304 R9999
+03930        TFM  BAND1+XR1,0,,            INITIALIZE XR 1                       06160 16 00309 -0000
+03940        60   *+12,1,,                 BS, SELECT BAND 1                     06172 60 06184 00001
+03950        65   *+12,R23-1,,             BLX, LOAD XR 0                        06184 65 06196 06135
+03960        67   *+12,PROD,,              BSX, STORE XR 0                       06196 67 06208 00099
+03970        CM   PROD-5,0,,               CHECK THAT LOWER DIGITS NOT AFFECTE   06208 14 00094 -0000
+03980        BNE  R23E,,,                                                        06220 47 06280 01200
+03990        C    PROD,R23-9,,             CHECK THAT DEST HAS EXPECTED RESULT   06232 24 00099 06127
+04000        BNE  R23E,,,                                                        06244 47 06280 01200
+04010        BNF  R23E,PROD-4,,            ERROR IF NO H.O. FLAG                 06256 44 06280 00095
+04020        B    R23OK,,,                 HAS FLAG - SUCCESS                    06268 49 06328 00000
+04030 R23E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      06280 46 06304 00100
+04040        WATY *+25,,                                                         06292 39 06317 00100
+04050        BNC3 *+24,,,                  NO HALT ON SW 3                       06304 47 06328 00300
+04060        DAC  6,H23  @,,               HALT H23                              06317 00012
+04070 R23OK  BC2  R23,,,                   LOOP ON SW 2                          06328 46 06136 00200
+04080        B    R24,,,                   CONTINUE TO NEXT ROUTINE              06340 49 06352 00000
+04090*
+04100 R24    B    R30,,,                   (RFE)                                 06352 49 06388 00000
+04110*
+04120*         ROUTINE 30
+04130*         BX - ADD TO XR, TEST RESULT AND HP SET
+04140*
+04150        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   06373 00010
+04160        DSC  6,K4690,,                EXPECTED RESULT                       06374 00006
+04170        DSC  8,R9J2345,,              2 GUARD, 5 SOURCE DIGITS              06380 00008
+04180 R30    TF   BAND1+XR5,R30-15,,       CLEAR XR 4,5 FLAGS                    06388 26 00329 06373
+04190        60   *+12,1,,                 SELECT XR BAND 1                      06400 60 06412 00001
+04200        66   *+12,0,8,                INITIALIZE XR 4                       06412 66 06424 0-000
+04210        65   *+12,R30-1,810,          INITIALIZE XR 5                       06424 65 06436 0O3Q7
+04220        61   *+12,R30-1,810,          ADD TO XR 5                           06436 61 06448 0O3Q7
+04230        BNP  R30E,,,                  CHECK HP INDICATOR IS SET             06448 47 06520 01100
+04240        CM   BAND1+XR4,0,,            CHECK ONLY 5 DIGITS AFFECTED          06460 14 00324 -0000
+04250        BNE  R30E,,,                                                        06472 47 06520 01200
+04260        C    BAND1+XR5,R30-9,,        CHECK EXPECTED RESULT                 06484 24 00329 06379
+04270        BNE  R30E,,,                                                        06496 47 06520 01200
+04280        B    R30OK,,,                 BR ON SUCCESS                         06508 49 06568 00000
+04290 R30E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      06520 46 06544 00100
+04300        WATY *+25,,                                                         06532 39 06557 00100
+04310        BNC3 *+24,,,                  NO HALT ON SW 3                       06544 47 06568 00300
+04320        DAC  6,H30  @,,               HALT H30                              06557 00012
+04330 R30OK  BC2  R30,,,                   LOOP ON SW 2                          06568 46 06388 00200
+04340        B    R31,,,                   CONTINUE TO NEXT ROUTINE              06580 49 06616 00000
+04350*
+04360*         ROUTINE 31
+04370*         BX - ADD NEGATIVE TO XR, TEST RESULT AND EZ/HP NOT SET
+04380*
+04390        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   06601 00010
+04400        DSC  6,J234N,,                EXPECTED RESULT                       06602 00006
+04410        DSC  8,R9K469-,,              2 GUARD, 5 SOURCE DIGITS              06608 00008
+04420 R31    TF   BAND1+XR3,R31-15,,       CLEAR XR 2,3 FLAGS                    06616 26 00319 06601
+04430        60   *+12,1,,                 SELECT XR BAND 1                      06628 60 06640 00001
+04440        66   *+12,0,9,                INITIALIZE XR 2                       06640 66 06652 00-00
+04450        66   *+12,12345,910,          INITIALIZE XR 3                       06652 66 06664 12LM5
+04460        61   *+12,R31-1,910,          ADD NEGATIVE TO XR 3                  06664 61 06676 06OJ5
+04470        BNN  R31E,,,                  CHECK EZ/HP INDICATORS NOT SET        06676 46 06748 01300
+04480        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          06688 14 00314 -0000
+04490        BNE  R31E,,,                                                        06700 47 06748 01200
+04500        C    BAND1+XR3,R31-9,,        CHECK EXPECTED RESULT                 06712 24 00319 06607
+04510        BNE  R31E,,,                                                        06724 47 06748 01200
+04520        B    R31OK,,,                 BR ON SUCCESS                         06736 49 06796 00000
+04530 R31E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      06748 46 06772 00100
+04540        WATY *+25,,                                                         06760 39 06785 00100
+04550        BNC3 *+24,,,                  NO HALT ON SW 3                       06772 47 06796 00300
+04560        DAC  6,H31  @,,               HALT H31                              06785 00012
+04570 R31OK  BC2  R31,,,                   LOOP ON SW 2                          06796 46 06616 00200
+04580        B    R32,,,                   CONTINUE TO NEXT ROUTINE              06808 49 06844 00000
+04590*
+04600*         ROUTINE 32
+04610*         BX - ADD/OVERFLOW TO XR, TEST RESULT AND OVFL NOT SET
+04620*
+04630        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   06829 00010
+04640        DSC  6,K2221,,                EXPECTED RESULT                       06830 00006
+04650        DSC  8,R9O6666,,              2 GUARD, 5 SOURCE DIGITS              06836 00008
+04660 R32    TF   BAND1+XR3,R32-15,,       CLEAR XR 2,3 FLAGS                    06844 26 00319 06829
+04670        60   *+12,1,,                 SELECT XR BAND 1                      06856 60 06868 00001
+04680        66   *+12,0,9,                INITIALIZE XR 2                       06868 66 06880 00-00
+04690        66   *+12,55555,910,          INITIALIZE XR 3                       06880 66 06892 55NN5
+04700        BV   *+12,,,                  RESET OVERFLOW INDICATOR              06892 46 06904 01400
+04710        61   *+12,R32-1,910,          ADD WITH OVERFLOW TO XR 3             06904 61 06916 06QM3
+04720        BNP  R32E,,,                  CHECK HP INDICATOR IS SET             06916 47 07000 01100
+04730        BV   R32E,,,                  CHECK OVFL INDICATOR IS NOT SET       06928 46 07000 01400
+04740        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          06940 14 00314 -0000
+04750        BNE  R32E,,,                                                        06952 47 07000 01200
+04760        C    BAND1+XR3,R32-9,,        CHECK EXPECTED RESULT                 06964 24 00319 06835
+04770        BNE  R32E,,,                                                        06976 47 07000 01200
+04780        B    R32OK,,,                 BR ON SUCCESS                         06988 49 07048 00000
+04790 R32E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      07000 46 07024 00100
+04800        WATY *+25,,                                                         07012 39 07037 00100
+04810        BNC3 *+24,,,                  NO HALT ON SW 3                       07024 47 07048 00300
+04820        DAC  6,H32  @,,               HALT H32                              07037 00012
+04830 R32OK  BC2  R32,,,                   LOOP ON SW 2                          07048 46 06844 00200
+04840        B    R33,,,                   CONTINUE TO NEXT ROUTINE              07060 49 07096 00000
+04850*
+04860*         ROUTINE 33
+04870*         BX - ADD WITH Q FIELD LONGER THAN XR, TEST OVFL SET
+04880*
+04890        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGS     07081 00010
+04900        DSC  6,O6666,,                EXPECTED RESULT                       07082 00006
+04910        DSC  8,R911111,,              7 SOURCE DIGITS                       07088 00008
+04920 R33    TF   BAND1+XR3,R33-15,,       CLEAR XR 2,3 FLAGS                    07096 26 00319 07081
+04930        60   *+12,1,,                 SELECT XR BAND 1                      07108 60 07120 00001
+04940        66   *+12,0,9,                INITIALIZE XR 2                       07120 66 07132 00-00
+04950        66   *+12,55555,910,          INITIALIZE XR 3                       07132 66 07144 55NN5
+04960        BV   *+12,,,                  RESET OVERFLOW INDICATOR              07144 46 07156 01400
+04970        61   *+12,R33-1,910,          ADD WITH OVERFLOW TO XR 3             07156 61 07168 07-R5
+04980        BNP  R33E,,,                  CHECK HP INDICATOR IS SET             07168 47 07252 01100
+04990        BNV  R33E,,,                  CHECK OVFL INDICATOR IS SET           07180 47 07252 01400
+05000        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          07192 14 00314 -0000
+05010        BNE  R33E,,,                                                        07204 47 07252 01200
+05020        C    BAND1+XR3,R33-9,,        CHECK EXPECTED RESULT                 07216 24 00319 07087
+05030        BNE  R33E,,,                                                        07228 47 07252 01200
+05040        B    R33OK,,,                 BR ON SUCCESS                         07240 49 07300 00000
+05050 R33E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      07252 46 07276 00100
+05060        WATY *+25,,                                                         07264 39 07289 00100
+05070        BNC3 *+24,,,                  NO HALT ON SW 3                       07276 47 07300 00300
+05080        DAC  6,H33  @,,               HALT H33                              07289 00012
+05090 R33OK  BC2  R33,,,                   LOOP ON SW 2                          07300 46 07096 00200
+05100        B    R34,,,                   CONTINUE TO NEXT ROUTINE              07312 49 07348 00000
+05110*
+05120*         ROUTINE 34
+05130*         BX - ADD WITH ZERO RESULT, TEST EZ SET
+05140*
+05150        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGS     07333 00010
+05160        DSC  6,-0000,,                EXPECTED RESULT                       07334 00006
+05170        DSC  8,R9J111J,,              7 SOURCE DIGITS                       07340 00008
+05180 R34    TF   BAND1+XR3,R34-15,,       CLEAR XR 2,3 FLAGS                    07348 26 00319 07333
+05190        60   *+12,1,,                 SELECT XR BAND 1                      07360 60 07372 00001
+05200        66   *+12,0,9,                INITIALIZE XR 2                       07372 66 07384 00-00
+05210        66   *+12,11111,910,          INITIALIZE XR 3                       07384 66 07396 11JJ1
+05220        BV   *+12,,,                  RESET OVERFLOW INDICATOR              07396 46 07408 01400
+05230        61   *+12,R34-1,910,          ADD NEGATIVE TO XR 3                  07408 61 07420 07LM7
+05240        BNE  R34E,,,                  CHECK EZ INDICATOR IS SET             07420 47 07504 01200
+05250        BV   R34E,,,                  CHECK OVFL INDICATOR IS NOT SET       07432 46 07504 01400
+05260        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          07444 14 00314 -0000
+05270        BNE  R34E,,,                                                        07456 47 07504 01200
+05280        C    BAND1+XR3,R34-9,,        CHECK EXPECTED RESULT                 07468 24 00319 07339
+05290        BNE  R34E,,,                                                        07480 47 07504 01200
+05300        B    R34OK,,,                 BR ON SUCCESS                         07492 49 07552 00000
+05310 R34E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      07504 46 07528 00100
+05320        WATY *+25,,                                                         07516 39 07541 00100
+05330        BNC3 *+24,,,                  NO HALT ON SW 3                       07528 47 07552 00300
+05340        DAC  6,H34  @,,               HALT H34                              07541 00012
+05350 R34OK  BC2  R34,,,                   LOOP ON SW 2                          07552 46 07348 00200
+05360        B    R35,,,                   CONTINUE TO NEXT ROUTINE              07564 49 07620 00000
+05370*
+05380*         ROUTINE 35
+05390*         BX - ADD TO MULTIPLE XR, TEST RESULT AND HP SET
+05400*
+05410        DSC  15,-01239876543210,,     INITIALIZE 3 REGISTERS                07576 00015
+05420        DSC  15,-11111111111109,,     EXPECTED RESULT                       07591 00015
+05430        DSC  14, -9871234567899,,     14 ADDEND DIGITS                      07606 00014
+05440 R35    TF   BAND2+XR7,R35-30,,       INITIALIZE XR 5,6,7                   07620 26 00379 07590
+05450        60   *+12,2,,                 SELECT XR BAND 2                      07632 60 07644 00002
+05460        66   *+12,0,8,                INITIALIZE XR 4                       07644 66 07656 0-000
+05470        61   *+12,R35-1,8910,         ADD TO XR 7                           07656 61 07668 0POJ9
+05480        BNP  R35E,,,                  CHECK HP INDICATOR IS SET             07668 47 07848 01100
+05490        CM   BAND2+XR4,0,,            CHECK XR 4 NOT AFFECTED               07680 14 00364 -0000
+05500        BNE  R35E,,,                                                        07692 47 07848 01200
+05510        C    BAND2+XR7,R35-15,,       CHECK EXPECTED RESULT                 07704 24 00379 07605
+05520        BNE  R35E,,,                                                        07716 47 07848 01200
+05530        67   *+12,PROD,8910,          STORE XR 7                            07728 67 07740 0--R9
+05540        CM   PROD,11109,,             CHECK XR 7 RESULT                     07740 14 00099 J1109
+05550        BNE  R35E,,,                                                        07752 47 07848 01200
+05560        67   *+12,PROD,89,            STORE XR 6                            07764 67 07776 0--99
+05570        CM   PROD,11111,,             CHECK XR 6 RESULT                     07776 14 00099 J1111
+05580        BNE  R35E,,,                                                        07788 47 07848 01200
+05590        67   *+12,PROD,810,           STORE XR 5                            07800 67 07812 0-0R9
+05600        CM   PROD,01111,,             CHECK XR 5 RESULT                     07812 14 00099 -1111
+05610        BNE  R35E,,,                                                        07824 47 07848 01200
+05620        B    R35OK,,,                 BR ON SUCCESS                         07836 49 07896 00000
+05630 R35E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      07848 46 07872 00100
+05640        WATY *+25,,                                                         07860 39 07885 00100
+05650        BNC3 *+24,,,                  NO HALT ON SW 3                       07872 47 07896 00300
+05660        DAC  6,H35  @,,               HALT H35                              07885 00012
+05670 R35OK  BC2  R35,,,                   LOOP ON SW 2                          07896 46 07620 00200
+05680        B    R36,,,                   CONTINUE TO NEXT ROUTINE              07908 49 07964 00000
+05690*
+05700*         ROUTINE 36
+05710*         BX - ADD NEG TO MULTIPLE XR, TEST RESULT AND EZ/HP NOT SET
+05720*
+05730        DSC  15,-01239876543210,,     INITIALIZE 3 REGISTERS                07920 00015
+05740        DSC  15,-0863135802468R,,     EXPECTED RESULT                       07935 00015
+05750        DSC  14, -987123456789R,,     14 ADDEND DIGITS                      07950 00014
+05760 R36    TF   BAND2+XR7,R36-30,,       INITIALIZE XR 5,6,7                   07964 26 00379 07934
+05770        60   *+12,2,,                 SELECT XR BAND 2                      07976 60 07988 00002
+05780        66   *+12,0,8,                INITIALIZE XR 4                       07988 66 08000 0-000
+05790        61   *+12,R36-1,8910,         ADD TO XR 7                           08000 61 08012 0PRO3
+05800        BNN  R36E,,,                  CHECK EZ/HP INDICATORS NOT SET        08012 46 08192 01300
+05810        CM   BAND2+XR4,0,,            CHECK XR 4 NOT AFFECTED               08024 14 00364 -0000
+05820        BNE  R36E,,,                                                        08036 47 08192 01200
+05830        C    BAND2+XR7,R36-15,,       CHECK EXPECTED RESULT                 08048 24 00379 07949
+05840        BNE  R36E,,,                                                        08060 47 08192 01200
+05850        67   *+12,PROD,8910,          STORE XR 7                            08072 67 08084 0--R9
+05860        CM   PROD,-24689,,            CHECK XR 7 RESULT                     08084 14 00099 K468R
+05870        BNE  R36E,,,                                                        08096 47 08192 01200
+05880        67   *+12,PROD,89,            STORE XR 6                            08108 67 08120 0--99
+05890        CM   PROD,13580,,             CHECK XR 6 RESULT                     08120 14 00099 J3580
+05900        BNE  R36E,,,                                                        08132 47 08192 01200
+05910        67   *+12,PROD,810,           STORE XR 5                            08144 67 08156 0-0R9
+05920        CM   PROD,00863,,             CHECK XR 5 RESULT                     08156 14 00099 -0863
+05930        BNE  R36E,,,                                                        08168 47 08192 01200
+05940        B    R36OK,,,                 BR ON SUCCESS                         08180 49 08240 00000
+05950 R36E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      08192 46 08216 00100
+05960        WATY *+25,,                                                         08204 39 08229 00100
+05970        BNC3 *+24,,,                  NO HALT ON SW 3                       08216 47 08240 00300
+05980        DAC  6,H36  @,,               HALT H36                              08229 00012
+05990 R36OK  BC2  R36,,,                   LOOP ON SW 2                          08240 46 07964 00200
+06000        B    R37,,,                   CONTINUE TO NEXT ROUTINE              08252 49 08310 00000
+06010*
+06020*         ROUTINE 37
+06030*         BX - ADD/OVERFLOW TO MULTIPLE XR, TEST OVFL NOT SET
+06040*
+06050        DSC  15,R87654321098765,,     INITIALIZE 3 REGISTERS                08264 00015
+06060        DSC  15,K22222211222221,,     EXPECTED RESULT                       08279 00015
+06070        DSC  15,K34567890123456,,     15 ADDEND DIGITS                      08294 00015
+06080        DC   1,0,,                    ADJUST TO EVEN ADDRESS                08309 00001
+06090 R37    TF   BAND2+XR7,R37-32,,       INITIALIZE XR 5,6,7                   08310 26 00379 08278
+06100        60   *+12,2,,                 SELECT XR BAND 2                      08322 60 08334 00002
+06110        66   *+12,0,8,                INITIALIZE XR 4                       08334 66 08346 0-000
+06120        61   *+12,R37-2,8910,         ADD TO XR 7                           08346 61 08358 0QL-8
+06130        BNP  R37E,,,                  CHECK HP INDICATOR SET                08358 47 08538 01100
+06140        CM   BAND2+XR4,0,,            CHECK XR 4 NOT AFFECTED               08370 14 00364 -0000
+06150        BNE  R37E,,,                                                        08382 47 08538 01200
+06160        C    BAND2+XR7,R37-17,,       CHECK EXPECTED RESULT                 08394 24 00379 08293
+06170        BNE  R37E,,,                                                        08406 47 08538 01200
+06180        67   *+12,PROD,8910,          STORE XR 7                            08418 67 08430 0--R9
+06190        CM   PROD,22221,,             CHECK XR 7 RESULT                     08430 14 00099 K2221
+06200        BNE  R37E,,,                                                        08442 47 08538 01200
+06210        67   *+12,PROD,89,            STORE XR 6                            08454 67 08466 0--99
+06220        CM   PROD,22112,,             CHECK XR 6 RESULT                     08466 14 00099 K2112
+06230        BNE  R37E,,,                                                        08478 47 08538 01200
+06240        67   *+12,PROD,810,           STORE XR 5                            08490 67 08502 0-0R9
+06250        CM   PROD,22222,,             CHECK XR 5 RESULT                     08502 14 00099 K2222
+06260        BNE  R37E,,,                                                        08514 47 08538 01200
+06270        B    R37OK,,,                 BR ON SUCCESS                         08526 49 08586 00000
+06280 R37E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      08538 46 08562 00100
+06290        WATY *+25,,                                                         08550 39 08575 00100
+06300        BNC3 *+24,,,                  NO HALT ON SW 3                       08562 47 08586 00300
+06310        DAC  6,H37  @,,               HALT H37                              08575 00012
+06320 R37OK  BC2  R37,,,                   LOOP ON SW 2                          08586 46 08310 00200
+06330        B    R38,,,                   CONTINUE TO NEXT ROUTINE              08598 49 08610 00000
+06340*
+06350 R38    B    R40,,,                   (RFE)                                 08610 49 08638 00000
+06360*
+06370*         ROUTINE 40
+06380*         BXM - ADD TO XR, TEST RESULT AND HP SET
+06390*
+06400        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   08631 00010
+06410        DSC  6,K4690,,                EXPECTED RESULT                       08632 00006
+06420 R40    TF   BAND1+XR5,R40-7,,        CLEAR XR 4,5 FLAGS                    08638 26 00329 08631
+06430        60   *+12,1,,                 SELECT XR BAND 1                      08650 60 08662 00001
+06440        66   *+12,0,8,                INITIALIZE XR 4                       08662 66 08674 0-000
+06450        66   *+12,12345,810,          INITIALIZE XR 5                       08674 66 08686 1K3M5
+06460        62   *+12,12345,810,          ADD TO XR 5                           08686 62 08698 1K3M5
+06470        BNP  R40E,,,                  CHECK HP INDICATOR IS SET             08698 47 08770 01100
+06480        CM   BAND1+XR4,0,,            CHECK ONLY 5 DIGITS AFFECTED          08710 14 00324 -0000
+06490        BNE  R40E,,,                                                        08722 47 08770 01200
+06500        C    BAND1+XR5,R40-1,,        CHECK EXPECTED RESULT                 08734 24 00329 08637
+06510        BNE  R40E,,,                                                        08746 47 08770 01200
+06520        B    R40OK,,,                 BR ON SUCCESS                         08758 49 08818 00000
+06530 R40E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      08770 46 08794 00100
+06540        WATY *+25,,                                                         08782 39 08807 00100
+06550        BNC3 *+24,,,                  NO HALT ON SW 3                       08794 47 08818 00300
+06560        DAC  6,H40  @,,               HALT H40                              08807 00012
+06570 R40OK  BC2  R40,,,                   LOOP ON SW 2                          08818 46 08638 00200
+06580        B    R41,,,                   CONTINUE TO NEXT ROUTINE              08830 49 08858 00000
+06590*
+06600*         ROUTINE 41
+06610*         BXM - ADD NEGATIVE TO XR, TEST RESULT AND EZ/HP NOT SET
+06620*
+06630        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   08851 00010
+06640        DSC  6,J234N,,                EXPECTED RESULT                       08852 00006
+06650 R41    TF   BAND1+XR3,R41-7,,        CLEAR XR 2,3 FLAGS                    08858 26 00319 08851
+06660        60   *+12,1,,                 SELECT XR BAND 1                      08870 60 08882 00001
+06670        66   *+12,0,9,                INITIALIZE XR 2                       08882 66 08894 00-00
+06680        66   *+12,12345,910,          INITIALIZE XR 3                       08894 66 08906 12LM5
+06690        62   *+12,-24690,910,         ADD NEGATIVE TO XR 3                  08906 62 08918 24OR-
+06700        BNN  R41E,,,                  CHECK EZ/HP INDICATORS NOT SET        08918 46 08990 01300
+06710        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          08930 14 00314 -0000
+06720        BNE  R41E,,,                                                        08942 47 08990 01200
+06730        C    BAND1+XR3,R41-1,,        CHECK EXPECTED RESULT                 08954 24 00319 08857
+06740        BNE  R41E,,,                                                        08966 47 08990 01200
+06750        B    R41OK,,,                 BR ON SUCCESS                         08978 49 09038 00000
+06760 R41E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      08990 46 09014 00100
+06770        WATY *+25,,                                                         09002 39 09027 00100
+06780        BNC3 *+24,,,                  NO HALT ON SW 3                       09014 47 09038 00300
+06790        DAC  6,H41  @,,               HALT H41                              09027 00012
+06800 R41OK  BC2  R41,,,                   LOOP ON SW 2                          09038 46 08858 00200
+06810        B    R42,,,                   CONTINUE TO NEXT ROUTINE              09050 49 09078 00000
+06820*
+06830*         ROUTINE 42
+06840*         BXM - ADD/OVERFLOW TO XR, TEST RESULT AND OVFL NOT SET
+06850*
+06860        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   09071 00010
+06870        DSC  6,K2221,,                EXPECTED RESULT                       09072 00006
+06880 R42    TF   BAND1+XR3,R42-7,,        CLEAR XR 2,3 FLAGS                    09078 26 00319 09071
+06890        60   *+12,1,,                 SELECT XR BAND 1                      09090 60 09102 00001
+06900        66   *+12,0,9,                INITIALIZE XR 2                       09102 66 09114 00-00
+06910        66   *+12,55555,910,          INITIALIZE XR 3                       09114 66 09126 55NN5
+06920        BV   *+12,,,                  RESET OVERFLOW INDICATOR              09126 46 09138 01400
+06930        62   *+12,66666,910,          ADD WITH OVERFLOW TO XR 3             09138 62 09150 66OO6
+06940        BNP  R42E,,,                  CHECK HP INDICATOR IS SET             09150 47 09234 01100
+06950        BV   R42E,,,                  CHECK OVFL INDICATOR IS NOT SET       09162 46 09234 01400
+06960        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          09174 14 00314 -0000
+06970        BNE  R42E,,,                                                        09186 47 09234 01200
+06980        C    BAND1+XR3,R42-1,,        CHECK EXPECTED RESULT                 09198 24 00319 09077
+06990        BNE  R42E,,,                                                        09210 47 09234 01200
+07000        B    R42OK,,,                 BR ON SUCCESS                         09222 49 09282 00000
+07010 R42E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      09234 46 09258 00100
+07020        WATY *+25,,                                                         09246 39 09271 00100
+07030        BNC3 *+24,,,                  NO HALT ON SW 3                       09258 47 09282 00300
+07040        DAC  6,H42  @,,               HALT H42                              09271 00012
+07050 R42OK  BC2  R42,,,                   LOOP ON SW 2                          09282 46 09078 00200
+07060        B    R43,,,                   CONTINUE TO NEXT ROUTINE              09294 49 09322 00000
+07070*
+07080*         ROUTINE 43
+07090*         BXM - ADD WITH Q FIELD LONGER THAN XR, TEST OVFL SET
+07100*
+07110        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGS     09315 00010
+07120        DSC  6,O66,,                  EXPECTED RESULT                       09316 00006
+07130 R43    TF   BAND1+XR3,R43-7,,        CLEAR XR 2,3 FLAGS                    09322 26 00319 09315
+07140        60   *+12,1,,                 SELECT XR BAND 1                      09334 60 09346 00001
+07150        66   *+12,0,9,                INITIALIZE XR 2                       09346 66 09358 00-00
+07160        66   *+12,55555,910,          INITIALIZE XR 3                       09358 66 09370 55NN5
+07170        SF   BAND1+XR3-2,,,           MAKE XR 3 A SHORTER FIELD             09370 32 00317 00000
+07180        BV   *+12,,,                  RESET OVERFLOW INDICATOR              09382 46 09394 01400
+07190        62   *+12,11111,910,          ADD WITH OVERFLOW TO XR 3             09394 62 09406 11JJ1
+07200        BNP  R43E,,,                  CHECK HP INDICATOR IS SET             09406 47 09490 01100
+07210        BNV  R43E,,,                  CHECK OVFL INDICATOR IS SET           09418 47 09490 01400
+07220        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          09430 14 00314 -0000
+07230        BNE  R43E,,,                                                        09442 47 09490 01200
+07240        C    BAND1+XR3,R43-1,,        CHECK EXPECTED RESULT                 09454 24 00319 09321
+07250        BNE  R43E,,,                                                        09466 47 09490 01200
+07260        B    R43OK,,,                 BR ON SUCCESS                         09478 49 09538 00000
+07270 R43E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      09490 46 09514 00100
+07280        WATY *+25,,                                                         09502 39 09527 00100
+07290        BNC3 *+24,,,                  NO HALT ON SW 3                       09514 47 09538 00300
+07300        DAC  6,H43  @,,               HALT H43                              09527 00012
+07310 R43OK  BC2  R43,,,                   LOOP ON SW 2                          09538 46 09322 00200
+07320        B    R44,,,                   CONTINUE TO NEXT ROUTINE              09550 49 09578 00000
+07330*
+07340*         ROUTINE 44
+07350*         BXM - ADD WITH ZERO RESULT, TEST EZ SET
+07360*
+07370        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGS     09571 00010
+07380        DSC  6,-0000,,                EXPECTED RESULT                       09572 00006
+07390 R44    TF   BAND1+XR3,R44-7,,        CLEAR XR 2,3 FLAGS                    09578 26 00319 09571
+07400        60   *+12,1,,                 SELECT XR BAND 1                      09590 60 09602 00001
+07410        66   *+12,0,9,                INITIALIZE XR 2                       09602 66 09614 00-00
+07420        66   *+12,11111,910,          INITIALIZE XR 3                       09614 66 09626 11JJ1
+07430        BV   *+12,,,                  RESET OVERFLOW INDICATOR              09626 46 09638 01400
+07440        62   *+12,-11111,910,         ADD NEGATIVE TO XR 3                  09638 62 09650 11JJJ
+07450        BNE  R44E,,,                  CHECK EZ INDICATOR IS SET             09650 47 09734 01200
+07460        BV   R44E,,,                  CHECK OVFL INDICATOR IS NOT SET       09662 46 09734 01400
+07470        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          09674 14 00314 -0000
+07480        BNE  R44E,,,                                                        09686 47 09734 01200
+07490        C    BAND1+XR3,R44-1,,        CHECK EXPECTED RESULT                 09698 24 00319 09577
+07500        BNE  R44E,,,                                                        09710 47 09734 01200
+07510        B    R44OK,,,                 BR ON SUCCESS                         09722 49 09782 00000
+07520 R44E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      09734 46 09758 00100
+07530        WATY *+25,,                                                         09746 39 09771 00100
+07540        BNC3 *+24,,,                  NO HALT ON SW 3                       09758 47 09782 00300
+07550        DAC  6,H44  @,,               HALT H44                              09771 00012
+07560 R44OK  BC2  R44,,,                   LOOP ON SW 2                          09782 46 09578 00200
+07570        B    R45,,,                   CONTINUE TO NEXT ROUTINE              09794 49 09836 00000
+07580*
+07590*         ROUTINE 45
+07600*         BXM - ADD TO MULTIPLE XR, TEST RESULT AND HP SET
+07610*
+07620        DSC  15,-01239876543210,,     INITIALIZE 3 REGISTERS                09806 00015
+07630        DSC  15,-01239876611109,,     EXPECTED RESULT                       09821 00015
+07640 R45    TF   BAND2+XR7,R45-16,,       INITIALIZE XR 5,6,7                   09836 26 00379 09820
+07650        60   *+12,2,,                 SELECT XR BAND 2                      09848 60 09860 00002
+07660        66   *+12,0,8,                INITIALIZE XR 4                       09860 66 09872 0-000
+07670        62   *+12,67899,8910,         ADD TO XR 7                           09872 62 09884 6PQR9
+07680        BNP  R45E,,,                  CHECK HP INDICATOR IS SET             09884 47 10064 01100
+07690        CM   BAND2+XR4,0,,            CHECK XR 4 NOT AFFECTED               09896 14 00364 -0000
+07700        BNE  R45E,,,                                                        09908 47 10064 01200
+07710        C    BAND2+XR7,R45-1,,        CHECK EXPECTED RESULT                 09920 24 00379 09835
+07720        BNE  R45E,,,                                                        09932 47 10064 01200
+07730        67   *+12,PROD,8910,          STORE XR 7                            09944 67 09956 0--R9
+07740        CM   PROD,11109,,             CHECK XR 7 RESULT                     09956 14 00099 J1109
+07750        BNE  R45E,,,                                                        09968 47 10064 01200
+07760        67   *+12,PROD,89,            STORE XR 6                            09980 67 09992 0--99
+07770        CM   PROD,98766,,             CHECK XR 6 RESULT                     09992 14 00099 R8766
+07780        BNE  R45E,,,                                                        10004 47 10064 01200
+07790        67   *+12,PROD,810,           STORE XR 5                            10016 67 10028 0-0R9
+07800        CM   PROD,00123,,             CHECK XR 5 RESULT                     10028 14 00099 -0123
+07810        BNE  R45E,,,                                                        10040 47 10064 01200
+07820        B    R45OK,,,                 BR ON SUCCESS                         10052 49 10112 00000
+07830 R45E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      10064 46 10088 00100
+07840        WATY *+25,,                                                         10076 39 10101 00100
+07850        BNC3 *+24,,,                  NO HALT ON SW 3                       10088 47 10112 00300
+07860        DAC  6,H45  @,,               HALT H45                              10101 00012
+07870 R45OK  BC2  R45,,,                   LOOP ON SW 2                          10112 46 09836 00200
+07880        B    R46,,,                   CONTINUE TO NEXT ROUTINE              10124 49 10166 00000
+07890*
+07900*         ROUTINE 46
+07910*         BXM - ADD NEG TO MULTIPLE XR, TEST RESULT AND EZ/HP NOT SET
+07920*
+07930        DSC  15,-01239876543210,,     INITIALIZE 3 REGISTERS                10136 00015
+07940        DSC  15,-01239876475311,,     EXPECTED RESULT                       10151 00015
+07950 R46    TF   BAND2+XR7,R46-16,,       INITIALIZE XR 5,6,7                   10166 26 00379 10150
+07960        60   *+12,2,,                 SELECT XR BAND 2                      10178 60 10190 00002
+07970        66   *+12,0,8,                INITIALIZE XR 4                       10190 66 10202 0-000
+07980        62   *+12,-67899,8910,        ADD TO XR 7                           10202 62 10214 6PQRR
+07990        BNP  R46E,,,                  CHECK EZ/HP INDICATORS NOT SET        10214 47 10394 01100
+08000        CM   BAND2+XR4,0,,            CHECK XR 4 NOT AFFECTED               10226 14 00364 -0000
+08010        BNE  R46E,,,                                                        10238 47 10394 01200
+08020        C    BAND2+XR7,R46-1,,        CHECK EXPECTED RESULT                 10250 24 00379 10165
+08030        BNE  R46E,,,                                                        10262 47 10394 01200
+08040        67   *+12,PROD,8910,          STORE XR 7                            10274 67 10286 0--R9
+08050        CM   PROD,75311,,             CHECK XR 7 RESULT                     10286 14 00099 P5311
+08060        BNE  R46E,,,                                                        10298 47 10394 01200
+08070        67   *+12,PROD,89,            STORE XR 6                            10310 67 10322 0--99
+08080        CM   PROD,98764,,             CHECK XR 6 RESULT                     10322 14 00099 R8764
+08090        BNE  R46E,,,                                                        10334 47 10394 01200
+08100        67   *+12,PROD,810,           STORE XR 5                            10346 67 10358 0-0R9
+08110        CM   PROD,00123,,             CHECK XR 5 RESULT                     10358 14 00099 -0123
+08120        BNE  R46E,,,                                                        10370 47 10394 01200
+08130        B    R46OK,,,                 BR ON SUCCESS                         10382 49 10442 00000
+08140 R46E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      10394 46 10418 00100
+08150        WATY *+25,,                                                         10406 39 10431 00100
+08160        BNC3 *+24,,,                  NO HALT ON SW 3                       10418 47 10442 00300
+08170        DAC  6,H46  @,,               HALT H46                              10431 00012
+08180 R46OK  BC2  R46,,,                   LOOP ON SW 2                          10442 46 10166 00200
+08190        B    R47,,,                   CONTINUE TO NEXT ROUTINE              10454 49 10466 00000
+08200*
+08210 R47    B    R50,,,                   (RFE)                                 10466 49 10502 00000
+08220*
+08230*         ROUTINE 50
+08240*         BXC - ADD TO XR, TEST RESULT AND HP SET
+08250*
+08260        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   10487 00010
+08270        DSC  6,K4690,,                EXPECTED RESULT                       10488 00006
+08280        DSC  8,R9J2345,,              2 GUARD, 5 SOURCE DIGITS              10494 00008
+08290 R50    TF   BAND1+XR5,R50-15,,       CLEAR XR 4,5 FLAGS                    10502 26 00329 10487
+08300        60   *+12,1,,                 SELECT XR BAND 1                      10514 60 10526 00001
+08310        66   *+12,0,8,                INITIALIZE XR 4                       10526 66 10538 0-000
+08320        65   *+12,R50-1,810,          INITIALIZE XR 5                       10538 65 10550 1-5-1
+08330        63   *+24,R50-1,810,          ADD TO XR 5, EXPECT BRANCH            10550 63 10574 1-5-1
+08340        B    R50E,,,                  ERROR - DID NOT BRANCH                10562 49 10646 00000
+08350        BNP  R50E,,,                  CHECK HP INDICATOR IS SET             10574 47 10646 01100
+08360        CM   BAND1+XR4,0,,            CHECK ONLY 5 DIGITS AFFECTED          10586 14 00324 -0000
+08370        BNE  R50E,,,                                                        10598 47 10646 01200
+08380        C    BAND1+XR5,R50-9,,        CHECK EXPECTED RESULT                 10610 24 00329 10493
+08390        BNE  R50E,,,                                                        10622 47 10646 01200
+08400        B    R50OK,,,                 BR ON SUCCESS                         10634 49 10694 00000
+08410 R50E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      10646 46 10670 00100
+08420        WATY *+25,,                                                         10658 39 10683 00100
+08430        BNC3 *+24,,,                  NO HALT ON SW 3                       10670 47 10694 00300
+08440        DAC  6,H50  @,,               HALT H50                              10683 00012
+08450 R50OK  BC2  R50,,,                   LOOP ON SW 2                          10694 46 10502 00200
+08460        B    R51,,,                   CONTINUE TO NEXT ROUTINE              10706 49 10742 00000
+08470*
+08480*         ROUTINE 51
+08490*         BXC - ADD NEGATIVE TO XR, TEST RESULT AND EZ/HP NOT SET
+08500*
+08510        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   10727 00010
+08520        DSC  6,J234N,,                EXPECTED RESULT                       10728 00006
+08530        DSC  8,R9K469-,,              2 GUARD, 5 SOURCE DIGITS              10734 00008
+08540 R51    TF   BAND1+XR3,R51-15,,       CLEAR XR 2,3 FLAGS                    10742 26 00319 10727
+08550        60   *+12,1,,                 SELECT XR BAND 1                      10754 60 10766 00001
+08560        66   *+12,0,9,                INITIALIZE XR 2                       10766 66 10778 00-00
+08570        66   *+12,12345,910,          INITIALIZE XR 3                       10778 66 10790 12LM5
+08580        63   *+24,R51-1,910,          ADD NEGATIVE TO XR 3, EXPECT NO BRA   10790 63 10814 10PM1
+08590        B    *+24,,,                  OKAY - DID NOT BRANCH                 10802 49 10826 00000
+08600        B    R51E,,,                  ERROR - BRANCH TAKEN                  10814 49 10898 00000
+08610        BNN  R51E,,,                  CHECK EZ/HP INDICATORS NOT SET        10826 46 10898 01300
+08620        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          10838 14 00314 -0000
+08630        BNE  R51E,,,                                                        10850 47 10898 01200
+08640        C    BAND1+XR3,R51-9,,        CHECK EXPECTED RESULT                 10862 24 00319 10733
+08650        BNE  R51E,,,                                                        10874 47 10898 01200
+08660        B    R51OK,,,                 BR ON SUCCESS                         10886 49 10946 00000
+08670 R51E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      10898 46 10922 00100
+08680        WATY *+25,,                                                         10910 39 10935 00100
+08690        BNC3 *+24,,,                  NO HALT ON SW 3                       10922 47 10946 00300
+08700        DAC  6,H51  @,,               HALT H51                              10935 00012
+08710 R51OK  BC2  R51,,,                   LOOP ON SW 2                          10946 46 10742 00200
+08720        B    R52,,,                   CONTINUE TO NEXT ROUTINE              10958 49 10994 00000
+08730*
+08740*         ROUTINE 52
+08750*         BXC - ADD/OVERFLOW TO XR, TEST RESULT AND OVFL NOT SET
+08760*
+08770        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   10979 00010
+08780        DSC  6,K2221,,                EXPECTED RESULT                       10980 00006
+08790        DSC  8,R9O6666,,              2 GUARD, 5 SOURCE DIGITS              10986 00008
+08800 R52    TF   BAND1+XR3,R52-15,,       CLEAR XR 2,3 FLAGS                    10994 26 00319 10979
+08810        60   *+12,1,,                 SELECT XR BAND 1                      11006 60 11018 00001
+08820        66   *+12,0,9,                INITIALIZE XR 2                       11018 66 11030 00-00
+08830        66   *+12,55555,910,          INITIALIZE XR 3                       11030 66 11042 55NN5
+08840        BV   *+12,,,                  RESET OVERFLOW INDICATOR              11042 46 11054 01400
+08850        63   *+24,R52-1,910,          ADD WITH OVERFLOW, NO BRANCH          11054 63 11078 10RR3
+08860        B    *+24,,,                  OKAY - DID NOT BRANCH                 11066 49 11090 00000
+08870        B    R52E,,,                  ERROR - BRANCH TAKEN                  11078 49 11174 00000
+08880        BNP  R52E,,,                  CHECK HP INDICATOR IS SET             11090 47 11174 01100
+08890        BV   R52E,,,                  CHECK OVFL INDICATOR IS NOT SET       11102 46 11174 01400
+08900        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          11114 14 00314 -0000
+08910        BNE  R52E,,,                                                        11126 47 11174 01200
+08920        C    BAND1+XR3,R52-9,,        CHECK EXPECTED RESULT                 11138 24 00319 10985
+08930        BNE  R52E,,,                                                        11150 47 11174 01200
+08940        B    R52OK,,,                 BR ON SUCCESS                         11162 49 11222 00000
+08950 R52E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      11174 46 11198 00100
+08960        WATY *+25,,                                                         11186 39 11211 00100
+08970        BNC3 *+24,,,                  NO HALT ON SW 3                       11198 47 11222 00300
+08980        DAC  6,H52  @,,               HALT H52                              11211 00012
+08990 R52OK  BC2  R52,,,                   LOOP ON SW 2                          11222 46 10994 00200
+09000        B    R53,,,                   CONTINUE TO NEXT ROUTINE              11234 49 11270 00000
+09010*
+09020*         ROUTINE 53
+09030*         BXC - ADD WITH Q FIELD LONGER THAN XR, TEST OVFL SET
+09040*
+09050        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGS     11255 00010
+09060        DSC  6,O6666,,                EXPECTED RESULT                       11256 00006
+09070        DSC  8,R911111,,              7 SOURCE DIGITS                       11262 00008
+09080 R53    TF   BAND1+XR3,R53-15,,       CLEAR XR 2,3 FLAGS                    11270 26 00319 11255
+09090        60   *+12,1,,                 SELECT XR BAND 1                      11282 60 11294 00001
+09100        66   *+12,0,9,                INITIALIZE XR 2                       11294 66 11306 00-00
+09110        66   *+12,55555,910,          INITIALIZE XR 3                       11306 66 11318 55NN5
+09120        BV   *+12,,,                  RESET OVERFLOW INDICATOR              11318 46 11330 01400
+09130        63   *+24,R53-1,910,          ADD WITH OVERFLOW TO XR 3, BRANCH     11330 63 11354 11KO9
+09140        B    R53E,,,                  ERROR - DID NOT BRANCH                11342 49 11438 00000
+09150        BNP  R53E,,,                  CHECK HP INDICATOR IS SET             11354 47 11438 01100
+09160        BNV  R53E,,,                  CHECK OVFL INDICATOR IS SET           11366 47 11438 01400
+09170        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          11378 14 00314 -0000
+09180        BNE  R53E,,,                                                        11390 47 11438 01200
+09190        C    BAND1+XR3,R53-9,,        CHECK EXPECTED RESULT                 11402 24 00319 11261
+09200        BNE  R53E,,,                                                        11414 47 11438 01200
+09210        B    R53OK,,,                 BR ON SUCCESS                         11426 49 11486 00000
+09220 R53E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      11438 46 11462 00100
+09230        WATY *+25,,                                                         11450 39 11475 00100
+09240        BNC3 *+24,,,                  NO HALT ON SW 3                       11462 47 11486 00300
+09250        DAC  6,H53  @,,               HALT H53                              11475 00012
+09260 R53OK  BC2  R53,,,                   LOOP ON SW 2                          11486 46 11270 00200
+09270        B    R54,,,                   CONTINUE TO NEXT ROUTINE              11498 49 11534 00000
+09280*
+09290*         ROUTINE 54
+09300*         BXC - ADD WITH ZERO RESULT, TEST EZ SET
+09310*
+09320        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGS     11519 00010
+09330        DSC  6,-0000,,                EXPECTED RESULT                       11520 00006
+09340        DSC  8,R9J111J,,              7 SOURCE DIGITS                       11526 00008
+09350 R54    TF   BAND1+XR3,R54-15,,       CLEAR XR 2,3 FLAGS                    11534 26 00319 11519
+09360        60   *+12,1,,                 SELECT XR BAND 1                      11546 60 11558 00001
+09370        66   *+12,0,9,                INITIALIZE XR 2                       11558 66 11570 00-00
+09380        66   *+12,11111,910,          INITIALIZE XR 3                       11570 66 11582 11JJ1
+09390        BV   *+12,,,                  RESET OVERFLOW INDICATOR              11582 46 11594 01400
+09400        63   *+24,R54-1,910,          ADD NEGATIVE TO XR 3, NO BRANCH       11594 63 11618 11NL3
+09410        B    *+24,,,                  OKAY - DID NOT BRANCH                 11606 49 11630 00000
+09420        B    R54E,,                   ERROR - BRANCH TAKEN                  11618 MR JJ7JM 0--00
+09430        BNE  R54E,,,                  CHECK EZ INDICATOR IS SET             11630 47 11714 01200
+09440        BV   R54E,,,                  CHECK OVFL INDICATOR IS NOT SET       11642 46 11714 01400
+09450        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          11654 14 00314 -0000
+09460        BNE  R54E,,,                                                        11666 47 11714 01200
+09470        C    BAND1+XR3,R54-9,,        CHECK EXPECTED RESULT                 11678 24 00319 11525
+09480        BNE  R54E,,,                                                        11690 47 11714 01200
+09490        B    R54OK,,,                 BR ON SUCCESS                         11702 49 11762 00000
+09500 R54E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      11714 46 11738 00100
+09510        WATY *+25,,                                                         11726 39 11751 00100
+09520        BNC3 *+24,,,                  NO HALT ON SW 3                       11738 47 11762 00300
+09530        DAC  6,H54  @,,               HALT H54                              11751 00012
+09540 R54OK  BC2  R54,,,                   LOOP ON SW 2                          11762 46 11534 00200
+09550        B    R55,,,                   CONTINUE TO NEXT ROUTINE              11774 49 11830 00000
+09560*
+09570*         ROUTINE 55
+09580*         BXC - ADD TO MULTIPLE XR, TEST RESULT AND HP SET
+09590*
+09600        DSC  15,-01239876543210,,     INITIALIZE 3 REGISTERS                11786 00015
+09610        DSC  15,-11111111111109,,     EXPECTED RESULT                       11801 00015
+09620        DSC  14, -9871234567899,,     14 ADDEND DIGITS                      11816 00014
+09630 R55    TF   BAND2+XR7,R55-30,,       INITIALIZE XR 5,6,7                   11830 26 00379 11800
+09640        60   *+12,2,,                 SELECT XR BAND 2                      11842 60 11854 00002
+09650        66   *+12,0,8,                INITIALIZE XR 4                       11854 66 11866 0-000
+09660        63   *+24,R55-1,8910,         ADD TO XR 7, BRANCH                   11866 63 11890 1JQK9
+09670        B    R55E,,,                  ERROR - DID NOT BRANCH                11878 49 12070 00000
+09680        BNP  R55E,,,                  CHECK HP INDICATOR IS SET             11890 47 12070 01100
+09690        CM   BAND2+XR4,0,,            CHECK XR 4 NOT AFFECTED               11902 14 00364 -0000
+09700        BNE  R55E,,,                                                        11914 47 12070 01200
+09710        C    BAND2+XR7,R55-15,,       CHECK EXPECTED RESULT                 11926 24 00379 11815
+09720        BNE  R55E,,,                                                        11938 47 12070 01200
+09730        67   *+12,PROD,8910,          STORE XR 7                            11950 67 11962 0--R9
+09740        CM   PROD,11109,,             CHECK XR 7 RESULT                     11962 14 00099 J1109
+09750        BNE  R55E,,,                                                        11974 47 12070 01200
+09760        67   *+12,PROD,89,            STORE XR 6                            11986 67 11998 0--99
+09770        CM   PROD,11111,,             CHECK XR 6 RESULT                     11998 14 00099 J1111
+09780        BNE  R55E,,,                                                        12010 47 12070 01200
+09790        67   *+12,PROD,810,           STORE XR 5                            12022 67 12034 0-0R9
+09800        CM   PROD,01111,,             CHECK XR 5 RESULT                     12034 14 00099 -1111
+09810        BNE  R55E,,,                                                        12046 47 12070 01200
+09820        B    R55OK,,,                 BR ON SUCCESS                         12058 49 12118 00000
+09830 R55E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      12070 46 12094 00100
+09840        WATY *+25,,                                                         12082 39 12107 00100
+09850        BNC3 *+24,,,                  NO HALT ON SW 3                       12094 47 12118 00300
+09860        DAC  6,H55  @,,               HALT H55                              12107 00012
+09870 R55OK  BC2  R55,,,                   LOOP ON SW 2                          12118 46 11830 00200
+09880        B    R56,,,                   CONTINUE TO NEXT ROUTINE              12130 49 12186 00000
+09890*
+09900*         ROUTINE 56
+09910*         BXC - ADD NEG TO MULTIPLE XR, TEST RESULT AND EZ/HP NOT SET
+09920*
+09930        DSC  15,-01239876543210,,     INITIALIZE 3 REGISTERS                12142 00015
+09940        DSC  15,-0863135802468R,,     EXPECTED RESULT                       12157 00015
+09950        DSC  14, -987123456789R,,     14 ADDEND DIGITS                      12172 00014
+09960 R56    TF   BAND2+XR7,R56-30,,       INITIALIZE XR 5,6,7                   12186 26 00379 12156
+09970        60   *+12,2,,                 SELECT XR BAND 2                      12198 60 12210 00002
+09980        66   *+12,0,8,                INITIALIZE XR 4                       12210 66 12222 0-000
+09990        63   *+24,R56-1,8910,         ADD TO XR 7, NO BRANCH                12222 63 12246 1KJQ5
+10000        B    *+24,,,                  OKAY - NO BRANCH                      12234 49 12258 00000
+10010        B    R56E,,,                  ERROR - BRANCH TAKEN                  12246 49 12438 00000
+10020        BNN  R56E,,,                  CHECK EZ/HP INDICATORS NOT SET        12258 46 12438 01300
+10030        CM   BAND2+XR4,0,,            CHECK XR 4 NOT AFFECTED               12270 14 00364 -0000
+10040        BNE  R56E,,,                                                        12282 47 12438 01200
+10050        C    BAND2+XR7,R56-15,,       CHECK EXPECTED RESULT                 12294 24 00379 12171
+10060        BNE  R56E,,,                                                        12306 47 12438 01200
+10070        67   *+12,PROD,8910,          STORE XR 7                            12318 67 12330 0--R9
+10080        CM   PROD,-24689,,            CHECK XR 7 RESULT                     12330 14 00099 K468R
+10090        BNE  R56E,,,                                                        12342 47 12438 01200
+10100        67   *+12,PROD,89,            STORE XR 6                            12354 67 12366 0--99
+10110        CM   PROD,13580,,             CHECK XR 6 RESULT                     12366 14 00099 J3580
+10120        BNE  R56E,,,                                                        12378 47 12438 01200
+10130        67   *+12,PROD,810,           STORE XR 5                            12390 67 12402 0-0R9
+10140        CM   PROD,00863,,             CHECK XR 5 RESULT                     12402 14 00099 -0863
+10150        BNE  R56E,,,                                                        12414 47 12438 01200
+10160        B    R56OK,,,                 BR ON SUCCESS                         12426 49 12486 00000
+10170 R56E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      12438 46 12462 00100
+10180        WATY *+25,,                                                         12450 39 12475 00100
+10190        BNC3 *+24,,,                  NO HALT ON SW 3                       12462 47 12486 00300
+10200        DAC  6,H56  @,,               HALT H56                              12475 00012
+10210 R56OK  BC2  R56,,,                   LOOP ON SW 2                          12486 46 12186 00200
+10220        B    R57,,,                   CONTINUE TO NEXT ROUTINE              12498 49 12556 00000
+10230*
+10240*         ROUTINE 57
+10250*         BXC - ADD/OVERFLOW TO MULTIPLE XR, TEST OVFL NOT SET
+10260*
+10270        DSC  15,R87654321098765,,     INITIALIZE 3 REGISTERS                12510 00015
+10280        DSC  15,K22222211222221,,     EXPECTED RESULT                       12525 00015
+10290        DSC  15,K34567890123456,,     15 ADDEND DIGITS                      12540 00015
+10300        DC   1,0,,                    ADJUST TO EVEN ADDRESS                12555 00001
+10310 R57    TF   BAND2+XR7,R57-32,,       INITIALIZE XR 5,6,7                   12556 26 00379 12524
+10320        60   *+12,2,,                 SELECT XR BAND 2                      12568 60 12580 00002
+10330        66   *+12,0,8,                INITIALIZE XR 4                       12580 66 12592 0-000
+10340        63   *+24,R57-2,8910,         ADD TO XR 7, NO BRANCH                12592 63 12616 1KNN4
+10350        B    *+24,,,                  OKAY - DID NOT BRANCH                 12604 49 12628 00000
+10360        B    R57E,,,                  ERROR - BRANCH TAKEN                  12616 49 12808 00000
+10370        BNP  R57E,,,                  CHECK HP INDICATOR SET                12628 47 12808 01100
+10380        CM   BAND2+XR4,0,,            CHECK XR 4 NOT AFFECTED               12640 14 00364 -0000
+10390        BNE  R57E,,,                                                        12652 47 12808 01200
+10400        C    BAND2+XR7,R57-17,,       CHECK EXPECTED RESULT                 12664 24 00379 12539
+10410        BNE  R57E,,,                                                        12676 47 12808 01200
+10420        67   *+12,PROD,8910,          STORE XR 7                            12688 67 12700 0--R9
+10430        CM   PROD,22221,,             CHECK XR 7 RESULT                     12700 14 00099 K2221
+10440        BNE  R57E,,,                                                        12712 47 12808 01200
+10450        67   *+12,PROD,89,            STORE XR 6                            12724 67 12736 0--99
+10460        CM   PROD,22112,,             CHECK XR 6 RESULT                     12736 14 00099 K2112
+10470        BNE  R57E,,,                                                        12748 47 12808 01200
+10480        67   *+12,PROD,810,           STORE XR 5                            12760 67 12772 0-0R9
+10490        CM   PROD,22222,,             CHECK XR 5 RESULT                     12772 14 00099 K2222
+10500        BNE  R57E,,,                                                        12784 47 12808 01200
+10510        B    R57OK,,,                 BR ON SUCCESS                         12796 49 12856 00000
+10520 R57E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      12808 46 12832 00100
+10530        WATY *+25,,                                                         12820 39 12845 00100
+10540        BNC3 *+24,,,                  NO HALT ON SW 3                       12832 47 12856 00300
+10550        DAC  6,H57  @,,               HALT H57                              12845 00012
+10560 R57OK  BC2  R57,,,                   LOOP ON SW 2                          12856 46 12556 00200
+10570        B    R58,,,                   CONTINUE TO NEXT ROUTINE              12868 49 12880 00000
+10580*
+10590 R58    B    R60,,,                   (RFE)                                 12880 49 12908 00000
+10600*
+10610*         ROUTINE 60
+10620*         BXCM - ADD TO XR, TEST RESULT AND HP SET
+10630*
+10640        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   12901 00010
+10650        DSC  6,K4690,,                EXPECTED RESULT                       12902 00006
+10660 R60    TF   BAND1+XR5,R60-7,,        CLEAR XR 4,5 FLAGS                    12908 26 00329 12901
+10670        60   *+12,1,,                 SELECT XR BAND 1                      12920 60 12932 00001
+10680        66   *+12,0,8,                INITIALIZE XR 4                       12932 66 12944 0-000
+10690        66   *+12,12345,810,          INITIALIZE XR 5                       12944 66 12956 1K3M5
+10700        64   *+24,12345,810,          ADD TO XR 5, BRANCH                   12956 64 12980 1K3M5
+10710        B    R60E,,,                  ERROR - DID NOT BRANCH                12968 49 13052 00000
+10720        BNP  R60E,,,                  CHECK HP INDICATOR IS SET             12980 47 13052 01100
+10730        CM   BAND1+XR4,0,,            CHECK ONLY 5 DIGITS AFFECTED          12992 14 00324 -0000
+10740        BNE  R60E,,,                                                        13004 47 13052 01200
+10750        C    BAND1+XR5,R60-1,,        CHECK EXPECTED RESULT                 13016 24 00329 12907
+10760        BNE  R60E,,,                                                        13028 47 13052 01200
+10770        B    R60OK,,,                 BR ON SUCCESS                         13040 49 13100 00000
+10780 R60E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      13052 46 13076 00100
+10790        WATY *+25,,                                                         13064 39 13089 00100
+10800        BNC3 *+24,,,                  NO HALT ON SW 3                       13076 47 13100 00300
+10810        DAC  6,H60  @,,               HALT H60                              13089 00012
+10820 R60OK  BC2  R60,,,                   LOOP ON SW 2                          13100 46 12908 00200
+10830        B    R61,,,                   CONTINUE TO NEXT ROUTINE              13112 49 13140 00000
+10840*
+10850*         ROUTINE 61
+10860*         BXCM - ADD NEGATIVE TO XR, TEST RESULT AND EZ/HP NOT SET
+10870*
+10880        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   13133 00010
+10890        DSC  6,J234N,,                EXPECTED RESULT                       13134 00006
+10900 R61    TF   BAND1+XR3,R61-7,,        CLEAR XR 2,3 FLAGS                    13140 26 00319 13133
+10910        60   *+12,1,,                 SELECT XR BAND 1                      13152 60 13164 00001
+10920        66   *+12,0,9,                INITIALIZE XR 2                       13164 66 13176 00-00
+10930        66   *+12,12345,910,          INITIALIZE XR 3                       13176 66 13188 12LM5
+10940        64   *+24,-24690,910,         ADD NEGATIVE TO XR 3, NO BRANCH       13188 64 13212 24OR-
+10950        B    *+24,,,                  OKAY - DID NOT BRANCH                 13200 49 13224 00000
+10960        B    R61E,,,                  ERROR - BRANCH TAKEN                  13212 49 13296 00000
+10970        BNN  R61E,,,                  CHECK EZ/HP INDICATORS NOT SET        13224 46 13296 01300
+10980        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          13236 14 00314 -0000
+10990        BNE  R61E,,,                                                        13248 47 13296 01200
+11000        C    BAND1+XR3,R61-1,,        CHECK EXPECTED RESULT                 13260 24 00319 13139
+11010        BNE  R61E,,,                                                        13272 47 13296 01200
+11020        B    R61OK,,,                 BR ON SUCCESS                         13284 49 13344 00000
+11030 R61E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      13296 46 13320 00100
+11040        WATY *+25,,                                                         13308 39 13333 00100
+11050        BNC3 *+24,,,                  NO HALT ON SW 3                       13320 47 13344 00300
+11060        DAC  6,H61  @,,               HALT H61                              13333 00012
+11070 R61OK  BC2  R61,,,                   LOOP ON SW 2                          13344 46 13140 00200
+11080        B    R62,,,                   CONTINUE TO NEXT ROUTINE              13356 49 13384 00000
+11090*
+11100*         ROUTINE 62
+11110*         BXCM - ADD/OVERFLOW TO XR, TEST RESULT AND OVFL NOT SET
+11120*
+11130        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGIST   13377 00010
+11140        DSC  6,K2221,,                EXPECTED RESULT                       13378 00006
+11150 R62    TF   BAND1+XR3,R62-7,,        CLEAR XR 2,3 FLAGS                    13384 26 00319 13377
+11160        60   *+12,1,,                 SELECT XR BAND 1                      13396 60 13408 00001
+11170        66   *+12,0,9,                INITIALIZE XR 2                       13408 66 13420 00-00
+11180        66   *+12,55555,910,          INITIALIZE XR 3                       13420 66 13432 55NN5
+11190        BV   *+12,,,                  RESET OVERFLOW INDICATOR              13432 46 13444 01400
+11200        64   *+24,66666,910,          ADD WITH OVERFLOW, NO BRANCH          13444 64 13468 66OO6
+11210        B    *+24,,,                  OKAY - DID NOT BRANCH                 13456 49 13480 00000
+11220        B    R62E,,,                  ERROR -- BRANCH TAKEN                 13468 49 13564 00000
+11230        BNP  R62E,,,                  CHECK HP INDICATOR IS SET             13480 47 13564 01100
+11240        BV   R62E,,,                  CHECK OVFL INDICATOR IS NOT SET       13492 46 13564 01400
+11250        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          13504 14 00314 -0000
+11260        BNE  R62E,,,                                                        13516 47 13564 01200
+11270        C    BAND1+XR3,R62-1,,        CHECK EXPECTED RESULT                 13528 24 00319 13383
+11280        BNE  R62E,,,                                                        13540 47 13564 01200
+11290        B    R62OK,,,                 BR ON SUCCESS                         13552 49 13612 00000
+11300 R62E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      13564 46 13588 00100
+11310        WATY *+25,,                                                         13576 39 13601 00100
+11320        BNC3 *+24,,,                  NO HALT ON SW 3                       13588 47 13612 00300
+11330        DAC  6,H62  @,,               HALT H62                              13601 00012
+11340 R62OK  BC2  R62,,,                   LOOP ON SW 2                          13612 46 13384 00200
+11350        B    R63,,,                   CONTINUE TO NEXT ROUTINE              13624 49 13652 00000
+11360*
+11370*         ROUTINE 63
+11380*         BXCM - ADD WITH Q FIELD LONGER THAN XR, TEST OVFL SET
+11390*
+11400        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGS     13645 00010
+11410        DSC  6,O66,,                  EXPECTED RESULT                       13646 00006
+11420 R63    TF   BAND1+XR3,R63-7,,        CLEAR XR 2,3 FLAGS                    13652 26 00319 13645
+11430        60   *+12,1,,                 SELECT XR BAND 1                      13664 60 13676 00001
+11440        66   *+12,0,9,                INITIALIZE XR 2                       13676 66 13688 00-00
+11450        66   *+12,55555,910,          INITIALIZE XR 3                       13688 66 13700 55NN5
+11460        SF   BAND1+XR3-2,,,           MAKE XR 3 A SHORTER FIELD             13700 32 00317 00000
+11470        BV   *+12,,,                  RESET OVERFLOW INDICATOR              13712 46 13724 01400
+11480        64   *+24,11111,910,          ADD WITH OVERFLOW, BRANCH             13724 64 13748 11JJ1
+11490        B    R63E,,,                  ERROR - DID NOT BRANCH                13736 49 13832 00000
+11500        BNP  R63E,,,                  CHECK HP INDICATOR IS SET             13748 47 13832 01100
+11510        BNV  R63E,,,                  CHECK OVFL INDICATOR IS SET           13760 47 13832 01400
+11520        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          13772 14 00314 -0000
+11530        BNE  R63E,,,                                                        13784 47 13832 01200
+11540        C    BAND1+XR3,R63-1,,        CHECK EXPECTED RESULT                 13796 24 00319 13651
+11550        BNE  R63E,,,                                                        13808 47 13832 01200
+11560        B    R63OK,,,                 BR ON SUCCESS                         13820 49 13880 00000
+11570 R63E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      13832 46 13856 00100
+11580        WATY *+25,,                                                         13844 39 13869 00100
+11590        BNC3 *+24,,,                  NO HALT ON SW 3                       13856 47 13880 00300
+11600        DAC  6,H63  @,,               HALT H63                              13869 00012
+11610 R63OK  BC2  R63,,,                   LOOP ON SW 2                          13880 46 13652 00200
+11620        B    R64,,,                   CONTINUE TO NEXT ROUTINE              13892 49 13920 00000
+11630*
+11640*         ROUTINE 64
+11650*         BXCM - ADD WITH ZERO RESULT, TEST EZ SET
+11660*
+11670        DC   10,0,,                   INITIALIZE DESTINATION FOR 2 REGS     13913 00010
+11680        DSC  6,-0000,,                EXPECTED RESULT                       13914 00006
+11690 R64    TF   BAND1+XR3,R64-7,,        CLEAR XR 2,3 FLAGS                    13920 26 00319 13913
+11700        60   *+12,1,,                 SELECT XR BAND 1                      13932 60 13944 00001
+11710        66   *+12,0,9,                INITIALIZE XR 2                       13944 66 13956 00-00
+11720        66   *+12,11111,910,          INITIALIZE XR 3                       13956 66 13968 11JJ1
+11730        BV   *+12,,,                  RESET OVERFLOW INDICATOR              13968 46 13980 01400
+11740        64   *+24,-11111,910,         ADD NEGATIVE, NO BRANCH               13980 64 14004 11JJJ
+11750        B    *+24,,,                  OKAY - DID NOT BRANCH                 13992 49 14016 00000
+11760        B    R64E,,,                  ERROR - BRANCH TAKEN                  14004 49 14100 00000
+11770        BNE  R64E,,,                  CHECK EZ INDICATOR IS SET             14016 47 14100 01200
+11780        BV   R64E,,,                  CHECK OVFL INDICATOR IS NOT SET       14028 46 14100 01400
+11790        CM   BAND1+XR2,0,,            CHECK ONLY 5 DIGITS AFFECTED          14040 14 00314 -0000
+11800        BNE  R64E,,,                                                        14052 47 14100 01200
+11810        C    BAND1+XR3,R64-1,,        CHECK EXPECTED RESULT                 14064 24 00319 13919
+11820        BNE  R64E,,,                                                        14076 47 14100 01200
+11830        B    R64OK,,,                 BR ON SUCCESS                         14088 49 14148 00000
+11840 R64E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      14100 46 14124 00100
+11850        WATY *+25,,                                                         14112 39 14137 00100
+11860        BNC3 *+24,,,                  NO HALT ON SW 3                       14124 47 14148 00300
+11870        DAC  6,H64  @,,               HALT H64                              14137 00012
+11880 R64OK  BC2  R64,,,                   LOOP ON SW 2                          14148 46 13920 00200
+11890        B    R65,,,                   CONTINUE TO NEXT ROUTINE              14160 49 14202 00000
+11900*
+11910*         ROUTINE 65
+11920*         BXCM - ADD TO MULTIPLE XR, TEST RESULT AND HP SET
+11930*
+11940        DSC  15,-01239876543210,,     INITIALIZE 3 REGISTERS                14172 00015
+11950        DSC  15,-01239876611109,,     EXPECTED RESULT                       14187 00015
+11960 R65    TF   BAND2+XR7,R65-16,,       INITIALIZE XR 5,6,7                   14202 26 00379 14186
+11970        60   *+12,2,,                 SELECT XR BAND 2                      14214 60 14226 00002
+11980        66   *+12,0,8,                INITIALIZE XR 4                       14226 66 14238 0-000
+11990        64   *+24,67899,8910,         ADD TO XR 7, BRANCH                   14238 64 14262 6PQR9
+12000        B    R65E,,,                  ERROR - DID NOT BRANCH                14250 49 14442 00000
+12010        BNP  R65E,,,                  CHECK HP INDICATOR IS SET             14262 47 14442 01100
+12020        CM   BAND2+XR4,0,,            CHECK XR 4 NOT AFFECTED               14274 14 00364 -0000
+12030        BNE  R65E,,,                                                        14286 47 14442 01200
+12040        C    BAND2+XR7,R65-1,,        CHECK EXPECTED RESULT                 14298 24 00379 14201
+12050        BNE  R65E,,,                                                        14310 47 14442 01200
+12060        67   *+12,PROD,8910,          STORE XR 7                            14322 67 14334 0--R9
+12070        CM   PROD,11109,,             CHECK XR 7 RESULT                     14334 14 00099 J1109
+12080        BNE  R65E,,,                                                        14346 47 14442 01200
+12090        67   *+12,PROD,89,            STORE XR 6                            14358 67 14370 0--99
+12100        CM   PROD,98766,,             CHECK XR 6 RESULT                     14370 14 00099 R8766
+12110        BNE  R65E,,,                                                        14382 47 14442 01200
+12120        67   *+12,PROD,810,           STORE XR 5                            14394 67 14406 0-0R9
+12130        CM   PROD,00123,,             CHECK XR 5 RESULT                     14406 14 00099 -0123
+12140        BNE  R65E,,,                                                        14418 47 14442 01200
+12150        B    R65OK,,,                 BR ON SUCCESS                         14430 49 14490 00000
+12160 R65E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      14442 46 14466 00100
+12170        WATY *+25,,                                                         14454 39 14479 00100
+12180        BNC3 *+24,,,                  NO HALT ON SW 3                       14466 47 14490 00300
+12190        DAC  6,H65  @,,               HALT H65                              14479 00012
+12200 R65OK  BC2  R65,,,                   LOOP ON SW 2                          14490 46 14202 00200
+12210        B    R66,,,                   CONTINUE TO NEXT ROUTINE              14502 49 14544 00000
+12220*
+12230*         ROUTINE 66
+12240*         BXCM - ADD NEG TO MULTIPLE XR, TEST RESULT AND EZ/HP NOT SET
+12250*
+12260        DSC  15,-01239876543210,,     INITIALIZE 3 REGISTERS                14514 00015
+12270        DSC  15,-01239876475311,,     EXPECTED RESULT                       14529 00015
+12280 R66    TF   BAND2+XR7,R66-16,,       INITIALIZE XR 5,6,7                   14544 26 00379 14528
+12290        60   *+12,2,,                 SELECT XR BAND 2                      14556 60 14568 00002
+12300        66   *+12,0,8,                INITIALIZE XR 4                       14568 66 14580 0-000
+12310        64   *+24,-67899,8910,        ADD TO XR 7, BRANCH                   14580 64 14604 6PQRR
+12320        B    R66E,,,                  ERROR - DID NOT BRANCH                14592 49 14784 00000
+12330        BNP  R66E,,,                  CHECK EZ/HP INDICATORS NOT SET        14604 47 14784 01100
+12340        CM   BAND2+XR4,0,,            CHECK XR 4 NOT AFFECTED               14616 14 00364 -0000
+12350        BNE  R66E,,,                                                        14628 47 14784 01200
+12360        C    BAND2+XR7,R66-1,,        CHECK EXPECTED RESULT                 14640 24 00379 14543
+12370        BNE  R66E,,,                                                        14652 47 14784 01200
+12380        67   *+12,PROD,8910,          STORE XR 7                            14664 67 14676 0--R9
+12390        CM   PROD,75311,,             CHECK XR 7 RESULT                     14676 14 00099 P5311
+12400        BNE  R66E,,,                                                        14688 47 14784 01200
+12410        67   *+12,PROD,89,            STORE XR 6                            14700 67 14712 0--99
+12420        CM   PROD,98764,,             CHECK XR 6 RESULT                     14712 14 00099 R8764
+12430        BNE  R66E,,,                                                        14724 47 14784 01200
+12440        67   *+12,PROD,810,           STORE XR 5                            14736 67 14748 0-0R9
+12450        CM   PROD,00123,,             CHECK XR 5 RESULT                     14748 14 00099 -0123
+12460        BNE  R66E,,,                                                        14760 47 14784 01200
+12470        B    R66OK,,,                 BR ON SUCCESS                         14772 49 14832 00000
+12480 R66E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      14784 46 14808 00100
+12490        WATY *+25,,                                                         14796 39 14821 00100
+12500        BNC3 *+24,,,                  NO HALT ON SW 3                       14808 47 14832 00300
+12510        DAC  6,H66  @,,               HALT H66                              14821 00012
+12520 R66OK  BC2  R66,,,                   LOOP ON SW 2                          14832 46 14544 00200
+12530        B    R67,,,                   CONTINUE TO NEXT ROUTINE              14844 49 14856 00000
+12540*
+12550 R67    B    R70,,,                   (RFE)                                 14856 49 14898 00000
+12560*     *
+12570 P0     DC   5,0,,                    INDEXING OPERAND FIELDS               14872 00005
+12580 Q0     DC   5,0,,                                                          14877 00005
+12590 P1     DC   5,0,,                                                          14882 00005
+12600 Q1     DC   5,0,,                                                          14887 00005
+12610 P2     DC   5,0,,                                                          14892 00005
+12620 Q2     DC   5,0,,                                                          14897 00005
+12630*
+12640*         ROUTINE 70
+12650*         POSITIVE INDEX P FIELD
+12660*
+12670 R70    60   *+12,1,,                 SELECT INDEX BAND 1                   14898 60 14910 00001
+12680        TFM  P0,99999,,               INITIALIZE OPERANDS                   14910 16 14872 R9999
+12690        TFM  P1,11111,,                                                     14922 16 14882 J1111
+12700        TFM  P2,22222,,                                                     14934 16 14892 K2222
+12710        66   *+12,20,10,              LOAD +20 TO XR 1                      14946 66 14958 000K0
+12720        TF   P0,P0,5,                 MOVE P0 TO P0(1)=P2                   14958 26 148P2 14872
+12730        CM   P1,11111,,               CHECK FOR PROPER RESULTS              14970 14 14882 J1111
+12740        BNE  R70E,,                                                         14982 47 15030 01200
+12750        CM   P2,99999,,                                                     14994 14 14892 R9999
+12760        BNE  R70E,,,                                                        15006 47 15030 01200
+12770        B    R70OK                                                          15018 49 15078 00000
+12780 R70E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      15030 46 15054 00100
+12790        WATY *+25,,                                                         15042 39 15067 00100
+12800        BNC3 *+24,,,                  NO HALT ON SW 3                       15054 47 15078 00300
+12810        DAC  6,H70  @,,               HALT H70                              15067 00012
+12820 R70OK  BC2  R70,,,                   LOOP ON SW 2                          15078 46 14898 00200
+12830        B    R71,,,                   CONTINUE TO NEXT ROUTINE              15090 49 15102 00000
+12840*
+12850*         ROUTINE 71
+12860*         NEGATIVE INDEX P FIELD
+12870*
+12880 R71    60   *+12,1,,                 SELECT INDEX BAND 1                   15102 60 15114 00001
+12890        TFM  P0,99999,,               INITIALIZE OPERANDS                   15114 16 14872 R9999
+12900        TFM  P1,11111,,                                                     15126 16 14882 J1111
+12910        TFM  P2,22222,,                                                     15138 16 14892 K2222
+12920        66   *+12,-20,10,             LOAD -20 TO XR 1                      15150 66 15162 000K-
+12930        TF   P2,P2,5,                 MOVE P2 TO P2(1)=P0                   15162 26 148R2 14892
+12940        CM   P1,11111,,               CHECK FOR PROPER RESULTS              15174 14 14882 J1111
+12950        BNE  R71E,,                                                         15186 47 15234 01200
+12960        CM   P0,22222,,                                                     15198 14 14872 K2222
+12970        BNE  R71E,,,                                                        15210 47 15234 01200
+12980        B    R71OK                                                          15222 49 15282 00000
+12990 R71E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      15234 46 15258 00100
+13000        WATY *+25,,                                                         15246 39 15271 00100
+13010        BNC3 *+24,,,                  NO HALT ON SW 3                       15258 47 15282 00300
+13020        DAC  6,H71  @,,               HALT H71                              15271 00012
+13030 R71OK  BC2  R71,,,                   LOOP ON SW 2                          15282 46 15102 00200
+13040        B    R72,,,                   CONTINUE TO NEXT ROUTINE              15294 49 15306 00000
+13050*
+13060*         ROUTINE 72
+13070*         POSITIVE INDEX Q FIELD
+13080*
+13090 R72    60   *+12,1,,                 SELECT INDEX BAND 1                   15306 60 15318 00001
+13100        TFM  Q0,99999,,               INITIALIZE OPERANDS                   15318 16 14877 R9999
+13110        TFM  Q1,11111,,                                                     15330 16 14887 J1111
+13120        TFM  Q2,22222,,                                                     15342 16 14897 K2222
+13130        66   *+12,20,10,              LOAD +20 TO XR 1                      15354 66 15366 000K0
+13140        TF   Q0,Q0,10,                MOVE Q0(1)=Q2 TO Q0                   15366 26 14877 148P7
+13150        CM   Q1,11111,,               CHECK FOR PROPER RESULTS              15378 14 14887 J1111
+13160        BNE  R72E,,                                                         15390 47 15438 01200
+13170        CM   Q0,22222,,                                                     15402 14 14877 K2222
+13180        BNE  R72E,,,                                                        15414 47 15438 01200
+13190        B    R72OK                                                          15426 49 15486 00000
+13200 R72E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      15438 46 15462 00100
+13210        WATY *+25,,                                                         15450 39 15475 00100
+13220        BNC3 *+24,,,                  NO HALT ON SW 3                       15462 47 15486 00300
+13230        DAC  6,H72  @,,               HALT H72                              15475 00012
+13240 R72OK  BC2  R72,,,                   LOOP ON SW 2                          15486 46 15306 00200
+13250        B    R73,,,                   CONTINUE TO NEXT ROUTINE              15498 49 15510 00000
+13260*
+13270*         ROUTINE 73
+13280*         NEGATIVE INDEX Q FIELD
+13290*
+13300 R73    60   *+12,1,,                 SELECT INDEX BAND 1                   15510 60 15522 00001
+13310        TFM  Q0,99999,,               INITIALIZE OPERANDS                   15522 16 14877 R9999
+13320        TFM  Q1,11111,,                                                     15534 16 14887 J1111
+13330        TFM  Q2,22222,,                                                     15546 16 14897 K2222
+13340        66   *+12,-20,10,             LOAD -20 TO XR 1                      15558 66 15570 000K-
+13350        TF   Q2,Q2,10,                MOVE Q2(1)=Q0 TO Q2                   15570 26 14897 148R7
+13360        CM   Q1,11111,,               CHECK FOR PROPER RESULTS              15582 14 14887 J1111
+13370        BNE  R73E,,                                                         15594 47 15642 01200
+13380        CM   Q2,99999,,                                                     15606 14 14897 R9999
+13390        BNE  R73E,,,                                                        15618 47 15642 01200
+13400        B    R73OK                                                          15630 49 15690 00000
+13410 R73E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      15642 46 15666 00100
+13420        WATY *+25,,                                                         15654 39 15679 00100
+13430        BNC3 *+24,,,                  NO HALT ON SW 3                       15666 47 15690 00300
+13440        DAC  6,H73  @,,               HALT H73                              15679 00012
+13450 R73OK  BC2  R73,,,                   LOOP ON SW 2                          15690 46 15510 00200
+13460        B    R74,,,                   CONTINUE TO NEXT ROUTINE              15702 49 15714 00000
+13470*
+13480*         ROUTINE 74
+13490*         TEST INDEXING OVERFLOW
+13500*
+13510 R74    60   *+12,1,,                 SELECT INDEX BAND 1                   15714 60 15726 00001
+13520        TFM  Q0,99999,,               INITIALIZE OPERANDS                   15726 16 14877 R9999
+13530        TFM  Q1,11111,,                                                     15738 16 14887 J1111
+13540        TFM  Q2,22222,,                                                     15750 16 14897 K2222
+13550        BV   *+12,,,                  RESET OVERFLOW INDICATOR              15762 46 15774 01400
+13560        66   *+12,99990,10,           LOAD 99990 TO XR 1 (I.E. -10)         15774 66 15786 999R0
+13570        TF   Q2,Q2,10,                MOVE Q2(1)=Q1 TO Q2                   15786 26 14897 148R7
+13580        BV   R74E,,,                  ERROR - ARITH OVERFLOW SET            15798 46 15870 01400
+13590        CM   Q0,99999,,               CHECK FOR PROPER RESULTS              15810 14 14877 R9999
+13600        BNE  R74E,,                                                         15822 47 15870 01200
+13610        CM   Q2,11111,,                                                     15834 14 14897 J1111
+13620        BNE  R74E,,,                                                        15846 47 15870 01200
+13630        B    R74OK                                                          15858 49 15918 00000
+13640 R74E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      15870 46 15894 00100
+13650        WATY *+25,,                                                         15882 39 15907 00100
+13660        BNC3 *+24,,,                  NO HALT ON SW 3                       15894 47 15918 00300
+13670        DAC  6,H74  @,,               HALT H74                              15907 00012
+13680 R74OK  BC2  R74,,,                   LOOP ON SW 2                          15918 46 15714 00200
+13690        B    R75,,,                   CONTINUE TO NEXT ROUTINE              15930 49 15942 00000
+13700*
+13710*         ROUTINE 75
+13720*         TEST INDEXING UNDERFLOW
+13730*
+13740 R75    60   *+12,1,,                 SELECT INDEX BAND 1                   15942 60 15954 00001
+13750        TFM  Q0,99999,,               INITIALIZE OPERANDS                   15954 16 14877 R9999
+13760        TFM  Q1,11111,,                                                     15966 16 14887 J1111
+13770        TFM  Q2,22222,,                                                     15978 16 14897 K2222
+13780        BV   *+12,,,                  RESET OVERFLOW INDICATOR              15990 46 16002 01400
+13790        66   *+12,-99990,10,          LOAD -99990 TO XR 1 (I.E. +10)        16002 66 16014 999R-
+13800        TF   Q1,Q1,10,                MOVE Q1(1)=Q2 TO Q1                   16014 26 14887 148Q7
+13810        BV   R75E,,,                  ERROR - ARITH OVERFLOW SET            16026 46 16098 01400
+13820        CM   Q0,99999,,               CHECK FOR PROPER RESULTS              16038 14 14877 R9999
+13830        BNE  R75E,,                                                         16050 47 16098 01200
+13840        CM   Q1,22222,,                                                     16062 14 14887 K2222
+13850        BNE  R75E,,,                                                        16074 47 16098 01200
+13860        B    R75OK                                                          16086 49 16146 00000
+13870 R75E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      16098 46 16122 00100
+13880        WATY *+25,,                                                         16110 39 16135 00100
+13890        BNC3 *+24,,,                  NO HALT ON SW 3                       16122 47 16146 00300
+13900        DAC  6,H75  @,,               HALT H75                              16135 00012
+13910 R75OK  BC2  R75,,,                   LOOP ON SW 2                          16146 46 15942 00200
+13920        B    R76,,,                   CONTINUE TO NEXT ROUTINE              16158 49 16352 00000
+13930*
+13940*         ROUTINE 76
+13950*         TEST INDEXING GENERATION OF INVALID ADDRESS
+13960*
+13970 R76M1  DAC  47,TEST R76 SHOULD HALT ON A CHECK STOP WITH MAR=@             16171 00094
+13980 R76M2  DSA  99999-Q2+Q1+1                                                  16268 00005 R9990
+13990        DC   1,@                                                            16269 00001
+14000 R76M3  DAC  41,PRESS RESET, THEN START, TO CONTINUE... @                   16271 00082
+14010*
+14020 R76    60   *+12,1,,                 SELECT INDEX BAND 1                   16352 60 16364 00001
+14030        RCTY                                                                16364 34 00000 00102
+14040        WATY R76M1,,,                                                       16376 39 16171 00100
+14050        WNTY R76M2-4,,,                                                     16388 38 16264 00100
+14060        RCTY                                                                16400 34 00000 00102
+14070        WATY R76M3,,,                                                       16412 39 16271 00100
+14080        TFM  Q0,99999,,               INITIALIZE OPERANDS                   16424 16 14877 R9999
+14090        TFM  Q1,11111,,                                                     16436 16 14887 J1111
+14100        TFM  Q2,22222,,                                                     16448 16 14897 K2222
+14110        BV   *+12,,,                  RESET OVERFLOW INDICATOR              16460 46 16472 01400
+14120        66   *+12,-Q2,10,             LOAD -Q2 TO XR 1                      16472 66 16484 148RP
+14130        TF   Q1,Q1,10,                MOVE Q1(1)=99990 TO Q1                16484 26 14887 148Q7
+14140        BV   R76E,,,                  ERROR - ARITH OVERFLOW SET            16496 46 16568 01400
+14150        CM   Q1,11111,,               CHECK FOR NO CHANGE                   16508 14 14887 J1111
+14160        BNE  R76E,,                                                         16520 47 16568 01200
+14170        CM   Q2,22222,,                                                     16532 14 14897 K2222
+14180        BNE  R76E,,,                                                        16544 47 16568 01200
+14190        B    R76OK                                                          16556 49 16616 00000
+14200 R76E   BC1  *+24,,,                  ERROR - CHECK FOR BYPASS TYPEOUT      16568 46 16592 00100
+14210        WATY *+25,,                                                         16580 39 16605 00100
+14220        BNC3 *+24,,,                  NO HALT ON SW 3                       16592 47 16616 00300
+14230        DAC  6,H76  @,,               HALT H76                              16605 00012
+14240 R76OK  BC2  R76,,,                   LOOP ON SW 2                          16616 46 16352 00200
+14250        B    R77,,,                   CONTINUE TO NEXT ROUTINE              16628 49 16640 00000
+14260*
+14270 R77    B    ETEST,,,                 (RFE)                                 16640 49 16652 00000
+14280*
+14290*     END OF TEST ROUTINE
+14300*
+14310 ETEST  RCTY                                                                16652 34 00000 00102
+14320        RCTY                                                                16664 34 00000 00102
+14330        WATY ETM1,,,                  END OF TEST                           16676 39 16781 00100
+14340        RCTY                                                                16688 34 00000 00102
+14350        WATY ETM2,,,                  IF SW 1 OFF...                        16700 39 16831 00100
+14360        BC4  START,,,                 LOOP PROGRAM ON SW 4                  16712 46 02402 00400
+14370        RCTY                                                                16724 34 00000 00102
+14380        RCTY                                                                16736 34 00000 00102
+14390        60   *+12,0,,                 TURN OFF XR BAND SELECTION            16748 60 16760 00000
+14400        H                                                                   16760 48 00000 00000
+14410        CALL EXIT                                                           16772 49 00796 00000
+14420*
+14430 ETM1   DAC  25,TEST ROUTINES COMPLETED.@                                   16781 00050
+14440 ETM2   DAC  41,IF SW 1 OFF AND NO ROUTINE NOS TYPED OUT,                   16831 00082
+14450        DAC  35, MACHINE PERFORMED TESTS PROPERLY.@                         16913 00070
+14460*
+14470        DEND START                                                          02402
+
+16982
+      CORE POSITIONS REQUIRED
+01447
+      STATEMENTS PROCESSED
