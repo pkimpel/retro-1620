@@ -489,6 +489,7 @@ class Processor {
         this.gateINSERT =           new FlipFlop(this.envir, false);    // insert latch
         this.gateSAVE_CTRL =        new FlipFlop(this.envir, false);    // SAVE control latch
         this.gateSCE =              new FlipFlop(this.envir, false);    // single-cycle execute
+        this.gateX_SIG_DIG =        new FlipFlop(this.envir, false);    // index register significant digit occurred
 
         this.regXBR =               new Register("XBR", 5, this.envir, false, true,  true);
 
@@ -610,18 +611,18 @@ class Processor {
         buildOpAtts(58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 58
         buildOpAtts(59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 59
 
-        buildOpAtts(60, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 60 BS
-        buildOpAtts(61, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 61 BX
-        buildOpAtts(62, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0);      // 62 BXM
-        buildOpAtts(63, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 63 BCX
-        buildOpAtts(64, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0);      // 64 BCXM
-        buildOpAtts(65, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 65 BLX
-        buildOpAtts(66, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0);      // 66 BLXM
-        buildOpAtts(67, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 67 BSX
+        buildOpAtts(60, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0);      // 60 BS
+        buildOpAtts(61, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 61 BX
+        buildOpAtts(62, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0);      // 62 BXM
+        buildOpAtts(63, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 63 BCX
+        buildOpAtts(64, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0);      // 64 BCXM
+        buildOpAtts(65, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 65 BLX
+        buildOpAtts(66, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0);      // 66 BLXM
+        buildOpAtts(67, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 67 BSX
         buildOpAtts(68, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 68
         buildOpAtts(69, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 69
 
-        buildOpAtts(70, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 70 MA
+        buildOpAtts(70, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 70 MA
         buildOpAtts(71, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 71 MF
         buildOpAtts(72, 1, 2, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 72 TNS
         buildOpAtts(73, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 73 TNF
@@ -668,6 +669,8 @@ class Processor {
                 att.opValid = this.bcInstalled;
             }
         }
+
+        this.opAtts[70].opValid = this.xrInstalled;     // MA part of the XR package
     }
 
 
@@ -745,6 +748,14 @@ class Processor {
     }
 
     /**************************************/
+    setIndexMAR() {
+        /* Sets MAR to the address of the index register specified by the
+        currently-selected band and regXR */
+
+        this.regMAR.binaryValue = this.gateIX_BAND_2.value*40 + this.regXR.binaryValue*5 + 304;
+    }
+
+    /**************************************/
     addDigits(addend) {
         /* Adds two digits and yields their sum. The augend must be in regDR.odd.
         Addition is handled by a two-step process. First, the augend (Q digit)
@@ -765,54 +776,7 @@ class Processor {
         let sum = Processor.addTable[pIndex][qIndex];
         this.gateCARRY_OUT.value = (sum & Processor.addCarryBit) | qCarry; // coerced to 0/1
         sum &= ~Processor.addCarryBit;          // strip off the add carry bit in result
-
-        /***** DEBUG *****
-        let qd = (this.regDR.odd & 0xF);
-        let au = (this.gateCOMP.value ? 9-qd : qd);
-        let pd = (addend & 0xF);
-        let ad = (this.gateP_COMP.value ? 9-pd : pd);
-        const ci = this.gateCARRY_IN.value;
-        const rs = au + ad + ci;
-        const sm = rs % 10;
-        const cy = (rs-sm)/10;
-        if (sm != (sum & 0xF) || cy != this.gateCARRY_OUT.value) {
-            console.debug("addDigits: " +
-                          `DRo=${this.regDR.odd.toString(16).padStart(2)} cm=${this.gateCOMP.value} ci=${ci} qi=${qIndex.toString(16).padStart(2)} | ` +
-                          `add=${addend.toString(16).padStart(2)} pm=${this.gateP_COMP.value} pi=${pIndex.toString(16).padStart(2)} | ` +
-                          `qc=${qCarry} sum=${sum.toString(16).padStart(2)} CO=${this.gateCARRY_OUT.value} | ` +
-                          `au=${au} ad=${ad} rs=${rs} sm=${sm} cy=${cy}`);
-        }
-        *****************/
-
         this.regDR.odd = sum;                   // don't do setDROdd() -- preserve FL_1 state
-        return sum;
-    }
-
-    /**************************************/
-    addDigits__OLD(rawAddend) {
-        /* Adds two digits and yields their sum. The augend must be in regDR.odd.
-        If gateCOMP is set, the 9s-complement of the augend is added instead.
-        gateCARRY_IN is added to the sum, which is then decimal-adjusted before
-        storing it in regDR.odd. gateCARRY_OUT is set to the carry from the sum */
-        let augend = this.regDR.odd & Register.bcdMask;
-        let addend = rawAddend & Register.bcdMask;
-
-        if (augend != Envir.bcdBinary[augend] || addend != Envir.bcdBinary[addend]) {
-            this.marCheck(`addDigits() invalid BCD code: aug=${augend.toString()}, add=${addend.toString()}`);
-            augend = Envir.bcdBinary[augend];
-            addend = Envir.bcdBinary[addend];
-        }
-
-        let sum = (this.gateP_COMP.value ? 9-addend : addend) + this.gateCARRY_IN.value +
-                  (this.gateCOMP.value ? 9-augend : augend);
-        if (sum < 10) {
-            this.gateCARRY_OUT.value = 0;
-        } else {
-            sum -= 10;
-            this.gateCARRY_OUT.value = 1;
-        }
-
-        this.regDR.odd = sum;           // don't do setDROdd() -- preserve FL_1 state
         return sum;
     }
 
@@ -1470,8 +1434,8 @@ class Processor {
                         }
 
                         // Preserve any flags already in memory.
-                        this.regMIR.setDigit(1, Envir.oddParity5[(this.regMIR.even & Register.flagMask) | even]);
-                        this.regMIR.setDigit(0, Envir.oddParity5[(this.regMIR.odd  & Register.flagMask) | odd]);
+                        this.regMIR.setDigitNoFlag(1, even);
+                        this.regMIR.setDigitNoFlag(0, odd);
                         this.store();
                         this.regOR2.incr(2);
                     }
@@ -1550,8 +1514,8 @@ class Processor {
                 }
 
                 // Preserve any flags already in memory.
-                this.regMIR.setDigit(1, Envir.oddParity5[(this.regMIR.even & Register.flagMask) | even]);
-                this.regMIR.setDigit(0, Envir.oddParity5[(this.regMIR.odd  & Register.flagMask) | odd]);
+                this.regMIR.setDigitNoFlag(1, even);
+                this.regMIR.setDigitNoFlag(0, odd);
                 this.store();
                 this.regOR2.incr(2);
             }
@@ -2322,7 +2286,7 @@ class Processor {
             isSet = this.gateEZ.value;
             break;
         case 13:        // H/P or E/Z
-            isSet = this.gateHP.value | this.gateEZ.value;
+            isSet = (this.gateHP.value | this.gateEZ.value) & 1;
             break;
         case 14:        // Arithmetic Check
             isSet = this.oflowArithCheck.value;
@@ -2341,13 +2305,13 @@ class Processor {
             this.parityMBROddCheck.value = 0;
             break;
         case 19:        // Any Check (6, 7, 16, 17, 25, 39)
-            isSet = this.ioReadCheck.value | this.ioWriteCheck.value |
+            isSet = (this.ioReadCheck.value | this.ioWriteCheck.value |
                     this.parityMBREvenCheck.value | this.parityMBROddCheck.value |
                     this.ioPrinterCheck.value | this.diskAddrCheck.value |
-                    this.diskWLRRBCCheck.value | this.diskCylOflowCheck.value;
+                    this.diskWLRRBCCheck.value | this.diskCylOflowCheck.value) & 1;
             break;
         case 30:        // IX Band 0 (indexing off)
-            isSet = ((this.gateIX_BAND_1.value | this.gateIX_BAND_2.value) ? 0 : 1);
+            isSet = ((this.gateIX_BAND_1.value | this.gateIX_BAND_2.value) & 1 ? 0 : 1);
             break;
         case 31:        // IX Band 1
             isSet = this.gateIX_BAND_1.value;
@@ -2368,7 +2332,7 @@ class Processor {
             this.diskCylOflowCheck.value = 0;
             break;
         case 39:        // 1311 Any Disk Error (36, 37, 38)
-            isSet = this.diskAddrCheck.value | this.diskWLRRBCCheck.value | this.diskCylOflowCheck.value;
+            isSet = (this.diskAddrCheck.value | this.diskWLRRBCCheck.value | this.diskCylOflowCheck.value) & 1;
             break;
         case 25:        // 1443 Printer Check
             isSet = this.ioPrinterCheck.value;
@@ -2445,6 +2409,7 @@ class Processor {
         this.gateMC_2.value = 0;
         this.gateP_COMP.value = 0;
         this.gateRECOMP.value = 0;
+        this.gateX_SIG_DIG.value = 0;
         this.resetDREven();
         this.resetDROdd();
 
@@ -2652,7 +2617,7 @@ class Processor {
         this.regXBR.clear();                    // ??
         this.regXR.clear();
         this.regMQ.clear();
-        this.opIndexable = this.opThisAtts.qIX &&
+        this.opIndexable = (this.opThisAtts.qIX || this.opThisAtts.index) &&
                 (this.gateIX_BAND_1.value || this.gateIX_BAND_2.value);
 
         switch (this.opBinary) {
@@ -2800,7 +2765,7 @@ class Processor {
         }
 
         this.regIR1.incr(2);
-        if (this.regXR.isntZero) {
+        if (this.regXR.isntZero && !this.opThisAtts.index) {
             this.enterIndexing();
         } else if (this.gateIA_REQ.value) {
             this.enterIndirecting();
@@ -2826,36 +2791,34 @@ class Processor {
         }
 
         this.gateIX.value = 1;
-        this.regMAR.binaryValue = this.gateIX_BAND_2.value*40 + this.regXR.binaryValue*5 + 304;
+        this.setIndexMAR();
         this.setProcState(procStateIX);
     }
 
     /**************************************/
     stepIndexing() {
-        /* Executes the steps for indexing an address register. On the first
-        call, the address of the index register digit is in MAR; subsequently it
-        is in PR-2. Note that the base address to be indexed is already in XBR
-        from state I-4 or I-6. Also note that if the resulting address is
-        negative, it is left in complement form */
-        let addend = 0;                 // local copy of DR-odd
-        let mq = 0;                     // local copy of MQ
+        /* Executes the steps for indexing an address register. MQ is used as a
+        digit counter. On the first call, the address of the index register
+        digit is in MAR; subsequently it is in PR-2. Note that the base address
+        to be indexed is already in XBR from state I-4 or I-6. Also note that if
+        the resulting address is negative, it is left in complement form.
+        Any overflow is lost */
 
         if (this.gateIX_ENT.value) {
             this.gateIX_ENT.value = 0;
             this.fetch();               // first IX cycle: MAR was initially set in enterIndexing()
-            addend = this.regMBR.getDigit(this.regMAR.isEven);
-            this.gateCOMP.value = this.gateCARRY_IN.value = addend & Register.flagMask;
+            this.setDROdd(this.regMBR.getDigit(this.regMAR.isEven));
+            this.gateCOMP.value = this.gateCARRY_IN.value = this.gateFL_1.value; // sign flag
         } else {
             this.regMAR.value = this.regPR2.value;
             this.fetch();               // non-first IX cycle: use address in PR2
-            addend = this.regMBR.getDigit(this.regMAR.isEven);
+            this.setDROdd(this.regMBR.getDigit(this.regMAR.isEven));
             this.regMQ.incr(1);         // use MQ as the digit counter
-            mq = this.regMQ.binaryValue;
         }
 
         // Compute the sum of the address and index register digits, propagating any carry.
-        this.setDROdd(this.regXBR.getDigit(mq));
-        let sum = this.addDigits(addend);       // leaves the sum in DR odd
+        let mq = this.regMQ.binaryValue;
+        let sum = this.addDigits(this.regXBR.getDigit(mq));     // leaves the sum in DR odd
         this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
         this.regXBR.setDigit(mq, sum);
         if (mq < 4) {                   // if there are more digits, decrement PR2
@@ -2988,7 +2951,7 @@ class Processor {
             this.regOR1.value = this.regMAR.value = this.regXBR.value;
         }
 
-        if (this.regXR.isntZero) {
+        if (this.regXR.isntZero && (this.gateP.value || !this.opThisAtts.index)) {
             this.enterIndexing();
         } else if (this.gateIA_REQ.value) {
             this.enterIndirecting();
@@ -3151,6 +3114,7 @@ class Processor {
         case 27:        // BT - Branch and Transmit
         case 30:        // TRNM - Transmit Record No Record Mark
         case 31:        // TR - Transmit Record
+        case 70:        // MA - Move Address
             this.gateEXMIT_ENT.value = 1;
             break;
 
@@ -3182,6 +3146,29 @@ class Processor {
             this.gateDIV_1_CYC.value = 1;
             this.enterAdd();            // DO NOT set ADD_ENT for first cycle
             this.gateCOMP.value = 1;
+            break;
+
+        case 61:        // BX - Branch and Modify Index Register
+        case 62:        // BXM - Branch and Modify Index Register Immediate
+        case 63:        // BCX - Branch Conditionally and Modify Index Register
+        case 64:        // BCXM - Branch Conditionally and Modify Index Register Immediate
+            this.gateADD_ENT.value = 1;
+            if (!(this.gateIX_BAND_1.value || this.gateIX_BAND_2.value)) {
+                this.marCheck(`E-Cyc-Ent: IX op no band ${this.regOP.toBCDString()} @${this.regIR1.binaryValue-12}`);
+            } else {
+                this.gateIX_EXEC.value = 1;
+            }
+            break;
+
+        case 65:        // BLX - Branch and Load Index Register
+        case 66:        // BLXM - Branch and Load Index Register Immediate
+        case 67:        // BSX - Branch and Store Index Register
+            this.gateEXMIT_ENT.value = 1;
+            if (!(this.gateIX_BAND_1.value || this.gateIX_BAND_2.value)) {
+                this.marCheck(`E-Cyc-Ent: IX op no band ${this.regOP.toBCDString()} @${this.regIR1.binaryValue-12}`);
+            } else {
+                this.gateIX_EXEC.value = 1;
+            }
             break;
         }
 
@@ -3238,6 +3225,7 @@ class Processor {
         switch (this.opBinary) {
         case 19:        // DM - Divide Immediate
         case 29:        // D - Divide
+        case 67:        // BSX - Branch and Store Index Register
             break;              // fetch done below
         default:
             this.regMAR.value = this.regOR1.value;
@@ -3253,6 +3241,9 @@ class Processor {
         case 25:        // TD - Transmit Digit
         case 26:        // TF - Transmit Field
         case 28:        // LD - Load Dividend
+        case 65:        // BLX - Branch and Load Index Register
+        case 66:        // BLXM - Branch and Load Index Register Immediate
+        case 70:        // MA - Move Address
             if (this.gateE_CYC_ENT.value) {
                 this.enterTransmit();
             }
@@ -3279,6 +3270,10 @@ class Processor {
         case 21:        // A - Add
         case 22:        // S - Subtract
         case 24:        // C - Compare
+        case 61:        // BX - Branch and Modify Index Register
+        case 62:        // BXM - Branch and Modify Index Register Immediate
+        case 63:        // BCX - Branch Conditionally and Modify Index Register
+        case 64:        // BCXM - Branch Conditionally and Modify Index Register Immediate
             digit = this.regMBR.getDigit(dx);
             if (this.gateADD_ENT.value) {
                 this.enterAdd();
@@ -3401,6 +3396,32 @@ class Processor {
             this.enterICycle();
             break;
 
+        case 67:        // BSX - Branch and Store Index Register
+            if (this.gateE_CYC_ENT.value) {
+                this.enterTransmit();
+            }
+
+            if (this.gate1ST_CYC.value) {
+                this.setIndexMAR();
+                this.regPR2.value = this.regMAR.value;
+            } else {
+                this.regMAR.value = this.regPR2.value;
+            }
+
+            dx = this.regMAR.isEven;
+            this.fetch();
+            this.setDREven(this.regMBR.even);
+            if (dx) {                   // MAR is even
+                this.regPR2.decr(1);
+            } else {                    // MAR is odd
+                this.gate2_DIG_CNTRL.value = 1;
+                this.setDROdd(this.regMBR.odd);
+                this.regPR2.decr(2);
+            }
+
+            this.setProcState(procStateE2);
+            break;
+
         case 71:        // MF - Move Flag
             digit = this.regMBR.getDigit(dx);
             if (digit & Register.flagMask) {
@@ -3470,6 +3491,13 @@ class Processor {
         case 23:        // M - Multiply
         case 28:        // LD - Load Dividend
         case 29:        // D - Divide
+        case 61:        // BX - Branch and Modify Index Register
+        case 62:        // BXM - Branch and Modify Index Register Immediate
+        case 63:        // BCX - Branch Conditionally and Modify Index Register
+        case 64:        // BCXM - Branch Conditionally and Modify Index Register Immediate
+        case 65:        // BLX - Branch and Load Index Register
+        case 66:        // BLXM - Branch and Load Index Register Immediate
+        case 67:        // BSX - Branch and Store Index Register
             break;              // fetch done below
         default:
             this.regMAR.value = this.regOR2.value;
@@ -3526,8 +3554,8 @@ class Processor {
             this.store();
             this.regOR2.decr(1);
 
-            if (((op == 6 || op == 7) && this.regMQ.value < 3) ||       // 3+ digit FP field
-                    ((op == 10 || op == 20) && this.regMQ.value < 4)) { // 5+ digit address field
+            if (((op == 6 || op == 7) && this.regMQ.binaryValue < 3) ||         // 3+ digit FP field
+                    ((op == 10 || op == 20) && this.regMQ.binaryValue < 4)) {   // 5+ digit address field
                 this.regMQ.incr(1);
                 if (nextState) {
                     this.setProcState(nextState);
@@ -3573,7 +3601,7 @@ class Processor {
                     this.gateP_COMP.value = 1;
                     // We need to redo the E2 fetch and start with the low-order P digit.
                     this.regOR2.value = this.regMAR.value = this.regOR3.value;
-                    dx = this.regOR2.isEven;
+                    dx = this.regMAR.isEven;
                     this.fetch();
                     digit = this.regMBR.getDigit(dx);
                 } else {
@@ -3606,7 +3634,7 @@ class Processor {
             }
 
             this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
-            this.regOR2.decr(1);                        // update OR1 before chance of early exits
+            this.regOR2.decr(1);                        // update OR2 before chance of early exits
 
             if (op % 10 == 4) {                 // doing Compare
                 // Check for compare early exit: sum or Q digit != 0.
@@ -3906,6 +3934,200 @@ class Processor {
                 }
             } else {
                 await this.writeAlphanumerically(this.regMBR.value);
+            }
+            break;
+
+        case 61:        // BX - Branch and Modify Index Register
+        case 62:        // BXM - Branch and Modify Index Register Immediate
+        case 63:        // BCX - Branch Conditionally and Modify Index Register
+        case 64:        // BCXM - Branch Conditionally and Modify Index Register Immediate
+            this.gateCARRY_OUT.value = 0;
+            if (this.gate1ST_CYC_DELAYD.value) {
+                this.setIndexMAR();
+                this.regPR2.value = this.regMAR.value;
+            } else {
+                this.regMAR.value = this.regPR2.value;
+            }
+
+            if (this.gate2_DIG_CNTRL.value) {
+                this.gate2_DIG_CNTRL.value = 0;
+            } else {
+                this.shiftDREvenOdd();
+                if (!this.gateRECOMP.value) {
+                    nextState = procStateE1;
+                }
+            }
+
+            this.fetch();
+            dx = this.regMAR.isEven;
+            digit = this.regMBR.getDigit(dx);
+
+            if (this.gate1ST_CYC_DELAYD.value) {
+                // The following tests are conditioned on 1ST_CYC in the ILD, but we just
+                // turned that off above when turning on 1ST_CYC_DELAYD, so sameo-sameo.
+                if (this.gateCOMP.value) {
+                    this.gateCARRY_IN.value = 1;        // pre-set carry if subtract
+                }
+
+                if (this.gateRECOMP.value) {
+                    // Set up initial conditions for the RECOMP phase.
+                    this.gateCARRY_IN.value = 1;
+                    this.gateCOMP.value = 0;
+                    this.gateFIELD_MK_2.value = 0;
+                    this.gateP_COMP.value = 1;
+                    // We need to redo the E2 fetch and start with the low-order XR digit.
+                    this.setIndexMAR();
+                    this.regPR2.value = this.regMAR.value;
+                    dx = this.regMAR.isEven;
+                    this.fetch();
+                    digit = this.regMBR.getDigit(dx);
+                } else {
+                    // If not RECOMP and the low-order XR digit is flagged, reverse COMP, CARRY_IN, HP
+                    if (digit & Register.flagMask) {
+                        this.gateCOMP.flip();
+                        this.gateCARRY_IN.value = this.gateCOMP.value;
+                        this.gateHP.flip();
+                    }
+                }
+            } else {
+                this.regMQ.incr(1);
+                if (op == 62 || op == 64) {             // BXM or BCXM
+                    if (this.regMQ.value & 4) {         // imm Q field ignores field marks: strictly 5 digits
+                        this.gateFIELD_MK_1.value = 1;  // end of immediate Q field
+                    }
+                } else if (this.gateFL_1.value) {
+                    this.gateFIELD_MK_1.value = 1;      // end of Q field
+                }
+
+                if (digit & Register.flagMask) {
+                    this.gateFIELD_MK_2.value = 1;      // end of XR field
+                }
+            }
+
+            if (this.gateFIELD_MK_1.value) {
+                this.resetDREven();
+                this.setDREven(0);                      // addend will be zero from here on...
+                nextState = 0;                          // no more E1 cycles -- E2 only
+            }
+
+            digit = this.addDigits(digit);
+            if (digit & Register.bcdMask) {
+                this.gateEZ.value = 0;
+                if (!this.gateRECOMP.value) {
+                    this.gateX_SIG_DIG.value = 1;       // result has a non-zero digit
+                }
+            }
+
+            this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+            this.regPR2.decr(1);                        // update PR2 before chance of early exits
+
+            if (this.gateFIELD_MK_2.value || (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value)) {
+                digit |= Register.flagMask;             // low-order XR digit sign or high-order XR digit flag
+            }
+            this.regMIR.setDigit(dx, digit);
+            this.store();
+
+            if (this.gateFIELD_MK_2.value) {
+                // Check for overflow.
+                if (!this.gateFIELD_MK_1.value) {
+                    this.setIndicator(14, `A/S/C Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue-12}`);
+                }
+
+                // Check for initiation of RECOMP phase.
+                if (this.gateCOMP.value && !this.gateCARRY_OUT.value) {
+                    this.gateRECOMP.value = 1;
+                    this.gate1ST_CYC.value = 1;
+                    this.gateHP.flip();
+                }
+
+                // Check for end of add operation: COMP&CARRY | !COMP.
+                if (this.gateCOMP.value ? this.gateCARRY_OUT.value : 1) {
+                    if (op == 61 || op == 62 ||
+                            !(this.gateEZ.value ||
+                                (this.gateCARRY_OUT.value && !this.gateCOMP.value) ||
+                                (this.gateX_SIG_DIG.value && this.gateRECOMP.value))) {
+                        this.gateBR_EXEC.value = 1;
+                    }
+
+                    this.enterICycle();                 // exit to I-Cycle entry
+                    return;
+                }
+            }
+
+            if (nextState) {     // do either E1 or continue with E2
+                this.setProcState(nextState);
+            }
+            break;
+
+        case 65:        // BLX - Branch and Load Index Register
+        case 66:        // BLXM - Branch and Load Index Register Immediate
+        case 67:        // BSX - Branch and Store Index Register
+            if (op == 67) {
+                this.regMAR.value = this.regOR1.value;
+                this.regOR1.decr(1);
+            } else {
+                if (this.gate1ST_CYC_DELAYD.value) {
+                    this.setIndexMAR();
+                    this.regPR2.value = this.regMAR.value;
+                } else {
+                    this.regMAR.value = this.regPR2.value;
+                }
+                this.regPR2.decr(1);
+            }
+
+            if (this.gate2_DIG_CNTRL.value) {
+                this.gate2_DIG_CNTRL.value = 0;
+                digit = this.getDROdd();
+            } else {
+                digit = this.shiftDREvenOdd();
+                nextState = procStateE1;
+            }
+
+            this.fetch();
+            dx = this.regMAR.isEven;
+            if (this.gate1ST_CYC_DELAYD.value) {                        // set sign flag
+                this.regMIR.setDigit(dx, this.gateFL_1.value ? digit | Register.flagMask : digit);
+            } else {
+                this.regMQ.incr(1);
+                if (this.regMQ.binaryValue & 4) {                       // check for 5 digits
+                    this.regMIR.setDigit(dx, digit | Register.flagMask);// set h.o. digit flag
+                } else {
+                    this.regMIR.setDigitNoFlag(dx, digit);              // don't overwrite flags
+                }
+            }
+
+            this.store();
+
+            if (this.regMQ.binaryValue & 4) {                           // 5 digit address field
+                this.gateFIELD_MK_1.value = 1;
+                this.gateBR_EXEC.value = 1;
+                this.enterICycle();
+            } else if (nextState) {                                     // do either E1 or continue with E2
+                this.setProcState(nextState);
+            }
+            break;
+
+        case 70:        // MA - Move Address
+            if (this.gate2_DIG_CNTRL.value) {
+                this.gate2_DIG_CNTRL.value = 0;
+                digit = this.getDROdd();
+            } else {
+                digit = this.shiftDREvenOdd();
+                nextState = procStateE1;
+            }
+
+            this.regMIR.setDigitNoFlag(dx, digit);
+            this.store();
+            this.regOR2.decr(1);
+
+            if (this.regMQ.binaryValue < 4) {   // 5 digit address field
+                this.regMQ.incr(1);
+                if (nextState) {                // do either E1 or continue with E2
+                    this.setProcState(nextState);
+                }
+            } else {
+                this.gateFIELD_MK_1.value = 1;
+                this.enterICycle();
             }
             break;
 
@@ -4588,6 +4810,7 @@ class Processor {
         this.checkReset();              // will turn off this.gateCHECK_STOP
 
         this.gateSTOP.value = 0;
+        this.running = false;
         this.enterICycle();
         this.enterManual();             // will turn off this.gateRUN
     }
@@ -4818,8 +5041,8 @@ class Processor {
             const numRex = /[0-9]/;
             const flagRex = /[@-I]/;
             const zero = ("0").charCodeAt(0);
-            const flagZero = ("@").charCodeAt(0);
-            const undigitMap = {"|": 0xA, "$": 0xB, "_": 0xC, "%": 0xD, "&": 0xE, "#": 0xF};
+            const flagZero = ("]").charCodeAt(0);
+            const undigitMap = {"|": 0xA, "$": 0xB, "@": 0xC, "%": 0xD, "&": 0xE, "}": 0xF};
 
             let d = 0;
             let flagged = false;

@@ -325,8 +325,8 @@ class Register {
         } while (carry && ++d < this.digits);
 
         if (this.digits == 5) {
-            if (this.intBinaryVal >= this.envir.memorySize) {
-                this.binaryValue = this.intBinaryVal - this.envir.memorySize;
+            if (this.intBinaryVal >= this.envir.memorySize) {   // addr overflow
+                this.binaryValue = this.intBinaryVal % this.envir.memorySize;
             }
         }
     }
@@ -365,8 +365,8 @@ class Register {
         } while (borrow && ++d < this.digits);
 
         if (this.digits == 5) {
-            if (this.intBinaryVal >= this.envir.memorySize) {
-                this.binaryValue = this.intBinaryVal + this.envir.memorySize - 100000;
+            if (this.intBinaryVal >= this.envir.memorySize) {   // addr underflow
+                this.binaryValue = this.envir.memorySize - (100000 - this.intBinaryVal)%this.envir.memorySize;
             }
         }
     }
@@ -410,6 +410,22 @@ class Register {
 
         if (d < this.digits) {
             let digit = (this.getDigit(d) & Register.notFlagMask) | ((value & 1)*Register.flagMask);
+            let corr = Envir.oddParity5[digit];
+
+            this.value = BitField.fieldInsert(this.intVal, (d+1)*Register.digitBits-1, Register.digitBits, corr);
+       }
+
+        return this.intVal;
+    }
+
+    /**************************************/
+    setDigitNoFlag(d, value) {
+        /* Set a digit into the register without overwriting the flag in the
+        register for that digit. 0 is the low-order digit. Unconditionally
+        recomputes parity for the digit. Returns the new register value */
+
+        if (d < this.digits) {
+            let digit = (this.getDigit(d) & Register.flagMask) | (value & Register.bcdMask);
             let corr = Envir.oddParity5[digit];
 
             this.value = BitField.fieldInsert(this.intVal, (d+1)*Register.digitBits-1, Register.digitBits, corr);
