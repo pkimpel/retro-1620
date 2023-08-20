@@ -6,9 +6,13 @@ Table (file name index) to punched cards.
 
 EQTCD.spt
     Original transcription of the 1968 program listing done by Paul
-    Kimpel in August 2023. The original program required the Monitor II
-    operating system and its SPS assembler, which we don't presently
-    have, thus it can't be assembled in its original form.
+    Kimpel in August 2023.
+
+EQTCD.sps
+    SPS source deck extracted from EQTCD.spt. This original version
+    requires the Monitor II operating system and its SPS assembler,
+    which we don't presently have, thus it can't be assembled in its
+    original form.
 
 EQTCD-Monitor-I.sps
     SPS source deck extracated from EQTCD.spt with minimum modifications
@@ -24,4 +28,5 @@ EQTCD-Monitor-I.lst
 EQTCD-Monitor-I-Output.txt
     Combined typewriter and punched card output from EQTCD-Monitor-
     I.sps.
+
 
