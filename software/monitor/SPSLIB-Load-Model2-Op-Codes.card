@@ -1,0 +1,66 @@
+34000480070136000480070260000365100060024025100911963611300102 1620-2 MON-I BOOT
+||JOB 5                         SPSLIB LOAD MODEL-2 OP CODES FOR MONITOR I SPS
+||XEQ SPSLIB
+*DELETE OP CODE
+           SAO
+           SA
+           SACO
+           SAOS
+           SLRN
+           SLTA
+           SLAR
+           SLCB
+           SLTC
+           SLAD
+           SLME
+           BO
+           BOLD
+           MK
+           UMK
+           SLIC
+           RNIC
+           RAIC
+           WNOC
+           WAOC
+           BOR
+           BRE
+           BMC
+           BIR
+           BCNB
+           BNOR
+           BNRE
+           BNMC
+           BNIR
+           BCB
+*DEFINE OP CODE
+           BS  600
+           ANDF930
+           BANS317
+           BBAS316
+           BBBS326
+           BNBS306
+           BBNS327
+           BEBS307
+           BBT 900
+           BMK 910
+           BKTY134
+           BTA 200
+           BTAM100
+           BX  610
+           BXM 620
+           BCX 630
+           BCXM640
+           BLX 650
+           BLXM660
+           BSX 670
+           CPLF940
+           DTO 970
+           EORF950
+           IXTY144
+           MA  700
+           ORF 920
+           OTD 960
+           TRNM300
+*LIST OP CODE
+*ENDLIB
+||||
