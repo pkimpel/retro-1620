@@ -1,8 +1,28 @@
+  (ID)  **EQTCD - DISK EQUIVALENCE TABLE UTILITY
+        *LIST PRINTER
+        *PRINT SYMBOL TABLE
+
+
+
+EQTCD - DISK EQUIVALENCE TABLE UTILITY                                            PAGE   1
+
+ ALP   02439     BLANK 03063     DATE  02679     DMSG  03272     EQ    02402
+ ER    02783     FORT  02891     INIT  03572     LOOP  03632     L1    03724
+ M1    02601     M2    02619     M3    02715     NINES 02427     NT    02432
+ QUIT  04112     ST    02437     START 03224     TIME  02761     TITLE 02839
+ USER  02979
+
+
+
+
+
+EQTCD - DISK EQUIVALENCE TABLE UTILITY                                            PAGE   1
+
 00010**********************************************************************
 00020*
 00030*                                 EQTCD
 00040*
-00050*          PUNCH THE SYMBOL TABLE IN ALPHA ORDER WITH -DIM- NO.
+00050*         PUNCH THE SYMBOL TABLE IN ALPHA ORDER WITH -DIM- NO.
 00060*             ONTO CARDS.
 00070*          MODIFIED FROM BRUCE KITCHEN-S  -EQTBL-
 00080*
@@ -50,7 +70,7 @@
 00480        BC4  DMSG,,               ,BR BACK TO TYPE-IN ON SSW 4              03404 46 03272 00400
 00490        TR   ALP-1,BLANK-1                                                  03416 31 02438 03062
 00500        TRNM ALP+53,TITLE-1                                                 03428 30 02492 02838
-00510        TDM   ALP,1,              ,CARRIAGE CONTROL                         03340 15 02439 00001
+00510        TDM   ALP,1,              ,CARRIAGE CONTROL                         03440 15 02439 00001
 00520        TDM   ALP-1,7                                                       03452 15 02438 00007
 00530        WACD ALP                                                            03464 39 02439 00400
 00540        WACD BLANK                                                          03476 39 03063 00400
@@ -60,14 +80,14 @@
 00580        WACD ALP                                                            03524 39 02439 00400
 00590        WACD BLANK                                                          03536 39 03063 00400
 00600*
-00610        BSIA  *+12,,              ,SELECT INDIRECT ADDRESSING               03548 60 03560 00009
-00620        BSBA *+12,,               ,SELECT XR BAND -A-                       03560 60 03572 00001
-00630 INIT   BLXM *+12,16(A1),          ,,CARD COL POINTER IN XA1                03572 66 03584 000J6
-00640        BLXM *+12,5(A2),          ,POINTER FOR NO. OF ENTRIES ON CARD       03584 66 03596 00-05
+00610        BS    *+12,9,             ,SELECT INDIRECT ADDRESSING               03548 60 03560 00009
+00620        BS   *+12,1,              ,SELECT XR BAND -A-                       03560 60 03572 00001
+00630 INIT   BLXM *+12,16,10,           ,,CARD COL POINTER IN XA1         //16   03572 66 03584 000J6
+00640        BLXM *+12,5,9,            ,POINTER FOR NO. OF ENTRIES ON CARD //5   03584 66 03596 00-05
 00650        TR    ALP-1,BLANK-1,      ,BLANK CARD AREA                          03596 31 02438 03062
 00660        TFM  ST,20011                                                       03608 16 02437 K0011
 00670        TFM  NT,20027                                                       03620 16 02432 K0027
-00680 LOOP   C    -ST,-NT                                                        03622 24 0243P 0243K
+00680 LOOP   C    -ST,-NT                                                        03632 24 0243P 0243K
 00690        BNH  *+24                                                           03644 47 03668 01100
 00700        TF   ST,NT                                                          03656 26 02437 02432
 00710        AM   NT,16,10                                                       03668 11 02432 000J6
@@ -75,15 +95,15 @@
 00730        B7   L1                                                             03692 49 03724 00000
 00740        C    -NT,NINES                                                      03700 24 0243K 02427
 00750        BNE  LOOP,,               ,TEST FOR END OF TABLE                    03712 47 03632 01200
-00760 L1     TF   ALP(A1),-ST,         , TRANSFER ALPHA NAME TO CARD AREA        03724 26 024L9 0243P
+00760 L1     TF   ALP,-ST,5            , TRANSFER ALPHA NAME TO CARD AREA //AL   03724 26 024L9 0243P
 00770        AM   ST,4,10                                                        03736 11 02437 000-4
-00780        TNF  ALP+12(A1),-ST,      ,TRANSFER DIM NO.                         03748 73 024N1 02439
-00790        BXM  *+12,32(A1),         ,INCR CARD COL POINTER                    03760 62 03772 000L2
-00800        BCXM *+60,-1(A2),         ,CK FOR FULL CARD AREA                    03772 64 03832 00-0J
+00780        TNF  ALP+12,-ST,5         ,TRANSFER DIM NO.               //ALP+1   03748 73 024N1 0243P
+00790        BXM  *+12,32,10           ,INCR CARD COL POINTER              //3   03760 62 03772 000L2
+00800        BCXM *+60,-1,9            ,CK FOR FULL CARD AREA              //-   03772 64 03832 00-0J
 00810        WACD ALP,,                ,PUNCH A LINE                             03784 39 02439 00400
 00820        TR    ALP-1,BLANK-1,      ,BLANK CARD AREA                          03796 31 02438 03062
-00830        BLXM *+12,5(A2),          ,RESTORE  ))                              03808 66 03820 00-05
-00840        BLXM *+12,16(A1),         ,POINTERS ))                              03820 66 03832 000J6
+00830        BLXM *+12,5,9             ,RESTORE  ))                         //   03808 66 03820 00-05
+00840        BLXM *+12,16,10           ,POINTERS ))                        //1   03820 66 03832 000J6
 00850        TF   NT,ST                                                          03832 26 02432 02437
 00860        SM   NT,15,10                                                       03844 12 02432 000J5
 00870        AM   ST,1,10                                                        03856 11 02437 000-1
@@ -113,12 +133,17 @@
 01110 QUIT   WACD ALP,,                ,PUNCH LAST LINE OF USER TABLE            04112 39 02439 00400
 01120        WACD BLANK                                                          04124 39 03063 00400
 01130        WACD BLANK                                                          04136 39 03063 00400
-01140        TR   ALP-1,BLANK-1                                                  04048 31 02438 03062
+01140        TR   ALP-1,BLANK-1                                                  04148 31 02438 03062
 01150        TRNM ALP+1,DATE-1                                                   04160 30 02440 02678
 01160        WACD ALP                                                            04172 39 02439 00400
 01170        TR   ALP-1,BLANK-1                                                  04184 31 02438 03062
-01180        TRNM ALP+1,TIME-1                                                   04916 30 02440 02760
+01180        TRNM ALP+1,TIME-1                                                   04196 30 02440 02760
 01190        WACD ALP                                                            04208 39 02439 00400
 01200        WACD BLANK                                                          04220 39 03063 00400
 01210        CALL EXIT                                                           04232 49 00796 00000
 01220        DEND START                                                          03224
+
+04240
+      CORE POSITIONS REQUIRED
+00122
+      STATEMENTS PROCESSED

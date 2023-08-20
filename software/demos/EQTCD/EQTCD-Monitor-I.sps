@@ -1,3 +1,8 @@
+||JOB 5                         EQTCD DISK EQUIV TABLE UTILITY
+||SPSX5
+**EQTCD - DISK EQUIVALENCE TABLE UTILITY
+*LIST PRINTER
+*PRINT SYMBOL TABLE
 00010**********************************************************************
 00020*
 00030*                                 EQTCD
@@ -58,10 +63,10 @@
 00580      WACDALP
 00590      WACDBLANK
 00600*
-00610      BSIA *+12,,              ,SELECT INDIRECT ADDRESSING
-00620      BSBA*+12,,               ,SELECT XR BAND -A-
-00630INIT  BLXM*+12,16(A1),          ,,CARD COL POINTER IN XA1
-00640      BLXM*+12,5(A2),          ,POINTER FOR NO. OF ENTRIES ON CARD
+00610      BS   *+12,9,             ,SELECT INDIRECT ADDRESSING
+00620      BS  *+12,1,              ,SELECT XR BAND -A-
+00630INIT  BLXM*+12,16,10,           ,,CARD COL POINTER IN XA1         //16(A1)
+00640      BLXM*+12,5,9,            ,POINTER FOR NO. OF ENTRIES ON CARD //5(A2)
 00650      TR   ALP-1,BLANK-1,      ,BLANK CARD AREA
 00660      TFM ST,20011
 00670      TFM NT,20027
@@ -73,15 +78,15 @@
 00730      B7  L1
 00740      C   -NT,NINES
 00750      BNE LOOP,,               ,TEST FOR END OF TABLE
-00760L1    TF  ALP(A1),-ST,         , TRANSFER ALPHA NAME TO CARD AREA
+00760L1    TF  ALP,-ST,5            , TRANSFER ALPHA NAME TO CARD AREA //ALP(A1)
 00770      AM  ST,4,10
-00780      TNF ALP+12(A1),-ST,      ,TRANSFER DIM NO.
-00790      BXM *+12,32(A1),         ,INCR CARD COL POINTER
-00800      BCXM*+60,-1(A2),         ,CK FOR FULL CARD AREA
+00780      TNF ALP+12,-ST,5         ,TRANSFER DIM NO.               //ALP+12(A1)
+00790      BXM *+12,32,10           ,INCR CARD COL POINTER              //32(A1)
+00800      BCXM*+60,-1,9            ,CK FOR FULL CARD AREA              //-1(A2)
 00810      WACDALP,,                ,PUNCH A LINE
 00820      TR   ALP-1,BLANK-1,      ,BLANK CARD AREA
-00830      BLXM*+12,5(A2),          ,RESTORE  ))
-00840      BLXM*+12,16(A1),         ,POINTERS ))
+00830      BLXM*+12,5,9             ,RESTORE  ))                         //5(A2)
+00840      BLXM*+12,16,10           ,POINTERS ))                        //16(A1)
 00850      TF  NT,ST
 00860      SM  NT,15,10
 00870      AM  ST,1,10

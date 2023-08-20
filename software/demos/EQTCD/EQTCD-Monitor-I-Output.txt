@@ -1,0 +1,38 @@
+
+||JOB 5                         EQTCD DISK EQUIV TABLE UTILITY
+
+||SPSX5
+
+
+
+END OF ASSEMBLY.
+
+EXECUTION
+
+OPERATOR
+TYPE IN DATE AS DD MMM YYYY  18 AUG 2023#
+TYPE IN TIME AS HHMM  0958#
+
+SSW 4 IF ERRORS, ELSE START
+
+END OF JOB
+
+
+________________________________________________________________________________
+1                          *** EQUIVALENCE TABLE ***
+
+
+ FORTRAN LIBRARY FUNCTIONS   *DO NOT DELETE*
+
+   ABS     0025    ABSF    0025    ATAN    0023    ATANF   0023    COS     0021
+   COSF    0021    EXP     0011    EXPF    0011    LOG     0010    LOGF    0010
+   SIN     0022    SINF    0022    SQRT    0024    SQRTF   0024
+
+
+ USER PROGRAMS, SUBROUTINES, AND FUNCTIONS
+
+        |  0009    SPSLIB  0009
+
+
+ DATE  18 AUG 2023
+ TIME  0958
