@@ -21,4 +21,8 @@ SPSLIB-Load-Model2-Op-Codes.card
     table, it also deletes the op codes for the IBM 1710/1720 variant of
     the 1620. This deck can be run redundantly without harm.
 
+SPSLIB-List-Op-Codes.txt
+    Output from runs of the Monitor I SPSLIB utility showing the
+    original SPS op code mnemonics and the results of running the
+    SPSLIB-Load-Model2-Op-Codes.card job.
 
