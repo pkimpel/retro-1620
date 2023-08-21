@@ -31,8 +31,8 @@ class SystemConfig {
         configName: "Default",
         version: SystemConfig.configVersion,
         memorySize: 40000,              // digits
-        indexRegisters: 1,
-        floatingPoint: 0,               // for now...
+        indexRegisters: 0,
+        floatingPoint: 0,
         binaryCapabilities: 0,
         persistentWindows: 0,
         multiScreen: 0,

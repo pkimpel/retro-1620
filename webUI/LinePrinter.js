@@ -341,6 +341,7 @@ class LinePrinter {
             this.paper.textContent = "";
             this.supplyRemaining = LinePrinter.maxPaperLines;
             this.paperMeter.value = LinePrinter.maxPaperLines;
+            this.atTopOfForm = false;
             this.$$("EndOfFormLamp").classList.remove("annunciatorLit");
             this.setCarriageReady(true);
         };

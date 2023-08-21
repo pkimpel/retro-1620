@@ -140,7 +140,7 @@ class CardPunch {
 
         this.punchReady = false;        // status of PUNCH READY lamp
         this.transportReady = false;    // ready status: cards loaded and START or LOAD pressed
-        this.bufferReady = false;       // punch card buffer is ready to be punched
+        this.bufferBusy = false;        // punch card buffer is full and ready to be punched
         this.punchCheck = false;        // true if a punch check has occurred
         this.punchCheckPending = false; // true if a punch check has been detected
         this.cardBuffer = "";           // card data received from Processor
@@ -214,7 +214,7 @@ class CardPunch {
             if (this.punchReady) {
                 if (this.waitForTransport.requested) {
                     this.waitForTransport.signal(false);
-                } else if (this.bufferReady) {
+                } else if (this.bufferBusy) {
                     this.initiateCardPunch();
                 }
             }
@@ -421,7 +421,7 @@ class CardPunch {
             now += CardPunch.idleStartupTime;
         }
 
-        // Next, wait until the next clutch latch point occurs.
+        // Next, compute time until the next clutch latch point occurs.
         if (this.nextLatchPointStamp < now) {
             // The next latch point has already passed, so compute a new one
             // based on where we are in the machine's cycle with respect to
@@ -430,9 +430,8 @@ class CardPunch {
             this.nextLatchPointStamp = now + this.punchLatchPeriod - cyclePoint;
         }
 
-        // Wait until the next cluth latch point, then for buffer ready.
+        // Compute delay until the next cluth latch point and post-punch buffer ready.
         const delay = this.nextLatchPointStamp + this.bufferReadyDelay - now;
-        await this.timer.delayFor(delay);
         this.lastUseStamp = this.nextLatchPointStamp;
         this.nextLatchPointStamp += this.punchLatchPeriod;  // earliest time next punch can occur
 
@@ -447,9 +446,12 @@ class CardPunch {
             this.$$("StackerLamp").classList.add("annunciatorLit");
         }
 
-        this.cardBuffer = "";                   // clear the internal card buffer
-        this.bufferReady = false;               // buffer is ready to receive more data
-        this.waitForBuffer.signal(false);       // tell 'em it's ready
+        // Wait for punching to complete before resetting buffer ready.
+        setTimeout(() => {
+            this.cardBuffer = "";               // clear the internal card buffer
+            this.bufferBusy = false;            // buffer is ready to receive more data
+            this.waitForBuffer.signal(false);   // tell 'em it's ready
+        }, delay);
     }
 
     /**************************************/
@@ -468,9 +470,9 @@ class CardPunch {
         const digit = code & Register.digitMask;
         let eob = 0;                    // end-of-block signal to Processor
 
-        if (this.bufferReady) {         // buffer not available to receive now
+        if (this.bufferBusy) {          // buffer not available to receive now
             if (await this.waitForBuffer.request()) {
-                return 1;                       // wait canceled
+                return 1;               // wait canceled
             }
         }
 
@@ -485,7 +487,7 @@ class CardPunch {
 
         this.cardBuffer += char;
         if (this.cardBuffer.length >= CardPunch.columns) {
-            this.bufferReady = true;
+            this.bufferBusy = true;
             await this.initiateCardPunch();
             eob =  1;
         }
@@ -503,9 +505,9 @@ class CardPunch {
         const code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
         let eob = 0;                    // end-of-block signal to Processor
 
-        if (this.bufferReady) {         // buffer not available to receive now
+        if (this.bufferBusy) {          // buffer not available to receive now
             if (await this.waitForBuffer.request()) {
-                return 1;                       // wait canceled
+                return 1;               // wait canceled
             }
         }
 
@@ -520,7 +522,7 @@ class CardPunch {
 
         this.cardBuffer += char;
         if (this.cardBuffer.length >= CardPunch.columns) {
-            this.bufferReady = true;
+            this.bufferBusy = true;
             await this.initiateCardPunch();
             eob = 1;
         }

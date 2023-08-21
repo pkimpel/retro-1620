@@ -893,9 +893,11 @@ class Processor {
                                 digitRex = fullHexRex;
                             }
                             break;
-                        default:        // it's something undefined
-                            ++errors;
-                            errMsg = `Unrecognized line ${lineNr}`;
+                        default:        // it's something else
+                            if (line.trim().at(0) != "/") {
+                                ++errors;
+                                errMsg = `Unrecognized line ${lineNr}`;
+                            }
                             break;
                         }
                     }
