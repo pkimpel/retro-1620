@@ -18,7 +18,7 @@ EQTCD-Monitor-I.sps
     SPS source deck extracated from EQTCD.spt with minimum modifications
     to allow it to run under Monitor I. This version requires updates to
     the SPS configuration for additional op code mnemonics in order to
-    assemble under Monitor I. See retro-1620/software/ monitor/SPSLIB-
+    assemble under Monitor I. See retro-1620/software/monitor/SPSLIB-
     Load-Model2-Op-Codes.card for a job that will update the SPS
     configuration.
 

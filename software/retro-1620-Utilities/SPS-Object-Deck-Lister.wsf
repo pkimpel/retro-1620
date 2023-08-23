@@ -12,18 +12,17 @@ Option Explicit
 ' Licensed under the MIT License, see
 '       http://www.opensource.org/licenses/mit-license.php
 '-----------------------------------------------------------------------
-' VBScript to extract source from SPS assembly listing transcriptions.
-' It reads an assembly transcription file and outputs a SPS assembler
-' card deck.
+' VBScript to convert the non-condensed card punch object output from the
+' card-based SPS assembler to a text file in the format of a line printer
+' assembly listing.
 '
-' This script should be executed in the current path of the transcription
-' files. Output files will be written to that path as well.
+' This script should be executed in the current path of the punch output
+' file. The output file will be written to that path as well with a .lst
+' extension.
 '
 ' Uses Scripting Runtime FileSystemObject.
 ' Parameters:
-'   1. Name of the transcription file.
-'   2. Optional started card sequence string.
-'   3. Optional /Q = quiet mode (no MsgBox at end), can be in any position.
+'   1. Name of the non-condensed card punch object file.
 '-----------------------------------------------------------------------
 ' Modification Log.
 ' 2023-05-23  P.Kimpel
