@@ -1,22 +1,27 @@
 Index of retro-1620/software/retro-1620-Utilities:
 Miscellaneous scripts and developer utilities:
 
+1620CBExtract.html
+    Script that reads one or more column binary 1620 card image (.cb)
+    files as a text blob and converts ASCII character pairs representing
+    12-bit column punch masks to ASCII text. Originally developed to
+    convert ".cb" files to ASCII from
+    http://bitsavers.org/bits/IBM/1620/1620.zip.
+
+    To use, select the .cb file(s) using the file selection control on
+    the page. The script writes a log of activity to the web page.
+    Outputs the converted data by opening a browser window for each file
+    and inserting the converted text into a <textarea> element in that
+    window. From there you can copy the text and paste it into another
+    program that can save the data to a local filesystem.
+
 1620CRDExtract.html
     Script that reads one or more binary IBM 1620 card image files as a
     text blob and converts binary 12-bit column punch masks to ASCII.
     Originally developed to convert ".crd" files to ASCII from
     http://bitsavers.org/bits/IBM/1620/games/.
 
-    The blob is assumed to be in a format where each card column is
-    represented as a pair of bytes. The first byte has the binary code
-    for punches 6-7-8-9 in the high-order digit of the byte with the
-    second digit being zero. The second byte has the binary code for
-    punches 12-11-0-1 in the first digit and the binary code for punches
-    2-3-4-5 in the second digit. Thus a column with "D" (12-4) would be
-    encoded has hex 00 82, a space would be encoded as 00 00, and a "."
-    (12-3-8) would be encoded as 02 84.
-
-    To use, select the .bcd file(s) using the file selection control on
+    To use, select the .crd file(s) using the file selection control on
     the page. The script writes a log of activity to the web page.
     Outputs the converted data by opening a browser window for each file
     and inserting the converted text into a <textarea> element in that
@@ -73,4 +78,3 @@ True-Complement-Gen.html
     10.01.32.1 of the Model 2 ILD manual. See
     http://bitsavers.org/pdf/ibm/1620/fe/227-5857-0_1620_Model_2_Custome
     r_Engineering_Intermediate_Level_Diagrams_Apr64.pdf.
-

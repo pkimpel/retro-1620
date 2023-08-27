@@ -8,7 +8,7 @@
 
 <script>
 /***********************************************************************
-* retro-16200/tools 1620CRDExtract.html
+* retro-16200/software/retro-1620-Utilities 1620CRDExtract.html
 ************************************************************************
 * Copyright (c) 2022, Paul Kimpel.
 * Licensed under the MIT License,
@@ -17,7 +17,8 @@
 * IBM-1620 .crd file extract and conversion.
 *
 * This script reads one or more binary 1620 card image files and converts
-* 12-bit binary column punch masks to ASCII.
+* 12-bit binary column punch masks to the ASCII equivalents used by the
+* retro-1620 emulator.
 *
 * The blob is assumed to be in a format where each card column is represented
 * as a pair of bytes. The first byte has the binary code for punches 6-7-8-9
@@ -27,15 +28,13 @@
 * Thus a column with "D" (12-4) would be encoded has hex 00 82, a space would
 * be encoded as 00 00, and a "." (12-3-8) would be encoded as 02 84.
 *
-* To use, select the .bcd file(s) using the file selection control on the page.
+* To use, select the .crd file(s) using the file selection control on the page.
 * The script writes a log of activity to the web page.
 *
 * This version outputs the converted data by opening a browser window for
 * each file and inserting the converted text into a <textarea> element in
 * that window. From there you can copy the text and paste it into another
-* program that can save the data to a local filesystem. This approach is
-* being used until we can figure out a better way to get data out of a
-* browser environment and into a local filesystem. Ugh.
+* program that can save the data to a local filesystem.
 ************************************************************************
 * 2022-07-13  P.Kimpel
 *   Original version, from retro-B5500 B5500LibMaintExtract.html
@@ -51,13 +50,14 @@ window.addEventListener("load", function() {
         "822": ")",
         "800": "+",
         "442": "$",
-        "422": "*",     // also flagged numeric blank
+        "422": "*",     // also flagged numeric blank (11-4-8 punch)
         "400": "-",
         "300": "/",
         "242": ",",
         "222": "(",
+        "20A": "^",     // "special" character (0-6-8 punch)
         "042": "=",
-        "022": "@",     // also numeric blank
+        "022": "@",     // also numeric blank (4-8 punch)
         "900": "A",
         "880": "B",
         "840": "C",
@@ -85,6 +85,7 @@ window.addEventListener("load", function() {
         "204": "X",
         "202": "Y",
         "201": "Z",
+        "A00": "0",     // 12-0 punch = zero
         "200": "0",
         "100": "1",
         "080": "2",
@@ -97,9 +98,10 @@ window.addEventListener("load", function() {
         "001": "9",
         "282": "|",     // record mark (0-2-8 punch)
         "482": "!",     // flagged record mark (11-2-8 punch)
+        "882": "!",     //                     (11-7-8 punch)
         "206": "}",     // group mark (0-7-8 punch)
         "806": "\"",    // flagged group mark (12-7-8 punch)
-
+        "406": "\""     //                    (11-7-8 punch)
     };
 
     const punchBits = ["9", "8", "7", "6", "5", "4", "3", "2", "1", "0", "11", "12"];
@@ -164,7 +166,7 @@ window.addEventListener("load", function() {
         writing the text to a new window object within the browser */
         let fileName = f.name;
 
-        let formatFile = (ev) => {
+        const formatFile = (ev) => {
             let doc = ev.target;
             let win = doc.defaultView;
             doc.title = fileName;

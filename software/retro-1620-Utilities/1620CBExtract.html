@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<head>
+<title>IBM-1620 CB File Extract</title>
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+
+<script>
+/***********************************************************************
+* retro-16200/software/retro-1620-Utilities 1620CBExtract.html
+************************************************************************
+* Copyright (c) 2022, Paul Kimpel.
+* Licensed under the MIT License,
+*       see http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM-1620 column binary (.cb) file extract and conversion.
+*
+* This script reads one or more column binary 1620 card image files and
+* converts 12-bit binary column punch codes to ASCII.
+*
+* The blob is assumed to be in a format where each card column is represented
+* as a pair of ASCII characters. The first character has the binary code for
+* punches 12-11-0-1-2-3 as the ASCII character code minus 64. The second
+* character has the binary code for punches 4-5-6-7-8-9 as the ASCII code minus
+* 64. Thus a "$" is encoded as "QB" which is ASCII hex 51 42. Subtracting hex
+* 40 (64) from each code yields 11 02. Expanding the hex to binary yields
+* 00010001 00000010, which is a 1-3-8 punch combination, or "$".
+*
+* To use, select the .cb file(s) using the file selection control on the page.
+* The script writes a log of activity to the web page.
+*
+* This version outputs the converted data by opening a browser window for
+* each file and inserting the converted text into a <textarea> element in
+* that window. From there you can copy the text and paste it into another
+* program that can save the data to a local filesystem.
+************************************************************************
+* 2023-08-24  P.Kimpel
+*   Original version, from 1620CRDExtract.html
+***********************************************************************/
+"use strict";
+
+window.addEventListener("load", function() {
+    const panel = document.getElementById("TextPanel");
+    const eolRex = /([^\n\r\f]*)((:?\r[\n\f]?)|\n|\f)?/g;
+
+    const cbToASCII = {                 // card column binary punch codes to ASCII code
+        "@@": " ",
+        "aB": ".",
+        "`b": ")",
+        "`@": "+",
+        "QB": "$",
+        "Pb": "*",      // also flagged numeric blank (11-4-8 punch)
+        "P@": "-",
+        "L@": "/",
+        "IB": ",",
+        "Hb": "(",
+        "HJ": "^",      // "special" character (0-6-8 punch)
+        "AB": "=",
+        "@b": "@",      // also numeric blank (4-8 punch)
+        "d@": "A",
+        "b@": "B",
+        "a@": "C",
+        "``": "D",
+        "`P": "E",
+        "`H": "F",
+        "`D": "G",
+        "`B": "H",
+        "`A": "I",
+        "X@": "]",      // -0 (11-0 punch, flagged zero)
+        "T@": "J",
+        "R@": "K",
+        "Q@": "L",
+        "P`": "M",
+        "PP": "N",
+        "PH": "O",
+        "PD": "P",
+        "PB": "Q",
+        "PA": "R",
+        "J@": "S",
+        "I@": "T",
+        "H`": "U",
+        "HP": "V",
+        "HH": "W",
+        "HD": "X",
+        "HB": "Y",
+        "HA": "Z",
+        "H@": "0",
+        "h@": "0",
+        "D@": "1",
+        "B@": "2",
+        "A@": "3",
+        "@`": "4",
+        "@P": "5",
+        "@H": "6",
+        "@D": "7",
+        "@B": "8",
+        "@A": "9",
+        "JB": "|",      // record mark (0-2-8 punch)
+        "RB": "!",      // flagged record mark (11-2-8 punch)
+        "bB": "!",      //                     (12-2-8 punch)
+        "HF": "}",      // group mark (0-7-8 punch)
+        "PF": "\"",     // flagged group mark (12-7-8 punch)
+        "`F": "\""      //                    (12-7-8 punch)
+    };
+
+    const punchBits = ["9", "8", "7", "6", "5", "4", "3", "2", "1", "0", "11", "12"];
+
+
+    function spout(text) {
+        /* Appends "text"+NL as a new text node to the panel DOM element */
+
+        panel.appendChild(document.createTextNode(text + "\n"));
+    }
+
+    function clearPanel() {
+        /* Clears the text panel */
+
+        panel.textContent = null;
+    }
+
+    function extractFile(f, blob) {
+        /* Extracts the data from "blob" for file "f" and converts it to ASCII,
+        writing the text to a new window object within the browser */
+        const fileName = f.name;
+        const blobLen = blob.length;
+        let x = 0;                      // character offset into blob
+
+        const extractCardImage = () => {
+            eolRex.lastIndex = x;
+            const match = eolRex.exec(blob);
+            if (!match) {           // EOF
+                document.getElementById("FileSelector").value = null;
+                return "";
+            } else {
+                x += match[0].length;
+                return match[1];
+            }
+        };
+
+        const formatFile = (ev) => {
+            const doc = ev.target;
+            const win = doc.defaultView;
+            const paper = doc.getElementById("Paper");
+            doc.title = fileName;
+            win.moveTo((screen.availWidth - 800)/2, (screen.availHeight - 600)/2);
+            win.focus();
+
+            let image = "";
+            do {
+                image = extractCardImage();
+            } while (x < blobLen && !image.startsWith("$COLUMN_BINARY"));
+
+            do {                        // extract and convert each card image
+                let card = "";
+                image = extractCardImage();
+                if (image.startsWith("$")) {
+                    break;
+                } else {
+                    const imageLen = image.length;
+                    let col = 0;
+                    while (col < imageLen) {
+                        card += cbToASCII[image.substring(col, col+2)] ?? "?";
+                        col += 2;
+                    }
+
+                    paper.appendChild(doc.createTextNode(card + "\n"));
+                }
+            } while (x < blobLen);
+        };
+
+        spout(" ");
+        spout(`Converting ${fileName}: ${f.size} octets, ${(new Date(f.lastModified).toDateString())}`);
+
+        const win = window.open("../../webUI/FramePaper.html", "ASCII",
+                "width=800,height=600,scrollbars");
+        win.addEventListener("load", formatFile, {once: true});
+
+        const result = !confirm("Copy and save " + f.name + " from the sub-window.\n" +
+                          "Then click OK to continue or Cancel to quit.");
+        win.close();
+        return result;
+    }
+
+    async function fileSelector_onChange(ev) {
+        /* Handle the <input type=file> onchange event when files are selected */
+
+        for (const f of ev.target.files) {
+            const blob = await f.text();
+            if (extractFile(f, blob)) {
+                break;
+            }
+        }
+
+        spout("");
+        spout("Done.");
+    }
+
+    function checkBrowser() {
+        /* Checks whether this browser can support the necessary stuff */
+        let missing = "";
+
+        if (!window.File) {missing += ", File"}
+        if (!window.FileReader) {missing += ", FileReader"}
+        if (!window.FileList) {missing += ", FileList"}
+        if (!window.Blob) {missing += ", Blob"}
+
+        if (missing.length == 0) {
+            return false;
+        } else {
+            alert(`No can do... your browser does not support the following features:\n${missing.substring(2)}`);
+            return true;
+        }
+    }
+
+    /* Start of window.onload() */
+    if (checkBrowser()) {
+        return;
+    }
+
+    clearPanel();
+    document.getElementById("FileSelector").value = null;
+    document.getElementById("FileSelector").addEventListener("change", fileSelector_onChange, false);
+});
+</script>
+</head>
+
+<body>
+
+<div style="position:relative; width:100%; height:3em">
+    <h3>
+        retro-1620 Column Binary (.cb) File Extract Utility
+    </h3>
+    <div>
+        <input id=FileSelector type=file size=60 multiple>
+    </div>
+
+</div>
+
+<pre id=TextPanel>
+</pre>
+
+</body>
+</html>
