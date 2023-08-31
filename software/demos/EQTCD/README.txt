@@ -25,8 +25,11 @@ EQTCD-Monitor-I.sps
 EQTCD-Monitor-I.lst
     Assembly listing for EQTCD-Monitor-I.sps.
 
+EQTCD-Monitor-I-Relocatable-Object.card
+    Relocatable object code (Monitor I System Output Format) from
+    assembling EQTCD-Monitor-I.sps.
+
 EQTCD-Monitor-I-Output.txt
     Combined typewriter and punched card output from EQTCD-Monitor-
     I.sps.
-
 

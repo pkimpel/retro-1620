@@ -1,9 +1,9 @@
-  (ID)  **EQTCD - DISK EQUIVALENCE TABLE UTILITY
+  (ID)  **EQTCD - DISK EQUIVALENCE TABLE UTILITY
+        *NAME EQTCD
+        *STORE RELOADABLE
+        *OUTPUT CARD
         *LIST PRINTER
         *PRINT SYMBOL TABLE
-
-
-
 EQTCD - DISK EQUIVALENCE TABLE UTILITY                                            PAGE   1
 
  ALP   02439     BLANK 03063     DATE  02679     DMSG  03272     EQ    02402
@@ -140,10 +140,11 @@
 01180        TRNM ALP+1,TIME-1                                                   04196 30 02440 02760
 01190        WACD ALP                                                            04208 39 02439 00400
 01200        WACD BLANK                                                          04220 39 03063 00400
-01210        CALL EXIT                                                           04232 49 00796 00000
+01208        BS   *+12,0,,             ,TURN OFF INDEX BAND SELECTION            04232 60 04244 00000
+01210        CALL EXIT                                                           04244 49 00796 00000
 01220        DEND START                                                          03224
 
-04240
+04252
       CORE POSITIONS REQUIRED
-00122
+00123
       STATEMENTS PROCESSED
