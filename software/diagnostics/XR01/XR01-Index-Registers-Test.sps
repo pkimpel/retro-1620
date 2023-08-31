@@ -396,7 +396,7 @@
 03880      TD  PROD-1,R22-16,,                                4
 03890      TD  PROD-2,R22-17,,                                3
 03900      TD  PROD-3,R22-18,,                                2
-03910      TD  PROD-4,R22-19,,                                1
+03910      TF  PROD-4,R22-19,,                                1 + 5 LOWER
 03920      TFM BAND1+XR6,99999,,        INITIALIZE XR 6
 03930      TFM BAND1+XR7,0,,            INITIALIZE XR 7
 03940      60  *+12,1,,                 BS, SELECT BAND 1
