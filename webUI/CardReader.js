@@ -44,7 +44,7 @@ class CardReader {
     timer = new Timer();                // delay management timer
 
     eolRex = /([^\n\r\f]*)((:?\r[\n\f]?)|\n|\f)?/g;
-    invalidCharRex = /[^A-Z0-9 .)+$*-/,(=@|}!"\x5D]/;
+    invalidCharRex = /[^A-Z0-9 .)+$*-/,(=@|}!"\x5D\x5E]/;
 
 
     constructor(context) {
@@ -88,6 +88,7 @@ class CardReader {
         this.boundStackerDblClick = this.stackerDblClick.bind(this);
 
         this.clear();
+
         let geometry = this.config.formatWindowGeometry("CardReader");
         if (geometry.length) {
             this.innerHeight = this.config.getWindowProperty("CardReader", "innerHeight");
@@ -109,7 +110,7 @@ class CardReader {
 
         this.readerReady = false;       // status of READER READY lamp
         this.transportReady = false;    // ready status: cards loaded and START or LOAD pressed
-        this.cardReady = false;         // a card has been read and is ready to send to Processor
+        this.bufferReady = false;       // a card has been read and is ready to send to Processor
         this.readerCheck = false;       // true if a reader check has occurred
         this.cardBuffer = "";           // card data to send to Processor
         this.transferRequested = false; // Processor has requested transfer, waiting for card ready
@@ -136,7 +137,7 @@ class CardReader {
         READER READY lamp */
         const wasReady = this.readerReady;
 
-        this.readerReady = this.cardReady && this.transportReady && !this.readerCheck;
+        this.readerReady = this.transportReady && !this.readerCheck;
         if (this.readerReady && !wasReady) {
             this.$$("ReaderReadyLamp").classList.add("annunciatorLit");
         } else if (wasReady && !this.readerReady) {
@@ -183,7 +184,7 @@ class CardReader {
             if (this.bufIndex < this.bufLength) {       // hopper is not empty
                 this.processor.resetIndicator(9);       // LAST_CARD gate
                 this.setTransportReady(true);
-                if (this.readerReady) {
+                if (this.bufferReady && !this.readerCheck && !this.processor.ioReadCheck.value) {
                     this.initiateTransfer();
                 } else {
                     this.initiateCardRead();
@@ -217,7 +218,7 @@ class CardReader {
 
         if (p.gateAUTOMATIC.value || !p.gateMANUAL.value) {
             this.startBtnClick(ev);
-        } else if (!(this.transportReady || this.cardReady || this.readerCheck ||
+        } else if (!(this.transportReady || this.bufferReady || this.readerCheck ||
                 p.ioReadCheck.value)) {
             if (this.bufIndex < this.bufLength) {       // input hopper is not empty
                 this.setTransportReady(true);
@@ -243,7 +244,7 @@ class CardReader {
             break;
         case "click":
             if (!this.transportReady && this.bufIndex >= this.bufLength) {
-                this.cardReady = false;         // invalidate the card buffer
+                this.bufferReady = false;       // invalidate the card buffer
                 this.setReaderCheck(false);
             }
             break;
@@ -264,7 +265,7 @@ class CardReader {
                          " characters remaining to read.\nDo you want to clear the input hopper?")) {
                 this.$$("FileSelector").value = null;   // reset the control
                 this.$$("FileSelector").disabled = false;
-                this.cardReady = false;
+                this.bufferReady = false;
                 this.setReaderCheck(false);
                 this.hopperBar.value = 0;
                 this.clear();
@@ -553,9 +554,8 @@ class CardReader {
             if (this.invalidCharRex.test(this.cardBuffer)) {
                 this.setReaderCheck(true);
             } else {
-                this.cardReady = true;
-                this.setReaderReadyStatus();
-                if (this.transferRequested && !this.processor.ioReadCheck.value) {
+                this.bufferReady = true;
+                if (this.transferRequested && !this.readerCheck &&  !this.processor.ioReadCheck.value) {
                     this.transferRequested = false;
                     this.initiateTransfer();
                 }
@@ -565,8 +565,8 @@ class CardReader {
 
     /**************************************/
     initiateTransfer() {
-        /* Initiates transfer of the card buffer to the Processor. Note that
-        this.cardBuffer always has exactly 80 characters when its ready */
+        /* Initiates transfer of the card buffer to the Processor. The card
+        image will be trimmed or padded to exactly 80 characters during transfer */
         const limit = CardReader.columns-1;
         const p = this.processor;
         let lastChar = " ";             // last char defaults to padded space
@@ -589,8 +589,8 @@ class CardReader {
         }
 
         // Delay sending last column to the Processor until we can turn off
-        // cardReady and initiate the next physical read.
-        this.cardReady = false;
+        // bufferReady and initiate the next physical read.
+        this.bufferReady = false;
         if (this.bufIndex < this.bufLength) {
             this.initiateCardRead();
         } else {                        // reader hopper empty
@@ -609,7 +609,7 @@ class CardReader {
         unconditionally. The next card will be sent once it has been read
         and no error conditions exist */
 
-        if (this.cardReady && !this.processor.ioReadCheck.value) {
+        if (this.bufferReady && !this.readerCheck && !this.processor.ioReadCheck.value) {
             this.initiateTransfer();            // queue to event loop
         } else {
             this.transferRequested = true;      // wait for reader

@@ -761,11 +761,12 @@ class Processor {
         Addition is handled by a two-step process. First, the augend (Q digit)
         addend (P digit) are converted to index values by the pCompTable[] and
         qCompTable[] lookups on the incoming digit values. These tables auto-
-        matically as necessary based on gateCOMP for the augend and gateP_COMP
-        for the addend. Then the P and Q index values are used to look up the
-        sum from addTable[]. gateCARRY_IN is included in the sum as part of
-        the qCompTable lookup before storing the sum digit in regDR.odd.
-        gateCARRY_OUT is set to the carry from the addTable result */
+        matically complement as necessary based on gateCOMP for the augend and
+        gateP_COMP for the addend. Then the P and Q index values are used to
+        look up the sum from addTable[]. gateCARRY_IN is included in the sum
+        as part of the qCompTable lookup before storing the sum digit in
+        regDR.odd. gateCARRY_OUT is set to the carry from the addTable result.
+        Returns the sum digit value */
 
         let pIndex = Processor.pCompTable[this.gateP_COMP.value][addend];
         let qIndex = Processor.qCompTable[this.gateCOMP.value][this.gateCARRY_IN.value][this.regDR.odd];
@@ -1198,7 +1199,7 @@ class Processor {
         this.gateRESP_GATE.value = 0;
         this.gateCHAR_GATE.value = 1;
 
-        let eob = await this.ioDevice.dumpNumeric(digit);
+        let eob = await this.ioDevice.dumpNumeric(digit);       // end-of-buffer indication
         this.gateCHAR_GATE.value = 0;
         if (this.gateWR.value) {        // we haven't been released...
             this.gateRESP_GATE.value = 1;
@@ -1227,7 +1228,7 @@ class Processor {
             * For all others (not used by Disk Drive), if the digit matches a record mark
             * If a RELEASE occurs
         */
-        let eob = 0;
+        let eob = 0;                    // end-of-buffer indication (meaning varies)
 
         this.gateRESP_GATE.value = 0;
         this.gateCHAR_GATE.value = 1;
@@ -2313,7 +2314,7 @@ class Processor {
                     this.diskWLRRBCCheck.value | this.diskCylOflowCheck.value) & 1;
             break;
         case 30:        // IX Band 0 (indexing off)
-            isSet = ((this.gateIX_BAND_1.value | this.gateIX_BAND_2.value) & 1 ? 0 : 1);
+            isSet = (this.gateIX_BAND_1.value | this.gateIX_BAND_2.value) & 1;
             break;
         case 31:        // IX Band 1
             isSet = this.gateIX_BAND_1.value;
@@ -3124,6 +3125,8 @@ class Processor {
         case 14:        // CM - Compare Immediate
         case 22:        // S - Subtract
         case 24:        // C - Compare
+            this.gateCOMP.value = 1;
+            //--no break
         case 11:        // AM - Add Immediate
         case 21:        // A - Add
             this.gateADD_ENT.value = 1;
@@ -3191,15 +3194,6 @@ class Processor {
         this.gateADD_MODE.value = 1;
         this.gateFIELD_MK_1.value = 0;
         this.gateFIELD_MK_2.value = 0;
-
-        switch (this.opBinary) {
-        case 12:        // Subtract Immediate, SM
-        case 14:        // Compare Immediate, CM
-        case 22:        // Subtract, S
-        case 24:        // Compare, C
-            this.gateCOMP.value = 1;
-            break;
-        }
     }
 
     /**************************************/
@@ -3208,7 +3202,6 @@ class Processor {
         TRNM, ADD, SUB */
 
         // ?? reset false xmit entry ??
-        // ?? reset LD clear exit ??
         // ?? reset P scan to result xmit ??
         this.gateEXMIT_MODE.value = 1;
         this.gate1ST_CYC.value = 1;
@@ -3504,6 +3497,7 @@ class Processor {
         default:
             this.regMAR.value = this.regOR2.value;
             this.fetch();
+            break;
         }
 
         if (this.gate1ST_CYC.value) {
@@ -3630,6 +3624,14 @@ class Processor {
                 nextState = 0;                          // no more E1 cycles -- E2 only
             }
 
+            if (op % 10 == 4) {                         // check for Compare early exit: P or Q != 0
+                if (((digit | this.regDR.odd) & Register.bcdMask) && !this.gateCOMP.value) {
+                    this.gateEZ.value = 0;
+                    this.enterICycle();                 // early exit to I-Cycle entry
+                    return;
+                }
+            }
+
             digit = this.addDigits(digit);
             if (digit & Register.bcdMask) {
                 this.gateEZ.value = 0;
@@ -3638,14 +3640,7 @@ class Processor {
             this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
             this.regOR2.decr(1);                        // update OR2 before chance of early exits
 
-            if (op % 10 == 4) {                 // doing Compare
-                // Check for compare early exit: sum or Q digit != 0.
-                if (((digit & Register.bcdMask) || (this.regDR.odd & Register.bcdMask)) && !this.gateCOMP.value) {
-                    this.gateEZ.value = 0;
-                    this.enterICycle();                 // early exit to I-Cycle entry
-                    return;
-                }
-            } else {                                    // not doing Compare
+            if (op % 10 != 4) {                         // not doing Compare: store result
                 if (this.gateFIELD_MK_2.value || (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value)) {
                     digit |= Register.flagMask;         // low-order P digit sign or high-order P digit flag
                 }
