@@ -4889,7 +4889,8 @@ class Processor {
         /* Initiates input from the typewriter via the INSERT key (cardLoad=false)
         or the CardReader LOAD button (cardLoad=true) */
 
-        if (this.gatePOWER_ON.value && this.gateMANUAL.value && !this.gateAUTOMATIC.value) {
+        if (this.gatePOWER_ON.value && this.gateMANUAL.value && !this.gateAUTOMATIC.value &&
+                !this.gateCHECK_STOP.value) {
             this.gateINSERT.value = 1;
             this.enterAutomatic();
             this.gateREL.value = 0;

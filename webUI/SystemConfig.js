@@ -662,7 +662,7 @@ class SystemConfig {
             this.doc = ev.target;
             this.window = this.doc.defaultView;
             this.window.moveTo(screen.availWidth-this.window.outerWidth-40,
-                    (screen.availHeight-this.window.outerHeight)/2);
+                               (screen.availHeight-this.window.outerHeight)/2);
             this.window.focus();
             this.alertWin = this.window;
             this.$$("SaveBtn").addEventListener("click", this.boundSaveConfigDialog, false);
@@ -677,7 +677,7 @@ class SystemConfig {
         this.window = null;
         this.configReporter = configReporter;
         openPopup(window, "../webUI/SystemConfig.html", `retro-1620.${SystemConfig.configStorageName}`,
-                "location=no,scrollbars,resizable,width=640,height=800",
+                `location=no,scrollbars,resizable,width=${Math.min(window.innerWidth, 740)},height=${screen.availHeight*0.8}`,
                 this, configUI_Load);
     }
 } // SystemConfig class

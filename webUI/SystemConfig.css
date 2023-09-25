@@ -12,6 +12,9 @@
 ***********************************************************************/
 
 
+HTML {
+    height:             auto}
+
 BUTTON.greenButton {
     background-color:   #060;
     color:              white;

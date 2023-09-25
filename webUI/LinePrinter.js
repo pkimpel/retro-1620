@@ -78,7 +78,7 @@ class LinePrinter {
     window = null;                      // window object
     innerHeight = 0;                    // window specified innerHeight
 
-    atTopOfForm = false;                // start new page flag
+    atTopOfForm = true;                 // start new page flag
     barGroup = null;                    // current greenbar line group
     carriageTape = [];                  // per-line skip-to-channel marker masks
     formLength = 0;                     // form length for carriage control (0=>simple CC)
@@ -334,20 +334,33 @@ class LinePrinter {
             const doc = ev.target;
             const win = doc.defaultView;
             const content = doc.getElementById("Paper");
+            let text = this.paper.textContent.replace(/[\u2021]/g, "|");        // record mark
+            if (text[0] == "\f") {
+                text = text.substring(1);       // drop leading form-feed
+            }
 
             doc.title = title;
             win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
-            content.textContent = this.paper.textContent.replace(/[\u2021]/g, "|");     // record mark
+            content.textContent = text;
             this.paper.textContent = "";
             this.supplyRemaining = LinePrinter.maxPaperLines;
             this.paperMeter.value = LinePrinter.maxPaperLines;
-            this.atTopOfForm = false;
             this.$$("EndOfFormLamp").classList.remove("annunciatorLit");
             this.setCarriageReady(true);
         };
 
         this.overstrike = false;
         this.lastLineDiv = null;
+
+        // Fill out the page before extracting the text.
+        if (this.formLength == 0) {             // use simple carriage control
+            this.skipToChannel(1, 0);
+        } else {
+            while (this.lineNr && this.lineNr < this.formLength) {
+                this.appendLine("");
+            }
+        }
+
         openPopup(this.window, "./FramePaper.html", "",
                 "scrollbars,resizable,width=660,height=500",
                 this, exportStacker);
@@ -720,7 +733,7 @@ class LinePrinter {
     /**************************************/
     appendLine(text) {
         /* Appends one line to the current greenbar group, this.barGroup.
-        This handles top-of-form and greenbar highlighting */
+        Also handles top-of-form and greenbar highlighting */
 
         let lineText = text + "\n";
         if (this.overstrike && this.lastLineDiv) {

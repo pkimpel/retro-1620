@@ -219,7 +219,7 @@ class CardReader {
         if (p.gateAUTOMATIC.value || !p.gateMANUAL.value) {
             this.startBtnClick(ev);
         } else if (!(this.transportReady || this.bufferReady || this.readerCheck ||
-                p.ioReadCheck.value)) {
+                p.ioReadCheck.value || p.gateCHECK_STOP.value)) {
             if (this.bufIndex < this.bufLength) {       // input hopper is not empty
                 this.setTransportReady(true);
                 this.transferRequested = false;
