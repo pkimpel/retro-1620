@@ -1,0 +1,104 @@
+  (ID)  **99 BOTTLES OF BEER
+        *LIST PRINTER
+        *PRINT SYMBOL TABLE
+
+
+
+99 BOTTLES OF BEER                                                                PAGE   1
+
+DBEER4 02718    DBEER2 02706    DBEERS 02626     BEERS 02741     BTL   02763
+ BTLS  02745     DBRET 02625     EMPTY 02578     MSG2  02779     MSG4  02823
+ MSG6  02843     MSG8  02907     START 02402
+
+99 BOTTLES OF BEER                                                                PAGE   1
+
+     * DOWNLOADED 2023-07-02 FROM
+     *   HTTP //99-BOTTLES-OF-BEER.NET/LANGUAGE-IBM-1620-SPS-916.HTML
+     *333333
+     *  BOTTLES OF BEER PROGRAM FOR THE IBM 1620 MODEL I
+     *
+     *  HAMMERS THE WHOLE THING OUT ON THE CONSOLE TYPEWRITER.
+     *
+     *  A MISERABLE WASTE OF TIME ON 10/2005 BY
+     *         CHUCK GUZIS   CHUCK @ SYDEX.COM
+     *
+     *  THIS CODE IS SHOWN IN ASSEMBLY-LISTING FORMAT WITH SPS MNEMONICS.
+     *  I HAVE SPREAD THE SPS FIELDS OUT A BIT FOR READABILITY.
+     *
+     *  THERE ARE SOME SPECIAL NUMERIC CHARACTERS-
+     *          - = FLAGGED 0
+     *          J-R = FLAGGED 1-9
+     *
+     *
+     *
+     *  IF YOU-RE GOING TO RUN THIS ON THE CADET, YOU NEED TO HAVE AT LEAST
+     *  THE ADDITION TABLES LOADED.  INDIRECT ADDRESSING IS USEFUL, BUT NOT
+     *  ABSOLUTELY NECESSARY (SEE NOTE BELOW).
+     *
+     *  EXECUTION STARTS AT 00402.
+     *
+      START  RCTY                 ,,, RETURN CARRIAGE                            02402 34 00000 00102
+             BTM  DBEERS,*+12     ,,, SHOW COUNT                                 02414 17 02626 -2426
+             WATY MSG2            ,,, OF BEER ON...                              02426 39 02779 00100
+             RCTY                 ,,, RETURN CARR.                               02438 34 00000 00102
+             BTM  DBEERS,*+12     ,,, SHOW COUNT                                 02450 17 02626 -2462
+             WATY MSG4            ,,, OF BEER.                                   02462 39 02823 00100
+             RCTY                 ,,, ZZZZIP...                                  02474 34 00000 00102
+             WATY MSG6            ,,, TAKE ONE DOWN                              02486 39 02843 00100
+             RCTY                 ,,, ZZZIP...                                   02498 34 00000 00102
+             SM   BEERS,1         ,,, A DEAD SOLDIER                             02510 12 02741 -0001
+             BZ   EMPTY           ,,, IF ALL GONE                                02522 46 02578 01200
+             BTM  DBEERS,*+12     ,,, SHOW COUNT                                 02534 17 02626 -2546
+             WATY MSG2            ,,, ON THE WALL                                02546 39 02779 00100
+             RCTY                 ,,, ZZZZZIP...                                 02558 34 00000 00102
+             B7   START           ,,, DO IT AGAIN                                02570 49 02402 00000
+      EMPTY  WATY MSG8            ,,, NO MORE BEER                               02578 39 02907 00100
+             RCTY                 ,,, ZZZZIP...                                  02590 34 00000 00102
+             H                    ,,, STOP                                       02602 48 00000 00000
+             B7   EMPTY           ,,, IN CASE RUN PUSHED                         02614 49 02578 00000
+     *
+     *  SUBROUTINE TO DISPLAY BOTTLE COUNT AND EITHER *BOTTLE* OR *BOTTLES*
+     *
+     *  THIS ASSUMES THAT THE INDIRECT ADDRESSING FEATURE IS PRESENT, BUT
+     *  IF NOT, SIMPLY USE A BB (42) INSTRUCTION IN PLACE OF THE INDIRECT
+     *  BRANCHES.
+     *
+      DBRET  DC   5,0             ,,, RETURN ADD                                 02625 00005
+      DBEERS CM   BEERS,10        ,,, DISPLAY BOTTLES                            02626 14 02741 -0010
+             BNL  DBEER2          ,,, 10 OR MORE                                 02638 46 02706 01300
+             WNTY BEERS           ,,, 1 DIGIT                                    02650 38 02741 00100
+             CM   BEERS,1         ,,, JUST 1 Q                                   02662 14 02741 -0001
+             BNE  DBEER4          ,,, NO, *BOTTLES*                              02674 47 02718 01200
+             WATY BTL             ,,, SAY *BOTTLE*                               02686 39 02763 00100
+             B7   -DBRET          ,,, EXIT                                       02698 49 0262N 00000
+      DBEER2 WNTY BEERS-1         ,,, 2 DIGITS                                   02706 38 02740 00100
+      DBEER4 WATY BTLS            ,,, SAY BOTTLES                                02718 39 02745 00100
+             B7   -DBRET          ,,, EXIT                                       02730 49 0262N 00000
+      BEERS  DC   5,99            ,,, BOTTLE COUNT                               02741 00005
+             DC   1,@                                                            02742 00001
+      BTLS   DAC  8, BOTTLES                                                     02745 00016
+             DAC  1,@                                                            02761 00002
+      BTL    DAC  8, BOTTLE@                                                     02763 00016
+      MSG2   DAC  8, OF BEER                                                     02779 00016
+             DAC  7, ON THE                                                      02795 00014
+             DAC  7, WALL.@                                                      02809 00014
+      MSG4   DAC  8, OF BEER                                                     02823 00016
+             DAC  2,.@                                                           02839 00004
+      MSG6   DAC  8,TAKE ONE                                                     02843 00016
+             DAC  6, DOWN,                                                       02859 00012
+             DAC  8, PASS IT                                                     02871 00016
+             DAC  9, AROUND -                                                    02887 00018
+             DAC  1,@                                                            02905 00002
+      MSG8   DAC  7,NO MORE                                                      02907 00014
+             DAC  7, BEER.@                                                      02921 00014
+             DEND START                                                          02402
+
+02934
+      CORE POSITIONS REQUIRED
+00080
+      STATEMENTS PROCESSED
+
+
+
+
+
