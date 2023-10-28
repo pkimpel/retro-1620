@@ -2314,7 +2314,7 @@ class Processor {
                     this.diskWLRRBCCheck.value | this.diskCylOflowCheck.value) & 1;
             break;
         case 30:        // IX Band 0 (indexing off)
-            isSet = (this.gateIX_BAND_1.value | this.gateIX_BAND_2.value) & 1;
+            isSet = ((this.gateIX_BAND_1.value | this.gateIX_BAND_2.value) & 1 ? 0 : 1);
             break;
         case 31:        // IX Band 1
             isSet = this.gateIX_BAND_1.value;
@@ -3212,6 +3212,488 @@ class Processor {
     }
 
     /**************************************/
+    stepE2Addition(op, dx) {
+        /* Handles the E2 state for Add, Subtract, and Compare */
+        let nextState = 0;
+        let digit = this.regMBR.getDigit(dx);
+
+        this.gateCARRY_OUT.value = 0;
+        if (this.gate2_DIG_CNTRL.value) {
+            this.gate2_DIG_CNTRL.value = 0;
+        } else {
+            this.shiftDREvenOdd();
+            if (!this.gateRECOMP.value) {
+                nextState = procStateE1;
+            }
+        }
+
+        if (this.gate1ST_CYC_DELAYD.value) {
+            // The following tests are conditioned on 1ST_CYC in the ILD, but we just
+            // turned that off above when turning on 1ST_CYC_DELAYD, so sameo-sameo.
+            if (this.gateCOMP.value) {
+                this.gateCARRY_IN.value = 1;    // pre-set carry if subtract
+            }
+
+            if (this.gateRECOMP.value) {
+                // Set up initial conditions for the RECOMP phase.
+                this.gateCARRY_IN.value = 1;
+                this.gateCOMP.value = 0;
+                this.gateFIELD_MK_2.value = 0;
+                this.gateP_COMP.value = 1;
+                // We need to redo the E2 fetch and start with the low-order P digit.
+                this.regOR2.value = this.regMAR.value = this.regOR3.value;
+                dx = this.regMAR.isEven;
+                this.fetch();
+                digit = this.regMBR.getDigit(dx);
+            } else {
+                // If not RECOMP and the low-order P digit is flagged, reverse COMP, CARRY_IN, HP
+                if (digit & Register.flagMask) {
+                    this.gateCOMP.flip();
+                    this.gateCARRY_IN.value = this.gateCOMP.value;
+                    this.gateHP.flip();
+                }
+            }
+        } else {
+            if (this.gateFL_1.value) {
+                this.gateFIELD_MK_1.value = 1;  // end of Q field
+            }
+
+            if (digit & Register.flagMask) {
+                this.gateFIELD_MK_2.value = 1;  // end of P field
+            }
+        }
+
+        if (this.gateFIELD_MK_1.value) {
+            this.resetDREven();
+            this.setDREven(0);                  // addend will be zero from here on...
+            nextState = 0;                      // no more E1 cycles -- E2 only
+        }
+
+        if (op % 10 == 4) {                     // check for Compare early exit: P or Q != 0
+            if (((digit | this.regDR.odd) & Register.bcdMask) && !this.gateCOMP.value) {
+                this.gateEZ.value = 0;
+                this.enterICycle();             // early exit to I-Cycle entry
+                return;
+            }
+        }
+
+        digit = this.addDigits(digit);
+        if (digit & Register.bcdMask) {
+            this.gateEZ.value = 0;
+        }
+
+        this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+        this.regOR2.decr(1);                    // update OR2 before chance of early exits
+
+        if (op % 10 != 4) {                     // not doing Compare: store result
+            if (this.gateFIELD_MK_2.value || (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value)) {
+                digit |= Register.flagMask;     // low-order P digit sign or high-order P digit flag
+            }
+            this.regMIR.setDigit(dx, digit);
+            this.store();
+        }
+
+        if (this.gateFIELD_MK_2.value) {
+            // Check for overflow.
+            if (!this.gateFIELD_MK_1.value ||
+                    (this.gateCARRY_OUT.value && !this.gateCOMP.value && op % 10 != 4)) {
+                this.setIndicator(14, `A/S/C Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue-12}`);
+            }
+
+            // Check for initiation of RECOMP phase.
+            if (this.gateCOMP.value && !this.gateCARRY_OUT.value) {
+                this.gateRECOMP.value = 1;
+                this.gate1ST_CYC.value = 1;
+                this.gateHP.flip();
+            }
+
+            // Check for end of add operation: COMP&CARRY | !COMP | Compare.
+            if ((this.gateCOMP.value ? this.gateCARRY_OUT.value : 1) || op % 10 == 4) {
+                this.enterICycle();             // exit to I-Cycle entry
+                nextState = 0;                  // so as not to override enterICycle()
+            }
+        }
+
+        if (nextState) {                        // either do E1 or continue with E2
+            this.setProcState(nextState);
+        }
+    }
+
+    /**************************************/
+    stepE2Multiply(op) {
+        /* Handles the E2 state for Multiply */
+
+        if (this.gate1ST_MPLY_CYCLE.value) {    // ILD has this as 1ST_CYC, but that can't be right
+            this.gate1ST_MPLY_CYCLE.value = 0;
+            this.regMAR.value = this.regPR1.value;
+            this.regPR1.decr(1);
+        } else {
+            this.regMAR.value = this.regPR2.value
+        }
+
+        this.fetch();
+        let dx = this.regMAR.isEven;            // digit index
+        let digit = this.regMBR.getDigit(dx);
+        if (this.gate2_DIG_CNTRL.value) {       // first E-2 cycle
+            this.regPR2.value = this.regMAR.value;
+            this.regPR2.decr(1);                // next product digit
+            this.gateCARRY_OUT.value = this.gateMC_2.value;
+        } else {
+            this.shiftDREvenOdd();              // second (and third) E-2 cycle
+            this.setDREven(0);                      // addend will be zero on 3rd E-2 cycle...
+        }
+
+        this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+        digit = this.addDigits(digit);
+        if (digit & Register.bcdMask) {
+            this.gateEZ.value = 0;
+        }
+
+        if (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value) {
+            digit |= Register.flagMask;         // set product sign in low-order digit
+        }
+
+        if (!this.gate2_DIG_CNTRL.value) {
+            // Propagate 2nd E-2 carry 2 cycles ahead.
+            this.gateMC_2.value = this.gateMC_1.value;
+            this.gateMC_1.value = this.gateCARRY_OUT.value;
+            // Determine final digit status.
+            if (this.gateFIELD_MK_2.value) {
+                if (this.gateFIELD_MK_1.value) {
+                    digit |= Register.flagMask; // set product area field mark
+                }
+            }
+        }
+
+        this.regMIR.setDigit(dx, digit);
+        this.store();
+
+        // Now, figure out how to get outta here...
+        if (this.gate2_DIG_CNTRL.value) {
+            this.gate2_DIG_CNTRL.value = 0;     // stay in E-2 for 2nd cycle
+        } else {
+            if (this.gateFIELD_MK_2.value) {
+                if (this.gateMC_2.value) {      // stay in E-2 for 3rd cycle to add final carry
+                    this.gateCARRY_OUT.value = this.gateMC_2.value;
+                } else if (this.gateFIELD_MK_1.value) {
+                    this.enterICycle();         // finito
+                } else {
+                    this.setProcState(procStateE1); // advance to next multiplier digit
+                }
+            } else if (this.regMQ.isZero && !this.gateFIELD_MK_1.value) {
+                this.setProcState(procStateE1); // zero multiplier - early exit to next multiplier digit
+            } else {
+                this.setProcState(procStateE3); // advance to next multiplicand digit
+            }
+        }
+    }
+
+    /**************************************/
+    stepE2LoadDividend() {
+        /* Handles the E2 state for Load Dividend */
+        let digit = 0;
+        let dx = 0;
+        let nextState = 0;
+
+        if (this.gateLAST_LD_CYC.value) {       // final LD/LDM cycle
+            this.regMAR.value = this.regPR1.value;
+            this.fetch();                       // fetch product digit at 00099
+            dx = this.regMAR.isEven;
+            digit = this.regMBR.getDigit(dx);
+            if (this.gateFIELD_MK_2.value) {
+                if (this.gateDVD_SIGN.value) {  // set sign in product field
+                    this.regMIR.setDigit(dx, digit |= Register.flagMask);
+                }
+                this.enterICycle();
+            }
+            this.store();
+        } else {                                // transfer P digit to product field
+            this.regMAR.value = this.regOR2.value;
+            this.fetch();
+            if (this.gate2_DIG_CNTRL.value) {
+                this.gate2_DIG_CNTRL.value = 0;
+                digit = this.getDROdd();
+            } else {
+                digit = this.shiftDREvenOdd();
+                nextState = procStateE1;
+            }
+
+            if (this.gate1ST_CYC_DELAYD.value) {// first P digit
+                digit &= Register.notFlagMask;  // reset flag on low-order P digit
+                if (this.gateFL_1.value) {
+                    this.gateDVD_SIGN.value = 1;// save P-field sign for final cycle
+                }
+            } else if (this.gateFL_1.value) {   // last P digit, set up final cycle
+                this.gateFIELD_MK_1.value = 1;
+                this.gateLAST_LD_CYC.value = 1;
+                this.gateEXMIT_MODE.value = 0;
+                this.gateFIELD_MK_2.value = 1;
+            }
+
+            dx = this.regMAR.isEven;
+            this.regMIR.setDigit(dx, digit);
+            this.store();
+            this.regOR2.decr(1);
+
+            if (nextState) {                    // do either E1 or continue with E2
+                this.setProcState(nextState);
+            }
+        }
+    }
+
+    /**************************************/
+    stepE2Divide(op) {
+        /* Handles the E2 state for Divide */
+        let nextState = 0;
+
+        if (this.gate1ST_CYC_DELAYD.value) {
+            this.regOR2.value = this.regOR3.value;  // reset the dividend digit address
+            this.gateCARRY_IN.value = this.gateCOMP.value;  // preset carry on first cycle
+        }
+
+        this.regMAR.value = this.regOR2.value;
+        this.fetch();                           // next dividend/remainder digit
+        let dx = this.regMAR.isEven;
+        let digit = this.regMBR.getDigit(dx);
+
+        if (this.gate2_DIG_CNTRL.value) {
+            this.gate2_DIG_CNTRL.value = 0;
+        } else {
+            this.shiftDREvenOdd();
+            nextState = procStateE1;
+        }
+
+        digit = this.addDigits(digit);
+        if (this.gateDVD_L_CYC.value) {
+            if (this.gate1ST_CYC_DELAYD.value) {
+                digit |= this.regMBR.getDigit(dx) & Register.flagMask; // preserve remainder sign
+            } else if (this.gateFL_1.value) {
+                digit |= Register.flagMask;     // set remainder field mark
+            }
+        }
+
+        this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+        this.regMIR.setDigit(dx, digit);
+        this.store();
+        this.regOR2.decr(1);                    // update OR1 before chance of early exits
+
+        if (this.gate1ST_CYC_DELAYD.value) {    // this was the first cycle of a divide cycle
+            if (this.gateDVD_L_CYC.value && !this.gateCOMP.value) { // last divide cycle add mode
+                if (this.gateFL_1.value) {
+                    this.gateHP.flip();         // flip sign if divisor negative
+                }
+                if (this.regMBR.getDigit(dx) & Register.flagMask) {
+                    this.gateHP.flip();         // flip sign if dividend negative
+                }
+            }
+        } else if (this.gateFIELD_MK_1.value) { // this was the third E2 cycle (see below)
+            this.gateFIELD_MK_2.value = 1;
+            this.gateADD_ENT.value = 1;         // restart field processing in E1
+            if (this.gateCARRY_OUT.value) {     // result from this cycle is still positive, so...
+                if (this.regMQ.binaryValue < 9) {
+                    this.regMQ.incr(1);         // increment quotient digit
+                    nextState = procStateE1;    // and do another subtraction cycle
+                } else {                        // exceeded 9 subtractions, set overflow and quit
+                    this.regMQ.value = 0xA;     // MQ actually counted to binary 10 on overflow
+                    this.setIndicator(14, `DIV Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue-12}`);
+                    nextState = 0;              // inhibit any other state change and exit
+                    this.enterICycle();
+                }
+            } else {                            // result from this cycle is negative, so...
+                nextState = procStateE1;        // start the add-correction cycle (COMP turned off in E1)
+            }
+        } else if (this.gateFL_1.value) {       // at the end of the divisor field
+            this.gateFIELD_MK_1.value = 1;
+            if (this.gateCOMP.value) {          // we've been subtracting
+                this.resetDREven();
+                this.setDREven(0);              // addend will be zero for next cycle
+                nextState = 0;                  // do third E2 cycle to apply borrow to next quotient digit
+            } else {                            // otherwise, this was an add-correction cycle
+                this.gateFIELD_MK_2.value = 1;
+                nextState = procStateE3;        // finish this quotient digit in E3
+            }
+        }
+
+        if (nextState) {
+            this.setProcState(nextState);
+        }
+    }
+
+    /**************************************/
+    stepE2ModifyIndex(op) {
+        /* Handles the E2 state for Branch and Modify Index Register */
+        let nextState = 0;
+
+        this.gateCARRY_OUT.value = 0;
+        if (this.gate1ST_CYC_DELAYD.value) {
+            this.setIndexMAR();
+            this.regPR2.value = this.regMAR.value;
+        } else {
+            this.regMAR.value = this.regPR2.value;
+        }
+
+        if (this.gate2_DIG_CNTRL.value) {
+            this.gate2_DIG_CNTRL.value = 0;
+        } else {
+            this.shiftDREvenOdd();
+            if (!this.gateRECOMP.value) {
+                nextState = procStateE1;
+            }
+        }
+
+        this.fetch();
+        let dx = this.regMAR.isEven;
+        let digit = this.regMBR.getDigit(dx);
+
+        if (this.gate1ST_CYC_DELAYD.value) {
+            // The following tests are conditioned on 1ST_CYC in the ILD, but we just
+            // turned that off above when turning on 1ST_CYC_DELAYD, so sameo-sameo.
+            if (this.gateCOMP.value) {
+                this.gateCARRY_IN.value = 1;    // pre-set carry if subtract
+            }
+
+            if (this.gateRECOMP.value) {
+                // Set up initial conditions for the RECOMP phase.
+                this.gateCARRY_IN.value = 1;
+                this.gateCOMP.value = 0;
+                this.gateFIELD_MK_2.value = 0;
+                this.gateP_COMP.value = 1;
+                // We need to redo the E2 fetch and start with the low-order XR digit.
+                this.setIndexMAR();
+                this.regPR2.value = this.regMAR.value;
+                dx = this.regMAR.isEven;
+                this.fetch();
+                digit = this.regMBR.getDigit(dx);
+            } else {
+                // If not RECOMP and the low-order XR digit is flagged, reverse COMP, CARRY_IN, HP
+                if (digit & Register.flagMask) {
+                    this.gateCOMP.flip();
+                    this.gateCARRY_IN.value = this.gateCOMP.value;
+                    this.gateHP.flip();
+                }
+            }
+        } else {
+            this.regMQ.incr(1);
+            if (op == 62 || op == 64) {         // BXM or BCXM
+                if (this.regMQ.value & 4) {     // imm Q field ignores field marks: strictly 5 digits
+                    this.gateFIELD_MK_1.value = 1;  // end of immediate Q field
+                }
+            } else if (this.gateFL_1.value) {
+                this.gateFIELD_MK_1.value = 1;  // end of Q field
+            }
+
+            if (digit & Register.flagMask) {
+                this.gateFIELD_MK_2.value = 1;  // end of XR field
+            }
+        }
+
+        if (this.gateFIELD_MK_1.value) {
+            this.resetDREven();
+            this.setDREven(0);                  // addend will be zero from here on...
+            nextState = 0;                      // no more E1 cycles -- E2 only
+        }
+
+        digit = this.addDigits(digit);
+        if (digit & Register.bcdMask) {
+            this.gateEZ.value = 0;
+            if (!this.gateRECOMP.value) {
+                this.gateX_SIG_DIG.value = 1;   // result has a non-zero digit
+            }
+        }
+
+        this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+        this.regPR2.decr(1);                    // update PR2 before chance of early exits
+
+        if (this.gateFIELD_MK_2.value || (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value)) {
+            digit |= Register.flagMask;         // low-order XR digit sign or high-order XR digit flag
+        }
+        this.regMIR.setDigit(dx, digit);
+        this.store();
+
+        if (this.gateFIELD_MK_2.value) {
+            // Check for overflow.
+            if (!this.gateFIELD_MK_1.value) {
+                this.setIndicator(14, `A/S/C Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue-12}`);
+            }
+
+            // Check for initiation of RECOMP phase.
+            if (this.gateCOMP.value && !this.gateCARRY_OUT.value) {
+                this.gateRECOMP.value = 1;
+                this.gate1ST_CYC.value = 1;
+                this.gateHP.flip();
+            }
+
+            // Check for end of add operation: COMP&CARRY | !COMP.
+            if (this.gateCOMP.value ? this.gateCARRY_OUT.value : 1) {
+                if (op == 61 || op == 62 ||
+                        !(this.gateEZ.value ||
+                            (this.gateCARRY_OUT.value && !this.gateCOMP.value) ||
+                            (this.gateX_SIG_DIG.value && this.gateRECOMP.value))) {
+                    this.gateBR_EXEC.value = 1;
+                }
+
+                this.enterICycle();             // exit to I-Cycle entry
+                return;
+            }
+        }
+
+        if (nextState) {                        // do either E1 or continue with E2
+            this.setProcState(nextState);
+        }
+    }
+
+    /**************************************/
+    stepE2LoadStoreIndex(op) {
+        /* Handles the E2 state for Branch and Load/Store Index Register */
+        let digit = 0;
+        let nextState = 0;
+
+        if (op == 67) {
+            this.regMAR.value = this.regOR1.value;
+            this.regOR1.decr(1);
+        } else {
+            if (this.gate1ST_CYC_DELAYD.value) {
+                this.setIndexMAR();
+                this.regPR2.value = this.regMAR.value;
+            } else {
+                this.regMAR.value = this.regPR2.value;
+            }
+            this.regPR2.decr(1);
+        }
+
+        if (this.gate2_DIG_CNTRL.value) {
+            this.gate2_DIG_CNTRL.value = 0;
+            digit = this.getDROdd();
+        } else {
+            digit = this.shiftDREvenOdd();
+            nextState = procStateE1;
+        }
+
+        this.fetch();
+        let dx = this.regMAR.isEven;
+        if (this.gate1ST_CYC_DELAYD.value) {                        // set sign flag
+            this.regMIR.setDigit(dx, this.gateFL_1.value ? digit | Register.flagMask : digit);
+        } else {
+            this.regMQ.incr(1);
+            if (this.regMQ.binaryValue & 4) {                       // check for 5 digits
+                this.regMIR.setDigit(dx, digit | Register.flagMask);// set h.o. digit flag
+            } else {
+                this.regMIR.setDigitNoFlag(dx, digit);              // don't overwrite flags
+            }
+        }
+
+        this.store();
+
+        if (this.regMQ.binaryValue & 4) {                           // 5 digit address field
+            this.gateFIELD_MK_1.value = 1;
+            this.gateBR_EXEC.value = 1;
+            this.enterICycle();
+        } else if (nextState) {                                     // do either E1 or continue with E2
+            this.setProcState(nextState);
+        }
+    }
+
+    /**************************************/
     stepECycle1() {
         /* Executes E-Cycle 1 - processes data at the OR1 (Q) address */
         let digit = 0;
@@ -3221,7 +3703,7 @@ class Processor {
         case 19:        // DM - Divide Immediate
         case 29:        // D - Divide
         case 67:        // BSX - Branch and Store Index Register
-            break;              // fetch done below
+            break;              // fetch done later, below
         default:
             this.regMAR.value = this.regOR1.value;
             this.fetch();
@@ -3477,8 +3959,8 @@ class Processor {
         let digit = 0;
         let dx = this.regOR2.isEven;    // digit index: 0/1
         let nextState = 0;
-
         const op = this.opBinary;
+
         switch (op) {
         case 13:        // MM - Multiply Immediate
         case 18:        // LDM - Load Dividend Immediate
@@ -3493,7 +3975,7 @@ class Processor {
         case 65:        // BLX - Branch and Load Index Register
         case 66:        // BLXM - Branch and Load Index Register Immediate
         case 67:        // BSX - Branch and Store Index Register
-            break;              // fetch done below
+            break;              // fetch done later, below
         default:
             this.regMAR.value = this.regOR2.value;
             this.fetch();
@@ -3570,297 +4052,22 @@ class Processor {
         case 21:        // A - Add
         case 22:        // S - Subtract
         case 24:        // C - Compare
-            this.gateCARRY_OUT.value = 0;
-            digit = this.regMBR.getDigit(dx);
-
-            if (this.gate2_DIG_CNTRL.value) {
-                this.gate2_DIG_CNTRL.value = 0;
-            } else {
-                this.shiftDREvenOdd();
-                if (!this.gateRECOMP.value) {
-                    nextState = procStateE1;
-                }
-            }
-
-            if (this.gate1ST_CYC_DELAYD.value) {
-                // The following tests are conditioned on 1ST_CYC in the ILD, but we just
-                // turned that off above when turning on 1ST_CYC_DELAYD, so sameo-sameo.
-                if (this.gateCOMP.value) {
-                    this.gateCARRY_IN.value = 1;        // pre-set carry if subtract
-                }
-
-                if (this.gateRECOMP.value) {
-                    // Set up initial conditions for the RECOMP phase.
-                    this.gateCARRY_IN.value = 1;
-                    this.gateCOMP.value = 0;
-                    this.gateFIELD_MK_2.value = 0;
-                    this.gateP_COMP.value = 1;
-                    // We need to redo the E2 fetch and start with the low-order P digit.
-                    this.regOR2.value = this.regMAR.value = this.regOR3.value;
-                    dx = this.regMAR.isEven;
-                    this.fetch();
-                    digit = this.regMBR.getDigit(dx);
-                } else {
-                    // If not RECOMP and the low-order P digit is flagged, reverse COMP, CARRY_IN, HP
-                    if (digit & Register.flagMask) {
-                        this.gateCOMP.flip();
-                        this.gateCARRY_IN.value = this.gateCOMP.value;
-                        this.gateHP.flip();
-                    }
-                }
-            } else {
-                if (this.gateFL_1.value) {
-                    this.gateFIELD_MK_1.value = 1;      // end of Q field
-                }
-
-                if (digit & Register.flagMask) {
-                    this.gateFIELD_MK_2.value = 1;      // end of P field
-                }
-            }
-
-            if (this.gateFIELD_MK_1.value) {
-                this.resetDREven();
-                this.setDREven(0);                      // addend will be zero from here on...
-                nextState = 0;                          // no more E1 cycles -- E2 only
-            }
-
-            if (op % 10 == 4) {                         // check for Compare early exit: P or Q != 0
-                if (((digit | this.regDR.odd) & Register.bcdMask) && !this.gateCOMP.value) {
-                    this.gateEZ.value = 0;
-                    this.enterICycle();                 // early exit to I-Cycle entry
-                    return;
-                }
-            }
-
-            digit = this.addDigits(digit);
-            if (digit & Register.bcdMask) {
-                this.gateEZ.value = 0;
-            }
-
-            this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
-            this.regOR2.decr(1);                        // update OR2 before chance of early exits
-
-            if (op % 10 != 4) {                         // not doing Compare: store result
-                if (this.gateFIELD_MK_2.value || (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value)) {
-                    digit |= Register.flagMask;         // low-order P digit sign or high-order P digit flag
-                }
-                this.regMIR.setDigit(dx, digit);
-                this.store();
-            }
-
-            if (this.gateFIELD_MK_2.value) {
-                // Check for overflow.
-                if (!this.gateFIELD_MK_1.value ||
-                        (this.gateCARRY_OUT.value && !this.gateCOMP.value && op % 10 != 4)) {
-                    this.setIndicator(14, `A/S/C Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue-12}`);
-                }
-
-                // Check for initiation of RECOMP phase.
-                if (this.gateCOMP.value && !this.gateCARRY_OUT.value) {
-                    this.gateRECOMP.value = 1;
-                    this.gate1ST_CYC.value = 1;
-                    this.gateHP.flip();
-                }
-
-                // Check for end of add operation: COMP&CARRY | !COMP | Compare.
-                if ((this.gateCOMP.value ? this.gateCARRY_OUT.value : 1) || op % 10 == 4) {
-                    this.enterICycle();                 // exit to I-Cycle entry
-                    return;
-                }
-            }
-
-            if (nextState) {     // do either E1 or continue with E2
-                this.setProcState(nextState);
-            }
+            this.stepE2Addition(op, dx);
             break;
 
         case 13:        // MM - Multiply Immediate
         case 23:        // M - Multiply
-            if (this.gate1ST_MPLY_CYCLE.value) {        // ILD has this as 1ST_CYC, but that can't be right
-                this.gate1ST_MPLY_CYCLE.value = 0;
-                this.regMAR.value = this.regPR1.value;
-                this.regPR1.decr(1);
-            } else {
-                this.regMAR.value = this.regPR2.value
-            }
-
-            this.fetch();
-            dx = this.regMAR.isEven;            // digit index
-            digit = this.regMBR.getDigit(dx);
-            if (this.gate2_DIG_CNTRL.value) {   // first E-2 cycle
-                this.regPR2.value = this.regMAR.value;
-                this.regPR2.decr(1);            // next product digit
-                this.gateCARRY_OUT.value = this.gateMC_2.value;
-            } else {
-                this.shiftDREvenOdd();          // second (and third) E-2 cycle
-                this.setDREven(0);                      // addend will be zero on 3rd E-2 cycle...
-            }
-
-            this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
-            digit = this.addDigits(digit);
-            if (digit & Register.bcdMask) {
-                this.gateEZ.value = 0;
-            }
-
-            if (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value) {
-                digit |= Register.flagMask;     // set product sign in low-order digit
-            }
-
-            if (!this.gate2_DIG_CNTRL.value) {
-                // Propagate 2nd E-2 carry 2 cycles ahead.
-                this.gateMC_2.value = this.gateMC_1.value;
-                this.gateMC_1.value = this.gateCARRY_OUT.value;
-                // Determine final digit status.
-                if (this.gateFIELD_MK_2.value) {
-                    if (this.gateFIELD_MK_1.value) {
-                        digit |= Register.flagMask;     // set product area field mark
-                    }
-                }
-            }
-
-            this.regMIR.setDigit(dx, digit);
-            this.store();
-
-            // Now, figure out how to get outta here...
-            if (this.gate2_DIG_CNTRL.value) {
-                this.gate2_DIG_CNTRL.value = 0;         // stay in E-2 for 2nd cycle
-            } else {
-                if (this.gateFIELD_MK_2.value) {
-                    if (this.gateMC_2.value) {          // stay in E-2 for 3rd cycle to add final carry
-                        this.gateCARRY_OUT.value = this.gateMC_2.value;
-                    } else if (this.gateFIELD_MK_1.value) {
-                        this.enterICycle();             // finito
-                    } else {
-                        this.setProcState(procStateE1); // advance to next multiplier digit
-                    }
-                } else if (this.regMQ.isZero && !this.gateFIELD_MK_1.value) {
-                    this.setProcState(procStateE1);     // zero multiplier - early exit to next multiplier digit
-                } else {
-                    this.setProcState(procStateE3);     // advance to next multiplicand digit
-                }
-            }
+            this.stepE2Multiply(op);
             break;
 
         case 18:        // LDM - Load Dividend Immediate
         case 28:        // LD - Load Dividend
-            if (this.gateLAST_LD_CYC.value) {           // final LD/LDM cycle
-                this.regMAR.value = this.regPR1.value;
-                this.fetch();                           // fetch product digit at 00099
-                dx = this.regMAR.isEven;
-                digit = this.regMBR.getDigit(dx);
-                if (this.gateFIELD_MK_2.value) {
-                    if (this.gateDVD_SIGN.value) {      // set sign in product field
-                        this.regMIR.setDigit(dx, digit |= Register.flagMask);
-                    }
-                    this.enterICycle();
-                }
-                this.store();
-            } else {                                    // transfer P digit to product field
-                this.regMAR.value = this.regOR2.value;
-                this.fetch();
-                if (this.gate2_DIG_CNTRL.value) {
-                    this.gate2_DIG_CNTRL.value = 0;
-                    digit = this.getDROdd();
-                } else {
-                    digit = this.shiftDREvenOdd();
-                    nextState = procStateE1;
-                }
-
-                if (this.gate1ST_CYC_DELAYD.value) {    // first P digit
-                    digit &= Register.notFlagMask;      // reset flag on low-order P digit
-                    if (this.gateFL_1.value) {
-                        this.gateDVD_SIGN.value = 1;    // save P-field sign for final cycle
-                    }
-                } else if (this.gateFL_1.value) {       // last P digit, set up final cycle
-                    this.gateFIELD_MK_1.value = 1;
-                    this.gateLAST_LD_CYC.value = 1;
-                    this.gateEXMIT_MODE.value = 0;
-                    this.gateFIELD_MK_2.value = 1;
-                }
-
-                this.regMIR.setDigit(dx, digit);
-                this.store();
-                this.regOR2.decr(1);
-
-                if (nextState) {        // do either E1 or continue with E2
-                    this.setProcState(nextState);
-                }
-            }
+            this.stepE2LoadDividend();
             break;
 
         case 19:        // DM - Divide Immediate
         case 29:        // D - Divide
-            if (this.gate1ST_CYC_DELAYD.value) {
-                this.regOR2.value = this.regOR3.value;  // reset the dividend digit address
-                this.gateCARRY_IN.value = this.gateCOMP.value;  // preset carry on first cycle
-            }
-
-            this.regMAR.value = this.regOR2.value;
-            dx = this.regMAR.isEven;
-            this.fetch();                               // next dividend/remainder digit
-            digit = this.regMBR.getDigit(dx);
-
-            if (this.gate2_DIG_CNTRL.value) {
-                this.gate2_DIG_CNTRL.value = 0;
-            } else {
-                this.shiftDREvenOdd();
-                nextState = procStateE1;
-            }
-
-            digit = this.addDigits(digit);
-            if (this.gateDVD_L_CYC.value) {
-                if (this.gate1ST_CYC_DELAYD.value) {
-                    digit |= this.regMBR.getDigit(dx) & Register.flagMask; // preserve remainder sign
-                } else if (this.gateFL_1.value) {
-                    digit |= Register.flagMask;         // set remainder field mark
-                }
-            }
-
-            this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
-            this.regMIR.setDigit(dx, digit);
-            this.store();
-            this.regOR2.decr(1);                        // update OR1 before chance of early exits
-
-            if (this.gate1ST_CYC_DELAYD.value) {        // this was the first cycle of a divide cycle
-                if (this.gateDVD_L_CYC.value && !this.gateCOMP.value) { // last divide cycle add mode
-                    if (this.gateFL_1.value) {
-                        this.gateHP.flip();             // flip sign if divisor negative
-                    }
-                    if (this.regMBR.getDigit(dx) & Register.flagMask) {
-                        this.gateHP.flip();             // flip sign if dividend negative
-                    }
-                }
-            } else if (this.gateFIELD_MK_1.value) {     // this was the third E2 cycle (see below)
-                this.gateFIELD_MK_2.value = 1;
-                this.gateADD_ENT.value = 1;             // restart field processing in E1
-                if (this.gateCARRY_OUT.value) {         // result from this cycle is still positive, so...
-                    if (this.regMQ.binaryValue < 9) {
-                        this.regMQ.incr(1);             // increment quotient digit
-                        nextState = procStateE1;        // and do another subtraction cycle
-                    } else {                            // exceeded 9 subtractions, set overflow and quit
-                        this.regMQ.value = 0xA;         // MQ actually counted to binary 10 on overflow
-                        this.setIndicator(14, `DIV Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue-12}`);
-                        nextState = 0;                  // inhibit any other state change and exit
-                        this.enterICycle();
-                    }
-                } else {                                // result from this cycle is negative, so...
-                    nextState = procStateE1;            // start the add-correction cycle (COMP turned off in E1)
-                }
-            } else if (this.gateFL_1.value) {           // at the end of the divisor field
-                this.gateFIELD_MK_1.value = 1;
-                if (this.gateCOMP.value) {              // we've been subtracting
-                    this.resetDREven();
-                    this.setDREven(0);                  // addend will be zero for next cycle
-                    nextState = 0;                      // do third E2 cycle to apply borrow to next quotient digit
-                } else {                                // otherwise, this was an add-correction cycle
-                    this.gateFIELD_MK_2.value = 1;
-                    nextState = procStateE3;            // finish this quotient digit in E3
-                }
-            }
-
-            if (nextState) {
-                this.setProcState(nextState);
-            }
+            this.stepE2Divide(op);
             break;
 
         case 30:        // TRNM - Transmit Record No Record Mark
@@ -3938,170 +4145,13 @@ class Processor {
         case 62:        // BXM - Branch and Modify Index Register Immediate
         case 63:        // BCX - Branch Conditionally and Modify Index Register
         case 64:        // BCXM - Branch Conditionally and Modify Index Register Immediate
-            this.gateCARRY_OUT.value = 0;
-            if (this.gate1ST_CYC_DELAYD.value) {
-                this.setIndexMAR();
-                this.regPR2.value = this.regMAR.value;
-            } else {
-                this.regMAR.value = this.regPR2.value;
-            }
-
-            if (this.gate2_DIG_CNTRL.value) {
-                this.gate2_DIG_CNTRL.value = 0;
-            } else {
-                this.shiftDREvenOdd();
-                if (!this.gateRECOMP.value) {
-                    nextState = procStateE1;
-                }
-            }
-
-            this.fetch();
-            dx = this.regMAR.isEven;
-            digit = this.regMBR.getDigit(dx);
-
-            if (this.gate1ST_CYC_DELAYD.value) {
-                // The following tests are conditioned on 1ST_CYC in the ILD, but we just
-                // turned that off above when turning on 1ST_CYC_DELAYD, so sameo-sameo.
-                if (this.gateCOMP.value) {
-                    this.gateCARRY_IN.value = 1;        // pre-set carry if subtract
-                }
-
-                if (this.gateRECOMP.value) {
-                    // Set up initial conditions for the RECOMP phase.
-                    this.gateCARRY_IN.value = 1;
-                    this.gateCOMP.value = 0;
-                    this.gateFIELD_MK_2.value = 0;
-                    this.gateP_COMP.value = 1;
-                    // We need to redo the E2 fetch and start with the low-order XR digit.
-                    this.setIndexMAR();
-                    this.regPR2.value = this.regMAR.value;
-                    dx = this.regMAR.isEven;
-                    this.fetch();
-                    digit = this.regMBR.getDigit(dx);
-                } else {
-                    // If not RECOMP and the low-order XR digit is flagged, reverse COMP, CARRY_IN, HP
-                    if (digit & Register.flagMask) {
-                        this.gateCOMP.flip();
-                        this.gateCARRY_IN.value = this.gateCOMP.value;
-                        this.gateHP.flip();
-                    }
-                }
-            } else {
-                this.regMQ.incr(1);
-                if (op == 62 || op == 64) {             // BXM or BCXM
-                    if (this.regMQ.value & 4) {         // imm Q field ignores field marks: strictly 5 digits
-                        this.gateFIELD_MK_1.value = 1;  // end of immediate Q field
-                    }
-                } else if (this.gateFL_1.value) {
-                    this.gateFIELD_MK_1.value = 1;      // end of Q field
-                }
-
-                if (digit & Register.flagMask) {
-                    this.gateFIELD_MK_2.value = 1;      // end of XR field
-                }
-            }
-
-            if (this.gateFIELD_MK_1.value) {
-                this.resetDREven();
-                this.setDREven(0);                      // addend will be zero from here on...
-                nextState = 0;                          // no more E1 cycles -- E2 only
-            }
-
-            digit = this.addDigits(digit);
-            if (digit & Register.bcdMask) {
-                this.gateEZ.value = 0;
-                if (!this.gateRECOMP.value) {
-                    this.gateX_SIG_DIG.value = 1;       // result has a non-zero digit
-                }
-            }
-
-            this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
-            this.regPR2.decr(1);                        // update PR2 before chance of early exits
-
-            if (this.gateFIELD_MK_2.value || (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value)) {
-                digit |= Register.flagMask;             // low-order XR digit sign or high-order XR digit flag
-            }
-            this.regMIR.setDigit(dx, digit);
-            this.store();
-
-            if (this.gateFIELD_MK_2.value) {
-                // Check for overflow.
-                if (!this.gateFIELD_MK_1.value) {
-                    this.setIndicator(14, `A/S/C Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue-12}`);
-                }
-
-                // Check for initiation of RECOMP phase.
-                if (this.gateCOMP.value && !this.gateCARRY_OUT.value) {
-                    this.gateRECOMP.value = 1;
-                    this.gate1ST_CYC.value = 1;
-                    this.gateHP.flip();
-                }
-
-                // Check for end of add operation: COMP&CARRY | !COMP.
-                if (this.gateCOMP.value ? this.gateCARRY_OUT.value : 1) {
-                    if (op == 61 || op == 62 ||
-                            !(this.gateEZ.value ||
-                                (this.gateCARRY_OUT.value && !this.gateCOMP.value) ||
-                                (this.gateX_SIG_DIG.value && this.gateRECOMP.value))) {
-                        this.gateBR_EXEC.value = 1;
-                    }
-
-                    this.enterICycle();                 // exit to I-Cycle entry
-                    return;
-                }
-            }
-
-            if (nextState) {     // do either E1 or continue with E2
-                this.setProcState(nextState);
-            }
+            this.stepE2ModifyIndex(op);
             break;
 
         case 65:        // BLX - Branch and Load Index Register
         case 66:        // BLXM - Branch and Load Index Register Immediate
         case 67:        // BSX - Branch and Store Index Register
-            if (op == 67) {
-                this.regMAR.value = this.regOR1.value;
-                this.regOR1.decr(1);
-            } else {
-                if (this.gate1ST_CYC_DELAYD.value) {
-                    this.setIndexMAR();
-                    this.regPR2.value = this.regMAR.value;
-                } else {
-                    this.regMAR.value = this.regPR2.value;
-                }
-                this.regPR2.decr(1);
-            }
-
-            if (this.gate2_DIG_CNTRL.value) {
-                this.gate2_DIG_CNTRL.value = 0;
-                digit = this.getDROdd();
-            } else {
-                digit = this.shiftDREvenOdd();
-                nextState = procStateE1;
-            }
-
-            this.fetch();
-            dx = this.regMAR.isEven;
-            if (this.gate1ST_CYC_DELAYD.value) {                        // set sign flag
-                this.regMIR.setDigit(dx, this.gateFL_1.value ? digit | Register.flagMask : digit);
-            } else {
-                this.regMQ.incr(1);
-                if (this.regMQ.binaryValue & 4) {                       // check for 5 digits
-                    this.regMIR.setDigit(dx, digit | Register.flagMask);// set h.o. digit flag
-                } else {
-                    this.regMIR.setDigitNoFlag(dx, digit);              // don't overwrite flags
-                }
-            }
-
-            this.store();
-
-            if (this.regMQ.binaryValue & 4) {                           // 5 digit address field
-                this.gateFIELD_MK_1.value = 1;
-                this.gateBR_EXEC.value = 1;
-                this.enterICycle();
-            } else if (nextState) {                                     // do either E1 or continue with E2
-                this.setProcState(nextState);
-            }
+            this.stepE2LoadStoreIndex(op);
             break;
 
         case 70:        // MA - Move Address
