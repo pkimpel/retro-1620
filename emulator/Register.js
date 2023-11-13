@@ -372,6 +372,18 @@ class Register {
     }
 
     /**************************************/
+    adjust(increment) {
+        /* Increments or decrements the register by "increment", which must be
+        in the range -9 to +9 */
+
+        if (increment < 0) {
+            this.incr(increment);
+        } else if (increment > 0) {
+            this.decr(increment);
+        }
+    }
+
+    /**************************************/
     getDigit(d) {
         /* Returns the value of a digit in the register, 0 is low-order */
 

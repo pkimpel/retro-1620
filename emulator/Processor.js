@@ -370,6 +370,46 @@ class Processor {
         this.gateRUN =              new FlipFlop(this.envir, true);
         this.gateSTOP =             new FlipFlop(this.envir, true);
 
+        // Floating-Point Gates
+        this.gateCOUNTER_COMP =     new FlipFlop(this.envir, false);
+        this.gateDIGIT_FORCE_ENTRY =new FlipFlop(this.envir, false);
+        this.gateDIG_FORCE_MODE =   new FlipFlop(this.envir, false);
+        this.gateD_GTR_99 =         new FlipFlop(this.envir, false);
+        this.gateEXP_ADD =          new FlipFlop(this.envir, false);
+        this.gateEXP_MODIFY =       new FlipFlop(this.envir, false);
+        this.gateEXP_MOD_ENTRY =    new FlipFlop(this.envir, false);
+        this.gateEXP_MOD_REQ =      new FlipFlop(this.envir, false);
+        this.gateEXP_UFLOW =        new FlipFlop(this.envir, false);
+        this.gateEXP_XMIT =         new FlipFlop(this.envir, false);
+        this.gateEXTRA_SFT_CYC =    new FlipFlop(this.envir, false);
+        this.gateFALSE_XMIT =       new FlipFlop(this.envir, false);
+        this.gateFALSE_XMIT_ENTRY = new FlipFlop(this.envir, false);
+        this.gateFDIV =             new FlipFlop(this.envir, false);
+        this.gateFDIV_ENTRY =       new FlipFlop(this.envir, false);
+        this.gateFMUL_ENTRY =       new FlipFlop(this.envir, false);
+        this.gateFMUL_MODE =        new FlipFlop(this.envir, false);
+        this.gateFORCE_CF1 =        new FlipFlop(this.envir, false);
+        this.gateFP_HI_PLUS =       new FlipFlop(this.envir, false);
+        this.gateFP_OFLO =          new FlipFlop(this.envir, false);
+        this.gateFRAC_ADD_ENTRY =   new FlipFlop(this.envir, false);
+        this.gateFRAC_ADD_MODE =    new FlipFlop(this.envir, false);
+        this.gateFRAC_COMPARE_MODE =new FlipFlop(this.envir, false);
+        this.gateFRAC_COMPR_ENTRY = new FlipFlop(this.envir, false);
+        this.gateHI_ORDER_ZERO =    new FlipFlop(this.envir, false);
+        this.gateLD =               new FlipFlop(this.envir, false);
+        this.gateLD_ENTRY =         new FlipFlop(this.envir, false);
+        this.gateNORM_SHIFT_RT =    new FlipFlop(this.envir, false);
+        this.gateQ_EXIT =           new FlipFlop(this.envir, false);
+        this.gateRESULT_XMIT =      new FlipFlop(this.envir, false);
+        this.gateSCAN_ENTRY =       new FlipFlop(this.envir, false);
+        this.gateSCAN_MINUS =       new FlipFlop(this.envir, false);
+        this.gateSCAN_MODE =        new FlipFlop(this.envir, false);
+        this.gateSCAN_Q =           new FlipFlop(this.envir, false);
+        this.gateSHIFT_ENTRY =      new FlipFlop(this.envir, false);
+        this.gateSHIFT_MODE =       new FlipFlop(this.envir, false);
+        this.gateSIG_DIGIT =        new FlipFlop(this.envir, false);
+        this.gateUFLO_CORR =        new FlipFlop(this.envir, false);
+
         // Input-Output Gates
         this.gateCHAR_GATE =        new FlipFlop(this.envir, true);
         this.gateDISK_ADDR =        new FlipFlop(this.envir, true);
@@ -489,7 +529,7 @@ class Processor {
         this.gateINSERT =           new FlipFlop(this.envir, false);    // insert latch
         this.gateSAVE_CTRL =        new FlipFlop(this.envir, false);    // SAVE control latch
         this.gateSCE =              new FlipFlop(this.envir, false);    // single-cycle execute
-        this.gateX_SIG_DIG =        new FlipFlop(this.envir, false);    // index register significant digit occurred
+        this.gateX_SIG_DIGIT =      new FlipFlop(this.envir, false);    // index register significant digit occurred
 
         this.regXBR =               new Register("XBR", 5, this.envir, false, true,  true);
 
@@ -519,6 +559,7 @@ class Processor {
         this.bcInstalled = (context.config.getNode("binaryCapabilities") ? 1 : 0);
 
         // General emulator state
+        this.addrIncrement = 0;                         // address register increment/decrement value
         this.avgThrottleDelay = 0;                      // running average throttling delay, ms
         this.avgThrottleDelta = 0;                      // running average throttling delay deviation, ms
         this.instructionCount = 0                       // number of instructions executed
@@ -2412,10 +2453,53 @@ class Processor {
         this.gateMC_2.value = 0;
         this.gateP_COMP.value = 0;
         this.gateRECOMP.value = 0;
-        this.gateX_SIG_DIG.value = 0;
+        this.gateX_SIG_DIGIT.value = 0;
         this.resetDREven();
         this.resetDROdd();
 
+        // Floating-point gates
+        if (this.fpInstalled) {
+            this.gateCOUNTER_COMP.value = 0;
+            this.gateDIGIT_FORCE_ENTRY.value = 0;
+            this.gateDIG_FORCE_MODE.value = 0;
+            this.gateD_GTR_99.value = 0;
+            this.gateEXP_ADD.value = 0;
+            this.gateEXP_MODIFY.value = 0;
+            this.gateEXP_MOD_ENTRY.value = 0;
+            this.gateEXP_MOD_REQ.value = 0;
+            this.gateEXP_UFLOW.value = 0;
+            this.gateEXP_XMIT.value = 0;
+            this.gateEXTRA_SFT_CYC.value = 0;
+            this.gateFALSE_XMIT.value = 0;
+            this.gateFALSE_XMIT_ENTRY.value = 0;
+            this.gateFDIV.value = 0;
+            this.gateFDIV_ENTRY.value = 0;
+            this.gateFMUL_ENTRY.value = 0;
+            this.gateFMUL_MODE.value = 0;
+            this.gateFORCE_CF1.value = 0;
+            this.gateFP_HI_PLUS.value = 0;
+            this.gateFP_OFLO.value = 0;
+            this.gateFRAC_ADD_ENTRY.value = 0;
+            this.gateFRAC_ADD_MODE.value = 0
+            this.gateFRAC_COMPARE_MODE.value = 0;
+            this.gateFRAC_COMPR_ENTRY.value = 0;
+            this.gateHI_ORDER_ZERO.value = 0;
+            this.gateLD.value = 0;
+            this.gateLD_ENTRY.value = 0;
+            this.gateNORM_SHIFT_RT.value = 0;
+            this.gateQ_EXIT.value = 0;
+            this.gateRESULT_XMIT.value = 0;
+            this.gateSCAN_ENTRY.value = 0;
+            this.gateSCAN_MINUS.value = 0;
+            this.gateSCAN_MODE.value = 0;
+            this.gateSCAN_Q.value = 0;
+            this.gateSHIFT_ENTRY = 0;
+            this.gateSHIFT_MODE.value = 0;
+            this.gateSIG_DIGIT.value = 0;
+            this.gateUFLO_CORR.value = 0;
+        }
+
+        // Registers
         this.regMQ.clear();
         this.gateE_1.value = 0;
         this.gateE_2.value = 0;
@@ -2430,6 +2514,7 @@ class Processor {
 
         this.gateEND_OF_MODULE.value = 0;
         this.gateREL.value = 0;
+        this.addrIncrement = 0;
     }
 
     /**************************************/
@@ -3212,6 +3297,165 @@ class Processor {
     }
 
     /**************************************/
+    enterFPScan() {
+        /* Sets up execution for the floating-point scan sub-operations:
+            - FSL(05) decrement Q address (OR-1) until start of mantissa field.
+            - FADD(01)/FSUB(02) decrement Q (OR-1) until start of field or CR-1 is zero.
+            - FADD(01)/FSUB(02) decrement P (PR-1) until start of field or CR-1 is zero.
+            - FADD(01)/FSUB(02) increment PR-1 until first non-zero digit counting in CR-1.
+        See ILD 10.00.82.1 */
+
+        this.gateSCAN_ENTRY.value = 1;
+        this.changeFPMode();
+        this.gate1ST_CYC.value = 1;
+        // Suppress turn on gateHP handled in changeFPMode()
+        this.gateADD_MODE.value = 0;
+        this.gateSCAN_MODE.value = 1;
+        this.gateEXP_ADD.value = 0;
+        this.gateEXP_XMIT.value = 0;
+        this.addrIncrement = (!this.gateCOUNTER_COMP.value && !this.gateHI_ORDER_ZERO.value ? -1 : 1);
+        if (this.gateSCAN_Q.value) {
+            // Suppress RD/WR OR-1      // ?? //
+        }
+
+        this.setProcState(procStateE1);
+    }
+
+    /**************************************/
+    enterFPShift(op) {
+    }
+
+    /**************************************/
+    changeFPMode() {
+        /* Change arithmetic mode gates on entry for various FP operations.
+        See ILD 10.00.93.1 */
+
+        this.gateFIELD_MK_1.value = 0;
+        this.gateFIELD_MK_2.value = 0;
+        this.gateCOMP.value = 0;
+        this.gateP_COMP.value = 0;
+        this.gateRECOMP.value = 0;
+        this.gateCARRY_OUT.value = 0;
+        if (!this.gateSHIFT_ENTRY.value && !this.gate.SCAN_ENTRY.value) {
+            this.gateHP.value = 1;
+            this.gateEZ.value = 1;
+        }
+    }
+
+    /**************************************/
+    stepE1FPScan(op) {
+        /* Handles the E1 state for floating-point scan operations. See ILD 10.00.82.1 */
+
+        if (this.gateHI_ORDER_ZERO.value && !this.gateSIG_DIGIT.value) {
+            this.addrIncrement = 1;
+        }
+
+        if (!this.gateQ_EXIT.value) {
+            // Suppress OR-1 RD/WR
+            this.gateEZ.value = 0;
+        }
+
+        if (!this.gateSCAN_Q.value) {
+            this.regMAR.value = this.regPR1.value;
+            this.regPR1.adjust(this.addrIncrement);
+        } else {                        // ?? //
+            this.regMAR.value = this.regOR1.value;
+            this.regOR1.adjust(this.addrIncrement);
+        }
+
+        this.fetch();
+        const digit = this.regMBR.getDigit(this.regMAR.isEven);
+
+        if (op == 5) {                  // 05=FSL - Floating Shift Left
+            this.regPR1.value = this.regOR1.value;
+        } else if (this.gate.HP.value && ! this.gateHI_ORDER_ZERO.value) {
+            this.gateSCAN_MINUS.value = 0;
+        }
+
+        if ((digit & Register.bcdMask) && this.gateHI_ORDER_ZERO.value) {
+            this.gateSIG_DIGIT.value = 1;
+        }
+
+        if (this.gate1ST_CYC.value) {
+            this.gateSCAN_ENTRY.value = 0;
+            if (digit & Register.flagMask) {
+                this.gateSCAN_MINUS.value = 1;
+            }
+        } else {
+            if (digit & Register.flagMask) {
+                if (!this.gateHI_ORDER_ZERO.value) {
+                    this.gateFIELD_MK_1.value = 1;
+                }
+
+                if (this.gateSCAN_Q.value && op != 5) { // 05 = FSL
+                    this.gateQ_EXIT.value = 1;
+                }
+            }
+        }
+    }
+
+    /**************************************/
+    stepE2FPScan(op) {
+        /* Handles the E2 state for floating-point scan operations. See ILD 10.00.82.1 */
+
+        if (this.gateCOUNTER_COMP.value) {
+            this.addrIncrement = 1;
+        }
+
+        if (this.gateSIG_DIGIT.value) {
+            this.regMAR.value = this.regPR1.value;
+            this.fetch();
+            this.regPR1.adjust(this.addrIncrement);
+        }
+
+        if (op == 5) { // 05 = FSL
+            this.regMAR.value = this.regPR1.value;
+            this.fetch();
+            if (this.gateFIELD_MK_1.value) {
+                let dx = this.regMAR.isEven;
+                let digit = this.regMBR.getDigit(dx);
+                this.regMIR.setDigit(dx, digit & Register.notFlagMask);
+                this.store();
+                this.gateHI_ORDER_ZERO.value = 1;
+                this.enterFPShift(op);
+            }
+        } else {
+            if (!this.gateSIG_DIGIT.value && !this.gateQ_EXIT.value) {
+                this.regCR1.adjust(this.addrIncrement);
+            }
+        }
+
+        if (this.gateFIELD_MK_1.value) {
+            if (!this.gateSCAN_Q.value && !this.gateHI_ORDER_ZERO.value) {
+                this.gateEXMIT_ENT.value = 1;
+                this.enterFPResultTransmit(op);         // <<<--------------------------------<<<
+            }
+        } else {
+            if (!this.gateSCAN_Q.value || this.gateHI_ORDER_ZERO.value) {
+                if (op != 5) { // 05 = FSL
+                    if (this.regCR1.isZero || this.gateSIG_DIGIT.value) {
+                        this.enterFPShift(op);          // <<<--------------------------------<<<
+                    }
+                }
+            }
+        }
+
+        if (this.gateSCAN_Q.value && this.regCR1.isZero && !this.gateQ_EXIT.value) {
+            this.enterFPFractionAdd(op);                // <<<--------------------------------<<<
+        }
+
+        if (this.gateQ_EXIT.value) {
+            this.regMAR.value = this.regOR2.value;
+            this.fetch();
+            if (this.regMBR.getDigit(this.regMAR.isEven) & Register.flagMask) {
+                this.gateHP.flip();
+            }
+
+            this.enterICycle();
+        }
+    }
+
+    /**************************************/
     stepE2Addition(op, dx) {
         /* Handles the E2 state for Add, Subtract, and Compare */
         let nextState = 0;
@@ -3597,7 +3841,7 @@ class Processor {
         if (digit & Register.bcdMask) {
             this.gateEZ.value = 0;
             if (!this.gateRECOMP.value) {
-                this.gateX_SIG_DIG.value = 1;   // result has a non-zero digit
+                this.gateX_SIG_DIGIT.value = 1;   // result has a non-zero digit
             }
         }
 
@@ -3628,7 +3872,7 @@ class Processor {
                 if (op == 61 || op == 62 ||
                         !(this.gateEZ.value ||
                             (this.gateCARRY_OUT.value && !this.gateCOMP.value) ||
-                            (this.gateX_SIG_DIG.value && this.gateRECOMP.value))) {
+                            (this.gateX_SIG_DIGIT.value && this.gateRECOMP.value))) {
                     this.gateBR_EXEC.value = 1;
                 }
 
