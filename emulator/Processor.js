@@ -591,10 +591,10 @@ class Processor {
         buildOpAtts( 2, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 02 FSUB
         buildOpAtts( 3, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 03 FMUL
         buildOpAtts( 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 04
-        buildOpAtts( 5, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 05 FSL
+        buildOpAtts( 5, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 05 FSL
         buildOpAtts( 6, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 06 TFL
         buildOpAtts( 7, 1, 2, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 07 BTFL
-        buildOpAtts( 8, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 08 FSR
+        buildOpAtts( 8, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 08 FSR
         buildOpAtts( 9, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 09 FDIV
 
         buildOpAtts(10, 1, 2, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0);      // 10 BTAM
@@ -2493,7 +2493,7 @@ class Processor {
             this.gateSCAN_MINUS.value = 0;
             this.gateSCAN_MODE.value = 0;
             this.gateSCAN_Q.value = 0;
-            this.gateSHIFT_ENTRY = 0;
+            this.gateSHIFT_ENTRY.value = 0;
             this.gateSHIFT_MODE.value = 0;
             this.gateSIG_DIGIT.value = 0;
             this.gateUFLO_CORR.value = 0;
@@ -3190,6 +3190,13 @@ class Processor {
 
         let initialEState = this.opThisAtts.eState;
         switch (this.opBinary) {
+        case  5:        // FSL - Floating Shift Left
+            this.gateSCAN_Q.value = 1;
+            //--no break
+        case  8:        // FSR - Floating Shift Right
+            this.enterFPScan();
+            break;
+
         case  6:        // TFL - Transmit Floating
         case  7:        // BTFL - Branch and Transmit Floating
         case 10:        // BTA - Branch and Transmit
@@ -3286,8 +3293,6 @@ class Processor {
         /* Sets up execution for the transmit-like ops: TF, TFM, TD, TDM, TR,
         TRNM, ADD, SUB */
 
-        // ?? reset false xmit entry ??
-        // ?? reset P scan to result xmit ??
         this.gateEXMIT_MODE.value = 1;
         this.gate1ST_CYC.value = 1;
         this.gateEXMIT_ENT.value = 0;
@@ -3298,31 +3303,34 @@ class Processor {
 
     /**************************************/
     enterFPScan() {
-        /* Sets up execution for the floating-point scan sub-operations:
-            - FSL(05) decrement Q address (OR-1) until start of mantissa field.
-            - FADD(01)/FSUB(02) decrement Q (OR-1) until start of field or CR-1 is zero.
-            - FADD(01)/FSUB(02) decrement P (PR-1) until start of field or CR-1 is zero.
-            - FADD(01)/FSUB(02) increment PR-1 until first non-zero digit counting in CR-1.
+        /* Sets up execution for the floating-point scan sub-operations.
         See ILD 10.00.82.1 */
 
         this.gateSCAN_ENTRY.value = 1;
         this.changeFPMode();
         this.gate1ST_CYC.value = 1;
-        // Suppress turn on gateHP handled in changeFPMode()
         this.gateADD_MODE.value = 0;
         this.gateSCAN_MODE.value = 1;
         this.gateEXP_ADD.value = 0;
         this.gateEXP_XMIT.value = 0;
         this.addrIncrement = (!this.gateCOUNTER_COMP.value && !this.gateHI_ORDER_ZERO.value ? -1 : 1);
-        if (this.gateSCAN_Q.value) {
-            // Suppress RD/WR OR-1      // ?? //
-        }
-
-        this.setProcState(procStateE1);
     }
 
     /**************************************/
-    enterFPShift(op) {
+    enterFPShift() {
+        /* Sets up execution for the floating-piont shift sub-operations.
+        See ILD 10.0.0.84.1 */
+
+        this.gateSHIFT_ENTRY.value = 1;
+        this.gateADD_MODE.value = 0;
+        this.changeFPMode();
+        this.gateSHIFT_MODE.value = 1;
+        this.addrIncrement = (this.gateHI_ORDER_ZERO.value ? 1 : -1);
+        this.gateSCAN_MODE.value = 0;
+        this.gateSIG_DIGIT.value = 0;
+        this.gateEXP_MODIFY.value = 0;
+        this.enterTransmit();
+        this.setProcState(procStateE1);
     }
 
     /**************************************/
@@ -3336,122 +3344,179 @@ class Processor {
         this.gateP_COMP.value = 0;
         this.gateRECOMP.value = 0;
         this.gateCARRY_OUT.value = 0;
-        if (!this.gateSHIFT_ENTRY.value && !this.gate.SCAN_ENTRY.value) {
+        if (!this.gateSHIFT_ENTRY.value && !this.gateSCAN_ENTRY.value) {
             this.gateHP.value = 1;
             this.gateEZ.value = 1;
         }
     }
 
     /**************************************/
-    stepE1FPScan(op) {
-        /* Handles the E1 state for floating-point scan operations. See ILD 10.00.82.1 */
-
-        if (this.gateHI_ORDER_ZERO.value && !this.gateSIG_DIGIT.value) {
-            this.addrIncrement = 1;
-        }
-
-        if (!this.gateQ_EXIT.value) {
-            // Suppress OR-1 RD/WR
-            this.gateEZ.value = 0;
-        }
-
-        if (!this.gateSCAN_Q.value) {
-            this.regMAR.value = this.regPR1.value;
-            this.regPR1.adjust(this.addrIncrement);
-        } else {                        // ?? //
-            this.regMAR.value = this.regOR1.value;
-            this.regOR1.adjust(this.addrIncrement);
-        }
-
-        this.fetch();
-        const digit = this.regMBR.getDigit(this.regMAR.isEven);
-
-        if (op == 5) {                  // 05=FSL - Floating Shift Left
-            this.regPR1.value = this.regOR1.value;
-        } else if (this.gate.HP.value && ! this.gateHI_ORDER_ZERO.value) {
-            this.gateSCAN_MINUS.value = 0;
-        }
-
-        if ((digit & Register.bcdMask) && this.gateHI_ORDER_ZERO.value) {
-            this.gateSIG_DIGIT.value = 1;
-        }
+    stepE1FPScan05() {
+        /* Handles the E1 scan state for op 05=FSL. Scans Q address down to
+        its field mark, leaving PR1=OR1 at the high-order digit.
+        See ILD 10.00.82.1 */
 
         if (this.gate1ST_CYC.value) {
             this.gateSCAN_ENTRY.value = 0;
-            if (digit & Register.flagMask) {
-                this.gateSCAN_MINUS.value = 1;
-            }
-        } else {
-            if (digit & Register.flagMask) {
-                if (!this.gateHI_ORDER_ZERO.value) {
-                    this.gateFIELD_MK_1.value = 1;
-                }
+        }
 
-                if (this.gateSCAN_Q.value && op != 5) { // 05 = FSL
-                    this.gateQ_EXIT.value = 1;
-                }
+        this.regMAR.value = this.regOR1.value;
+        this.fetch();
+        this.regPR1.value = this.regMAR.value;
+        this.regOR1.decr(1);
+        if (this.regMBR.getDigit(this.regMAR.isEven) & Register.flagMask) {
+            if (this.gate1ST_CYC.value) {
+                this.gateSCAN_MINUS.value = 1;
+            } else {
+                this.gateFIELD_MK_1.value = 1;
             }
+        }
+
+        this.setProcState(procStateE2);
+    }
+
+    /**************************************/
+    stepE2FPScan05() {
+        /* Handles the E2 scan state for op 05=FSL. Reads digit at PR1. Once FM-1
+        is detected, clears the flag (old field mark) and rewrites that digit.
+        See ILD 10.00.82.1 */
+
+        this.regMAR.value = this.regPR1.value;
+        this.fetch();
+        if (this.gateFIELD_MK_1.value) {
+            this.regMIR.setDigitFlag(this.regMAR.isEven, 0);
+            this.store();
+            this.gateHI_ORDER_ZERO.value = 1;
+            this.enterFPShift();
+        } else {
+            this.setProcState(procStateE1);
         }
     }
 
     /**************************************/
-    stepE2FPScan(op) {
-        /* Handles the E2 state for floating-point scan operations. See ILD 10.00.82.1 */
+    stepE1FPShift05() {
+        /* Handles the E1 shift state for op 05=FSL. Fetch digits in forward
+        direction via PR2 (set from scan mode) and leave in DR for the E2 state.
+        See ILD 10.00.82.1 */
 
-        if (this.gateCOUNTER_COMP.value) {
-            this.addrIncrement = 1;
+        this.regMAR.value = this.regPR1.value;
+        this.fetch();
+        this.setDREven(this.regMBR.odd);
+        if (this.regMAR.isOdd) {        // MAR is odd
+            this.regPR1.incr(1);
+        } else {                        // MAR is even
+            this.gate2_DIG_CNTRL.value = 1;
+            this.setDROdd(this.regMBR.even);
+            this.regPR1.incr(2);
         }
 
-        if (this.gateSIG_DIGIT.value) {
-            this.regMAR.value = this.regPR1.value;
-            this.fetch();
-            this.regPR1.adjust(this.addrIncrement);
-        }
+        this.setProcState(procStateE2);
+    }
 
-        if (op == 5) { // 05 = FSL
-            this.regMAR.value = this.regPR1.value;
-            this.fetch();
-            if (this.gateFIELD_MK_1.value) {
-                let dx = this.regMAR.isEven;
-                let digit = this.regMBR.getDigit(dx);
-                this.regMIR.setDigit(dx, digit & Register.notFlagMask);
-                this.store();
-                this.gateHI_ORDER_ZERO.value = 1;
-                this.enterFPShift(op);
-            }
-        } else {
-            if (!this.gateSIG_DIGIT.value && !this.gateQ_EXIT.value) {
-                this.regCR1.adjust(this.addrIncrement);
-            }
-        }
+    /**************************************/
+    stepE2FPShift05() {
+        /* Handles the E2 shift state for op 05=FSL. Transfers digits from DR
+        to OR2 until end of mantissa detected, then zero fills the rest of the
+        original mantissa area. See ILD 10.00.84.1 */
+        let digit = 0;
+        let dx = this.regOR2.isEven;
+        let nextState = 0;
+
+        this.regMAR.value = this.regOR2.value;
+        this.fetch();
 
         if (this.gateFIELD_MK_1.value) {
-            if (!this.gateSCAN_Q.value && !this.gateHI_ORDER_ZERO.value) {
-                this.gateEXMIT_ENT.value = 1;
-                this.enterFPResultTransmit(op);         // <<<--------------------------------<<<
+            // Do zero fill
+            digit = this.regMBR.getDigit(dx);
+            if (!(digit & Register.flagMask)) {
+                digit = 0;
+            } else {
+                this.gateFIELD_MK_2.value = 1;
+                if (this.gateSCAN_MINUS.value) {// detected flag in negative low-order digit
+                    digit = Register.flagMask;
+                    this.enterICycle();             // done -- otherwise, stay in E2
+                } else {                        // detected flag in high-order exponent digit
+                    this.enterICycle();             // done -- but don't overwrite exponent digit
+                    return;
+                }
             }
+
+            this.regMIR.setDigit(dx, digit);
+            this.store();
+            this.regOR2.incr(1);
         } else {
-            if (!this.gateSCAN_Q.value || this.gateHI_ORDER_ZERO.value) {
-                if (op != 5) { // 05 = FSL
-                    if (this.regCR1.isZero || this.gateSIG_DIGIT.value) {
-                        this.enterFPShift(op);          // <<<--------------------------------<<<
+            // Do mantissa transfer
+            if (this.gate2_DIG_CNTRL.value) {
+                this.gate2_DIG_CNTRL.value = 0;
+                digit = this.getDROdd();
+            } else {
+                digit = this.shiftDREvenOdd();
+                nextState = procStateE1;        // otherwise stay in E2
+            }
+
+            if (this.gate1ST_CYC_DELAYD.value) {
+                digit |= Register.flagMask;     // set flag on H.O. digit
+            } else {
+                digit &= Register.notFlagMask;  // reset flag on all other digits
+                if (this.gateFL_1.value) {
+                    this.gateFIELD_MK_1.value = 1;
+                    nextState = 0;              // stay in E2 anyway for zero fill
+                    if (this.gateHI_ORDER_ZERO.value && !this.gateSCAN_MINUS.value) {
+                        this.gateEXTRA_SFT_CYC.value = 1;   // detected flag in exponent field
                     }
                 }
             }
+
+            if (!this.gateEXTRA_SFT_CYC.value) {
+                this.regMIR.setDigit(dx, digit);
+                this.store();
+                this.regOR2.incr(1);
+            }
         }
 
-        if (this.gateSCAN_Q.value && this.regCR1.isZero && !this.gateQ_EXIT.value) {
-            this.enterFPFractionAdd(op);                // <<<--------------------------------<<<
+        if (nextState) {
+            this.setProcState(nextState);
         }
+    }
 
-        if (this.gateQ_EXIT.value) {
-            this.regMAR.value = this.regOR2.value;
-            this.fetch();
-            if (this.regMBR.getDigit(this.regMAR.isEven) & Register.flagMask) {
-                this.gateHP.flip();
+    /**************************************/
+    stepE2FPShift08(dx) {
+        /* Handles the E2 shift state for op 08=FSR. Transfers digits from DR
+        to OR2 until the mantissa FM is detected, then zero fills the vacated
+        part of the original mantissa area. MBR is fetched via OR2 by caller.
+        See ILD 10.00.84.1 */
+        let digit = 0;
+        let nextState = 0;
+
+        if (this.gateFIELD_MK_1.value) {
+            // Do zero fill
+            if (this.regMBR.getDigit(dx) & Register.flagMask) {
+                this.gateFIELD_MK_2.value = 1;
+                this.enterICycle();             // done -- otherwise, stay in E2
+            }
+        } else {
+            // Do mantissa transfer
+            if (this.gate2_DIG_CNTRL.value) {
+                this.gate2_DIG_CNTRL.value = 0;
+                digit = this.getDROdd();
+            } else {
+                digit = this.shiftDREvenOdd();
+                nextState = procStateE1;        // otherwise stay in E2
             }
 
-            this.enterICycle();
+            if (this.gate1ST_CYC_DELAYD.value && (this.regMBR.getDigit(dx) & Register.flagMask)) {
+                digit |= Register.flagMask;     // set sign flag on L.O. digit
+            } else if (this.gateFL_1.value) {
+                this.gateFIELD_MK_1.value = 1;
+                nextState = 0;                  // stay in E2 anyway for zero fill
+            }
+        }
+
+        this.regMIR.setDigit(dx, digit);
+        this.store();
+        this.regOR2.decr(1);
+        if (nextState) {
+            this.setProcState(nextState);
         }
     }
 
@@ -3944,6 +4009,7 @@ class Processor {
         let dx = this.regOR1.isEven;    // digit index: 0/1
 
         switch (this.opBinary) {
+        case  5:        // FSL - Floating Shift Left
         case 19:        // DM - Divide Immediate
         case 29:        // D - Divide
         case 67:        // BSX - Branch and Store Index Register
@@ -3955,6 +4021,15 @@ class Processor {
         }
 
         switch (this.opBinary) {
+        case  5:        // FSL - Floating Shift Left
+            if (this.gateSCAN_MODE.value) {
+                this.stepE1FPScan05();
+            } else {
+                this.stepE1FPShift05();
+            }
+            this.setProcState(procStateE2);
+            break;
+
         case  6:        // TFL - Transmit Floating
         case 15:        // TDM - Transmit Digit Immediate
         case 16:        // TFM - Transmit Field Immediate
@@ -3970,6 +4045,7 @@ class Processor {
             }
             //--no break
         case  7:        // BTFL - Branch and Transmit Floating
+        case  8:        // FSR - Floating Shift Right
         case 10:        // BTA - Branch and Transmit
         case 17:        // BTM - Branch and Transmit Immediate
         case 20:        // BTAM - Branch and Transmit Immediate
@@ -4206,6 +4282,7 @@ class Processor {
         const op = this.opBinary;
 
         switch (op) {
+        case  5:        // FSL - Floating Shift Left
         case 13:        // MM - Multiply Immediate
         case 18:        // LDM - Load Dividend Immediate
         case 19:        // DM - Divide Immediate
@@ -4234,6 +4311,18 @@ class Processor {
         }
 
         switch (op) {
+        case  5:        // FSL - Floating Shift Left
+            if (this.gateSCAN_MODE.value) {
+                this.stepE2FPScan05();
+            } else {
+                this.stepE2FPShift05();
+            }
+            break;
+
+        case  8:        // FSR - Floating Shift Right
+            this.stepE2FPShift08(dx);
+            break;
+
         case 15:        // TDM - Transmit Digit Immediate
         case 25:        // TD - Transmit Digit
             if (this.gate2_DIG_CNTRL.value) {
