@@ -20,6 +20,7 @@ import {Register} from "../emulator/Register.js";
 import {Timer} from "../emulator/Timer.js";
 import {openPopup} from "./PopupUtil.js";
 
+import {AuxCEPanel} from "./AuxCEPanel.js";
 import {ColoredLamp} from "./ColoredLamp.js";
 import {GateLamp} from "./GateLamp.js";
 import {MARSelectorKnob} from "./MARSelectorKnob.js";
@@ -48,6 +49,7 @@ class ControlPanel {
     window = null;                      // window object
 
     avgInstructionRate = 0;             // running average instructions/sec
+    auxCEPanel = null;                  // Aux CE Panel object
     debugView = false;                  // true if Debug View is displaying
     diskResetLatch = 0;                 // RESET / RELEASE simultaneous sequence pending
     intervalToken = 0;                  // panel refresh timer cancel token
@@ -134,8 +136,8 @@ class ControlPanel {
 
                 idText = gateIDs[k];
                 if (idText) {
-                    caption = idText.replace("|", "<br>").replace("1ST ", "1<sup class=tiny>st</sup>");
-                    idText = idText.replace(" ", "_").replace("-", "_").replace("|", "_").replace("/", "");
+                    caption = idText.replace(/\|/g, "<br>").replace("1ST ", "1<sup class=tiny>st</sup>");
+                    idText = idText.replace(/\s/g, "_").replace(/\-/g, "_").replace(/\|/g, "_").replace(/[/]/g, "");
                 } else {
                     caption = null;
                     idText = `${panelID}_${j}_${i}`;
@@ -366,9 +368,8 @@ class ControlPanel {
         this.program4Switch.set(this.config.getNode("ControlPanel.Program4SW"));
         p.program4Switch = this.program4Switch.state;
 
-        this.debugView = this.config.getNode("ControlPanel.DebugView");
-        this.$$("RegisterViewTable").style.display = (this.debugView ? "table" : "none");
-        this.$$("RunStatsTable").style.display = (this.debugView ? "table" : "none");
+        this.debugView = !this.config.getNode("ControlPanel.DebugView"); // negate for toggling
+        this.toggleDebugView(ev);
 
         this.$$("EmulatorVersion").textContent = Version.retro1620Version;
         this.window.addEventListener("beforeunload", this.boundBeforeUnload);
@@ -649,11 +650,16 @@ class ControlPanel {
            this.$$("RegisterViewTable").style.display = "none";
            this.$$("RunStatsTable").style.display = "none";
            this.config.putNode("ControlPanel.DebugView", 0);
+           if (this.auxCEPanel) {
+               this.auxCEPanel.shutDown();
+               this.auxCEPanel = null;
+           }
         } else {
            this.debugView = true;
            this.$$("RegisterViewTable").style.display = "table";
            this.$$("RunStatsTable").style.display = "table";
            this.config.putNode("ControlPanel.DebugView", 1);
+           this.auxCEPanel = new AuxCEPanel(this.context);
         }
     }
 
@@ -1143,6 +1149,9 @@ class ControlPanel {
         this.$$("AlarmSound").pause();
         this.$$("IBMLogo").removeEventListener("dblClick", this.boundToggleDebugView);
         this.$$("DPSLogo").removeEventListener("dblclick", this.boundLoadCMEMFile);
+        if (this.auxCEPanel) {
+            this.auxCEPanel.shutDown();
+        }
 
         this.config.putWindowGeometry(this.window, "ControlPanel");
         this.window.removeEventListener("beforeunload", this.boundBeforeUnload);

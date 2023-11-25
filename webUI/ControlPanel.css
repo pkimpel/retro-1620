@@ -672,3 +672,24 @@ DIV.evenOddCaption {
     box-shadow:         4px 4px 4px black}
 #LoadCMEMDiv TABLE {
     width:              100%}
+
+
+/* Aux CE Panel styles */
+
+#AuxPanel {
+    top:                0;
+    left:               0;
+    height:             100%;
+    width:              100%;
+    overflow:           auto;
+    box-shadow:         none}
+
+#AuxPanelCaption {
+    top:                4px;
+    left:               0;
+    right:              0}
+
+#AuxPanel .gateLampTopCaption,
+#AuxPanel .gateLampBottomCaption {
+    width:              42px;
+    transform:          translate(-6px,0)}
