@@ -236,11 +236,11 @@ DIV.evenOddCaption {
 
 #PanelGap {
     position:           absolute;
-    bottom:             2px;
+    bottom:             0px;
     left:               0;
     right:              0;
-    height:             6px;
-    background-color:   black}
+    height:             12px;
+    background-image:   linear-gradient(#333, #EEE)}
 
 
 

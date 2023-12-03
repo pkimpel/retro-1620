@@ -106,6 +106,15 @@ class ControlPanel {
     }
 
     /**************************************/
+    alert(msg) {
+        /* Displays an alert from the Control Panel window. This method allows
+        Processor and other components to generate alerts without having direct
+        access to the UI */
+
+        this.window.alert(msg);
+    }
+
+    /**************************************/
     panelOnLoad(ev) {
         /* Initializes the Control Panel window and user interface */
         const p = this.context.processor;
@@ -235,7 +244,7 @@ class ControlPanel {
             "REL", "DISK|OP", "DISK LD|ZERO", "DISK|ADDR", "SCTR|COUNT", "MEM|ADDR", "SCTR|CYC",
             null, null, null, "DISK|HUND", "DISK|UNIT", "SIMO|HOLD", "SIMO|30",
             null, null, null, null, null, null, null,
-            null, "PC|H/P", "PC|E/Z", "PC|OFLOW", "PC|TR 8", "PC|IND", "PC|6XXX"]);
+            null, "PC|H/P", "PC|E/Z", "PC|OFLO", "PC|TR 8", "PC|IND", "PC|6XXX"]);
 
         // Control Gates
         buildGatePanel("Panel1Gray", 12, [
@@ -793,7 +802,7 @@ class ControlPanel {
         /********** PC_* registers used on IBM 1710 only **********
         //this.gatePC_HP.set(p.gatePC_HP.glow);
         //this.gatePC_EZ.set(p.gatePC_EZ.glow);
-        //this.gatePC_OFLOW.set(p.gatePC_OFLOW.glow);
+        //this.gatePC_OFLO.set(p.gatePC_OFLO.glow);
         //this.gatePC_TR_8.set(p.gatePC_TR_8.glow);
         //this.gatePC_IND.set(p.gatePC_IND.glow);
         //this.gatePC_6XXX.set(p.gatePC_6XXX.glow);
@@ -1138,6 +1147,10 @@ class ControlPanel {
             this.intervalToken = 0;
         }
 
+        if (this.auxCEPanel) {
+            this.auxCEPanel.shutDown();
+        }
+
         this.$$("OperatorContainer").removeEventListener("click", this.boundControlSwitchClick);
         this.$$("OperatorContainer").removeEventListener("mouseover", this.boundSimultaneousButtonDrag);
         this.$$("OperatorContainer").removeEventListener("mouseout", this.boundSimultaneousButtonDrag);
@@ -1149,10 +1162,6 @@ class ControlPanel {
         this.$$("AlarmSound").pause();
         this.$$("IBMLogo").removeEventListener("dblClick", this.boundToggleDebugView);
         this.$$("DPSLogo").removeEventListener("dblclick", this.boundLoadCMEMFile);
-        if (this.auxCEPanel) {
-            this.auxCEPanel.shutDown();
-        }
-
         this.config.putWindowGeometry(this.window, "ControlPanel");
         this.window.removeEventListener("beforeunload", this.boundBeforeUnload);
         this.window.removeEventListener("unload", this.boundPanelUnload);

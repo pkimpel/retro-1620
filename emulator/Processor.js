@@ -380,7 +380,7 @@ class Processor {
         this.gateEXP_MOD_ENTRY =    new FlipFlop(this.envir, true);
         this.gateEXP_MOD_EXIT =     new FlipFlop(this.envir, true);
         this.gateEXP_MOD_REQ =      new FlipFlop(this.envir, true);
-        this.gateEXP_UFLOW =        new FlipFlop(this.envir, true);
+        this.gateEXP_OFLO_CORR =    new FlipFlop(this.envir, true);
         this.gateEXP_XMIT =         new FlipFlop(this.envir, true);
         this.gateEXTRA_SFT_CYC =    new FlipFlop(this.envir, true);
         this.gateFALSE_XMIT =       new FlipFlop(this.envir, true);
@@ -391,9 +391,6 @@ class Processor {
         this.gateFMUL_MODE =        new FlipFlop(this.envir, true);
         this.gateFORCE_CF1 =        new FlipFlop(this.envir, true);
         this.gateFP_HI_PLUS =       new FlipFlop(this.envir, true);
-        this.gateFP_OFLO =          new FlipFlop(this.envir, true);
-        this.gateFP_UFLO =          new FlipFlop(this.envir, true);
-        this.gateFP_UFLO_CORR =     new FlipFlop(this.envir, true);
         this.gateFRAC_ADD_ENTRY =   new FlipFlop(this.envir, true);
         this.gateFRAC_ADD_MODE =    new FlipFlop(this.envir, true);
         this.gateFRAC_COMPARE_MODE =new FlipFlop(this.envir, true);
@@ -401,8 +398,6 @@ class Processor {
         this.gateHI_ORDER_ZERO =    new FlipFlop(this.envir, true);
         this.gateLD =               new FlipFlop(this.envir, true);
         this.gateLD_ENTRY =         new FlipFlop(this.envir, true);
-        this.gateMOD_3_CTRL_L1 =    new FlipFlop(this.envir, true);
-        this.gateMOD_3_CTRL_L2 =    new FlipFlop(this.envir, true);
         this.gateNORM_SHIFT_RT =    new FlipFlop(this.envir, true);
         this.gateQ_EXIT =           new FlipFlop(this.envir, true);
         this.gateRESULT_XMIT =      new FlipFlop(this.envir, true);
@@ -413,7 +408,6 @@ class Processor {
         this.gateSHIFT_ENTRY =      new FlipFlop(this.envir, true);
         this.gateSHIFT_MODE =       new FlipFlop(this.envir, true);
         this.gateSIG_DIGIT =        new FlipFlop(this.envir, true);
-        this.gateZERO_FILL =        new FlipFlop(this.envir, true);
 
         // Input-Output Gates
         this.gateCHAR_GATE =        new FlipFlop(this.envir, true);
@@ -429,7 +423,7 @@ class Processor {
         this.gatePC_EZ =            new FlipFlop(this.envir, true);
         this.gatePC_HP =            new FlipFlop(this.envir, true);
         this.gatePC_IND =           new FlipFlop(this.envir, true);
-        this.gatePC_OFLOW =         new FlipFlop(this.envir, true);
+        this.gatePC_OFLO =          new FlipFlop(this.envir, true);
         this.gatePC_TR_8 =          new FlipFlop(this.envir, true);
         this.gateRD =               new FlipFlop(this.envir, true);
         this.gateRDR_FEED =         new FlipFlop(this.envir, true);
@@ -1039,7 +1033,7 @@ class Processor {
             this.gateEXP_MOD_ENTRY.updateLampGlow(gamma);
             this.gateEXP_MOD_EXIT.updateLampGlow(gamma);
             this.gateEXP_MOD_REQ.updateLampGlow(gamma);
-            this.gateEXP_UFLOW.updateLampGlow(gamma);
+            this.gateEXP_OFLO_CORR.updateLampGlow(gamma);
             this.gateEXP_XMIT.updateLampGlow(gamma);
             this.gateEXTRA_SFT_CYC.updateLampGlow(gamma);
             this.gateFALSE_XMIT.updateLampGlow(gamma);
@@ -1050,9 +1044,6 @@ class Processor {
             this.gateFMUL_MODE.updateLampGlow(gamma);
             this.gateFORCE_CF1.updateLampGlow(gamma);
             this.gateFP_HI_PLUS.updateLampGlow(gamma);
-            this.gateFP_OFLO.updateLampGlow(gamma);
-            this.gateFP_UFLO.updateLampGlow(gamma);
-            this.gateFP_UFLO_CORR.updateLampGlow(gamma);
             this.gateFRAC_ADD_ENTRY.updateLampGlow(gamma);
             this.gateFRAC_ADD_MODE.updateLampGlow(gamma);
             this.gateFRAC_COMPARE_MODE.updateLampGlow(gamma);
@@ -1060,8 +1051,6 @@ class Processor {
             this.gateHI_ORDER_ZERO.updateLampGlow(gamma);
             this.gateLD.updateLampGlow(gamma);
             this.gateLD_ENTRY.updateLampGlow(gamma);
-            this.gateMOD_3_CTRL_L1.updateLampGlow(gamma);
-            this.gateMOD_3_CTRL_L2.updateLampGlow(gamma);
             this.gateNORM_SHIFT_RT.updateLampGlow(gamma);
             this.gateQ_EXIT.updateLampGlow(gamma);
             this.gateRESULT_XMIT.updateLampGlow(gamma);
@@ -1072,7 +1061,6 @@ class Processor {
             this.gateSHIFT_ENTRY.updateLampGlow(gamma);
             this.gateSHIFT_MODE.updateLampGlow(gamma);
             this.gateSIG_DIGIT.updateLampGlow(gamma);
-            this.gateZERO_FILL.updateLampGlow(gamma);
         }
 
         // Input-Output Gates
@@ -1089,7 +1077,7 @@ class Processor {
         this.gatePC_EZ.updateLampGlow(gamma);
         this.gatePC_HP.updateLampGlow(gamma);
         this.gatePC_IND.updateLampGlow(gamma);
-        this.gatePC_OFLOW.updateLampGlow(gamma);
+        this.gatePC_OFLO.updateLampGlow(gamma);
         this.gatePC_TR_8.updateLampGlow(gamma);
         this.gateRD.updateLampGlow(gamma);
         this.gateRDR_FEED.updateLampGlow(gamma);
@@ -1641,8 +1629,8 @@ class Processor {
 
     /**************************************/
     loadDiskControl() {
-        /* Loads the fields of the Disk Control Field addressed by OR-2 to the
-        OR-1, OR-2, and PR-2 registers. The drive code is converted to a disk
+        /* Loads the fields of the Disk Control Field addressed by OR2 to the
+        OR1, OR2, and PR2 registers. The drive code is converted to a disk
         module number and stored in this.ioDiskDriveCode. This process involves 10
         memory cycles which are not visible when doing STOP/SCE. Returns true if
         there is an error */
@@ -1663,7 +1651,7 @@ class Processor {
         this.envir.tick();
         this.gateDISK_LD_ZERO.value = 0;
 
-        // Load OR-1.
+        // Load OR1.
 
         this.gateDISK_ADDR.value = 1;
         this.fetch();   // no MAR increment
@@ -1687,7 +1675,7 @@ class Processor {
         this.gateDISK_UNIT.value = 0;
         this.gateDISK_ADDR.value = 0;
 
-        // Load PR-2.
+        // Load PR2.
 
         this.gateSCTR_COUNT.value = 1;
         this.gateDISK_HUND.value = 1;
@@ -1706,7 +1694,7 @@ class Processor {
         this.gateDISK_UNIT.value = 0;
         this.gateSCTR_COUNT.value = 0;
 
-        // Load OR-2.
+        // Load OR2.
 
         this.gateMEM_ADDR.value = 1;
         this.fetch();   // no MAR increment
@@ -1768,8 +1756,8 @@ class Processor {
     /**************************************/
     async readDiskSectors(check, wlrc) {
         /* Reads one or more disk sectors from the currently selected disk
-        module at the address specified by OR-1 for the number of sectors
-        specified by PR-2 to the memory address specified by OR-2.
+        module at the address specified by OR1 for the number of sectors
+        specified by PR2 to the memory address specified by OR2.
             check: compare data to memory instead of storing data to memory
             wlrc: detect group marks and wrong-length records.
         Runs in Limbo, so restarts this.run() on completion */
@@ -1876,8 +1864,8 @@ class Processor {
     /**************************************/
     async readDiskTrack(wlrc) {
         /* Reads one track of disk sectors from the currently selected disk
-        module at the address specified by OR-1 to the memory address specified
-        by OR-2.
+        module at the address specified by OR1 to the memory address specified
+        by OR2.
             wlrc: detect group marks and wrong-length records.
         Runs in Limbo, so restarts this.run() on completion */
         let evenAddr = 0;               // even/odd half of memory digit pair
@@ -1959,8 +1947,8 @@ class Processor {
     /**************************************/
     async checkDiskTrack(wlrc) {
         /* Reads one track of disk sectors from the currently selected disk
-        module at the address specified by OR-1 and compares the sector data to
-        the memory address specified by OR-2.
+        module at the address specified by OR1 and compares the sector data to
+        the memory address specified by OR2.
             wlrc: detect group marks and wrong-length records.
         Runs in Limbo, so restarts this.run() on completion */
         let evenAddr = 0;               // even/odd half of memory digit pair
@@ -2095,8 +2083,8 @@ class Processor {
     /**************************************/
     async writeDiskSectors(wlrc) {
         /* Writes one or more disk sectors to the currently selected disk module
-        at the address specified by OR-1 for the number of sectors specified by
-        PR-2 from the memory address specified by OR-2.
+        at the address specified by OR1 for the number of sectors specified by
+        PR2 from the memory address specified by OR2.
             wlrc: detect group marks and wrong-length records.
         Runs in Limbo, so restarts this.run() on completion */
 
@@ -2180,7 +2168,7 @@ class Processor {
     /**************************************/
     async writeDiskTrack(wlrc) {
         /* Writes one track of disk sectors to the currently selected disk module
-        at the address specified by OR-1 to the memory address specified by OR-2.
+        at the address specified by OR1 to the memory address specified by OR2.
             wlrc: detect group marks and wrong-length records.
         Runs in Limbo, so restarts this.run() on completion */
         let evenAddr = 0;               // even/odd half of memory digit pair
@@ -2462,13 +2450,17 @@ class Processor {
         /* Initiates the start of the next instruction I-cycles */
 
         this.gateI_CYC_ENT.value = 1;
-        this.resetICycle();
-        this.exitAutomatic();
-        this.gateRUN.value = 0;
         if (this.gateEZ.value) {
             this.gateHP.value = 0;
         }
 
+        if (this.gateEXP_OFLO.value || this.gateEXP_UFLO.value) {
+            this.setIndicator(15, `Exponent overflow/underflow: op=${this.opBinary}, IR1=${this.regIR1.binaryValue-12}`);
+        }
+
+        this.resetICycle();
+        this.exitAutomatic();
+        this.gateRUN.value = 0;
         if (!(this.gateSAVE.value || this.gateDISPLAY_MAR.value ||
                 this.gateINSERT.value || this.gateCLR_MEM.value)) {
             this.gateDISK_OP.value = 0;         // ILD 10.00.30.1
@@ -2523,7 +2515,9 @@ class Processor {
             this.gateEXP_MOD_ENTRY.value = 0;
             this.gateEXP_MOD_EXIT.value = 0;
             this.gateEXP_MOD_REQ.value = 0;
-            this.gateEXP_UFLOW.value = 0;
+            this.gateEXP_OFLO.value = 0;
+            this.gateEXP_OFLO_CORR.value = 0;
+            this.gateEXP_UFLO.value = 0;
             this.gateEXP_XMIT.value = 0;
             this.gateEXTRA_SFT_CYC.value = 0;
             this.gateFALSE_XMIT.value = 0;
@@ -2534,9 +2528,6 @@ class Processor {
             this.gateFMUL_MODE.value = 0;
             this.gateFORCE_CF1.value = 0;
             this.gateFP_HI_PLUS.value = 0;
-            this.gateFP_OFLO.value = 0;
-            this.gateFP_UFLO.value = 0
-            this.gateFP_UFLO_CORR.value = 0;
             this.gateFRAC_ADD_ENTRY.value = 0;
             this.gateFRAC_ADD_MODE.value = 0
             this.gateFRAC_COMPARE_MODE.value = 0;
@@ -2544,8 +2535,6 @@ class Processor {
             this.gateHI_ORDER_ZERO.value = 0;
             this.gateLD.value = 0;
             this.gateLD_ENTRY.value = 0;
-            this.gateMOD_3_CTRL_L1.value = 0;
-            this.gateMOD_3_CTRL_L1.value = 0;
             this.gateNORM_SHIFT_RT.value = 0;
             this.gateQ_EXIT.value = 0;
             this.gateRESULT_XMIT.value = 0;
@@ -2556,7 +2545,6 @@ class Processor {
             this.gateSHIFT_ENTRY.value = 0;
             this.gateSHIFT_MODE.value = 0;
             this.gateSIG_DIGIT.value = 0;
-            this.gateZERO_FILL.value = 0;
         }
 
         // Registers
@@ -2788,7 +2776,7 @@ class Processor {
             break;                              // do nothing in I-5
 
         default:
-            if (!this.opThisAtts.immed) {       // don't load OR-1 for immediate ops in I-5
+            if (!this.opThisAtts.immed) {       // don't load OR1 for immediate ops in I-5
                 let drOdd = this.shiftDREvenOdd();
                 this.regOR1.setDigit(4, drOdd);
                 this.regOR1.setDigit(3, mbrEven);
@@ -2892,7 +2880,7 @@ class Processor {
             this.regIR2.incr(2);                // address of next instruction for return
             //--no break
         default:
-            if (this.opThisAtts.immed) {        // set OR-1 to Q11 addr for immediate ops
+            if (this.opThisAtts.immed) {        // set OR1 to Q11 addr for immediate ops
                 this.regOR1.value = this.regMAR.value |= 1;
             } else {
                 this.regOR1.setDigit(1, mbrEven);
@@ -2947,7 +2935,7 @@ class Processor {
     stepIndexing() {
         /* Executes the steps for indexing an address register. MQ is used as a
         digit counter. On the first call, the address of the index register
-        digit is in MAR; subsequently it is in PR-2. Note that the base address
+        digit is in MAR; subsequently it is in PR2. Note that the base address
         to be indexed is already in XBR from state I-4 or I-6. Also note that if
         the resulting address is negative, it is left in complement form.
         Any overflow is lost */
@@ -3002,7 +2990,7 @@ class Processor {
         this.gateIA_ENT.value = 0;      // (not sure this is correct: it resets at T603)
         this.gateIX.value = 0;
         this.regXR.clear();
-        if (this.gateP.value) {         // set PR-2 to step thru the indirect address
+        if (this.gateP.value) {         // set PR2 to step thru the indirect address
             this.regMAR.value = this.regPR2.value = this.regOR2.value;
         } else {
             this.regMAR.value = this.regPR2.value = this.regOR1.value;
@@ -3252,9 +3240,11 @@ class Processor {
         switch (this.opBinary) {
         case  5:        // FSL - Floating Shift Left
             this.gateSCAN_Q.value = 1;
-            //--no break
-        case  8:        // FSR - Floating Shift Right
             this.enterFPScan();
+            break;
+
+        case  8:        // FSR - Floating Shift Right
+            this.enterFPShift();
             break;
 
         case  6:        // TFL - Transmit Floating
@@ -3345,7 +3335,7 @@ class Processor {
     /**************************************/
     enterAdd() {
         /* Sets up execution for the add-like ops: A, AM, S, SM, C, CM,
-        FADD, etc. */
+        FADD, FSUB, etc. */
 
         this.gate1ST_CYC.value = 1;
         this.gateEZ.value = 1;
@@ -3380,6 +3370,7 @@ class Processor {
         this.gateSCAN_MODE.value = 1;
         this.gateEXP_ADD.value = 0;
         this.gateEXP_XMIT.value = 0;
+        this.gateFRAC_ADD_MODE.value = 0;
         this.addrIncrement = (!this.gateCOUNTER_COMP.value && !this.gateHI_ORDER_ZERO.value ? -1 : 1);
         this.setProcState(procStateE1);
     }
@@ -3403,14 +3394,56 @@ class Processor {
 
     /**************************************/
     enterFPFractionAdd() {
-        this.panic("FP Fraction Add not yet implemented");
-        debugger;
+        /* Sets up execution for the floating-point fraction add sub-operation.
+        See ILD 10.00.85.1 */
+
+        this.gateFRAC_ADD_ENTRY.value = 1;
+        this.changeFPMode();
+        this.enterAdd();
+        if (this.opBinary == 2 /* 02=FSUB */) {
+            this.gateCOMP.value = 1;
+        }
+
+        this.gateCARRY_IN.value = this.gateCOMP.value;  // not in ILD
+        this.gateFRAC_ADD_MODE.value = 1;
+        this.gateSCAN_MODE.value = 0;
+        this.gateEXMIT_MODE.value = 0;
+        this.gateEXP_ADD.value = 0;
+        this.gateSHIFT_MODE.value = 0;
+        this.setProcState(procStateE1);
+    }
+
+    /**************************************/
+    enterFPExponentModify() {
+        /* Sets up execution for the floating-point exponent modify
+        sub-operation. See ILD 10.0.86.1 */
+
+        this.gateEXP_MOD_ENTRY.value = 1;
+        if (this.gateHP.value) {
+            this.gateFP_HI_PLUS.value = 1;
+        }
+
+        //this.gateHP.value = 1;        // set by enterAdd()
+        this.gateEXMIT_MODE.value = 0;
+        this.gateEXP_MODIFY.value = 1;
+        this.gateSHIFT_MODE.value = 0;
+        this.gateFMUL_MODE.value = 0;
+        this.gateFRAC_ADD_MODE.value = 0;
+        this.gateFDIV.value = 0;
+        // Block turn off EZ ??
+        if (this.gateEXP_MOD_REQ.value && this.gateEXP_OFLO_CORR.value) {
+            this.gateEXP_OFLO.value = 0;
+            this.gateEXP_UFLO.value = 0;
+        }
+
+        this.enterAdd();
+        this.setProcState(procStateE1);
     }
 
     /**************************************/
     enterFPExponentTransmit() {
-        /* Sets up execution for the exponent transmit sub-operation.
-        See ILD 10.00.81.1 */
+        /* Sets up execution for the floating-point exponent transmit
+        sub-operation. See ILD 10.00.81.1 */
 
         this.gateEXP_XMIT.value = 1;
         this.gateEXMIT_ENT.value = 1;
@@ -3421,14 +3454,9 @@ class Processor {
     }
 
     /**************************************/
-    enterFPShiftPRight() {
-        this.panic("enterFPShiftPRight not yet implemented");
-    }
-
-    /**************************************/
     enterFPResultTransmit() {
-        /* Sets up execution for the result (mantissa) transmit sub-operation.
-        See ILD 10.00.83.1 */
+        /* Sets up execution for the floating-point result (mantissa) transmit
+        sub-operation. See ILD 10.00.83.1 */
 
         this.gateRESULT_XMIT.value = 1;
         this.gateEXMIT_ENT.value = 1;
@@ -3436,6 +3464,25 @@ class Processor {
         this.gateSCAN_MODE.value = 0;
         this.gateEXP_MODIFY.value = 0;
         this.setProcState(procStateE1);
+    }
+
+    /**************************************/
+    enterFPDigitForce() {
+        /* Sets up execution for the floating-point digit force (store special
+        floating-point zero or infinity value) sub-operation.
+        See ILD 10.00.88.1 */
+
+        this.gateDIGIT_FORCE_ENTRY.value = 1;
+        this.regMQ.clear;
+        this.gate1ST_CYC.value = 1;     // not in the ILD
+        this.gateEXMIT_ENT.value = 0;   // not in the ILD
+        this.gateFIELD_MK_1.value = 0;  // not in the ILD
+        this.gateFIELD_MK_2.value = 0;  // not in the ILD
+        this.gateADD_MODE.value = 0;
+        this.gateFRAC_ADD_MODE.value = 0;
+        this.gateEXP_MODIFY.value = 0;
+        this.gateDIG_FORCE_MODE.value = 1;
+        this.setProcState(procStateE2); // no E1 cycles are done
     }
 
     /**************************************/
@@ -3456,10 +3503,36 @@ class Processor {
     }
 
     /**************************************/
+    checkFPExponentOfloUflo(op) {
+        /* Evaluates the end of an exponent add/subtract operation for overflow
+        or underflow and sets the oflo/uflo gates appropriately.
+        See ILD 10.0.00.93.1 */
+
+        if (this.gateCARRY_OUT.value && !this.gateCOMP.value) {
+            if ((op == 3 /* 03=FMUL */ && this.gateFP_HI_PLUS.value) ||
+                    (op == 9 /* 09=FDIV */ && !this.gateFP_HI_PLUS.value)) {
+                if (this.gateEZ.value) {
+                    this.gateEXP_OFLO_CORR.value = 1;
+                    if (this.gateEXP_MODIFY.value && this.gateEXP_MODIFY_REQ.value) {
+                        this.gateEXP_OFLO.value = 0;
+                        this.gateEXP_UFLO.value = 0;
+                    }
+                }
+            } else {
+                if (this.gateHP.value ) {       // ILD lies about using FP_HI_PLUS for this...
+                    this.gateEXP_OFLO.value = 1;
+                } else {
+                    this.gateEXP_UFLO.value = 1;
+                }
+            }
+        }
+    }
+
+    /**************************************/
     stepE1FPScan05() {
-        /* Handles the E1 scan state for op 05=FSL. Scans Q address down to
-        its field mark, leaving PR1=OR1 at the high-order digit.
-        See ILD 10.00.82.1 */
+        /* Handles the E1 scan state for op 05=FSL. Scans the Q address,
+        decrementing OR1 to the Q field mark, leaving PR1 at the high-order
+        digit. See ILD 10.00.82.1 */
 
         if (this.gate1ST_CYC.value) {
             this.gateSCAN_ENTRY.value = 0;
@@ -3500,11 +3573,10 @@ class Processor {
 
     /**************************************/
     stepE1FPScanP() {
-        /* Handles the E1 scan P state for op 01/02. Scans P address, decrementing
-        PR1 and incrementing or decrementing CR1 until CR1 is zero or the field
-        mark flag is encountered. Leaves PR1 pointing to the next lower digit,
-        which will be treated as the low-order digit of the P mantissa during
-        fraction add. See ILD 10.00.82.1 */
+        /* Handles the E1 scan P state for op 01/02. Scans P address via PR1,
+        decrementing PR1 until the field mark flag is encountered. Leaves PR1
+        pointing to the next lower digit, which will be treated as the low-order
+        digit of the P mantissa during fraction add. See ILD 10.00.82.1 */
 
         if (this.gate1ST_CYC.value) {
             this.gateSCAN_ENTRY.value = 0;
@@ -3526,10 +3598,11 @@ class Processor {
 
     /**************************************/
     stepE2FPScanP() {
-        /* Handles the E2 scan P state for op 01/02. If CR1 becomes zero, exits
-        to shift right to align the remainder of the mantissa. If FM-1 is
-        detected, exit to result transmit (adjusted P fraction is insignificant
-        so the result is the Q fraction). See ILD 10.00.82.1 */
+        /* Handles the E2 scan P state for op 01/02. Does not access memory.
+        Counts CR1 down or up depending on COUNTER_COMP. If CR1 becomes zero,
+        exits to shift right to align the remainder of the mantissa. If FM-1 was
+        detected in E1, exit to result transmit (adjusted P fraction is
+        insignificant thus the result is the Q fraction). See ILD 10.00.82.1 */
 
         if (this.gateFIELD_MK_1.value) {
             this.gateEXMIT_ENT.value = 1;
@@ -3546,7 +3619,7 @@ class Processor {
             this.regCR1.setDigit(0, this.regMAR.getDigit(0));   // keep only the 2 low-order digits
             this.regCR1.setDigit(1, this.regMAR.getDigit(1));
             if (this.regCR1.isZero && !this.gateD_GTR_99.value) {
-                this.enterFPShiftPRight();
+                this.enterFPShift();
             } else {
                 this.setProcState(procStateE1);
             }
@@ -3555,11 +3628,11 @@ class Processor {
 
     /**************************************/
     stepE1FPScanQ() {
-        /* Handles the E1 scan Q state for op 01/02. Scans Q address, decrementing
-        OR1 and incrementing or decrementing CR1 until CR1 is zero or the field
-        mark flag is encountered. Leaves OR1 pointing to the next lower digit,
-        which will be treated as the low-order digit of the Q mantissa during
-        fraction add. See ILD 10.00.82.1 */
+        /* Handles the E1 scan Q state for op 01/02. Scans Q address via OR1,
+        decrementing OR1 field mark flag is encountered. Leaves OR1 pointing to
+        the next lower digit, which will be treated as the low-order digit of
+        the Q mantissa during fraction add. On first cycle, sets  the field
+        sign in SCAN_MINUS. See ILD 10.00.82.1 */
 
         if (this.gate1ST_CYC.value) {
             this.gateSCAN_ENTRY.value = 0;
@@ -3582,9 +3655,11 @@ class Processor {
 
     /**************************************/
     stepE2FPScanQ() {
-        /* Handles the E2 scan Q state for op 01/02. Reads digit at PR1. Once FM-1
-        is detected, clears the flag (old field mark) and rewrites that digit.
-        See ILD 10.00.82.1 */
+        /* Handles the E2 scan Q state for op 01/02. Counts CR1 down or up
+        depending on COUNTER_COMP. If CR1 becomes zero, exits to shift right to
+        align the remainder of the mantissa. If FM-1 was detected in E1, exit
+        to I-Cycle Entry (result is the P value, and HP is set from the P digit
+        sign via OR1). See ILD 10.00.82.1 */
 
         if (this.gateQ_EXIT.value) {
             this.regMAR.value = this.regOR2.value;
@@ -3615,16 +3690,59 @@ class Processor {
 
     /**************************************/
     stepE1FPScanZero() {
+        /* Handles the E1 scan zero state for op 01/02. The HI_ORDER_ZERO gate
+        is on. Scans P address via PR1, incrementing PR1 and CR1 until the
+        first non-zero digit is encountered. Leaves PR1 pointing to the highest-
+        order non-zero digit. See ILD 10.00.82.1 */
+
+        if (this.gate1ST_CYC.value) {
+            this.gateSCAN_ENTRY.value = 0;
+        }
+
+        this.regMAR.value = this.regPR1.value;
+        this.fetch();
+        if (this.regMBR.getDigit(this.regMAR.isEven) & Register.bcdMask) {
+            this.gateSIG_DIGIT.value = 1;
+            this.regPR1.decr(1);
+        } else {
+            this.regPR1.incr(1);
+        }
+
+        if (this.regMBR.getDigit(this.regMAR.isEven) & Register.flagMask) {
+            if (this.gate1ST_CYC.value) {
+                this.gateSCAN_MINUS.value = (this.gateHP.value ? 0 : 1);
+            } else {
+                this.gateFIELD_MK_1.value = 1;
+            }
+        }
+
+        this.setProcState(procStateE2);
     }
 
     /**************************************/
     stepE2FPScanZero() {
+        /* Handles the E2 scan zero state for op 01/02. Counts CR1 while
+        SIG_DIGIT is not on. Does not access memory until the SIG_DIGIT gate is
+        on, at which point it exits to normalize shift left to align the
+        remainder of the mantissa. See ILD 10.00.82.1 */
+
+        if (!this.gateSIG_DIGIT.value) {
+            this.regCR1.incr(1);
+            this.setProcState(procStateE1);
+        } else {
+            this.regMAR.value = this.regPR1.value;
+            this.fetch();
+            this.regPR1.incr(1);
+            if (!this.gateFIELD_MK_1.value) {
+                this.enterFPShift();
+            }
+        }
     }
 
     /**************************************/
     stepE1FPExponentTransmit() {
         /* Handles the E1 exponent transmit state for op 01/02. Similar to TF,
-        but works from OR-4 */
+        but reads via OR4. See ILD 10.00.81.1 */
 
         if (this.gateEXMIT_ENT.value) {
             this.enterTransmit();
@@ -3646,7 +3764,8 @@ class Processor {
     /**************************************/
     stepE2FPExponentTransmit() {
         /* Handles the E2 exponent transmit state for op 01/02. Similar to TF,
-        but works from OR-3/OR-5 and transmits only two digits */
+        but initializes OR3 to OR5 and stores via OR3. Transmits only two digits,
+        leaving OR3 at the low-order-digit of the mantissa. See ILD 10.00.81.1 */
         let digit = 0;
         let nextState = procStateE2;
 
@@ -3658,9 +3777,10 @@ class Processor {
             nextState = procStateE1;
         }
 
-        this.regMAR.value = this.regOR3.value;
         if (this.gate1ST_CYC_DELAYD.value) {
-            this.regOR5.value = this.regMAR.value;
+            this.regMAR.value = this.regOR3.value = this.regOR5.value;
+        } else {
+            this.regMAR.value = this.regOR3.value;
         }
 
         this.fetch();
@@ -3677,8 +3797,8 @@ class Processor {
 
     /**************************************/
     stepE1FPResultTransmit(op) {
-        /* Handles the E1 result transmit state for op 01/02. Similar to TF.
-        See ILD 10.00.83.1 */
+        /* Handles the E1 result transmit state for op 01/02. Similar to TF,
+        reading via OR1. Sets HP from the Q field sign. See ILD 10.00.83.1 */
 
         if (this.gateEXMIT_ENT.value) {
             this.enterTransmit();
@@ -3705,7 +3825,8 @@ class Processor {
 
     /**************************************/
     stepE2FPResultTransmit(op) {
-        /* Handles the E2 result transmit state for op 01/02. Similar to TF.
+        /* Handles the E2 result transmit state for op 01/02. Similar to TF, and
+        stores via OR2. Reverses HP if necessary from the P field sign.
         See IDL 10.00.83.1 */
         let digit = 0;
         let nextState = 0;
@@ -3746,8 +3867,12 @@ class Processor {
     /**************************************/
     stepE1FPShift05() {
         /* Handles the E1 shift state for op 05=FSL. Fetch digits in forward
-        direction via PR2 (set from scan mode) and leave in DR for the E2 state.
+        direction via PR1 (set from scan mode) and leave in DR for the E2 state.
         See ILD 10.00.82.1 */
+
+        if (this.gate1ST_CYC.value) {
+            this.gateSHIFT_ENTRY.value = 0;
+        }
 
         this.regMAR.value = this.regPR1.value;
         this.fetch();
@@ -3782,11 +3907,10 @@ class Processor {
                 digit = 0;
             } else {
                 this.gateFIELD_MK_2.value = 1;
+                this.enterICycle();             // done -- otherwise, stay in E2
                 if (this.gateSCAN_MINUS.value) {// detected flag in negative low-order digit
                     digit = Register.flagMask;
-                    this.enterICycle();             // done -- otherwise, stay in E2
                 } else {                        // detected flag in high-order exponent digit
-                    this.enterICycle();             // done -- but don't overwrite exponent digit
                     return;
                 }
             }
@@ -3810,7 +3934,7 @@ class Processor {
                 digit &= Register.notFlagMask;  // reset flag on all other digits
                 if (this.gateFL_1.value) {
                     this.gateFIELD_MK_1.value = 1;
-                    nextState = 0;              // stay in E2 anyway for zero fill
+                    nextState = 0;              // stay in E2 for zero fill
                     if (this.gateHI_ORDER_ZERO.value && !this.gateSCAN_MINUS.value) {
                         this.gateEXTRA_SFT_CYC.value = 1;   // detected flag in exponent field
                     }
@@ -3830,17 +3954,38 @@ class Processor {
     }
 
     /**************************************/
+    stepE1FPShift08() {
+        /* Handles the E1 shift right state for op 08. Reads digits via OR1 to
+        DR. MBR is fetched via OR1 by caller. See ILD 10.00.84.1 */
+
+        if (this.gate1ST_CYC.value) {
+            this.gateSHIFT_ENTRY.value = 0;
+        }
+
+        this.setDREven(this.regMBR.even);
+        if (this.regMAR.isEven) {   // MAR is even
+            this.regOR1.decr(1);
+        } else {                    // MAR is odd
+            this.gate2_DIG_CNTRL.value = 1;
+            this.setDROdd(this.regMBR.odd);
+            this.regOR1.decr(2);
+        }
+        this.setProcState(procStateE2);
+    }
+
+    /**************************************/
     stepE2FPShift08(dx) {
-        /* Handles the E2 shift state for op 08=FSR. Transfers digits from DR
-        to OR2 until the mantissa FM is detected, then zero fills the vacated
-        part of the original mantissa area. MBR is fetched via OR2 by caller.
-        See ILD 10.00.84.1 */
+        /* Handles the E2 shift state for op 08=FSR. Shifts digits right by
+        transfering digits from DR to OR2 until the mantissa FM is detected,
+        then zero fills the vacated part of the original mantissa area.
+        MBR and MIR are set via OR2 by caller. See ILD 10.00.84.1 */
         let digit = 0;
         let nextState = 0;
 
         if (this.gateFIELD_MK_1.value) {
             // Do zero fill
             if (this.regMBR.getDigit(dx) & Register.flagMask) {
+                digit |= Register.flagMask;
                 this.gateFIELD_MK_2.value = 1;
                 this.enterICycle();             // done -- otherwise, stay in E2
             }
@@ -3854,11 +3999,15 @@ class Processor {
                 nextState = procStateE1;        // otherwise stay in E2
             }
 
-            if (this.gate1ST_CYC_DELAYD.value && (this.regMBR.getDigit(dx) & Register.flagMask)) {
-                digit |= Register.flagMask;     // set sign flag on L.O. digit
-            } else if (this.gateFL_1.value) {
+            if (this.gate1ST_CYC_DELAYD.value) {// set sign flag on L.O. digit
+                digit = (digit & Register.notFlagMask) | (this.regMBR.getDigit(dx) & Register.flagMask);
+            } else {
+                digit &= Register.notFlagMask;  // clear all other flags in transferred digits
+            }
+
+            if (this.gateFL_1.value) {          // check for end of Q field
                 this.gateFIELD_MK_1.value = 1;
-                nextState = 0;                  // stay in E2 anyway for zero fill
+                nextState = 0;                  // stay in E2 for zero fill
             }
         }
 
@@ -3871,8 +4020,267 @@ class Processor {
     }
 
     /**************************************/
+    stepE1FPShiftRightP() {
+        /* Handles the E1 shift right P state for op 01/02. Reads digits via
+        PR1 to DR. See ILD 10.00.84.1 */
+
+        if (this.gate1ST_CYC.value) {
+            this.gateSHIFT_ENTRY.value = 0;
+        }
+
+        this.regMAR.value = this.regPR1.value;
+        this.fetch();
+        this.setDREven(this.regMBR.even);
+        if (this.regMAR.isEven) {   // MAR is even
+            this.regPR1.decr(1);
+        } else {                    // MAR is odd
+            this.gate2_DIG_CNTRL.value = 1;
+            this.setDROdd(this.regMBR.odd);
+            this.regPR1.decr(2);
+        }
+        this.setProcState(procStateE2);
+    }
+
+    /**************************************/
+    stepE2FPShiftRightP() {
+        /* Handles the E2 shift right P state for op 01/02. Shifts P right by
+        transferring digits from DR to PR2 until the mantissa FM is detected,
+        then zero fills the vacated part of the original mantissa area.
+        See ILD 10.00.84.1 */
+        let digit = 0;
+        let nextState = 0;
+
+        this.regMAR.value = this.regPR2.value;
+        this.fetch();
+        const dx = this.regMAR.isEven;
+
+        if (this.gateFIELD_MK_1.value) {
+            // Do zero fill
+            if (this.regMBR.getDigit(dx) & Register.flagMask) {
+                digit |= Register.flagMask;
+                this.gateFIELD_MK_2.value = 1;
+                this.enterFPFractionAdd();      // done -- otherwise, stay in E2
+            }
+        } else {
+            // Do mantissa transfer
+            if (this.gate2_DIG_CNTRL.value) {
+                this.gate2_DIG_CNTRL.value = 0;
+                digit = this.getDROdd();
+            } else {
+                digit = this.shiftDREvenOdd();
+                nextState = procStateE1;        // otherwise stay in E2
+            }
+
+            if (this.gate1ST_CYC_DELAYD.value) {// set sign flag on L.O. digit
+                digit = (digit & Register.notFlagMask) | (this.regMBR.getDigit(dx) & Register.flagMask);
+            } else {
+                digit &= Register.notFlagMask;  // clear all other flags in transferred digits
+            }
+
+            if (this.gateFL_1.value) {          // check for end of Q field
+                this.gateFIELD_MK_1.value = 1;
+                nextState = 0;                  // stay in E2 for zero fill
+            }
+        }
+
+        this.regMIR.setDigit(dx, digit);
+        this.store();
+        this.regPR2.decr(1);
+        if (nextState) {
+            this.setProcState(nextState);
+        }
+    }
+
+    /**************************************/
+    stepE1FPShiftRightNormalize() {
+        /* Handles the E1 shift right normalize state for op 01/02. Reads digits
+        via PR1 to DR. If the FORCE_CF1 gate is set (which happens on the last
+        cycle), resets FM-1 and sets the units position of DR to 0 in preparation
+        for storing a high-order 1 in the mantissa during E2. See ILD 10.00.84.1 */
+
+        if (this.gate1ST_CYC.value) {
+            this.gateSHIFT_ENTRY.value = 0;
+        }
+
+        this.regMAR.value = this.regPR1.value;
+        this.fetch();
+        this.setDREven(this.regMBR.even);
+        if (this.regMAR.isEven) {   // MAR is even
+            this.regPR1.decr(1);
+        } else {                    // MAR is odd
+            this.gate2_DIG_CNTRL.value = 1;
+            this.setDROdd(this.regMBR.odd);
+            this.regPR1.decr(2);
+        }
+
+        if (this.gateFORCE_CF1.value) {
+            this.gateFIELD_MK_1.value = 0;
+            this.resetDROdd();
+        }
+        this.setProcState(procStateE2);
+    }
+
+    /**************************************/
+    stepE2FPShiftRightNormalize() {
+        /* Handles the E2 shift right normalize state for op 01/02. Shifts P
+        right by transferring digits from DR via PR2 until the mantissa FM-1 is
+        detected. On the next cycle, E1 will have reset FM-1 and set FORCE_CF1,
+        which causes a flagged 1 to be stored in the mantissa high-order digit,
+        representing the carry from fraction addition.
+        See ILD 10.00.84.1 */
+        let digit = 0;
+        let nextState = 0;
+
+        this.regMAR.value = this.regPR2.value;
+        this.fetch();
+        const dx = this.regMAR.isEven;
+
+        if (this.gateFORCE_CF1.value && !this.gateFIELD_MK_1.value) {
+            // Set high-order 1 in mantissa and terminate
+            digit = 1 | Register.flagMask;
+            this.gateFIELD_MK_2.value = 1;
+            this.enterICycle();
+        } else {
+            // Do mantissa transfer
+            if (this.gate2_DIG_CNTRL.value) {
+                this.gate2_DIG_CNTRL.value = 0;
+                digit = this.getDROdd();
+            } else {
+                digit = this.shiftDREvenOdd();
+                nextState = procStateE1;        // otherwise stay in E2
+            }
+
+            //if (this.gate1ST_CYC_DELAYD.value) {// set sign flag on L.O. digit
+            //    digit = (digit & Register.notFlagMask) | (this.regMBR.getDigit(dx) & Register.flagMask);
+            //} else {
+            //    digit &= Register.notFlagMask;  // clear all other flags in transferred digits
+            //    if (this.gateFL_1.value) {          // check for end of Q field
+            //        this.gateFIELD_MK_1.value = 1;
+            //    }
+            //}
+
+            if (!this.gate1ST_CYC_DELAYD.value) {
+                if (this.gateFL_1.value) {          // check for end of Q field
+                    this.gateFIELD_MK_1.value = 1;
+                }
+            }
+
+            if (this.gateFIELD_MK_1.value) {    // check for end of Q field
+                this.gateFORCE_CF1.value = 1;
+                nextState = procStateE1;        // do one more E1, suppress any 2_DIG_CNTRL effect
+            } else {
+                digit = (digit & Register.notFlagMask) | (this.regMBR.getDigit(dx) & Register.flagMask);
+            }
+        }
+
+        this.regMIR.setDigit(dx, digit);
+        this.store();
+
+        // Don't decrement PR2 on the first cycle -- results in a 1 digit right shift.
+        if (!this.gate1ST_CYC_DELAYD.value) {
+            this.regPR2.decr(1);
+        }
+
+        if (nextState) {
+            this.setProcState(nextState);
+        }
+    }
+
+    /**************************************/
+    stepE1FPShiftLeftNormalize() {
+        /* Handles the E1 shift left state for op 01/02. Fetch digits in forward
+        direction via PR1 (set from scan mode) and leave in DR for the E2 state.
+        See ILD 10.00.82.1 */
+
+        if (this.gate1ST_CYC.value) {
+            this.gateSHIFT_ENTRY.value = 0;
+        }
+
+        this.regMAR.value = this.regPR1.value;
+        this.fetch();
+        this.setDREven(this.regMBR.odd);
+        if (this.regMAR.isOdd) {        // MAR is odd
+            this.regPR1.incr(1);
+        } else {                        // MAR is even
+            this.gate2_DIG_CNTRL.value = 1;
+            this.setDROdd(this.regMBR.even);
+            this.regPR1.incr(2);
+        }
+
+        this.setProcState(procStateE2);
+    }
+
+    /**************************************/
+    stepE2FPShiftLeftNormalize() {
+        /* Handles the E2 shift left state for op 01/02. Transfers digits from
+        DR via PR2 until end of mantissa detected, then zero fills the rest of the
+        original mantissa area. See ILD 10.00.84.1 */
+        let digit = 0;
+        let dx = this.regPR2.isEven;
+        let nextState = 0;
+
+        this.regMAR.value = this.regPR2.value;
+        this.fetch();
+
+        if (this.gateFIELD_MK_1.value) {
+            // Do zero fill
+            digit = this.regMBR.getDigit(dx);
+            if (!(digit & Register.flagMask)) {
+                digit = 0;
+            } else {
+                this.gateFIELD_MK_2.value = 1;
+                this.enterFPExponentModify();
+                if (this.gateSCAN_MINUS.value) {// detected flag in negative low-order digit
+                    digit = Register.flagMask;
+                } else {                        // detected flag in high-order exponent digit
+                    return;
+                }
+            }
+
+            this.regMIR.setDigit(dx, digit);
+            this.store();
+            this.regPR2.incr(1);
+        } else {
+            // Do mantissa transfer
+            if (this.gate2_DIG_CNTRL.value) {
+                this.gate2_DIG_CNTRL.value = 0;
+                digit = this.getDROdd();
+            } else {
+                digit = this.shiftDREvenOdd();
+                nextState = procStateE1;        // otherwise stay in E2
+            }
+
+            if (this.gate1ST_CYC_DELAYD.value) {
+                digit |= Register.flagMask;     // set flag on H.O. digit
+            } else {
+                digit &= Register.notFlagMask;  // reset flag on all other digits
+                if (this.gateFL_1.value) {
+                    this.gateFIELD_MK_1.value = 1;
+                    nextState = 0;              // stay in E2 for zero fill
+                    if (this.gateHI_ORDER_ZERO.value && !this.gateSCAN_MINUS.value) {
+                        this.gateEXTRA_SFT_CYC.value = 1;   // detected flag in exponent field
+                    }
+                }
+            }
+
+            if (!this.gateEXTRA_SFT_CYC.value) {
+                this.regMIR.setDigit(dx, digit);
+                this.store();
+                this.regPR2.incr(1);
+            }
+        }
+
+        if (nextState) {
+            this.setProcState(nextState);
+        }
+    }
+
+    /**************************************/
     stepE1FPExponentAdd(op, mars) {
-        /* Handles the E1 state for floating-point exponent add/sub/compare */
+        /* Handles the E1 state for floating-point exponent add/sub/compare.
+        Fetches digits via the "mars" register. Similar to the E1 state for ADD/
+        SUB/C, but on first cycle clears CR1, PR1, PR2, and sets OR4 to the
+        "mars" address. See ILD 10.00.90.1 */
         const compare = (op==1 || op==2);
 
         this.regMAR.value = mars.value;
@@ -3882,6 +4290,9 @@ class Processor {
         if (this.gateADD_ENT.value) {
             this.enterAdd();
             this.gateADD_ENT.value = 0;
+        }
+
+        if (this.gate1ST_CYC.value) {
             this.regCR1.clear();
             this.regPR1.clear();
             this.regPR2.clear();
@@ -3908,7 +4319,9 @@ class Processor {
 
     /**************************************/
     stepE2FPExponentAdd(op, mars) {
-        /* Handles the E2 state for FP Exponent add/subtract and compare */
+        /* Handles the E2 state for FP Exponent add/subtract and compare. If not
+        comparing, stores digits via the "mars" register. If comparing,
+        accumulates the exponent difference in CR1. See ILD 10.0.80.1 */
         const compare = (op==1 || op==2);
         let nextState = 0;
 
@@ -3947,6 +4360,7 @@ class Processor {
                 this.fetch();
                 digit = this.regMBR.getDigit(dx);
             } else {
+                this.regOR5.value = this.regMAR.value;  // not in the ILD, but in Ref Card
                 // If not RECOMP and the low-order P digit is flagged, reverse COMP, CARRY_IN, HP
                 if (digit & Register.flagMask) {
                     this.gateCOMP.flip();
@@ -3983,7 +4397,7 @@ class Processor {
         this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
         mars.decr(1);                    // update OR2 before chance of early exits
 
-        // Store compare difference in low-order 2 digits of CR1.
+        // Store compare difference in low-order 2 digits of CR1; set PR2 to P fraction.
         if (this.gate1ST_CYC_DELAYD.value) {
             this.regCR1.setDigit(0, digit);
         } else {
@@ -3992,11 +4406,9 @@ class Processor {
             this.regPR2.value = mars.value;
         }
 
-        // if doing compare, set OR3 to exponent address, else store the result digit.
+        // If doing compare, set OR3 to mantissa address, else store the result digit.
         if (compare) {
-            if (this.gate1ST_CYC_DELAYD.value) {
-                this.regOR3.value = this.regMAR.value;
-            }
+            this.regOR3.value = mars.value;
         } else {
             if (this.gateFIELD_MK_2.value || (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value)) {
                 digit |= Register.flagMask;     // low-order P digit sign or high-order P digit flag
@@ -4007,6 +4419,13 @@ class Processor {
 
         // Check for end of P field and overflow; exit or start recomplement phase.
         if (this.gateFIELD_MK_2.value) {
+            // Check for initiation of RECOMP phase.
+            if (this.gateCOMP.value && !this.gateCARRY_OUT.value) {
+                this.gateRECOMP.value = 1;
+                this.gate1ST_CYC.value = 1;
+                this.gateHP.flip();
+            }
+
             if (compare) {
                 nextState = 0;
                 if (this.gateCARRY_OUT.value && !this.gateCOMP.value) {
@@ -4024,19 +4443,6 @@ class Processor {
                     this.enterFPExponentTransmit();     // PE < QE, so scale P value
                 }
             } else {
-                // Check for overflow.
-                if (!this.gateFIELD_MK_1.value ||
-                        (this.gateCARRY_OUT.value && !this.gateCOMP.value)) {
-                    this.setIndicator(14, `A/S/C Arithmetic overflow: op=${this.opBinary}, IR1=${this.regIR1.binaryValue-12}`);
-                }
-
-                // Check for initiation of RECOMP phase.
-                if (this.gateCOMP.value && !this.gateCARRY_OUT.value) {
-                    this.gateRECOMP.value = 1;
-                    this.gate1ST_CYC.value = 1;
-                    this.gateHP.flip();
-                }
-
                 // Check for end of add operation: COMP&CARRY | !COMP.
                 if (this.gateCOMP.value ? this.gateCARRY_OUT.value : 1) {
                     //...this.enterICycle();         // exit to I-Cycle entry
@@ -4052,8 +4458,438 @@ class Processor {
     }
 
     /**************************************/
+    stepE1FPExponentModify(op) {
+        /* Handles the E1 state for floating-point exponent modify.
+        Does not access memory; instead loads DR with:
+          - literal 01 if EXP_MOD_REQ is set and HI_ORDER_ZERO is not
+          - low-order 2 digits of CR if HI_ORDER_ZERO is set.
+        Otherwise, similar to the E1 state for ADD/SUB/C given that the augend
+        is never considered to be negative. Note that since only two digits are
+        involved and 2_DIG_CNTRL is set, there is only one E1 state, so
+        effectively everything executes with 1ST_CYC set. See ILD 10.00.87.1 */
+
+        this.gateEXP_MOD_ENTRY.value = 0;
+        if (this.gateADD_ENT.value) {
+            this.enterAdd();
+            this.gateADD_ENT.value = 0;
+        }
+
+        this.gateFL_2.value = 1;
+        this.gate2_DIG_CNTRL.value = 1;
+        this.gateCARRY_OUT.value = 0;
+        this.gateCARRY_IN.value = 0;    // not in ILD (at least not obviously)
+        if (op == 9 /* 09=FDIV */) {
+            this.gateCOMP.value = 0;
+        }
+
+        if (op != 3 /* 03=FMUL */) {
+            this.regMAR.value = this.regCR1.value;
+        } else {
+            this.regMAR.value = this.regPR1.value;
+            this.regMAR.incr(1);
+            this.regOR1.value = this.regMAR.value;
+        }
+
+        if (this.gateHI_ORDER_ZERO.value || (op == 3 && this.gateEXP_MOD_REQ.value)) {
+            if (this.gate1ST_CYC.value) {
+                this.gateCOMP.flip();
+            }
+        }
+
+        if (this.gateHI_ORDER_ZERO.value) {
+            this.regDR.clear();
+            this.regDR.setDigit(0, this.regMAR.getDigit(0));
+            this.regDR.setDigit(1, this.regMAR.getDigit(1));
+        } else {
+            if (this.gateEXP_MOD_REQ.value) {
+                this.regDR.value = 1;
+            } else {
+                this.regDR.value = 0;
+            }
+        }
+
+        this.setProcState(procStateE2);
+    }
+
+    /**************************************/
+    stepE2FPExponentModify(op) {
+        /* Handles the E2 state for floating-point exponent modify.
+        See ILD 10.0.87.1 */
+        let nextState = 0;
+
+        this.gateCARRY_OUT.value = 0;
+        if (this.gate2_DIG_CNTRL.value) {
+            this.gate2_DIG_CNTRL.value = 0;
+        } else {
+            this.shiftDREvenOdd();
+            if (!this.gateRECOMP.value) {
+                nextState = procStateE1;
+            }
+        }
+
+        if (this.gate1ST_CYC_DELAYD.value) {
+            this.regMAR.value = this.regOR5.value;
+        }
+
+        this.fetch();
+        let dx = this.regMAR.isEven;
+        let digit = this.regMBR.getDigit(dx);
+
+        // Handle 1st cycle and non-1st cycle special actions.
+        if (this.gate1ST_CYC_DELAYD.value) {
+            // The following tests are conditioned on 1ST_CYC in the ILD, but we just
+            // turned that off above when turning on 1ST_CYC_DELAYD, so sameo-sameo.
+            if (this.gateCOMP.value) {
+                this.gateCARRY_IN.value = 1;    // pre-set carry if subtract
+            }
+
+            if (this.gateRECOMP.value) {
+                // Set up initial conditions for the RECOMP phase.
+                this.gateCARRY_IN.value = 1;
+                this.gateCOMP.value = 0;
+                this.gateFIELD_MK_2.value = 0;
+                this.gateP_COMP.value = 1;
+                // We need to redo the E2 fetch and start with the low-order P digit.
+                this.regOR2.value = this.regMAR.value = this.regOR3.value;
+                dx = this.regMAR.isEven;
+                this.fetch();
+                digit = this.regMBR.getDigit(dx);
+            } else {
+                // If not RECOMP and the low-order P digit is flagged, reverse COMP, CARRY_IN, HP
+                if (digit & Register.flagMask) {
+                    this.gateCOMP.flip();
+                    this.gateCARRY_IN.value = this.gateCOMP.value;
+                    this.gateHP.flip();
+                }
+            }
+        } else {
+            // Detect end-of-field flags.
+            if (this.gateFL_1.value) {
+                this.gateFIELD_MK_1.value = 1;  // end of Q field
+            }
+
+            if (digit & Register.flagMask) {
+                this.gateFIELD_MK_2.value = 1;  // end of P field
+            }
+        }
+
+        // After the Q field mark, the addend digit is always zero.
+        if (this.gateFIELD_MK_1.value) {
+            this.resetDREven();
+            this.setDREven(0);
+            nextState = 0;                      // no more E1 cycles -- E2 only
+        }
+
+
+        // Do the actual addition.
+        digit = this.addDigits(digit);
+        if (digit & Register.bcdMask) {
+            this.gateEZ.value = 0;
+        }
+
+        // Store the result digit.
+        if (this.gateFIELD_MK_2.value || (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value)) {
+            digit |= Register.flagMask;         // low-order P digit sign or high-order P digit flag
+        }
+        this.regMIR.setDigit(dx, digit);
+        this.store();
+
+        // Propagate the carry and decrement the P address register
+        this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+        this.regMAR.decr(1);
+
+        this.regOR2.value = this.regMAR.value;
+        if (this.gateNORM_SHIFT_RT.value) {
+            this.regPR1.value = this.regMAR.value;
+            this.regPR2.value = this.regMAR.value;
+        }
+
+        // Check for end of P field and overflow; exit or start recomplement phase.
+        if (this.gateFIELD_MK_2.value) {
+            // Check for exponent overflow/underflow.
+            this.checkFPExponentOfloUflo(op);
+            const expOfloCorrCond = this.gateEXP_OFLO_CORR.value && this.gateEXP_MODIFY.value && this.gateEXP_MOD_REQ.value;
+            // Check for initiation of RECOMP phase.
+            if (!expOfloCorrCond) {
+                if (this.gateCOMP.value && !this.gateCARRY_OUT.value) {
+                    this.gateRECOMP.value = 1;
+                    this.gate1ST_CYC.value = 1;
+                    this.gateHP.flip();
+                }
+            }
+
+            // Check for end of add operation: COMP&CARRY | !COMP | (OFLO_CORR & EXP_MODIFY & EXP_MOD_REQ).
+            if ((this.gateCOMP.value ? this.gateCARRY_OUT.value : 1) || expOfloCorrCond) {
+                nextState = 0;                  // so as not to override enterICycle()
+                this.gateHP.value = this.gateFP_HI_PLUS.value;
+                if (this.gateEZ.value || this.gateEXP_OFLO.value || this.gateEXP_UFLO.value) {
+                    this.enterFPDigitForce();
+                } else {
+                    if (this.gateHI_ORDER_ZERO.value) {
+                        this.enterICycle();     // exit to I-Cycle entry
+                    } else if (op == 3 || op == 9) {
+                        this.enterFPResultTransmit();
+                    } else if (this.gateNORM_SHIFT_RT.value ){
+                        this.enterFPShift();
+                    } else {
+                        this.panic("FPExponentModify invalid exit condition");
+                    }
+                }
+            }
+        }
+
+        if (nextState) {                        // either do E1 or continue with E2 or terminate.
+            this.setProcState(nextState);
+        }
+    }
+
+    /**************************************/
+    stepE1FPFractionAdd() {
+        /* Handles the E1 state for the floating point fraction add sub-operation.
+        Similar to E1 state for regular ADD/SUB, reading digits via OR1, but
+        takes the Q sign from the SCAN_MINUS gate instead of the low-order digit
+        flag. See ILD 10.00.85.1 */
+
+        this.regMAR.value = this.regOR1.value;
+        this.fetch();
+        const dx = this.regMAR.isEven;
+        const digit = this.regMBR.getDigit(dx);
+
+        if (this.gateFRAC_ADD_ENTRY.value) {
+            this.enterAdd();
+            this.gateADD_ENT.value = 0;
+            this.gateFRAC_ADD_ENTRY.value = 0;
+        }
+
+        if (this.gate1ST_CYC.value && this.gateADD_MODE.value && !this.gateRECOMP.value) {
+            // If Q is negative, reverse COMP, CARRY_IN
+            if (this.gateSCAN_Q.value && this.gateFRAC_ADD_MODE.value ?
+                    this.gateSCAN_MINUS.value : (digit & Register.flagMask)) {
+                this.gateCOMP.flip();
+                this.gateCARRY_IN.value = this.gateCOMP.value;
+            }
+        }
+
+        this.resetDROdd();
+        this.setDREven(this.regMBR.even);
+        if (dx) {                   // MAR is even
+            this.regOR1.decr(1);
+        } else {                    // MAR is odd
+            this.gate2_DIG_CNTRL.value = 1;
+            this.setDROdd(digit);
+            this.regOR1.decr(2);
+        }
+        this.setProcState(procStateE2);
+    }
+
+    /**************************************/
+    stepE2FPFractionAdd(compare) {
+        /* Handles the E2 state for the floating point fraction add/compare
+        sub-operation. Similar to the E2 state for regular ADD/SUB, fetching
+        and storing digits via OR2, but copies the updated OR2 to PR1 and PR2.
+        Exits:
+          - to I-Cycle Entry if no carry and the high-order digit is not zero,
+          - to Digit Force if no carry and the result is zero,
+          - to Normalize Left if no carry and the high-order digit is zero,
+          - to Normalize Right and insert high-order 1 if there is a carry.
+        See ILD 10.00.85.1 */
+        let nextState = 0;
+
+        this.regMAR.value = this.regOR2.value;
+        this.fetch();
+        let dx = this.regOR2.isEven;
+        let digit = this.regMBR.getDigit(dx);
+
+        this.gateCARRY_OUT.value = 0;
+        if (this.gate2_DIG_CNTRL.value) {
+            this.gate2_DIG_CNTRL.value = 0;
+        } else {
+            this.shiftDREvenOdd();
+            if (!this.gateRECOMP.value) {
+                nextState = procStateE1;
+            }
+        }
+
+        // Handle 1st cycle and non-1st cycle special actions.
+        if (this.gate1ST_CYC_DELAYD.value) {
+            // The following tests are conditioned on 1ST_CYC in the ILD, but we just
+            // turned that off above when turning on 1ST_CYC_DELAYD, so sameo-sameo.
+            if (this.gateCOMP.value) {
+                this.gateCARRY_IN.value = 1;    // pre-set carry if subtract
+            }
+
+            if (this.gateRECOMP.value) {
+                // Set up initial conditions for the RECOMP phase.
+                this.gateCARRY_IN.value = 1;
+                this.gateCOMP.value = 0;
+                this.gateFIELD_MK_2.value = 0;
+                this.gateP_COMP.value = 1;
+                // We need to redo the E2 fetch and start with the low-order P digit.
+                this.regOR2.value = this.regMAR.value = this.regOR3.value;
+                dx = this.regMAR.isEven;
+                this.fetch();
+                digit = this.regMBR.getDigit(dx);
+            } else {
+                // If not RECOMP and the low-order P digit is flagged, reverse COMP, CARRY_IN, HP
+                if (digit & Register.flagMask) {
+                    this.gateCOMP.flip();
+                    this.gateCARRY_IN.value = this.gateCOMP.value;
+                    this.gateHP.flip();
+                }
+            }
+
+            // If SCAN_Q is set, end-of-field can occur on first digit.
+            if (this.gateFL_1.value && this.gateSCAN_Q.value && this.gateFRAC_ADD_MODE.value) {
+                this.gateFIELD_MK_1.value = 1;  // end of Q field
+            }
+        } else {
+            // Detect Q end-of-field flags.
+            if (this.gateFL_1.value) {
+                this.gateFIELD_MK_1.value = 1;  // end of Q field
+            }
+
+            if (digit & Register.flagMask) {
+                this.gateFIELD_MK_2.value = 1;  // end of P field
+            }
+        }
+
+        // After the Q field mark, the addend digit is always zero.
+        if (this.gateFIELD_MK_1.value) {
+            this.resetDREven();
+            this.setDREven(0);
+            nextState = 0;                      // no more E1 cycles -- E2 only
+        }
+
+        // Check for Compare early exit: P or Q != 0.
+        if (compare) {
+            if (((digit | this.regDR.odd) & Register.bcdMask) && !this.gateCOMP.value) {
+                this.gateEZ.value = 0;
+                this.enterICycle();             // early exit to I-Cycle entry
+                return;
+            }
+        }
+
+        if (this.gateFRAC_ADD_MODE.value) {
+            this.regPR1.value = this.regMAR.value;
+            this.regPR2.value = this.regMAR.value;
+            this.gateCOUNTER_COMP.value = 0;
+        }
+
+        // Do the actual addition.
+        digit = this.addDigits(digit);
+        if (digit & Register.bcdMask) {
+            this.gateEZ.value = 0;
+        }
+
+        // if not doing Compare, store the result digit.
+        if (!compare) {
+            if (this.gateFIELD_MK_2.value || (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value)) {
+                digit |= Register.flagMask;     // low-order P digit sign or high-order P digit flag
+            }
+            this.regMIR.setDigit(dx, digit);
+            this.store();
+        }
+
+        // Propagate the carry and decrement the P address register
+        this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+        this.regOR2.decr(1);                    // update OR2 before chance of early exits
+
+        // Check for end of P field and overflow; exit or start recomplement phase.
+        if (this.gateFIELD_MK_2.value) {
+            // Check for initiation of RECOMP phase.
+            if (this.gateCOMP.value && !this.gateCARRY_OUT.value) {
+                this.gateRECOMP.value = 1;
+                this.gate1ST_CYC.value = 1;
+                this.gateHP.flip();
+            }
+
+            // Check for end of add operation: COMP&CARRY | !COMP | Compare.
+            if ((this.gateCOMP.value ? this.gateCARRY_OUT.value : 1) || compare) {
+                nextState = 0;                  // so as not to override exit states
+                if (this.gateFRAC_ADD_MODE.value) {
+                    if (this.gateCARRY_OUT.value && !this.gateCOMP.value) {
+                        // Carry out of high-order digit sum occurred.
+                        this.enterFPExponentModify();
+                        this.gateNORM_SHIFT_RT.value = 1;
+                        this.gateEXP_MOD_REQ.value = 1;
+                        this.gateEZ.value = 0;
+                    } else {
+                        if (digit & Register.bcdMask) {
+                            // High-order digit sum not zero, no carry -- finito.
+                            this.enterICycle();
+                        } else if (this.gateEZ.value) {
+                            // High-order digit sum is zero, EZ set -- store FP zero in result.
+                            this.enterFPDigitForce();
+                        } else {
+                            // High-order digit sum is zero, EZ not set -- normalize result.
+                            this.gateHI_ORDER_ZERO.value = 1;
+                            this.enterFPScan();
+                        }
+                    }
+                }
+            }
+        }
+
+        if (nextState) {                        // either do E1 or continue with E2 or terminate.
+            this.setProcState(nextState);
+        }
+    }
+
+    /**************************************/
+    stepE2FPDigitForce() {
+        /* Handles the E2 state for the floating-point digit force sub-operation.
+        Stores zeroes and nines to set floating-point zero or infinity, based on
+        the exponent over/underflow gates. No E1 states are performed.
+        See ILD 10.0.88.1, but take that diagram with a large grain of salt */
+
+        this.gateDIGIT_FORCE_ENTRY.value = 0;
+        this.regMAR.value = this.regOR5.value;
+        this.fetch();
+        let dx = this.regMAR.isEven;
+
+        if (!(this.regMQ.value & 0b0100)) {
+            this.regMQ.incr(1);
+        }
+
+        let mq = this.regMQ.binaryValue;        // local copy of incremented value
+        let digit = (mq < 3 || !(this.gateEXP_UFLO.value || this.gateEZ.value) ? 9 : 0);
+        if (this.gateEXP_UFLO.value) {
+            this.gateEZ.value = 1;
+        }
+
+        switch (mq) {
+        case 1:                         // set exponent sign
+            if (!this.gateEXP_OFLO.value) {
+                digit |= Register.flagMask;
+            }
+            break;
+        case 2:                         // set exponent field mark
+            digit |= Register.flagMask;
+            break;
+        case 3:                         // set mantissa sign
+            if (!this.gateEZ.value && !this.gateFP_HI_PLUS.value) {
+                digit |= Register.flagMask;
+            }
+            break;
+        case 4:                         // set mantissa field mark & done
+            if ((this.regMBR.getDigit(dx) & Register.flagMask)) {
+                digit |= Register.flagMask;
+                this.enterICycle();
+            }
+            break;
+        default:                        // just store the digit
+            break;
+        }
+
+        this.regMIR.setDigit(dx, digit);
+        this.store();
+        this.regOR5.decr(1);
+    }
+
+    /**************************************/
     stepE2Addition(compare, dx) {
-        /* Handles the E2 state for Add, Subtract, and Compare */
+        /* Handles the E2 state for Add, Subtract, and Compare. Caller does the
+        MBR/MIR fetch via OR2 */
         let nextState = 0;
         let digit = this.regMBR.getDigit(dx);
 
@@ -4127,10 +4963,6 @@ class Processor {
             this.gateEZ.value = 0;
         }
 
-        // Propagate the carry and decrement the P address register
-        this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
-        this.regOR2.decr(1);                    // update OR2 before chance of early exits
-
         // if not doing Compare, store the result digit.
         if (!compare) {
             if (this.gateFIELD_MK_2.value || (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value)) {
@@ -4139,6 +4971,10 @@ class Processor {
             this.regMIR.setDigit(dx, digit);
             this.store();
         }
+
+        // Propagate the carry and decrement the P address register
+        this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
+        this.regOR2.decr(1);                    // update OR2 before chance of early exits
 
         // Check for end of P field and overflow; exit or start recomplement phase.
         if (this.gateFIELD_MK_2.value) {
@@ -4578,6 +5414,18 @@ class Processor {
                 this.stepE1FPExponentTransmit();
             } else if (this.gateRESULT_XMIT.value) {
                 this.stepE1FPResultTransmit(this.opBinary);
+            } else if (this.gateSHIFT_MODE.value) {
+                if (this.gateNORM_SHIFT_RT.value) {
+                    this.stepE1FPShiftRightNormalize();
+                } else if (this.gateHI_ORDER_ZERO.value) {
+                    this.stepE1FPShiftLeftNormalize();
+                } else {
+                    this.stepE1FPShiftRightP();
+                }
+            } else if (this.gateFRAC_ADD_MODE.value) {
+                this.stepE1FPFractionAdd();
+            } else if (this.gateEXP_MODIFY.value) {
+                this.stepE1FPExponentModify(this.opBinary);
             } else {
                 this.panic("01/02=FADD/FSUB invalid E1 mode");
             }
@@ -4592,6 +5440,10 @@ class Processor {
                 this.panic("05=FSL invalid E1 mode");
             }
             this.setProcState(procStateE2);
+            break;
+
+        case  8:        // FSR - Floating Shift Right
+            this.stepE1FPShift08(dx);
             break;
 
         case  6:        // TFL - Transmit Floating
@@ -4639,6 +5491,9 @@ class Processor {
             if (this.gateADD_ENT.value) {
                 this.enterAdd();
                 this.gateADD_ENT.value = 0;
+            }
+
+            if (this.gate1ST_CYC.value && this.gateADD_MODE.value && !this.gateRECOMP.value) {
                 // If the low-order Q digit is flagged, reverse COMP, CARRY_IN
                 if (digit & Register.flagMask) {
                     this.gateCOMP.flip();
@@ -4893,6 +5748,20 @@ class Processor {
                 this.stepE2FPExponentTransmit();
             } else if (this.gateRESULT_XMIT.value) {
                 this.stepE2FPResultTransmit(op);
+            } else if (this.gateSHIFT_MODE.value) {
+                if (this.gateNORM_SHIFT_RT.value) {
+                    this.stepE2FPShiftRightNormalize();
+                } else if (this.gateHI_ORDER_ZERO.value) {
+                    this.stepE2FPShiftLeftNormalize();
+                } else {
+                    this.stepE2FPShiftRightP();
+                }
+            } else if (this.gateFRAC_ADD_MODE.value) {
+                this.stepE2FPFractionAdd(false);
+            } else if (this.gateEXP_MODIFY.value) {
+                this.stepE2FPExponentModify(op);
+            } else if (this.gateDIG_FORCE_MODE.value) {
+                this.stepE2FPDigitForce();
             } else {
                 this.panic("01/02=FADD/FSUB invalid E2 mode");
             }
@@ -5420,6 +6289,7 @@ class Processor {
 
         this.gateTHERMAL.value = 1;
         this.checkStop(msg);
+        this.context.controlPanel.alert("<PANIC STOP> " + msg);         // Debug only //
     }
 
     /**************************************/
@@ -5469,7 +6339,7 @@ class Processor {
         case 15:        // Exponent Check
             this.oflowExpCheck.value = 1;
             if (this.oflowStopSwitch) {
-                this.checkStop(`Exponent Overflow Check: ${text}`);
+                this.checkStop(`Exponent Check: ${text}`);
             }
             break;
         case 16:        // MBR-even Check
@@ -5732,6 +6602,47 @@ class Processor {
         this.gateP.value = 0;
         this.gateRM.value = 0;
 
+        // Floating-point gates
+        if (this.fpInstalled) {
+            this.gateCOUNTER_COMP.value = 0;
+            this.gateDIGIT_FORCE_ENTRY.value = 0;
+            this.gateDIG_FORCE_MODE.value = 0;
+            this.gateD_GTR_99.value = 0;
+            this.gateEXP_ADD.value = 0;
+            this.gateEXP_MODIFY.value = 0;
+            this.gateEXP_MOD_ENTRY.value = 0;
+            this.gateEXP_MOD_EXIT.value = 0;
+            this.gateEXP_MOD_REQ.value = 0;
+            this.gateEXP_OFLO_CORR.value = 0;
+            this.gateEXP_XMIT.value = 0;
+            this.gateEXTRA_SFT_CYC.value = 0;
+            this.gateFALSE_XMIT.value = 0;
+            this.gateFALSE_XMIT_ENTRY.value = 0;
+            this.gateFDIV.value = 0;
+            this.gateFDIV_ENTRY.value = 0;
+            this.gateFMUL_ENTRY.value = 0;
+            this.gateFMUL_MODE.value = 0;
+            this.gateFORCE_CF1.value = 0;
+            this.gateFP_HI_PLUS.value = 0;
+            this.gateFRAC_ADD_ENTRY.value = 0;
+            this.gateFRAC_ADD_MODE.value = 0
+            this.gateFRAC_COMPARE_MODE.value = 0;
+            this.gateFRAC_COMPR_ENTRY.value = 0;
+            this.gateHI_ORDER_ZERO.value = 0;
+            this.gateLD.value = 0;
+            this.gateLD_ENTRY.value = 0;
+            this.gateNORM_SHIFT_RT.value = 0;
+            this.gateQ_EXIT.value = 0;
+            this.gateRESULT_XMIT.value = 0;
+            this.gateSCAN_ENTRY.value = 0;
+            this.gateSCAN_MINUS.value = 0;
+            this.gateSCAN_MODE.value = 0;
+            this.gateSCAN_Q.value = 0;
+            this.gateSHIFT_ENTRY.value = 0;
+            this.gateSHIFT_MODE.value = 0;
+            this.gateSIG_DIGIT.value = 0;
+        }
+
         // Input-Output Gates
         this.gateDISK_ADDR.value = 0;
         this.gateDISK_HUND.value = 0;
@@ -5744,7 +6655,7 @@ class Processor {
         this.gatePC_EZ.value = 0;
         this.gatePC_HP.value = 0;
         this.gatePC_IND.value = 0;
-        this.gatePC_OFLOW.value = 0;
+        this.gatePC_OFLO.value = 0;
         this.gatePC_TR_8.value = 0;
         this.gateRDR_FEED.value = 0;
         this.gateREL.value = 0;

@@ -78,6 +78,12 @@ class Register {
         incoming flag (F) bits will be unconditionally reset and will not
         contribute to the parity sum.
 
+        The 1620 technical documentation refers to the "even" and "odd" digits
+        of two-digit registers, with "even" referring to the high-order and
+        "odd" referring to the low-order. Don't confuse this with indexes used
+        by Register to select digits, though. Register.even selects digit [1]
+        and Register.odd selects digit [0].
+
         Note that it is important to call envir.tick() in the caller to increment
         envir.eTime AFTER setting new values in registers and flip-flops. This
         allows the average intensity to be computed based on the amount of time
@@ -379,7 +385,7 @@ class Register {
         if (increment < 0) {
             this.incr(increment);
         } else if (increment > 0) {
-            this.decr(increment);
+            this.decr(-increment);
         }
     }
 
