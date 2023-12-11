@@ -6,7 +6,7 @@
 *       http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
 * IBM-1620 emulator support class implementing display and behavior
-* for the auxilliary customer engineer panel.
+* for the auxiliary customer engineer panel.
 ************************************************************************
 * 2023-11-22  P.Kimpel
 *   Original version, from retro-1620 ControlPanel.js.
@@ -136,10 +136,10 @@ class AuxCEPanel {
 
         // Control Gates
         buildGatePanel("AuxPanel", cols, [
-            "EXP ADD", "SCAN", "EXP|XMIT", "SHIFT", "RESULT|XMIT", "FRAC|ADD", "EXP MOD|ENTRY", "EXP|MODIFY", "EXP MOD|EXIT", "EXP OFLO|CORR",
+            "EXP ADD", "SCAN", "EXP|XMIT", "SHIFT", "RESULT|XMIT", "FRAC|ADD", "EXP MOD|ENTRY", "EXP|MODIFY", "EXP MOD|REQD", "EXP OFLO|CORR",
             "MULT", "FRAC|COMP", "FALSE|XMIT", "LOAD DVD|ENTRY", "LOAD|DVD", "DIV|ENTRY", "DIV", "DIGIT|FORCE", "SHIFT|OPS ENT", "HI ORDER|ZERO",
-            "NORM SFT|RIGHT", "EXTRA|SFT CYC", "EXP MOD|REQD", "CTR|COMPL", "SCAN|Q", "SIG|DIGIT", "SCAN|MINUS", "HI PLUS|AUX", "SCAN|ENTRY", "SCAN Q|EXIT",
-            "DIG FORCE|ENTRY", "D GTR|99", "FALSE XMIT|ENTRY", "MULT|ENTRY", "FORCE|CF1", "FRAC ADD|ENTRY", "FRAC COMP|ENTRY", "SCE", "X SIG|DIGIT"]);
+            "NORM SFT|RIGHT", "EXTRA|SFT CYC", "D GTR|99", "CTR|COMPL", "SCAN|Q", "SIG|DIGIT", "SCAN|MINUS", "HI PLUS|AUX", "SCAN|ENTRY", "SCAN Q|EXIT",
+            "DIG FORCE|ENTRY", "FALSE XMIT|ENTRY", "MULT|ENTRY", "FORCE|CF1", "FRAC ADD|ENTRY", "FRAC COMP|ENTRY", "SCE", "X SIG|DIGIT"]);
 
         this.window.addEventListener("unload", this.boundShutDown);
         this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, AuxCEPanel.displayRefreshPeriod);
@@ -162,14 +162,6 @@ class AuxCEPanel {
 
         if (!p) {
             return;                     // probably got caught in a shutdown
-        //} else {
-        //    const eTime = p.envir.eTime;
-        //    if (eTime - this.lastETime <= AuxCEPanel.lampFreezeThreshold) {
-        //        p.updateLampGlow(1);    // Processor is not executing: freeze lamps
-        //    } else {
-        //        this.lastETime = eTime;
-        //        p.updateLampGlow(0);
-        //    }
         }
 
         this.gateCTR_COMPL.set(p.gateCOUNTER_COMP.glow);
@@ -181,7 +173,6 @@ class AuxCEPanel {
         this.gateEXP_ADD.set(p.gateEXP_ADD.glow);
         this.gateEXP_MODIFY.set(p.gateEXP_MODIFY.glow);
         this.gateEXP_MOD_ENTRY.set(p.gateEXP_MOD_ENTRY.glow);
-        this.gateEXP_MOD_EXIT.set(p.gateEXP_MOD_EXIT.glow);
         this.gateEXP_MOD_REQD.set(p.gateEXP_MOD_REQ.glow);
         this.gateEXP_OFLO_CORR.set(p.gateEXP_OFLO_CORR.glow);
         this.gateEXP_XMIT.set(p.gateEXP_XMIT.glow);
