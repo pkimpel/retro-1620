@@ -118,15 +118,11 @@ class AuxCEPanel {
                 idText = gateIDs[k];
                 if (idText) {
                     caption = idText.replace(/\|/g, "<br>").replace("1ST ", "1<sup class=tiny>st</sup>");
-                    idText = idText.replace(/\s/g, "_").replace(/\-/g, "_").replace(/\|/g, "_").replace(/[/]/g, "");
-                } else {
-                    caption = null;
-                    idText = `${panelID}_${j}_${i}`;
+                    idText = prefix + idText.replace(/\s/g, "_").replace(/\-/g, "_")
+                                            .replace(/\|/g, "_").replace(/[/]/g, "");
+                    this[idText] = new GateLamp(panel, x, y, idText);
+                    this[idText].setCaption(caption, true);
                 }
-
-                idText = prefix + idText;
-                this[idText] = new GateLamp(panel, x, y, idText);
-                this[idText].setCaption(caption, true);
             }
         };
 
@@ -136,10 +132,10 @@ class AuxCEPanel {
 
         // Control Gates
         buildGatePanel("AuxPanel", cols, [
-            "EXP ADD", "SCAN", "EXP|XMIT", "SHIFT", "RESULT|XMIT", "FRAC|ADD", "EXP MOD|ENTRY", "EXP|MODIFY", "EXP MOD|REQD", "EXP OFLO|CORR",
-            "MULT", "FRAC|COMP", "FALSE|XMIT", "LOAD DVD|ENTRY", "LOAD|DVD", "DIV|ENTRY", "DIV", "DIGIT|FORCE", "SHIFT|OPS ENT", "HI ORDER|ZERO",
-            "NORM SFT|RIGHT", "EXTRA|SFT CYC", "D GTR|99", "CTR|COMPL", "SCAN|Q", "SIG|DIGIT", "SCAN|MINUS", "HI PLUS|AUX", "SCAN|ENTRY", "SCAN Q|EXIT",
-            "DIG FORCE|ENTRY", "FALSE XMIT|ENTRY", "MULT|ENTRY", "FORCE|CF1", "FRAC ADD|ENTRY", "FRAC COMP|ENTRY", "SCE", "X SIG|DIGIT"]);
+            "EXP ADD", "FRAC ADD|ENTRY", "FRAC|ADD", "FRAC COMP|ENTRY", "FRAC|COMP", "EXP MOD|ENTRY", "EXP|MODIFY", "EXP MOD|REQD", "EXP OFLO|CORR", "HI PLUS|AUX",
+            "MULT|ENTRY", "MULT", "FALSE XMIT|ENTRY", "FALSE|XMIT", "LOAD DVD|ENTRY", "LOAD|DVD", "DIV|ENTRY", "DIV", "EXP|XMIT", "RESULT|XMIT",
+            "SCAN|ENTRY", "SCAN", "SCAN|MINUS", "SCAN|Q", "SCAN Q|EXIT", "CTR|COMPL", "D GTR|99", "SIG|DIGIT", "DIG FORCE|ENTRY", "DIGIT|FORCE",
+            "SHIFT|OPS ENT", "SHIFT", "EXTRA|SFT CYC", "HI ORDER|ZERO", "NORM SFT|RIGHT", "FORCE|CF1", "", "", "X SIG|DIGIT", "SCE"]);
 
         this.window.addEventListener("unload", this.boundShutDown);
         this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, AuxCEPanel.displayRefreshPeriod);
@@ -219,6 +215,7 @@ class AuxCEPanel {
 
             this.config.putWindowGeometry(this.window, "AuxCEPanel");
             this.window.close();
+            this.window = null;
         }
     }
 } // class AuxCEPanel
