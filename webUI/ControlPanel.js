@@ -50,13 +50,13 @@ class ControlPanel {
 
     avgInstructionRate = 0;             // running average instructions/sec
     auxCEPanel = null;                  // Aux CE Panel object
-    debugView = false;                  // true if Debug View is displaying
     diskResetLatch = 0;                 // RESET / RELEASE simultaneous sequence pending
     intervalToken = 0;                  // panel refresh timer cancel token
     lastETime = 0;                      // last emulation clock value
     lastInstructionCount = 0;           // prior total instruction count (for average)
     lastRunTime = 0;                    // prior total run time (for average), ms
     modifyLatch = 0;                    // MODIFY / CHECK RESET simultaneous sequence pending
+    registerView = false;               // true if Register View is displaying
 
     /**************************************/
     constructor(context) {
@@ -76,8 +76,8 @@ class ControlPanel {
         this.boundBeforeUnload = this.beforeUnload.bind(this);
         this.boundControlSwitchClick = this.controlSwitchClick.bind(this);
         this.boundSimultaneousButtonDrag = this.simultaneousButtonDrag.bind(this);
-        this.boundToggleDebugView = this.toggleDebugView.bind(this);
-        this.boundLoadCMEMFile = this.loadCMEMFile.bind(this);
+        this.boundToggleRegisterView = this.toggleRegisterView.bind(this);
+        this.boundOpenDebugPanel = this.openDebugPanel.bind(this);
         this.boundEmergencyOffClick = this.emergencyOffClick.bind(this);
         this.boundPanelUnload = this.panelUnload.bind(this);
         this.boundShutDown = this.shutDown.bind(this);
@@ -377,8 +377,11 @@ class ControlPanel {
         this.program4Switch.set(this.config.getNode("ControlPanel.Program4SW"));
         p.program4Switch = this.program4Switch.state;
 
-        this.debugView = !this.config.getNode("ControlPanel.DebugView"); // negate for toggling
-        this.toggleDebugView(ev);
+        this.registerView = !this.config.getNode("ControlPanel.RegisterView");  // negate for toggling
+        this.toggleRegisterView(ev);
+        if (this.config.getNode("ControlPanel.AuxCEPanelView")) {
+            this.openAuxCEPanel();
+        }
 
         this.$$("EmulatorVersion").textContent = Version.retro1620Version;
         this.window.addEventListener("beforeunload", this.boundBeforeUnload);
@@ -391,8 +394,7 @@ class ControlPanel {
         this.powerBtn.addEventListener("dblclick", this.boundControlSwitchClick);
         this.marSelectorKnob.setChangeListener(this.boundMARSelectorChange);
         this.$$("EmergencyOffSwitch").addEventListener("dblclick", this.boundEmergencyOffClick);
-        this.$$("IBMLogo").addEventListener("dblclick", this.boundToggleDebugView);
-        this.$$("DPSLogo").addEventListener("dblclick", this.boundLoadCMEMFile);
+        this.$$("IBMLogo").addEventListener("dblclick", this.boundOpenDebugPanel);
 
         // Power up and initialize the system.
         setTimeout(() => {
@@ -586,17 +588,19 @@ class ControlPanel {
     }
 
     /**************************************/
-    loadCMEMFile(ev) {
-        /* Enables the LoadCMEMDiv overlay to select a CMEM file */
+    openDebugPanel(ev) {
+        /* Opens the DebugPanelDiv and wires up its events */
 
-        const cancelLoad = (ev) => {
+        const closeDebugPanel = (ev) => {
             /* Unwires the local events and closes the load panel */
 
-            this.$$("CMEMCancelBtn").removeEventListener("click", cancelLoad);
+            this.$$("DebugCloseBtn").removeEventListener("click", closeDebugPanel);
+            this.$$("RegisterViewCheck").removeEventListener("click", toggleRegisterView);
+            this.$$("AuxCEPanelViewCheck").removeEventListener("click", toggleAuxCEPanelView);
             this.$$("CMEMDumpBtn").removeEventListener("click", initiateCMEMDump);
             this.$$("CMEMSelector").removeEventListener("change", initiateCMEMLoad);
             this.$$("CMEMSelector").value = null;       // reset the file-picker control
-            this.$$("LoadCMEMDiv").style.display = "none";
+            this.$$("DebugPanelDiv").style.display = "none";
         };
 
         const initiateCMEMLoad = (ev) => {
@@ -612,7 +616,7 @@ class ControlPanel {
                     this.window.alert(msg);
                 }
 
-                cancelLoad(ev);
+                closeDebugPanel(ev);
             };
 
             const reader = new FileReader();
@@ -624,13 +628,34 @@ class ControlPanel {
             /* Handle the click event on the dump button to initiate a CMEM dump */
 
             this.dumpCMEMFile(ev);
-            cancelLoad(ev);
+            closeDebugPanel(ev);
         };
 
-        this.$$("LoadCMEMDiv").style.display = "block";
+        const toggleRegisterView = (ev) => {
+            /* Handle the click event on the RegisterView check box */
+
+            this.toggleRegisterView();
+        };
+
+        const toggleAuxCEPanelView = (ev) => {
+            /* Handle the click event on the AuxCEPanelView check box */
+
+            if (ev.target.checked) {
+                this.openAuxCEPanel();
+            } else {
+                this.closeAuxCEPanel();
+            }
+        };
+
+        this.$$("RegisterViewCheck").checked = this.registerView;
+        this.$$("AuxCEPanelViewCheck").checked = this.auxCEPanel !== null;
+
+        this.$$("DebugPanelDiv").style.display = "block";
+        this.$$("RegisterViewCheck").addEventListener("click", toggleRegisterView);
+        this.$$("AuxCEPanelViewCheck").addEventListener("click", toggleAuxCEPanelView);
         this.$$("CMEMSelector").addEventListener("change", initiateCMEMLoad);
         this.$$("CMEMDumpBtn").addEventListener("click", initiateCMEMDump);
-        this.$$("CMEMCancelBtn").addEventListener("click", cancelLoad);
+        this.$$("DebugCloseBtn").addEventListener("click", closeDebugPanel);
     }
 
     /**************************************/
@@ -650,25 +675,47 @@ class ControlPanel {
     }
 
     /**************************************/
-    toggleDebugView(ev) {
-        /* Toggles display of the Debug View and RunStats panels when the IBM
-        logo is double-clicked */
+    openAuxCEPanel() {
+        /* Opens the AuxCEPanel */
 
-        if (this.debugView) {
-           this.debugView = false;
-           this.$$("RegisterViewTable").style.display = "none";
-           this.$$("RunStatsTable").style.display = "none";
-           this.config.putNode("ControlPanel.DebugView", 0);
-           if (this.auxCEPanel) {
-               this.auxCEPanel.shutDown();
-               this.auxCEPanel = null;
-           }
-        } else {
-           this.debugView = true;
+        if (!this.auxCEPanel) {
+           this.auxCEPanel = new AuxCEPanel(this.context);
+           this.config.putNode("ControlPanel.AuxCEPanelView", 1);
+        }
+    }
+
+    /**************************************/
+    closeAuxCEPanel() {
+        /* Closes the AuxCEPanel */
+
+        if (this.auxCEPanel) {
+            this.auxCEPanel.shutDown();
+            this.auxCEPanel = null;
+            this.config.putNode("ControlPanel.AuxCEPanelView", 0);
+        }
+    }
+
+    /**************************************/
+    postAuxCEPanelClosed() {
+        /* Handles notification that the AuxCEPanel has been closed manually */
+
+        this.auxCEPanel = null;
+        this.config.putNode("ControlPanel.AuxCEPanelView", 0);
+    }
+
+    /**************************************/
+    toggleRegisterView(ev) {
+        /* Toggles display of the Register View and RunStats panels */
+
+        this.registerView = !this.registerView;
+        if (this.registerView) {
            this.$$("RegisterViewTable").style.display = "table";
            this.$$("RunStatsTable").style.display = "table";
-           this.config.putNode("ControlPanel.DebugView", 1);
-           this.auxCEPanel = new AuxCEPanel(this.context);
+           this.config.putNode("ControlPanel.RegisterView", 1);
+        } else {
+           this.$$("RegisterViewTable").style.display = "none";
+           this.$$("RunStatsTable").style.display = "none";
+           this.config.putNode("ControlPanel.RegisterView", 0);
         }
     }
 
@@ -866,7 +913,7 @@ class ControlPanel {
         this.oflowArithCheckLamp.set(p.oflowArithCheck.glow);
 
         // Register View & Delay Stats Tables **DEBUG**
-        if (this.debugView) {
+        if (this.registerView) {
             this.$$("ViewOR1").textContent = p.regOR1.toBCDString();
             this.$$("ViewOR2").textContent = p.regOR2.toBCDString();
             this.$$("ViewOR3").textContent = p.regOR3.toBCDString();
@@ -1149,6 +1196,7 @@ class ControlPanel {
 
         if (this.auxCEPanel) {
             this.auxCEPanel.shutDown();
+            this.auxCEPanel = null;
         }
 
         this.$$("OperatorContainer").removeEventListener("click", this.boundControlSwitchClick);
@@ -1160,8 +1208,7 @@ class ControlPanel {
         this.marSelectorKnob.removeChangeListener(this.boundMARSelectorChange);
         this.$$("EmergencyOffSwitch").removeEventListener("dblclick", this.boundEmergencyOffClick);
         this.$$("AlarmSound").pause();
-        this.$$("IBMLogo").removeEventListener("dblClick", this.boundToggleDebugView);
-        this.$$("DPSLogo").removeEventListener("dblclick", this.boundLoadCMEMFile);
+        this.$$("IBMLogo").removeEventListener("dblClick", this.boundOpenDebugPanel);
         this.config.putWindowGeometry(this.window, "ControlPanel");
         this.window.removeEventListener("beforeunload", this.boundBeforeUnload);
         this.window.removeEventListener("unload", this.boundPanelUnload);

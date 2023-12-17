@@ -1169,12 +1169,12 @@ class Processor {
 
             // Set indicators for parity errors.
             if (this.regMBR.parityError) {
-                let digit = (pair >> Register.digitBits) & this.digitMask;
+                let digit = (pair >> Register.digitBits) & Register.digitMask;
                 if (Envir.oddParity5[digit] != digit) {
                     this.setIndicator(17, `fetch() parity error odd @${this.regMAR.toBCDString()}`);
                 }
 
-                digit = pair & this.digitMask;
+                digit = pair & Register.digitMask;
                 if (Envir.oddParity5[digit] != digit) {
                     this.setIndicator(16, `fetch() parity error even @${this.regMAR.toBCDString()}`);
                 }

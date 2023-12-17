@@ -146,7 +146,7 @@ class LinePrinter {
         this.carriageReady = false;     // true if the print mechanism is ready
         this.printCheck = false;        // true if a printer check has occurred
         this.printCheckPending = false; // true if a printer check has been detected
-        this.bufferReady = false;       // printer buffer is ready to be printed
+        this.bufferBusy = false;        // printer buffer not available for input, being printed
         this.bufferOffset = 0;          // offset into the print buffer
         this.carriageCode = 0;          // carriage control code from control() call
         this.printBuffer = "";          // line data received from Processor
@@ -164,10 +164,10 @@ class LinePrinter {
 
     /**************************************/
     setPrinterBusy(busy) {
-        /* Controls this.bufferReady and the Processor's Printer Busy (35)
+        /* Controls this.bufferBusy and the Processor's Printer Busy (35)
         indicator */
 
-        this.bufferReady = busy;
+        this.bufferBusy = busy;
         if (busy) {
             this.processor.setIndicator(35);
         } else {
@@ -183,6 +183,7 @@ class LinePrinter {
         const wasReady = this.printerReady;
 
         this.printerReady = this.carriageReady; // formerly included: && !this.printCheck;
+        this.$$("CCLoadBtn").disabled = this.printerReady;
         if (this.printerReady && !wasReady) {
             this.$$("ReadyLamp").classList.add("annunciatorLit");
         } else if (wasReady && !this.printerReady) {
@@ -256,7 +257,7 @@ class LinePrinter {
             if (this.printerReady) {
                 if (this.waitForCarriage.requested) {
                     this.waitForCarriage.signal(false);
-                } else if (this.bufferReady) {
+                } else if (this.bufferBusy) {
                     this.initiateLinePrinter();
                 }
             }
@@ -874,11 +875,15 @@ class LinePrinter {
             }
         }
 
+        this.setPrinterBusy(true);
         this.printReadyDelay = this.linePeriod; // minimum print time
         let [space, skip, before] = this.determineCarriageControl(this.carriageCode);
 
+        // DEBUG ?? console.log("%i %i %2i %i  %s", this.suppressSpacing, space, skip, before, this.printBuffer);
+
         // Print the line image.
         this.printLine(this.printBuffer.substring(0, this.columns).trimEnd(), space, skip);
+        this.printBuffer = "";                  // clear the internal print buffer
         this.paperMeter.value = this.supplyRemaining;
         if (this.printCheckPending) {
             this.setPrintCheck(true);           // leave buffer in ready state
@@ -886,8 +891,7 @@ class LinePrinter {
 
         // Wait for printing and carriage motion before resetting Printer Busy.
         setTimeout(() => {
-            this.printBuffer = "";              // clear the internal print buffer
-            this.setPrinterBusy(false);         // buffer is ready to receive more data
+            this.setPrinterBusy(false);         // buffer is now ready to receive more data
         }, this.printReadyDelay);
     }
 
@@ -898,7 +902,7 @@ class LinePrinter {
         const digit = code & Register.digitMask;
         let eob = 0;                    // end-of-block signal to Processor
 
-        if (this.bufferReady) {         // buffer not available to receive now
+        if (this.bufferBusy) {          // buffer not available to receive now
             if (await this.waitForBuffer.request()) {
                 return 1;                       // wait canceled
             }
@@ -914,7 +918,6 @@ class LinePrinter {
         }
 
         if (this.bufferOffset >= LinePrinter.maxBufferSize) {
-            this.setPrinterBusy(true);
             await this.initiateLinePrinter();
             eob =  1;
         }
@@ -931,7 +934,7 @@ class LinePrinter {
         const digit = code & Register.digitMask;
         let eob = 0;                    // end-of-block signal to Processor
 
-        if (this.bufferReady) {         // buffer not available to receive now
+        if (this.bufferBusy) {          // buffer not available to receive now
             if (await this.waitForBuffer.request()) {
                 return 1;                       // wait canceled
             }
@@ -947,7 +950,6 @@ class LinePrinter {
         }
 
         if (this.bufferOffset >= LinePrinter.maxBufferSize) {
-            this.setPrinterBusy(true);
             await this.initiateLinePrinter();
             eob = 1;
         }
@@ -957,7 +959,7 @@ class LinePrinter {
 
     /**************************************/
     async writeAlpha(digitPair) {
-        /* Writes one even/odd digit pair as a characterto the print buffer.
+        /* Writes one even/odd digit pair as a character to the print buffer.
         This should be used directly by Write Alphanumerically (WA, 39). A
         "code" less than zero implies a record mark has been detected by the
         processor and this call is just to fill out the buffer. Returns 1
@@ -967,7 +969,7 @@ class LinePrinter {
         const code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
         let eob = 0;                    // end-of-block signal to Processor
 
-        if (this.bufferReady) {         // buffer not available to receive now
+        if (this.bufferBusy) {          // buffer not available to receive now
             if (await this.waitForBuffer.request()) {
                 return 1;                       // wait canceled
             }
@@ -983,7 +985,6 @@ class LinePrinter {
         }
 
         if (this.bufferOffset >= LinePrinter.maxBufferSize) {
-            this.setPrinterBusy(true);
             await this.initiateLinePrinter();
             eob = 1;
         }
@@ -999,24 +1000,45 @@ class LinePrinter {
 
         this.suppressSpacing = ioVariant & 1;
         this.bufferOffset = 0;
+
+        /********** DEBUG ***********
+        const p = this.processor;
+        let addr = p.regOR2.binaryValue;
+        let line = "";
+        for (let x=0; x<240; x+=2) {
+            const pair = p.MM[(addr+x) >> 1];           // div 2
+            const even = (pair >> Register.digitBits) & Register.digitMask;
+            const odd = pair & Register.digitMask;
+            if (odd == Envir.numRecMark) {
+                break;
+            } else {
+                const code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
+                line += LinePrinter.alphaGlyphs[code];
+            }
+        }
+        console.log("%s %s  %s", ioVariant.toString(8).padStart(4, "0"),
+                addr.toString().padStart(5, "0"), line);
+        ***************************/
     }
 
     /**************************************/
-    async control(code) {
-        /* Performs control functions for the printer. "code" is the 2-digit
-        contents of MBR in I-6 (the Q10/Q11 digits of the instruction. for
+    async control(ioVariant) {
+        /* Performs control functions for the printer. "ioVariant" is the 2-digit
+        contents of MBR in I-6 (the Q10/Q11 digits of the instruction. For
         immediate carriage control, executes it here asynchronously. For deferred
         carriage control, simply stores the code until the next time a write
         occurs with its Q11 1-bit set */
 
-        if (this.bufferReady) {         // buffer busy being printed
+        if (this.bufferBusy) {          // buffer busy being printed
             if (await this.waitForBuffer.request()) {
                 return;                 // wait canceled
             }
         }
 
-        this.carriageCode =  code & Register.bcdValueMask;
+        this.carriageCode =  ioVariant & Register.bcdValueMask;
         let [space, skip, before] = this.determineCarriageControl(this.carriageCode);
+
+        // DEBUG ?? console.log("%i %i %2i %i  [Control %i]", this.suppressSpacing, space, skip, before, ioVariant);
 
         if (before) {                   // do immediate carriage control
             this.carriageCode = 0;      // reset the carriage control code

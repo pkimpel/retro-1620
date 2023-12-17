@@ -62,7 +62,7 @@ class AuxCEPanel {
         this.config = context.config;
 
         this.boundUpdatePanel = this.updatePanel.bind(this);
-        this.boundShutDown = this.shutDown.bind(this);
+        this.boundClosePanel = this.closePanel.bind(this);
 
         // Create the Aux CE Panel window
         let geometry = this.config.formatWindowGeometry("AuxCEPanel");
@@ -137,7 +137,7 @@ class AuxCEPanel {
             "SCAN|ENTRY", "SCAN", "SCAN|MINUS", "SCAN|Q", "SCAN Q|EXIT", "CTR|COMPL", "D GTR|99", "SIG|DIGIT", "DIG FORCE|ENTRY", "DIGIT|FORCE",
             "SHIFT|OPS ENT", "SHIFT", "EXTRA|SFT CYC", "HI ORDER|ZERO", "NORM SFT|RIGHT", "FORCE|CF1", "", "", "X SIG|DIGIT", "SCE"]);
 
-        this.window.addEventListener("unload", this.boundShutDown);
+        this.window.addEventListener("unload", this.boundClosePanel);
         this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, AuxCEPanel.displayRefreshPeriod);
 
         // Resize the window to take into account the difference between
@@ -203,11 +203,19 @@ class AuxCEPanel {
     }
 
     /**************************************/
+    closePanel(ev) {
+        /* Closes the panel and informs ControlPanel that it's gone */
+
+        this.context.controlPanel?.postAuxCEPanelClosed();
+        this.shutDown();
+    }
+
+    /**************************************/
     shutDown() {
         /* Shuts down the panel */
 
-        this.window.removeEventListener("unload", this.boundPanelUnload);
-        if (!this.window.closed) {
+        if (this.window && !this.window.closed) {
+            this.window.removeEventListener("unload", this.boundClosePanel);
             if (this.intervalToken) {
                 this.window.clearTimeout(this.intervalToken);
                 this.intervalToken = 0;

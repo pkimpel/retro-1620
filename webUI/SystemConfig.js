@@ -47,7 +47,8 @@ class SystemConfig {
             IOStopSW: 0,
             OflowStopSW: 0,
             MARSelSW: 0,                // 0-relative knob position
-            DebugView: 0                // display register Debug View panel
+            RegisterView: 0,            // display RegisterView panel
+            AuxCEPanelView: 0           // display AuxCEPanel
         },
 
         Typewriter: {
@@ -224,6 +225,12 @@ class SystemConfig {
                    this.flush();
                }
             }
+        }
+        if ("DebugView" in this.configData.ControlPanel) {      // redesigned 2023-12-16
+            this.configData.ControlPanel.RegisterView = this.configData.ControlPanel.DebugView;
+            this.configData.ControlPanel.AuxCEPanelView = this.configData.ControlPanel.DebugView;
+            delete this.configData.ControlPanel.DebugView;
+            this.flush();
         }
 
         // Preserve the exsiting LinePrinter channelSpecs so they don't get merged with the default.

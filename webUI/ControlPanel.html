@@ -187,19 +187,30 @@
 
 </div> <!-- OperatorContainer -->
 
-<div id=LoadCMEMDiv>
-    <h2>Load Memory from a CMEM file:</h2>
-    <blockquote>
-        <input id=CMEMSelector type=file size=60 accept=".cmem">
-    </blockquote>
+<div id=DebugPanelDiv>
+    <h2 class=center>Debug Options</h2>
+    <table class=normal>
+    <tbody><tr>
+        <td>
+            <input id=RegisterViewCheck type=checkbox value=1>
+            <label class=bold for=RegisterViewCheck>Register Debug View</label>
+        <td class=rj>
+            <input id=AuxCEPanelViewCheck type=checkbox value=1>
+            <label class=bold for=AuxCEPanelViewCheck>Aux CE Panel</label>
+    </table>
 
-    <h2>Dump Memory to a CMEM file:</h2>
+    <p class=bold>Load Memory from a CMEM file:</p>
+    <p>
+        <input id=CMEMSelector type=file size=60 accept=".cmem">
+    </p>
+
+    <p class=bold>Dump Memory to a CMEM file:</p>
     <table class=normal>
     <tbody><tr>
         <td>
             <button id=CMEMDumpBtn>Dump</button>
         <td class=rj>
-            <button id=CMEMCancelBtn>Cancel</button>
+            <button id=DebugCloseBtn>Close</button>
     </table>
     </div>
 </div>

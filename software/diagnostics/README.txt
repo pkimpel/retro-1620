@@ -2,7 +2,8 @@ Index of retro-1620/software/diagnostics:
 Additional IBM 1620 diagnostic routines:
 
 DT0020/
-    IBM diagnostic to write standard sector addresses on a 1311 disk pack.
+    IBM diagnostic to write standard sector addresses on a 1311 disk
+    pack.
 
 DT0021/
     IBM diagnostic to write test data on a 1311 disk pack in preparation
@@ -17,6 +18,15 @@ DT0032/
 XR01/
     Diagnostic written by Paul Kimpel for index register operations.
 
+FP1620Math.card
+    FORTRAN II-D compile deck to run under Monitor I to generate
+    floating point test results from 64 selected FP values. This program
+    was used to debug the emulator's floating-point implementation by
+    running it twice -- once under Monitor configured with the software-
+    only floating-point libraries and once with the hardware-enabled
+    libraries -- and comparing the two sets of results.
+
 Printer-Overstrike-Test.sps
     SPS assemble deck to run under Monitor I for a simple program to
     test overstrike printing on the 1443 line printer.
+

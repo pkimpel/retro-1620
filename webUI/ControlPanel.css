@@ -659,7 +659,7 @@ DIV.evenOddCaption {
     color:              black}
 
 
-#LoadCMEMDiv {
+#DebugPanelDiv {
     position:           absolute;
     display:            none;
     left:               50%;
@@ -670,8 +670,11 @@ DIV.evenOddCaption {
     padding:            8px;
     border:             2px solid black;
     box-shadow:         4px 4px 4px black}
-#LoadCMEMDiv TABLE {
+#DebugPanelDiv TABLE {
     width:              100%}
+#DebugPanelDiv H2 {
+    margin-top:         0;
+    margin-bottom:      0}
 
 
 /* Aux CE Panel styles */
