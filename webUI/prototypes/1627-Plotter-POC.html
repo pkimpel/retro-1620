@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>retro-1620 1627 Plotter POC</title>
+<!--
+/***********************************************************************
+* retro-1620/Misc Plotter-POC-2.html
+************************************************************************
+* Copyright (c) 2023, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1627 plotter proof-of-concept page.
+************************************************************************
+* 2023-12-17  P.Kimpel
+*   Original version.
+***********************************************************************/
+-->
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<!--
+<link id=defaultStyleSheet rel=stylesheet type="text/css" href="./Common.css">
+<link id=supervisoryStyleSheet rel=stylesheet type="text/css" href="./ControlPanel.css">
+-->
+
+<style>
+#PlotterDiv {
+    position:           relative;
+    width:              578px;
+    height:             480px;
+    overflow:           scroll;
+    background-color:   white;
+    border:             1px solid black;
+    box-shadow:         6px 6px 6px #333}
+
+#PlotterCanvas {
+    margin:             4px;
+    border:             1px dotted black}
+</style>
+
+<script>
+window.addEventListener("load", (ev) => {
+    const canvas = this.document.getElementById("PlotterCanvas");
+    const container = this.document.getElementById("PlotterDiv");
+    const clientRect = container.getBoundingClientRect();
+
+    const canvasMaxSize =               32764;          // pixels (for Firefox in 2023)
+    const canvasStepSize =              0.01;           // inch
+    const canvasWidth =                 11;             // inch
+    const canvasPixelWidth =            canvasWidth/canvasStepSize;
+    const canvasScaleFactor =           (clientRect.width-8-20)/canvasPixelWidth;
+    const canvasHeight =                canvasMaxSize*canvasStepSize/canvasScaleFactor; // inch (about 54 feet)
+    const canvasPixelHeight =           canvasHeight/canvasStepSize;
+
+
+    canvas.height = canvasPixelHeight*canvasScaleFactor;
+    canvas.width = canvasPixelWidth*canvasScaleFactor;
+
+    // Swap coordinates, as "x" for the 1627 is along the paper length.
+    const moveTo = (x,y) => {dc.moveTo(y,x)};
+    const lineTo = (x,y) => {dc.lineTo(y,x)};
+
+    // Breshenham's algorithm.
+    const plotLine = (x0, y0, x1, y1) => {
+        const dx = x1 - x0;
+        const dy = y1 - y0;
+        let D = 2*dy - dx;
+        let y = y0;
+        let lastx = x0;
+        let lasty = y0;
+
+        dc.beginPath();
+        moveTo(x0, y0);
+        for (x=x0; x<=x1; ++x) {
+            if (y != lasty) {
+                lineTo(x, y);
+                lastx = x;
+                lasty = y;
+            }
+            if (D > 0) {
+                y += 1;
+                D -= 2*dx;
+            }
+
+            D += 2*dy;
+        }
+
+        lineTo(x1, y1);
+        dc.stroke();
+    };
+
+    const dc = canvas.getContext("2d");
+    dc.save();
+    dc.scale(canvasScaleFactor, canvasScaleFactor);
+    dc.translate(canvasScaleFactor/2, canvasScaleFactor/2);
+    dc.fillStyle = "transparent";       // fill in the panel background (aids antialiasing)
+    dc.strokeStyle = "black";
+    dc.lineWidth = 1/canvasScaleFactor;
+    dc.lineJoin = "round";
+    dc.clearRect(0, 0, canvasPixelWidth, canvasPixelHeight);
+
+    /**********
+    dc.beginPath();
+    moveTo(10,10);
+    lineTo(20,20);
+    lineTo(20,50);
+    lineTo(50,50);
+    lineTo(30,30);
+    dc.stroke();
+    **********/
+
+    dc.strokeStyle = "red";
+    plotLine(25,50, 200,300);
+    dc.strokeStyle = "blue";
+    plotLine(200,300, 500,500);
+    dc.strokeStyle = "green";
+    plotLine(500,500, 400,200);
+    dc.strokeStyle = "black";
+    plotLine(400,200, 333,1000);
+
+    plotLine(100,100, 100,500);
+    plotLine(100,500, 500,500);
+    plotLine(500,500, 500,100);
+    plotLine(500,100, 100,100);
+
+    dc.restore();
+
+}, {once:true});
+</script>
+
+</head>
+
+<body class=panelBody>
+<p><strong>retro-1620 1627 Plotter Proof-of-Concept</stong></p>
+
+<div id=PlotterDiv>
+    <canvas id=PlotterCanvas>
+        This browser does not support the HTML &lt;canvas&gt; element.
+    </canvas>
+</div>
+
+</body>
+</html>
