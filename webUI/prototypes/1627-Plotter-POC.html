@@ -2,16 +2,19 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>retro-1620 1627 Plotter POC-2</title>
+<title>retro-1620 1627 Plotter POC-3</title>
 <!--
 /***********************************************************************
-* retro-1620/Misc Plotter-POC-2.html
+* retro-1620/Misc Plotter-POC-3.html
 ************************************************************************
 * Copyright (c) 2023, Paul Kimpel.
 * Licensed under the MIT License, see
 *       http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
 * IBM 1627 plotter proof-of-concept page.
+* Version of Bresenham's line algorithm adapted from the example based
+* on reference [2] at
+* https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm.
 ************************************************************************
 * 2023-12-17  P.Kimpel
 *   Original version.
@@ -65,29 +68,32 @@ window.addEventListener("load", async (ev) => {
     canvas.height = canvasPixelHeight*canvasScaleFactor;
     canvas.width = canvasPixelWidth*canvasScaleFactor;
 
-    const delay = (period) => {
+    function delay(period) {
         pendingWait += period;
-        if (pendingWait > minWait) {
+        if (pendingWait < minWait) {
+            return Promise.resolve();
+        } else {
             return new Promise((resolve, reject) => {
                 setTimeout(resolve, pendingWait);
                 pendingWait = 0;
             });
-        } else {
-            return Promise.resolve();
         }
-    };
+    }
 
     // Bresenham's algorithm.
-    const moveTo = async (x, y) => {
-        await plotLine(lastx, lasty, x, y, null);
-    };
+    async function moveTo(x, y) {
+        if (x != lastx && y != lasty) {
+            await plotLine(lastx, lasty, x, y, null);
+        }
+    }
 
-    const plotLine = async (x0, y0, x1, y1, color) => {
-        const dx = x1 - x0;
-        const dy = y1 - y0;
-        const incx = (dx < 0 ? -1 : 1);
-        const incy = (dy < 0 ? -1 : 1);
-        let D = 2*dy - dx;
+    async function plotLine(x0, y0, x1, y1, color) {
+        const dx = Math.abs(x1 - x0);
+        const dy = -Math.abs(y1 - y0);
+        const incx = (x0 < x1 ? 1 : -1);
+        const incy = (y0 < y1 ? 1 : -1);
+        let err = dx + dy;
+        let x = x0;
         let y = y0;
 
         if (color) {
@@ -95,23 +101,35 @@ window.addEventListener("load", async (ev) => {
             dc.fillStyle = color;
         }
 
-        for (let x=x0; x<=x1; ++x) {
+        for (;;) {
             await delay(stepPeriod);
             if (color) {
                 dc.fillRect(y, x, lineWidth, lineWidth);
             }
 
-            if (D > 0) {
-                y += 1;
-                D -= 2*dx;
+            const e2 = 2*err;
+            if (e2 >= dy) {
+                if (x == x1) {
+                    break;
+                } else {
+                    err += dy;
+                    x += incx;
+                }
             }
 
-            lastx = x;
-            lasty = y;
-            D += 2*dy;
+            if (e2 <= dx) {
+                if (y == y1) {
+                    break;
+                } else {
+                    err += dx;
+                    y += incy;
+                }
+            }
         }
-    };
 
+        lastx = x;
+        lasty = y;
+    }
 
     dc.save();
     dc.scale(canvasScaleFactor, canvasScaleFactor);
@@ -119,18 +137,33 @@ window.addEventListener("load", async (ev) => {
     dc.fillStyle = "transparent";       // fill in the panel background (aids antialiasing)
     dc.strokeStyle = "black";
     dc.lineWidth = lineWidth;
-    dc.lineJoin = "round";
     dc.clearRect(0, 0, canvasPixelWidth, canvasPixelHeight);
 
-    await plotLine(25,50, 200,300, "red");
-    await plotLine(200,300, 500,500, "blue");
-    await plotLine(500,500, 400,200, "green");
-    await plotLine(400,200, 333,1000, "black");
+    let left = 50;
+    let right = 750;
+    let top = 200;
+    let bottom = 900;
 
-    await plotLine(100,100, 100,500, "orange");
-    await plotLine(100,500, 500,500, "orange");
-    await plotLine(500,500, 500,100, "orange");
-    await plotLine(500,100, 100,100, "orange");
+    while (right-left >= 0) {
+        await plotLine(left, top, right, top, "black");
+        await plotLine(right, top, right, bottom, "black");
+        await plotLine(right, bottom, left, bottom, "black");
+        await plotLine(left, bottom, left, top, "black");
+        left += 50;
+        right -= 50;
+        top += 50;
+        bottom -= 50;
+    }
+
+    //await plotLine(100,100, 100,500, "black");
+    //await plotLine(100,500, 500,500, "black");
+    //await plotLine(500,500, 500,100, "black");
+    //await plotLine(500,100, 100,100, "black");
+
+    await plotLine(700,50, 1000,300, "red");
+    await plotLine(1000,300, 1200,500, "blue");
+    await plotLine(1200,500, 1200,200, "green");
+    await plotLine(1200,200, 1133,700, "orange");
 
     dc.restore();
     alert("Done");
@@ -140,7 +173,7 @@ window.addEventListener("load", async (ev) => {
 </head>
 
 <body class=panelBody>
-<p><strong>retro-1620 1627 Plotter Proof-of-Concept 2</stong></p>
+<p><strong>retro-1620 1627 Plotter Proof-of-Concept 3</stong></p>
 
 <div id=PlotterDiv>
     <canvas id=PlotterCanvas>
