@@ -2,10 +2,10 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>retro-1620 1627 Plotter POC-5</title>
+<title>retro-1620 1627 Plotter POC-6</title>
 <!--
 /***********************************************************************
-* retro-1620/Misc Plotter-POC-5.html
+* retro-1620/Misc Plotter-POC-6.html
 ************************************************************************
 * Copyright (c) 2023, Paul Kimpel.
 * Licensed under the MIT License, see
@@ -80,38 +80,42 @@ window.addEventListener("load", async (ev) => {
 
     const canvasMaxSize =               32764;          // pixels (for Firefox in 2023)
     const canvasStepSize =              0.01;           // inch
-    const canvasWidth =                 11;             // inch
-    const canvasScaleFactor =           0.5;
+    const canvasWidth =                 11;             // inch, 1627 Model 1
+    const canvasScaleFactorX =          -0.5;
+    const canvasScaleFactorY =          0.5;
     const canvasUnitWidth =             canvasWidth/canvasStepSize;
     const canvasHeight =                canvasMaxSize*canvasStepSize; // inch (about 27 feet)
     const canvasUnitHeight =            Math.round(canvasHeight/canvasStepSize);
-    const canvasLineWidth =             1/canvasScaleFactor;
-    const canvasOffsetX =               0.5/canvasScaleFactor;
-    const canvasOffsetY =               (0.5 + container.offsetHeight/2)/canvasScaleFactor;
+    const canvasLineWidth =             Math.abs(1/canvasScaleFactorY);
+    const canvasOffsetX =               Math.abs(canvasUnitWidth*canvasScaleFactorX + 1/canvasScaleFactorX);
+    const canvasOffsetY =               Math.abs(container.offsetHeight/2 + 1/canvasScaleFactorY);
     const stepPeriod =                  1000/300;       // milliseconds, 1627 Model 1
-    const minWait =                     8;              // milliseconds
+    const minWait =                     10;             // milliseconds
 
     let lastx = 0;
     let lasty = 0;
     let pendingWait = 0;
     const [originLeft, originTop] = toPixelCoord(0, 0);
 
-    canvas.height = canvasUnitHeight*canvasScaleFactor;
-    canvas.width = canvasUnitWidth*canvasScaleFactor;
-    canvasBox.style.width = `${canvasUnitWidth*canvasScaleFactor}px`;
-    xCursor.style.height = `${canvasUnitHeight*canvasScaleFactor}px`;
+    canvas.height = Math.abs(canvasUnitHeight*canvasScaleFactorY);
+    canvas.width = Math.abs(canvasUnitWidth*canvasScaleFactorX);
+    canvasBox.style.width = `${Math.abs(canvasUnitWidth*canvasScaleFactorX)}px`;
+    xCursor.style.height = `${Math.abs(canvasUnitHeight*canvasScaleFactorY)}px`;
+
+    dc.translate(canvasOffsetX, canvasOffsetY);         // do translate before scale
+    dc.scale(canvasScaleFactorX, canvasScaleFactorY);
 
     function toUnitCoord(x, y) {
         /* Converts canvas (pixel) coordinates to transformed unit coordinates */
 
-        return [x/canvasScaleFactor - canvasOffsetX, y/canvasScaleFactor - canvasOffsetY];
+        return [(x-canvasOffsetX)/canvasScaleFactorX, (y-canvasOffsetY)/canvasScaleFactorY];
     }
 
     function toPixelCoord(x, y) {
         /* Converts transformed canvas unit coordinates into canvas (pixel)
         coordinates */
 
-        return [Math.round((x+canvasOffsetX)*canvasScaleFactor), Math.round((y+canvasOffsetY)*canvasScaleFactor)];
+        return [Math.floor(x*canvasScaleFactorX + canvasOffsetX), Math.floor(y*canvasScaleFactorY + canvasOffsetY)];
     }
 
     function delay(period) {
@@ -156,7 +160,7 @@ window.addEventListener("load", async (ev) => {
 
         for (;;) {
             if (color) {
-                dc.fillRect(y, x, canvasLineWidth, canvasLineWidth);
+                dc.fillRect(y, x, 1, 1);
             }
 
             positionCursor(y, x);
@@ -188,9 +192,6 @@ window.addEventListener("load", async (ev) => {
     let ux = 0;
     let uy = 0;
 
-    dc.save();
-    dc.scale(canvasScaleFactor, canvasScaleFactor);
-    dc.translate(canvasOffsetX, canvasOffsetY);
     dc.fillStyle = "transparent";       // fill in the panel background (aids antialiasing)
     //dc.strokeStyle = "black";
     dc.lineWidth = canvasLineWidth;
@@ -201,16 +202,17 @@ window.addEventListener("load", async (ev) => {
     await delay(2000);
     await plotLine(-16, canvasUnitWidth/2, 16, canvasUnitWidth/2, "red");
     await plotLine(0, canvasUnitWidth/2-16, 0, canvasUnitWidth/2+16, "green");
-    await delay(1000);
+    await moveTo(0, canvasUnitWidth/2);
+    await delay(3000);
     await moveTo(0, 0);
 
     // Draw the concentric boxes.
-    let left = 50;
-    let right = 750;
-    let top = 200;
-    let bottom = 900;
+    let left = 51;
+    let right = 751;
+    let top = 201;
+    let bottom = 901;
 
-    while (right-left >= 0) {
+    while (right-left > 0) {
         await plotLine(left, top, right, top, "black");
         await plotLine(right, top, right, bottom, "black");
         await plotLine(right, bottom, left, bottom, "black");
@@ -221,14 +223,17 @@ window.addEventListener("load", async (ev) => {
         bottom -= 50;
     }
 
+    // Draw the cross within the inner box.
+    await plotLine(left-16, (top+bottom)/2, right+16, (top+bottom)/2, "black");
+    await plotLine((left+right)/2, top-16, (left+right)/2, bottom+16, "black");
+
     // Fool around.
     await plotLine(700,50, 1000,300, "red");
     await plotLine(1000,300, 800,500, "blue");
     await plotLine(800,500, 1200,200, "green");
     await plotLine(1200,200, 700,1000, "orange");
-    await moveTo(400, 550);
+    await moveTo(left, top);
 
-    dc.restore();
     await delay(1000);
 }, {once:true});
 </script>
@@ -236,7 +241,7 @@ window.addEventListener("load", async (ev) => {
 </head>
 
 <body class=panelBody>
-<p><strong>retro-1620 1627 Plotter Proof-of-Concept 5</stong></p>
+<p><strong>retro-1620 1627 Plotter Proof-of-Concept 6</stong></p>
 
 <div id=PlotterDiv>
     <div id=CanvasBox>
