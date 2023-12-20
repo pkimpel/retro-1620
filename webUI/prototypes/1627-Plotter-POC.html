@@ -2,10 +2,10 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>retro-1620 1627 Plotter POC-3</title>
+<title>retro-1620 1627 Plotter POC-4</title>
 <!--
 /***********************************************************************
-* retro-1620/Misc Plotter-POC-3.html
+* retro-1620/Misc Plotter-POC-4.html
 ************************************************************************
 * Copyright (c) 2023, Paul Kimpel.
 * Licensed under the MIT License, see
@@ -37,7 +37,6 @@
     background-color:   white;
     border:             1px solid black;
     box-shadow:         6px 6px 6px #333}
-
 #PlotterCanvas {
     margin:             4px;
     border:             1px dotted black}
@@ -47,19 +46,21 @@
 window.addEventListener("load", async (ev) => {
     const canvas = this.document.getElementById("PlotterCanvas");
     const container = this.document.getElementById("PlotterDiv");
-    const clientRect = container.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
     const dc = canvas.getContext("2d");
 
     const canvasMaxSize =               32764;          // pixels (for Firefox in 2023)
     const canvasStepSize =              0.01;           // inch
     const canvasWidth =                 11;             // inch
     const canvasPixelWidth =            canvasWidth/canvasStepSize;
-    const canvasScaleFactor =           (clientRect.width-8-20)/canvasPixelWidth;
+    const canvasScaleFactor =           (containerRect.width-8-20)/canvasPixelWidth;
     const canvasHeight =                canvasMaxSize*canvasStepSize/canvasScaleFactor; // inch (about 54 feet)
     const canvasPixelHeight =           canvasHeight/canvasStepSize;
-    const lineWidth =                   1/canvasScaleFactor;
+    const canvasLineWidth =             1/canvasScaleFactor;
+    const canvasOffsetX =               0.5/canvasScaleFactor;
+    const canvasOffsetY =               0.5/canvasScaleFactor;
     const stepPeriod =                  1000/300;       // milliseconds, 1627 Model 1
-    const minWait =                     4;              // milliseconds
+    const minWait =                     8;              // milliseconds
 
     let lastx = 0;
     let lasty = 0;
@@ -67,6 +68,13 @@ window.addEventListener("load", async (ev) => {
 
     canvas.height = canvasPixelHeight*canvasScaleFactor;
     canvas.width = canvasPixelWidth*canvasScaleFactor;
+
+    function toCanvasCoord(x, y) {
+        /* Converts transformed canvas unit coordinates into canvas (pixel)
+        coordinates */
+
+        return [(x-canvasOffsetX)*canvasScaleFactor, (y-canvasOffsetY)*canvasScaleFactor];
+    }
 
     function delay(period) {
         pendingWait += period;
@@ -80,9 +88,23 @@ window.addEventListener("load", async (ev) => {
         }
     }
 
+    async function drawCursor(x, y) {
+        const [px, py] = toCanvasCoord(x, y);
+        const savePix = dc.getImageData(py-4, px-4, 8, 8);
+
+        dc.save();
+        dc.strokeStyle = "gray";
+        dc.beginPath();
+        dc.arc(y, x, 3, Math.PI*2, false);
+        dc.stroke();
+        dc.restore();
+        await delay(stepPeriod);
+        dc.putImageData(savePix, py-4, px-4);
+    }
+
     // Bresenham's algorithm.
     async function moveTo(x, y) {
-        if (x != lastx && y != lasty) {
+        if (x != lastx || y != lasty) {
             await plotLine(lastx, lasty, x, y, null);
         }
     }
@@ -102,9 +124,11 @@ window.addEventListener("load", async (ev) => {
         }
 
         for (;;) {
-            await delay(stepPeriod);
             if (color) {
-                dc.fillRect(y, x, lineWidth, lineWidth);
+                dc.fillRect(y, x, canvasLineWidth, canvasLineWidth);
+                await delay(stepPeriod);
+            } else {
+                await drawCursor(x, y);
             }
 
             const e2 = 2*err;
@@ -136,7 +160,7 @@ window.addEventListener("load", async (ev) => {
     dc.translate(canvasScaleFactor/2, canvasScaleFactor/2);
     dc.fillStyle = "transparent";       // fill in the panel background (aids antialiasing)
     dc.strokeStyle = "black";
-    dc.lineWidth = lineWidth;
+    dc.lineWidth = canvasLineWidth;
     dc.clearRect(0, 0, canvasPixelWidth, canvasPixelHeight);
 
     let left = 50;
@@ -155,15 +179,10 @@ window.addEventListener("load", async (ev) => {
         bottom -= 50;
     }
 
-    //await plotLine(100,100, 100,500, "black");
-    //await plotLine(100,500, 500,500, "black");
-    //await plotLine(500,500, 500,100, "black");
-    //await plotLine(500,100, 100,100, "black");
-
     await plotLine(700,50, 1000,300, "red");
-    await plotLine(1000,300, 1200,500, "blue");
-    await plotLine(1200,500, 1200,200, "green");
-    await plotLine(1200,200, 1133,700, "orange");
+    await plotLine(1000,300, 800,500, "blue");
+    await plotLine(800,500, 1200,200, "green");
+    await plotLine(1200,200, 700,1000, "orange");
 
     dc.restore();
     alert("Done");
@@ -173,12 +192,12 @@ window.addEventListener("load", async (ev) => {
 </head>
 
 <body class=panelBody>
-<p><strong>retro-1620 1627 Plotter Proof-of-Concept 3</stong></p>
+<p><strong>retro-1620 1627 Plotter Proof-of-Concept 4</stong></p>
 
 <div id=PlotterDiv>
-    <canvas id=PlotterCanvas>
-        This browser does not support the HTML &lt;canvas&gt; element.
-    </canvas>
+        <canvas id=PlotterCanvas>
+            This browser does not support the HTML &lt;canvas&gt; element.
+        </canvas>
 </div>
 
 </body>
