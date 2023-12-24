@@ -1,0 +1,159 @@
+/***********************************************************************
+* retro-1620/webUI Plotter.css
+************************************************************************
+* Copyright (c) 2023, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 emulator Plotter style sheet.
+************************************************************************
+* 2023-12-22  P.Kimpel
+*   Original version, from retro-1620 Typewriter.css.
+***********************************************************************/
+
+#PlotterBody {
+    height:             100%;
+    min-height:         100%;
+    overflow:           hidden;
+    padding:            0}
+
+#PlotterFrame {
+    position:           absolute;
+    height:             488px;
+    width:              calc(100% - 60px);
+    min-height:         64px;
+    min-width:          120px;
+    overflow:           hidden;
+    background-color:   white;
+    padding:            0;
+    border:             none}
+
+#ControlsDiv {
+    position:           absolute;
+    top:                0;
+    right:              0;
+    height:             100%;
+    width:              60px;
+    background-color:   #999;
+    cursor:             auto}
+
+#IBMLogo {
+    position:           absolute;
+    top:                16px;
+    left:               50%;
+    width:              80%;
+    transform:          translate(-50%, 0)}
+#ModelLogo {
+    position:           absolute;
+    top:                40px;
+    left:               50%;
+    transform:          translate(-50%, 0);
+    font-family:        DejaVu Sans, Arial, Helvetica, sans-serif;
+    font-size:          16px;
+    font-weight:        bold}
+
+#StepControlsDiv {
+    position:           absolute;
+    top:                76px;
+    width:              100%;
+    height:             72px;
+    margin-top:         4px;
+    margin-bottom:      4px;
+    text-align:         center}
+#StepCaption {
+    width:              100%}
+#StepLeftBtn {
+    position:           absolute;
+    top:                16px;
+    left:               calc(50% - 20px)}
+#StepRightBtn {
+    position:           absolute;
+    top:                16px;
+    right:              calc(50% - 20px)}
+#StepUpBtn {
+    position:           absolute;
+    top:                40px;
+    left:               calc(50% - 20px)}
+#StepDownBtn {
+    position:           absolute;
+    top:                40px;
+    right:              calc(50% - 20px)}
+
+#CoordDiv {
+    position:           absolute;
+    top:                144px;
+    width:              100%;
+    height:             16px;
+    text-align:         center}
+
+#FastControlsDiv {
+    position:           absolute;
+    top:                168px;
+    width:              100%;
+    height:             72px;
+    margin-top:         4px;
+    margin-bottom:      4px;
+    text-align:         center}
+#FastCaption {
+    width:              100%}
+#FastLeftBtn {
+    position:           absolute;
+    top:                16px;
+    left:               calc(50% - 20px)}
+#FastRightBtn {
+    position:           absolute;
+    top:                16px;
+    right:              calc(50% - 20px)}
+#FastUpBtn {
+    position:           absolute;
+    top:                40px;
+    left:               calc(50% - 20px)}
+#FastDownBtn {
+    position:           absolute;
+    top:                40px;
+    right:              calc(50% - 20px)}
+
+#PenControlsDiv {
+    position:           absolute;
+    top:                244px;
+    width:              100%;
+    margin-top:         4px;
+    margin-bottom:      4px;
+    height:             48px;
+    text-align:         center}
+#PenCaption {
+    width:              100%}
+#PenUpBtn {
+    position:           absolute;
+    top:                16px;
+    left:               calc(50% - 20px)}
+#PenDownBtn {
+    position:           absolute;
+    top:                16px;
+    right:              calc(50% - 20px)}
+#PenStatusDiv {
+    position:           absolute;
+    top:                36px;
+    left:               50%;
+    transform:          translate(-50%, 0)}
+
+#ButtonDiv {
+    position:           absolute;
+    top:                312px;
+    width:              100%;
+    height:             60px;
+    margin-top:         4px;
+    margin-bottom:      4px;
+    text-align:         center}
+#PrintBtn {
+    width:              calc(100% - 8px);
+    margin-bottom:      8px;
+    font-weight:        bold}
+#HomeBtn {
+    width:              calc(100% - 8px);
+    margin-bottom:      8px;
+    font-weight:        bold}
+#ClearBtn {
+    width:              calc(100% - 8px);
+    margin-bottom:      8px;
+    font-weight:        bold}

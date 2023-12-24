@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>IBM-1620 Plotter Frame</title>
+<!--
+/***********************************************************************
+* retro-1620/webUI PlotterFrame.html
+************************************************************************
+* Copyright (c) 2023, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM-1620 user interface blank page for use with Plotter.
+************************************************************************
+* 2023-12-22  P.Kimpel
+*   Original version, from retro-1620 FramePaper.html.
+***********************************************************************/
+-->
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link id=defaultStyleSheet rel=stylesheet type="text/css" href="Common.css">
+<style id=PlotterFrameStyles>
+BODY {
+    height:             calc(100% - 8px);
+    margin:             4px;
+    padding:            0;
+    background-color:   white}
+#PlotterDiv {
+    position:           absolute;
+    width:              578px;
+    height:             480px;
+    overflow-x:         hidden;
+    overflow-y:         scroll;
+    background-color:   white}
+#CanvasBox {
+    position:           absolute;
+    left:               50%;
+    top:                0;
+    height:             100%;
+    width:              100%;
+    transform:          translate(-50%, 0)}
+#PlotterCanvas {
+    position:           absolute;
+    left:               0;
+    top:                0}
+#HCursor {
+    position:           absolute;
+    left:               50%;
+    width:              2px;
+    top:                0;
+    bottom:             0;
+    z-index:            10;
+    border-left:        1px dashed red}
+#VCursor {
+    position:           absolute;
+    left:               0;
+    right:              0;
+    top:                50%;
+    height:             2px;
+    z-index:            10;
+    border-top:         1px dashed red}
+</style>
+</head>
+
+<body id=FrameBody>
+
+<div id=PlotterDiv>
+    <div id=CanvasBox>
+        <canvas id=PlotterCanvas>
+            This browser does not support the HTML &lt;canvas&gt; element.
+        </canvas>
+        <div id=HCursor></div>
+        <div id=VCursor></div>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Build Plotter Decode Table</title>
+<!--
+/***********************************************************************
+* retro-1620/software Plotter-Decode-Gen.html
+************************************************************************
+* Copyright (c) 2023, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 test page to generate complete decode logic for the IBM 1627
+* plotter. See Figure 3-1 (page 3.2) in:
+* http://bitsavers.org/pdf/ibm/1620/fe/227-5721-0_1626_1627_FE_Maint_Man_1963.pdf.
+************************************************************************
+* 2023-12-20  P.Kimpel
+*   Original version.
+***********************************************************************/
+-->
+    <meta name="Author" content="Paul Kimpel">
+
+<style>
+BODY {
+    font-family:        Arial, Helvetica, sans serif;
+    font-size:          10pt}
+TABLE {
+    border-collapse:    collapse;
+    border-spacing:     0}
+#DecodeBody TD {
+    font-family:        DejaVu Sans Mono, Consolas, monospace;
+    font-size:          10pt;
+    text-align:         center}
+</style>
+
+<script>
+
+window.addEventListener("load", (ev) => {
+    ptCode = {                          // IBM 1620 Paper Tape Codes
+        //     <X0C8421
+        "A": 0b01100001,        //  X0    1
+        "B": 0b01100010,        //  X0   2
+        "C": 0b01110011,        //  X0C  21
+        "D": 0b01100100,        //  X0  4
+        "E": 0b01110101,        //  X0C 4 1
+        "F": 0b01110110,        //  X0C 42
+        "G": 0b01100111,        //  X0  421
+        "H": 0b01101000,        //  X0 8
+        "I": 0b01111001,        //  X0C8  1
+        "]": 0b01000000,        //  X          // flagged zero (-0)
+        "J": 0b01010001,        //  X C   1
+        "K": 0b01010010,        //  X C  2
+        "L": 0b01000011,        //  X    21
+        "M": 0b01010100,        //  X C 4
+        "N": 0b01000101,        //  X   4 1
+        "O": 0b01000110,        //  X   42
+        "P": 0b01010111,        //  X C 421
+        "Q": 0b01011000,        //  X C8
+        "R": 0b01001001,        //  X  8  1
+        "S": 0b00110010,        //   0C  2
+        "T": 0b00100011,        //   0   21
+        "U": 0b00110100,        //   0C 4
+        "V": 0b00100101,        //   0  4 1
+        "W": 0b00100110,        //   0  42
+        "X": 0b00110111,        //   0C 421
+        "Y": 0b00111000,        //   0C8
+        "Z": 0b00101001,        //   0 8  1
+        "1": 0b00000001,        //        1
+        "2": 0b00000010,        //       2
+        "3": 0b00010011,        //    C  21
+        "4": 0b00000100,        //      4
+        "5": 0b00010101,        //    C 4 1
+        "6": 0b00010110,        //    C 42
+        "7": 0b00000111,        //      421
+        "8": 0b00001000,        //     8
+        "9": 0b00011001,        //    C8  1
+        "0": 0b00100000,        //   0
+        ".": 0b01101011,        //  X0 8 21
+        ")": 0b01111100,        //  X0C84
+        "*": 0b01001100,        //  X  84
+        "$": 0b01011011,        //  X C8 21
+        "(": 0b00101100,        //   0 84
+        ",": 0b00111011,        //   0C8 21
+        "|": 0b00101010,        //   0 8 2     // Record Mark
+        "!": 0b01001010,        //  X  8 2     // flagged Record Mark
+        "=": 0b00001011,        //     8 21
+        "@": 0b00011100,        //    C84
+        "+": 0b01110000,        //  X0C
+        "-": 0b01000000,        //  X
+        " ": 0b00010000,        //    C        // space
+        "/": 0b00110001,        //   0C   1
+        "^": 0b00111110,        //   0C842     // "special" character
+        "<": 0b10000000,        // <           // EOL
+        "\\":0b00101111,        //   0 8421    // Group Mark
+        "\"":0b01001111         //  X  8421    // flagged Group Mark
+    };
+
+    function decodePT(code) {
+        /* Compute 1627 plotter decode results from a paper-tape character code.
+        Returns [dx, dy, penUp, penDown], where
+            dx is the ±1 motion in the vertical direction,
+            dy is the ±1 motion in the horizontal direction,
+            penUp is 1 if the pen should be raised,
+            penDown is 1 if the pen should be lowered.
+        Any value may also be zero, indicating no action */
+        const bits = ptCode[code];
+        const eol  = (bits & 0b10000000) >> 7;
+        const bitx = (bits & 0b01000000) >> 6;
+        const bit0 = (bits & 0b00100000) >> 5;
+        const bitc = (bits & 0b00010000) >> 4;
+        const bit8 = (bits & 0b00001000) >> 3;
+        const bit4 = (bits & 0b00000100) >> 2;
+        const bit2 = (bits & 0b00000010) >> 1;
+        const bit1 = (bits & 0b00000001);
+
+        const decode1  = bit1 & ~bit2 & ~bit4 & ~bit8;
+        const decode2  = bit2 & ~bit1 & ~bit4;
+        const decode23 = bit2 & ~bit4;
+        const decode4  = bit4 & ~bit1 & ~bit2;
+        const decode45 = bit4 & ~bit2;
+        const decode46 = bit4 & ~bit1;
+        const decode67 = bit4 & bit2;
+        const decode8  = bit8 & ~bit1;
+        const decode9  = bit8 & bit1;
+        const decode0  = bit0;
+
+        const left  = decode1 | decode2 | decode8;
+        const down  = decode23 | decode4;
+        const right = decode45 | decode46;
+        const up    = decode67 | decode8;
+
+        const dx = down - up;
+        const dy = left - right;
+
+        let penUp = decode9;
+        let penDown=decode0;
+        if (dx || dy || (penUp && penDown)) {
+            penUp = penDown = 0;
+        }
+
+        return [dx, dy, penUp, penDown];
+    }
+
+    const body = document.getElementById("DecodeBody");
+    let plotXlate = "const plotXlate = {\n";
+
+    for (let code in ptCode) {
+        const row = document.createElement("tr");
+        const [dx, dy, penUp, penDown] = decodePT(code);
+        plotXlate += `    "${code}": {bits: 0b${ptCode[code].toString(2).padStart(8,0)}, ` +
+                     `dx: ${dx.toString().padStart(2)}, dy: ${dy.toString().padStart(2)}, penUp: ${penUp}, penDown: ${penDown}},\n`;
+
+        let cell = document.createElement("td");
+        cell.textContent = code;
+        row.appendChild(cell);
+
+        cell = document.createElement("td");
+        cell.textContent = dx;
+        row.appendChild(cell);
+
+        cell = document.createElement("td");
+        cell.textContent = dy;
+        row.appendChild(cell);
+
+        cell = document.createElement("td");
+        cell.textContent = penUp;
+        row.appendChild(cell);
+
+        cell = document.createElement("td");
+        cell.textContent = penDown;
+        row.appendChild(cell);
+
+        body.appendChild(row);
+    }
+
+    plotXlate += "};";
+    document.getElementById("JSObject").textContent = plotXlate;
+}, {once: true});
+</script>
+</head>
+
+<body>
+<h2>Build Plotter Decode Table</h2>
+<table border=1 cellspacing=0 cellpadding=2>
+    <thead>
+        <tr><th>PT Code<th>dx<th>dy<th>pen Up<th>pen Down
+    <tbody id=DecodeBody>
+</table>
+<p>JavaScript Object:</p>
+<pre id=JSObject></pre>
+</body>
+</html>

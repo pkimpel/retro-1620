@@ -18,6 +18,7 @@ import {CardReader} from "./CardReader.js";
 import {CardPunch} from "./CardPunch.js";
 import {DiskDrive} from "./DiskDrive.js";
 import {LinePrinter} from "./LinePrinter.js";
+import {Plotter} from "./Plotter.js";
 import {ControlPanel} from "./ControlPanel.js";
 import {SystemConfig} from "./SystemConfig.js";
 import {Typewriter} from "./Typewriter.js";
@@ -104,7 +105,7 @@ let globalLoad = (ev) => {
         window.addEventListener("beforeunload", beforeUnload);
 
         context.processor = new Processor(context);
-        context.devices = {typewriter: new Typewriter(context)};
+        context.devices = {};
         if (config.getNode("Card.hasCard")) {
             context.devices.cardReader = new CardReader(context);
             context.devices.cardPunch = new CardPunch(context);
@@ -118,6 +119,11 @@ let globalLoad = (ev) => {
             context.devices.linePrinter = new LinePrinter(context);
         }
 
+        if (config.getNode("Plotter.hasPlotter")) {
+            context.devices.paperPunch = new Plotter(context);
+        }
+
+        context.devices.typewriter = new Typewriter(context);
         context.controlPanel = new ControlPanel(context);
     }
 

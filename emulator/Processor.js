@@ -1241,7 +1241,7 @@ class Processor {
             this.gateTWPR_SELECT.value = 1;
             break;
         case 2:         // Paper Tape Punch / Plotter
-            this.ioDevice = null;
+            this.ioDevice = this.devices.paperPunch;
             break;
         case 3:         // Paper Tape Reader
             this.ioDevice = null;
@@ -3174,6 +3174,10 @@ class Processor {
                     this.setProcState(procStateE2);     // no E-cycle entry for I/O
                     switch (this.ioSelectNr) {
                     case 1:     // Typewriter
+                        this.ioDevice.initiateWrite();
+                        break;
+                    case 2:     // Paper Tape Punch / Plotter
+                        this.gateWRITE_INTERLOCK.value = 1;
                         this.ioDevice.initiateWrite();
                         break;
                     case 4:     // Card Punch

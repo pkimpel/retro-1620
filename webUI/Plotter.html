@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>1620 Emulator Plotter</title>
+<!--
+/***********************************************************************
+* retro-1620/webUI Plotter.html
+************************************************************************
+* Copyright (c) 2023, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 Model 2 Emulator 1627 plotter window.
+************************************************************************
+* 2023-12-22  P.Kimpel
+*   Original version, from retro-1620 Typewriter.html.
+***********************************************************************/
+-->
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link id=defaultStyleSheet rel=stylesheet type="text/css" href="Common.css">
+<link id=plotterStyleSheet rel=stylesheet type="text/css" href="Plotter.css">
+</head>
+
+<body id=PlotterBody class=deviceBody>
+
+<iframe id=PlotterFrame src="./PlotterFrame.html">
+</iframe>
+
+<div id=ControlsDiv>
+    <img id=IBMLogo src="./resources/IBM-logo-BW.png" title="Actually, it's a CALCOMP">
+    <div id=ModelLogo>1627</div>
+
+    <div id=StepControlsDiv>
+        <div id=StepCaption class=caption>STEP</div>
+        <img id=StepLeftBtn src="./resources/ArrowLeft-16.png" title="Carriage Step Left">
+        <img id=StepRightBtn src="./resources/ArrowRight-16.png" title="Carriage Step Right">
+        <img id=StepUpBtn src="./resources/ArrowUp-16.png" title="Drum Step Up">
+        <img id=StepDownBtn src="./resources/ArrowDown-16.png" title="Drum Step Down">
+    </div>
+
+    <div id=CoordDiv title="Pen location (horizontal, vertical)">
+        (<span id=VCoordSpan>0</span>,<span id=HCoordSpan>0</span>)
+    </div>
+
+    <div id=FastControlsDiv>
+        <div id=FastCaption class=caption>FAST</div>
+        <img id=FastLeftBtn src="./resources/ArrowLeft-16.png" title="Carriage Fast Left">
+        <img id=FastRightBtn src="./resources/ArrowRight-16.png" title="Carriage Fast Right">
+        <img id=FastUpBtn src="./resources/ArrowUp-16.png" title="Drum Fast Up">
+        <img id=FastDownBtn src="./resources/ArrowDown-16.png" title="Drum Fast Down">
+    </div>
+
+    <div id=PenControlsDiv>
+        <div id=PenCaption class=caption>PEN</div>
+        <img id=PenUpBtn src="./resources/ArrowUp-16.png" title="Pen Up">
+        <img id=PenDownBtn src="./resources/ArrowDown-16.png" title="Pen Down">
+        <div id=PenStatusDiv>
+            <span id=PenStatusSpan>UP</span>
+        </div>
+    </div>
+
+    <div id=ButtonDiv>
+        <button id=PrintBtn DISABLED title="Print the plot">PRINT</button>
+        <br>
+        <button id=HomeBtn title="Reposition pen to (0,0)">HOME</button>
+        <br>
+        <button id=ClearBtn title="Erase the plot area">CLEAR</button>
+    </div>
+</div>
+
+</body>
+</html>

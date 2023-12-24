@@ -1,0 +1,368 @@
+  (ID)  **1620-LM-042-PLOT -- FORTRAN II-D PLOTTER ROUTINE
+        *PRINT SYMBOL TABLE
+        *LIST PRINTER
+        * ASSEMBLE RELOCATABLE
+        * STORE RELOADABLE
+        * OUTPUT CARD
+        * NAME PLOT
+
+
+
+
+
+1620-LM-042-PLOT -- FORTRAN II-D PLOTTER ROUTINE                                  PAGE   1
+
+YESFRM 01182R   XYSWCH 01218R   XYRETN 00502R   XYPLOT 01972R   XLSTOR 00701R
+XCROSS 01922R   WRITEX 03004R   TWARXY 01801R   TEMPAD 01745R   SXYMIN 00986R
+STRCON 01070R   RETURN 02776R   PLOTYC 00478R   PLOTYB 00374R   PLOTYA 00350R
+PLOTXC 00338R   PLOTXB 00254R   PENMEM 00829R   OUTPT2 03054R   OUTPT1 02196R
+LWRPEN 01956R   LIFTPN 01958R   INSTR2 02524R   INSTR1 02512R   INCADD 01686R
+FRMFRM 00514R   FRAMX2 01114R   FPYVAL 00433R   FPYMIN 01861R   FPXVAL 00313R
+FPXMIN 01831R   FINPLT 01458R   FINFIN 01290R   ENTRPT 00490R   ENTPLT 01174R
+ENDFRM 01230R   EEQZRO 02452R   CLPLT8 01334R   CKFRM2 00470R   CHRTCT 02903R
+CHART4 02868R   CHART2 02936R   CHART1 02856R   CHART0 02844R    A     02307R
+ ABS   02284R    ADD1  02128R    ADD2  02164R    ADD3  02200R    AGAIN 02536R
+ C     02703R    CKFRM 00446R    COUNT 00761R    CX1   01891R    CY1   01921R
+ D     02734R    DEQA  02404R    DO90  00194R    E     01229R    EEQA  02656R
+ ENTER 01996R    F     02775R    FAC   02492     FDVR  04186     FIVE  01964R
+ FIX   03854     FIX1  01566R    FIX2  01626R    FIX9  01662R    FMFAC 03452
+ FMP   04138     FPD   00217R    FPLH  00513R    FPMAX 00017R    FPMIN 00361R
+ FSB   04066     GOOP  02800R    NCHAR 01414R    ONE   01960R    PLOT  00006R
+ Q     02655R    R     02403R    RCM   03064R    SEVEN 01966R    SS    00100R
+ TABLE 01940R    TESTA 02212R    TESTC 02140R    TESTD 02176R    TESTE 02704R
+ TEST1 02740R    TEST9 02632R    THREE 01962R    TMIN8 02248R    TOFAC 03408
+ TT    02739R    XN    02247R    XORG  00534R    XYORG 00962R    XZ    02127R
+ YN    02295R    YORG  00830R    YZ    02163R    ZRONE 01969R
+
+1620-LM-042-PLOT -- FORTRAN II-D PLOTTER ROUTINE                                  PAGE   1
+
+00010*         1620-LM-042-PLOT
+00020*
+00030******    PROGRAM 1620-FO-042  POINT-TO-POINT PLOT
+00040****  LAMONT VERSION WITH CALL PLOT(8) AND CALL PLOT(98,X,Y)
+00050*         A CONTROL DIGIT OF 8 WILL REINITIALISE THE CO-ORDINATE
+00060*         SYSTEM TO THE PRESENT POSITION OF THE PEN
+00070**    A CONTROL FIELD OF 98 WILL LIFT THE PEN, MOVE TO
+00080**    CO-ORDINATES X, Y, AND LEAVE THE PEN IN THE UP POSITION.
+00090**    THIS CODE IS USEFUL PRIOR TO CALLING CHAR.
+00100 SS     DS   ,*+101                                                         00100 00000
+00110        DC   6,987898,5-SS                                                  0009N 00006
+00120        DAC  6,PLOT  ,7-SS                                                  0009L 00012
+00130        DVLC 22-SS,5,RCM,2,08,2,04,5,PLOT-6,5,0,30,0                        0007Q 00049
+00140        DSC  17,0,0                                                         00000 00017
+00150        DORG SS-100                                                         00000
+00160        DS   5                                                              00004 00005
+00170 PLOT   SF   PLOT-1,,0                                                      00006 L2 00005 00000
+00180 FPMAX  DS   5,*                                                            00017 00005
+00190        AM   PLOT-1,05,01011,        BRING IN CONTROL CHARACTER ADDRESS     00018 J1 00005 000-N
+00200        C    ZRONE,PLOT-1,0111                                              00030 KM 01969 0000N
+00210        BV   *+12,,0                                                        00042 M6 00054 01400
+00220        BE   XORG,,0,                 GO TO XFRAME ROUTINE                  00054 M6 00534 01200
+00230        CM   PLOT-1,07,0610                                                 00066 J4 0000N 000-7
+00240        BE   FINPLT,,0,               GO TO FINISH PLOT ROUTINE.            00078 M6 01458 01200
+00250        CM   PLOT-1,08,0610, COMPARE AND BRANCH IF PLOT8 REQUIRED.          00090 J4 0000N 000-8
+00260        BE   CLPLT8                                                         00102 M6 01334 01200
+00270        TD   XCROSS+16,PLOT-1,0111,  ADJUST PEN CONTROL TO PROPER MODE      00114 KN 01938 0000N
+00280        CM   PLOT-1,98,0610                                                 00126 J4 0000N 000R8
+00290        BE   NCHAR,,0                                                       00138 M6 01414 01200
+00300        CM   PLOT-1,90,0610                                                 00150 J4 0000N 000R0
+00310        BE   *+32,,0                                                        00162 M6 00194 01200
+00320        BL   *+32,,0                                                        00174 M7 00206 01300
+00330        B    FINFIN,,0                                                      00186 M9 01290 00000
+00340        DORG *-3                                                            00194
+00350 DO90   TFM  WRITEX+1,41,010                                                00194 J6 03005 000M1
+00360        CF   PLOT-1,,0                                                      00206 L3 00005 00000
+00370 FPD    DS   5,*                                                            00217 00005
+00380        BTM  INCADD,FPXVAL,017,      BRING IN XVALUE ADDRESS                00218 JP 01686 -0313
+00390        BTM  INCADD,FPYVAL,017,      BRING IN YVALUE ADDRESS                00230 JP 01686 -0433
+00400        BT   TOFAC, FPXVAL,1,         XVALUE TO FAC                         00242 2P 03408 00313
+00410 PLOTXB BTM  FSB,FPXMIN,17,          XVALUE - XMIN TO FAC                   00254 1P 04066 -1831
+00420        BTM  FMP,CX1,17,              CX1(VALUE - XMIN) TO FAC              00266 1P 04138 -1891
+00430        BTM  FIX1,*+12,017                                                  00278 JP 01566 -0290
+00440        TFM  CKFRM2+6,PLOTXC,017                                            00290 JO 00476 -0338
+00450        SF   FAC-4,,,                 FIX AT 5 DIGETS                       00302 32 02488 00000
+00460 FPXVAL DS   5,*                                                            00313 00005
+00470        CM   FAC,0,10,                IS PLOTXVALUE LT ZERO0                00314 14 02492 000-0
+00480        BL   CKFRM,,0,                IF SO, CHECK IF PART OF FRAME.        00326 M7 00446 01300
+00490 PLOTXC TF   XN,FAC,0,                STORE PLOTXVALUE IN XN                00338 K6 02247 02492
+00500 PLOTYA NOP  ENTRPT,,0,               GO TO PLOT IF IN XFRAME ROUTINE.      00350 M1 00490 00000
+00510 FPMIN  DS   5,*                                                            00361 00005
+00520        BT   TOFAC, FPYVAL,1,         YVALUE TO FAC                         00362 2P 03408 00433
+00530 PLOTYB BTM  FSB,FPYMIN,17,          YVALUE - YMIN TO FAC                   00374 1P 04066 -1861
+00540        BTM  FMP,CY1,17,              CY1(YVALUE -YMIN, TO FAC              00386 1P 04138 -1921
+00550        BTM  FIX1,*+12,017                                                  00398 JP 01566 -0410
+00560        TFM  CKFRM2+6,PLOTYC,017                                            00410 JO 00476 -0478
+00570        SF   FAC-4,,,                 FI XAT 5 DIGETS                       00422 32 02488 00000
+00580 FPYVAL DS   5,*                                                            00433 00005
+00590        BNF  PLOTYC,FAC,0                                                   00434 M4 00478 02492
+00600 CKFRM  CM   XYRETN+1,49,010                                                00446 J4 00503 000M9
+00610        BE   YESFRM,,0,              FRAME IS NOW COMPLETE                  00458 M6 01182 01200
+00620 CKFRM2 B    PLOTXC,,0,                OTHERWISE PLOT POINT IN ERROR.       00470 M9 00338 00000
+00630        DORG *-3                                                            00478
+00640 PLOTYC TF   YN,FAC,0,                STORE PLOTYVALUE IN YN                00478 K6 02295 02492
+00650 ENTRPT BTM  XYPLOT,0,010,            GO TO PLOT ALGORITHM                  00490 J7 01972 000-0
+00660 XYRETN NOP  FRAMX2,,0,               IF FRAME RTN, RETURN TO PROPER SPOT   00502 M1 01114 00000
+00670 FPLH   DS   5,*                                                            00513 00005
+00680 FRMFRM AM   PLOT-1,02,010,          RETURN TO PROGRAM                      00514 J1 00005 000-2
+00690        B    PLOT-1,,06,              FROM THIS SUBPROGRAM                  00526 M9 0000N 00000
+00700        DORG *-3                                                            00534
+00710 XORG   TFM  ENTPLT+6,PLOTXB,017,    INITIALIZE                             00534 JO 01180 -0254
+00720        TFM  SXYMIN+11,FPXMIN,017                                           00546 JO 00997 -1831
+00730        TFM  STRCON+11,CX1,017,        ROUTINE                              00558 JO 01081 -1891
+00740        TDM  XCROSS+16,0,0,          SET PEN DOWN FOR FRAME                 00570 J5 01938 00000
+00750        TFM  PLOTYA+1,49,010,           FOR                                 00582 J6 00351 000M9
+00760        TFM  WRITEX+1,41,010                                                00594 J6 03005 000M1
+00770        WN   LWRPEN,200,0,           LOWER PEN FOR FRAME                    00606 L8 01956 00200
+00780        CM   PLOT-1,201,069                                                 00618 J4 0000N 00K01
+00790        BNE  *+24,,0                                                        00630 M7 00654 01200
+00800        TFM  XYPLOT+1,42,010                                                00642 J6 01973 000M2
+00810        CM   PLOT-1,101,069                                                 00654 J4 0000N 00J01
+00820        BNE  *+24,,0                                                        00666 M7 00690 01200
+00830        TDM  CHART0+1,1,0                                                   00678 J5 02845 00001
+00840        CF   PLOT-1,,0                                                      00690 L3 00005 00000
+00850 XLSTOR DS   5,*                                                            00701 00005
+00860        AM   PLOT-1,30,010                                                  00702 J1 00005 000L0
+00870        BTM  INCADD,TEMPAD,017,      GET Y HIGH ADDRESS                     00714 JP 01686 -1745
+00880        BT   TOFAC,TEMPAD,1                                                 00726 2P 03408 01745
+00890        BTM  FIX1,*+12,017                                                  00738 JP 01566 -0750
+00900        SF   FAC-4                                                          00750 32 02488 00000
+00910 COUNT  DC   5,0,*                                                          00761 00005
+00920        BTM  FMFAC,CHRTCT,17                                                00762 1P 03452 -2903
+00930        SM   PLOT-1,35,010                                                  00774 J2 00005 000L5
+00940        TFM  CHART4+6,ONE,017                                               00786 JO 02874 -1960
+00950        TFM  CHART2+6,FIVE,017                                              00798 JO 02942 -1964
+00960        TFM  XYRETN+1,49,010                                                00810 J6 00503 000M9
+00970        B    XYORG,,0                                                       00822 M9 00962 00000
+00980 PENMEM DS   ,*-4                                                           00829 00000
+00990        DORG *-3                                                            00830
+01000 YORG   TFM  ENTPLT+6,PLOTYB,017                                            00830 JO 01180 -0374
+01010        TFM  SXYMIN+11,FPYMIN,017                                           00842 JO 00997 -1861
+01020        TFM  XYSWCH+1,41,010                                                00854 J6 01219 000M1
+01030        TFM  STRCON+11,CY1,017                                              00866 JO 01081 -1921
+01040        TFM  FRAMX2+1,41,010                                                00878 J6 01115 000M1
+01050        TF   CHRTCT,XLSTOR,01                                               00890 KO 02903 00701
+01060        TFM  CHART4+6,THREE,017                                             00902 JO 02874 -1962
+01070        TFM  CHART2+6,SEVEN,017                                             00914 JO 02942 -1966
+01080        TFM  XN,0,07                                                        00926 J6 02247 -0000
+01090        TFM  YN,0,07                                                        00938 J6 02295 -0000
+01100        BTM  XYPLOT,0,010,            GO TO INITIALIZE PLOTTER FOR FRAME    00950 J7 01972 000-0
+01110 XYORG  BTM  INCADD,FPMIN,017,       BRING IN MINIMUM ADDRESS               00962 JP 01686 -0361
+01120        BT   TOFAC,FPMIN,1                                                  00974 2P 03408 00361
+01130 SXYMIN BTM  FMFAC,FPXMIN,17                                                00986 1P 03452 -1831
+01140        BTM  INCADD,FPMAX,017,       BRING IN MAXIMUM ADDRESS               00998 JP 01686 -0017
+01150        BTM  INCADD,FPLH,017,        BRING IN LENGTH (HEIGHT) ADDRESS       01010 JP 01686 -0513
+01160        BTM  INCADD,FPD,017,         BRING IN FRAME INCREMENT ADDRESS       01022 JP 01686 -0217
+01170        BT   TOFAC, FPMAX,1,         CALCULATE                              01034 2P 03408 00017
+01180        BT   FSB, FPMIN,1,            X (Y) VALUE                           01046 2P 04066 00361
+01190        BT   FDVR, FPLH,1,             SCALING                              01058 2P 04186 00513
+01200 STRCON BTM  FMFAC,CX1,17,              FACTOR CX1 (CY1)                    01070 1P 03452 -1891
+01210        BT   TOFAC, FPMAX,1                                                 01082 2P 03408 00017
+01220        BTM  FMFAC,TWARXY,17,         SET UP MAXIMUM FOR XFRAME PLOT        01094 1P 03452 -1801
+01230        B    ENTPLT,,0,              GO TO PLOT FRAME                       01106 M9 01174 00000
+01240        DORG *-3                                                            01114
+01250 FRAMX2 TF   XLSTOR,XN,01,            SAVE XMAX FOR INITIALIZING THE        01114 KO 00701 02247
+01260        TFM  FRAMX2+1,41,010,         NEXT PLOT                             01126 J6 01115 000M1
+01270        BTM  TOFAC,TWARXY,17,        SET UP                                 01138 1P 03408 -1801
+01280        BT   FSB,FPD,1,               GRID                                  01150 2P 04066 00217
+01290        BTM  FMFAC,TWARXY,17                                                01162 1P 03452 -1801
+01300 ENTPLT B    PLOTXB,,0,              GO TO  PLOT GRID POINTS                01174 M9 00254 00000
+01310        DORG *-3                                                            01182
+01320 YESFRM CM   CHART1+1,41,010                                                01182 J4 02857 000M1
+01330        BE   XYSWCH,,0                                                      01194 M6 01218 01200
+01340        BTM  XYPLOT,5,010                                                   01206 J7 01972 000-5
+01350 XYSWCH B    YORG,,0                                                        01218 M9 00830 00000
+01360 E      DC   5,0,*                                                          01229 00005
+01370 ENDFRM TFM  PLOTYA+1,41,010,        NOP PLOTYA                             01230 J6 00351 000M1
+01380        TFM  XYRETN+1,41,010,         NOP XYRETN                            01242 J6 00503 000M1
+01390        TFM  XYSWCH+1,49,010                                                01254 J6 01219 000M9
+01400        TDM  CHART0+1,9,0                                                   01266 J5 02845 00009
+01410        TFM  XYPLOT+1,24,010                                                01278 J6 01973 000K4
+01420 FINFIN WN   LIFTPN,200,0,           LIFT PEN                               01290 L8 01958 00200
+01430        CF   PLOT-1,,0                                                      01302 L3 00005 00000
+01440        TDM  PENMEM,9,0                                                     01314 J5 00829 00009
+01450        B    FRMFRM,,0,               GO TO EXIT                            01326 M9 00514 00000
+01460        DORG *-3                                                            01334
+01470 CLPLT8 TFM  XN,0,7                                                         01334 J6 02247 -0000
+01480        TFM  YN,0,7                                                         01346 J6 02295 -0000
+01490        TFM  XZ,0,7                                                         01358 J6 02127 -0000
+01500        TFM  YZ,0,7                                                         01370 J6 02163 -0000
+01510        TFM  WRITEX+1,41,010                                                01382 J6 03005 000M1
+01520        TFM  FRAMX2+1,26,010                                                01394 J6 01115 000K6
+01530        B7   FINFIN,,0                                                      01406 M9 01290 00000
+01540 NCHAR  WN   LIFTPN,200,0                                                   01414 L8 01958 00200
+01550        TDM  PENMEM,9,0                                                     01426 J5 00829 00009
+01560        TDM  GOOP+1,9,0                                                     01438 J5 02801 00009
+01570        B7   DO90,,0                                                        01450 M9 00194 00000
+01580 FINPLT AM   XLSTOR,250,09,          ADJUST XMAX FOR INITIALIZING           01458 J1 00701 00K50
+01590        TF   XN,XLSTOR,01,            NEXT PLOT                             01470 KO 02247 00701
+01600        TFM  YN,0,07,                 SET YN = ZERO                         01482 J6 02295 -0000
+01610        WN   LIFTPN,200,0,            LIFT PEN                              01494 L8 01958 00200
+01620        TFM  WRITEX+1,41,010                                                01506 J6 03005 000M1
+01630        BTM  XYPLOT,0,010,            GO TO  SET UP NEXT PLOT IF ANY        01518 J7 01972 000-0
+01640        TFM  XZ,0,07,                SET XZ = ZERO                          01530 J6 02127 -0000
+01650        TFM  FRAMX2+1,26,010,         SET FRAMX2 TO TRANSFER                01542 J6 01115 000K6
+01660        B    FINFIN,,0,               GO TO EXIT                            01554 M9 01290 00000
+01670 FIX1   AM   FAC,2,10                                                       01566 11 02492 000-2
+01680        AM   FAC-2,5,10                                                     01578 11 02490 000-5
+01690        BNV  FIX9,,0                                                        01590 M7 01662 01400
+01700        TFM  FIX2+11,FAC-2,07                                               01602 J6 01637 -2490
+01710        SM   FIX2+11,1,010                                                  01614 J2 01637 000-1
+01720 FIX2   BNF  FIX2-12,,0                                                     01626 M4 01614 00000
+01730        TDM  FIX2+11,1,0611                                                 01638 J5 0163P 0000J
+01740        AM   FAC,1,10                                                       01650 11 02492 000-1
+01750 FIX9   BTM  FIX,0,10                                                       01662 17 03854 000-0
+01760        B    FIX1-1,,06                                                     01674 M9 0156N 00000
+01770 INCADD AM   PLOT-1,05,010                                                  01686 J1 00005 000-5
+01780        BNF  *+24,PLOT-1,0111                                               01698 MM 01722 0000N
+01790        TDM  TEMPAD+1,2,0                                                   01710 J5 01746 00002
+01800        TF   *+35,PLOT-1,0111                                               01722 KO 01757 0000N
+01810        CF   *+23,,0                                                        01734 L3 01757 00000
+01820 TEMPAD DS   ,*                                                             01745 00000
+01830        TFM  INCADD-1,,06                                                   01746 J6 0168N 00000
+01840        TDM  *-12,1,0                                                       01758 J5 01746 00001
+01850        BB                                                                  01770 42 00000 00000
+01860        DORG *-9                                                            01772
+01870 TWARXY DS   30                                                             01801 00030
+01880 FPXMIN DS   30                                                             01831 00030
+01890 FPYMIN DS   30                                                             01861 00030
+01900 CX1    DS   30                                                             01891 00030
+01910 CY1    DS   30                                                             01921 00030
+01920 XCROSS DSC  18,11555511337777339@                                          01922 00018
+01930 TABLE  DSC  16,1232345456767818                                            01940 00016
+01940 LWRPEN DSC  2,0@                                                           01956 00002
+01950 LIFTPN DSC  2,9@                                                           01958 00002
+01960 ONE    DSC  2,1@                                                           01960 00002
+01970 THREE  DSC  2,3@                                                           01962 00002
+01980 FIVE   DSC  2,5@                                                           01964 00002
+01990 SEVEN  DSC  2,7@                                                           01966 00002
+02000 ZRONE  DC   2,01                                                           01969 00002
+02010        DS   2                                                              01971 00002
+02020 XYPLOT C    XZ,XN,01                                                       01972 KM 02127 02247
+02030        BE   TEST1,,0                                                       01984 M6 02740 01200
+02040 ENTER  TF   A,XN,01                                                        01996 KO 02307 02247
+02050        S    A,XZ,01                                                        02008 KK 02307 02127
+02060        TF   R,YN,01                                                        02020 KO 02403 02295
+02070        S    R,YZ,01                                                        02032 KK 02403 02163
+02080        TFM  Q,0,07                                                         02044 J6 02655 -0000
+02090        TF   C,A,01                                                         02056 KO 02703 02307
+02100        A    C,R,01                                                         02068 KJ 02703 02403
+02110        TF   D,R,01                                                         02080 KO 02734 02403
+02120        S    D,A,01                                                         02092 KK 02734 02307
+02130        BNF  ADD1,R,01                                                      02104 MM 02128 02403
+02140        B    TESTC,,0                                                       02116 M9 02140 00000
+02150 XZ     DC   5,0,*                                                          02127 00005
+02160 ADD1   AM   Q,2,07                                                         02128 J1 02655 -0002
+02170 TESTC  BNF  ADD2,C,01                                                      02140 MM 02164 02703
+02180        B    TESTD,,0                                                       02152 M9 02176 00000
+02190 YZ     DC   5,0,*                                                          02163 00005
+02200 ADD2   AM   Q,2,07                                                         02164 J1 02655 -0002
+02210 TESTD  BNF  ADD3,D,01                                                      02176 MM 02200 02734
+02220        B    TESTA,,0                                                       02188 M9 02212 00000
+02230 OUTPT1 DSC  2,1@,*-3                                                       02196 00002
+02240 ADD3   AM   Q,2,07                                                         02200 J1 02655 -0002
+02250 TESTA  BNF  TMIN8,A,01                                                     02212 MM 02248 02307
+02260        AM   Q,10,07                                                        02224 J1 02655 -0010
+02270        B    ABS,,0                                                         02236 M9 02284 00000
+02280 XN     DC   5,0,*                                                          02247 00005
+02290 TMIN8  TFM  TT,8,07                                                        02248 J6 02739 -0008
+02300        S    TT,Q,01                                                        02260 KK 02739 02655
+02310        TF   Q,TT,01                                                        02272 KO 02655 02739
+02320 ABS    CF   A,,0                                                           02284 L3 02307 00000
+02330 YN     DC   5,0,*                                                          02295 00005
+02340        CF   R,,0                                                           02296 L3 02403 00000
+02350 A      DC   5,0,*                                                          02307 00005
+02360        TF   F,A,01                                                         02308 KO 02775 02307
+02370        A    F,R,01                                                         02320 KJ 02775 02403
+02380        SM   F,1,07                                                         02332 J2 02775 -0001
+02390        TF   C,R,01                                                         02344 KO 02703 02403
+02400        S    C,A,01                                                         02356 KK 02703 02307
+02410        BNF  DEQA,C,01                                                      02368 MM 02404 02703
+02420        TF   D,R,01                                                         02380 KO 02734 02403
+02430        B    EEQZRO,,0                                                      02392 M9 02452 00000
+02440 R      DC   5,0,*                                                          02403 00005
+02450 DEQA   TF   E,C,01,                 E USED AS TEMPORARY STORAGE            02404 KO 01229 02703
+02460        TFM  C,0,07                                                         02416 J6 02703 -0000
+02470        S    C,E,01                                                         02428 KK 02703 01229
+02480        TF   D,A,01                                                         02440 KO 02734 02307
+02490 EEQZRO TFM  E,0,07                                                         02452 J6 01229 -0000
+02500        TFM  INSTR1+11,TABLE-1,017                                          02464 JO 02523 -1939
+02510        TFM  INSTR2+11,TABLE-2,017                                          02476 JO 02535 -1938
+02520        A    INSTR1+11,Q,01                                                 02488 KJ 02523 02655
+02530        A    INSTR2+11,Q,01                                                 02500 KJ 02535 02655
+02540 INSTR1 TD   OUTPT1,,0                                                      02512 K5 02196 00000
+02550 INSTR2 TD   OUTPT2,,0                                                      02524 K5 03054 00000
+02560 AGAIN  TF   A,C,01                                                         02536 KO 02307 02703
+02570        A    A,E,01                                                         02548 KJ 02307 01229
+02580        A    E,D,01                                                         02560 KJ 01229 02734
+02590        TF   R,A,01                                                         02572 KO 02403 02307
+02600        A    R,E,01                                                         02584 KJ 02403 01229
+02610        BNL  EEQA,,0                                                        02596 M6 02656 01300
+02620        SM   F,1,010                                                        02608 J2 02775 000-1
+02630        WN   OUTPT2,200,0                                                   02620 L8 03054 00200
+02640 TEST9  BNL  AGAIN,,0                                                       02632 M6 02536 01300
+02650        B    TESTE,,0                                                       02644 M9 02704 00000
+02660 Q      DC   5,0,*                                                          02655 00005
+02670 EEQA   TF   E,A,01                                                         02656 KO 01229 02307
+02680        SM   F,2,010                                                        02668 J2 02775 000-2
+02690        WN   OUTPT1,200,0                                                   02680 L8 02196 00200
+02700        B    TEST9,,0                                                       02692 M9 02632 00000
+02710 C      DC   5,0,*                                                          02703 00005
+02720 TESTE  CM   E,0,07                                                         02704 J4 01229 -0000
+02730        BE   RETURN,,0                                                      02716 M6 02776 01200
+02740        H    ,,,                     ERROR HALT                             02728 48 00000 00000
+02750 D      DC   5,0,*-5                                                        02734 00005
+02760 TT     DC   5,0,*                                                          02739 00005
+02770 TEST1  C    YZ,YN,01                                                       02740 KM 02163 02295
+02780        BE   RETURN,,0                                                      02752 M6 02776 01200
+02790        B    ENTER,,0                                                       02764 M9 01996 00000
+02800 F      DC   5,0,*                                                          02775 00005
+02810 RETURN TF   XZ,XN,01                                                       02776 KO 02127 02247
+02820        TF   YZ,YN,01                                                       02788 KO 02163 02295
+02830 GOOP   NOP  WRITEX+12,,0                                                   02800 M1 03016 00000
+02840        BD   CHART0-12,PENMEM,01                                            02812 ML 02832 00829
+02850        B    CHART0,,0                                                      02824 M9 02844 00000
+02860        DORG *-3                                                            02832
+02870        WN   LWRPEN,200,0                                                   02832 L8 01956 00200
+02880 CHART0 B    WRITEX-12,,0                                                   02844 M9 02992 00000
+02890 CHART1 NOP  CHART2,,0                                                      02856 M1 02936 00000
+02900 CHART4 WN   ONE,200,0                                                      02868 L8 01960 00200
+02910        AM   COUNT,1,07                                                     02880 J1 00761 -0001
+02920        CM   COUNT,0,07                                                     02892 J4 00761 -0000
+02930 CHRTCT DS   5,*                                                            02903 00005
+02940        BNE  CHART4,,0                                                      02904 M7 02868 01200
+02950        TDM  CHART1+1,9,0                                                   02916 J5 02857 00009
+02960        B    WRITEX+24,,0                                                   02928 M9 03028 00000
+02970        DORG *-3                                                            02936
+02980 CHART2 WN   FIVE,200,0                                                     02936 L8 01964 00200
+02990        SM   COUNT,1,010                                                    02948 J2 00761 000-1
+03000        BNZ  CHART2,,0                                                      02960 M7 02936 01200
+03010        TDM  CHART1+1,1,0                                                   02972 J5 02857 00001
+03020        B    WRITEX+24,,0                                                   02984 M9 03028 00000
+03030        DORG *-3                                                            02992
+03040        TD   PENMEM,XCROSS+16,01                                            02992 KN 00829 01938
+03050 WRITEX WN   XCROSS,200,0                                                   03004 L8 01922 00200
+03060        TFM  WRITEX+1,38,010                                                03016 J6 03005 000L8
+03070        TDM  GOOP+1,1,0                                                     03028 J5 02801 00001
+03080        BV   *+12,,0                                                        03040 M6 03052 01400
+03090        BB                                                                  03052 42 00000 00000
+03100 OUTPT2 DSC  2,2@,*-9                                                       03054 00002
+03110 FAC    DS   ,2492                                                          02492 00000
+03120 FIX    DS   ,3854                                                          03854 00000
+03130 FMFAC  DS   ,3452                                                          03452 00000
+03140 FSB    DS   ,4066                                                          04066 00000
+03150 FMP    DS   ,4138                                                          04138 00000
+03160 FDVR   DS   ,4186                                                          04186 00000
+03170 TOFAC  DS   ,3408                                                          03408 00000
+03180 RCM    NOP                                                                 03064 41 00000 00000
+03190        DC   1,@,RCM                                                        03064 00001
+03200        DEND                                                                00000
+
+03076
+      CORE POSITIONS REQUIRED
+ PLUS RELOCATION INCREMENT
+00320
+      STATEMENTS PROCESSED
+
+
+
+

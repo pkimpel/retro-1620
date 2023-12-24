@@ -1,0 +1,73 @@
+3400032007013600032007024902402511963611300102 COLD START CARD - 1620 MONITOR I
+||JOB                        PLOT DEMO 1
+||FORX52  |
+*LIST PRINTER
+C-----------------------------------------------------------------------
+C PLOT DEMO 1
+C PROGRAM TO DEMONSTRATE USE OF THE PLOT SUBROUTINE.
+C
+C 2023-12-24  P.KIMPEL
+C   ORIGINAL VERSION.
+C-----------------------------------------------------------------------
+C
+C A SIMPLE LINEAR PLOT
+      XMIN = 0.0
+      XMAX = 100.0
+      XL = 8.0
+      XD = 10.0
+      YMIN = 0.0
+      YMAX = 50.0
+      YL = 6.0
+      YD = 10.0
+      CALL PLOT(1, XMIN, XMAX, XL, XD, YMIN, YMAX, YL, YD)
+      CALL PLOT(99)
+      DO 10 I=10,100,5
+        X = I
+        Y = X/2.0
+        CALL PLOT(9, X, Y)
+   10 CONTINUE
+      CALL PLOT(7)
+C
+C THE CLASSIC SIN WAVE
+      PI = 3.1415926
+      RADS = PI/180.0
+      CALL PLOT(1, 0.0, 2.0*PI, 8.0, PI/4.0, -1.0, 1.0, 6.0, 0.1)
+      CALL PLOT(99)
+      DO 20 I=1,360,1
+        DEG = I
+        X = DEG*RADS
+        Y = SIN(X)
+        CALL PLOT(90, X, Y)
+   20 CONTINUE
+      CALL PLOT(7)
+C
+C NESTED BOXES FROM PLOT POC 6
+      XMAX = 700.0
+      XMIN = 0.0
+      YMAX = 700.0
+      YMIN = 0.0
+      CALL PLOT (201, XMIN, XMAX, 7.0, 1.0, YMIN, YMAX, 7.0, 1.0)
+   30 CONTINUE
+      CALL PLOT(99)
+      CALL PLOT(90, XMIN, YMIN)
+      CALL PLOT(90, XMAX, YMIN)
+      CALL PLOT(90, XMAX, YMAX)
+      CALL PLOT(90, XMIN, YMAX)
+      CALL PLOT(90, XMIN, YMIN)
+      XMIN = XMIN + 50.0
+      XMAX = XMAX - 50.0
+      YMIN = YMIN + 50.0
+      YMAX = YMAX - 50.0
+      IF (XMAX - XMIN) 35, 35, 30
+   35 CONTINUE
+      CALL PLOT(99)
+      CALL PLOT(90, XMIN-16.0, YMIN)
+      CALL PLOT(90, XMAX+16.0, YMIN)
+      CALL PLOT(99)
+      CALL PLOT(90, XMIN, YMIN-16.0)
+      CALL PLOT(90, XMIN, YMAX+16.0)
+      CALL PLOT(7)
+C
+      CALL EXIT
+      END
+||||              END OF JOB

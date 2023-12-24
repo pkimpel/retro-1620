@@ -73,6 +73,10 @@ class SystemConfig {
             carriageControl: {formLength: 0, channelSpecs: {"1": 0b111111111111}}
         },
 
+        Plotter: {
+            hasPlotter: 0
+        },
+
         Disk: {
             hasDisk: 0,
             module: [
@@ -501,6 +505,9 @@ class SystemConfig {
         this.$$("CarriageControlText").textContent = JSON.stringify(cd.Printer.carriageControl).replace(/,/g, ", ");
         this.$$("CarriageControlText").style.display = (cd.Printer.hasPrinter ? "inline" : "none");
 
+        // Plotter
+        this.setListValue("PlotterModel", cd.Plotter.hasPlotter);
+
         // Disk
         for (let x=0; x<4; ++x) {
             this.$$(`Disk${x}Exists`).checked = cd.Disk.module[x].exists;
@@ -623,6 +630,10 @@ class SystemConfig {
         e = this.$$("PrinterColumns");
         x = parseInt(e.options[e.selectedIndex].value, 10);
         cd.Printer.columns = (isNaN(x) ? 120 : x);
+
+        // Plotter
+        e = this.$$("PlotterModel");
+        cd.Plotter.hasPlotter = (e.selectedIndex > 0 ? 1 : 0);
 
         // Disk
         cd.Disk.hasDisk = (this.$$("Disk0Exists").checked ? 1 : 0);
