@@ -1,0 +1,302 @@
+  (ID)  **1620-LM-042-POINT -- FORTRAN II-D PLOTTER POINT ROUTINE
+        *PRINT SYMBOL TABLE
+        *LIST PRINTER
+        * ERROR STOP
+        * ASSEMBLE RELOCATABLE
+        * STORE RELOADABLE
+        * NAME POINT
+        *OUTPUT CARD
+
+
+
+
+1620-LM-042-POINT -- FORTRAN II-D PLOTTER POINT ROUTINE                           PAGE   1
+
+STYLE2 00196R   COUNT1 00089R   BIGGER 00522R    A     01521R    B     01524R
+ BTM   00198R    C     01527R    CF    00054R    COUNT 00473R    CT    00474R
+ D     01530R    DAVID 00246R    DN    01571R    DOT   00065R    E     01533R
+ EC    01575R    EIGHT 01350R    END   01759R    END1  01573R    ER1   00706R
+ ER2   00750R    ER3   00794R    ER4   00838R    E1    01601R    E2    01631R
+ E3    01661R    E4    01691R    F     01536R    FAC   02492     FAD   04090
+ FDV   04162     FIVE  01165R    FIX   03854     FOUR  01740R    FOURQ 01090R
+ G     01539R    H     01542R    HALF  01750R    I     01545R    J     01549R
+ K     01553R    L     01557R    LINK  00005R    LOOP  00510R    N     00528R
+ NINE  01415R    NODOT 00414R    ONE   00935R    OUT   00698R    P     01561R
+ PLUS  00885R    POINT 00006R    Q     01563R    R     01565R    ROUND 00486R
+ R1    01751R    R2    01571R    S     00100R    SEVEN 01285R    SF    00078R
+ SIX   01220R    SIZE  01730R    SKIP  00582R    STYLE 00198R    T     01567R
+ TEN   01470R    THREE 01045R    TIMES 00017R    TOFAC 03408     TWO   00980R
+ UP    01569R    X     00509R
+
+1620-LM-042-POINT -- FORTRAN II-D PLOTTER POINT ROUTINE                           PAGE   1
+
+00010*  SUBROUTINE POINT
+00020 S      DS   ,*+101,STANDARD FORTRAN SUBPROGRAMME HEADING                   00100 00000
+00030        DC   6,987898,5-S                                                   0009N 00006
+00040        DAC  6,POINT ,7-S                                                   0009L 00012
+00050        DVLC 22-S,5,END-1,2,08,2,04,5,POINT-6,5,0,30,0                      0007Q 00049
+00060        DSC  17,0,0                                                         00000 00017
+00070        DORG S-100                                                          00000
+00080        DS   5                                                              00004 00005
+00090 POINT  SF   LINK,,,BEGIN TRANSFER OF ARGUMENTS                             00006 L2 00005 00000
+00100        SM   LINK,5,10                                                      00018 J2 00005 000-5
+00110        TF   STYLE,LINK,11                                                  00030 KO 00198 0000N
+00120        SM   LINK,5,10                                                      00042 J2 00005 000-5
+00130 CF     CF   LINK                                                           00054 L3 00005 00000
+00140        TF   *+35,-LINK                                                     00066 KO 00101 0000N
+00150 SF     SF   LINK                                                           00078 L2 00005 00000
+00160        BTM  TOFAC                                                          00090 17 03408 -0000
+00170        SM   LINK,5,10                                                      00102 J2 00005 000-5
+00180        TF   TIMES,LINK,11                                                  00114 KO 00017 0000N
+00190        SM   LINK,5,10                                                      00126 J2 00005 000-5
+00200        TF   DOT,LINK,11                                                    00138 KO 00065 0000N
+00210        SM   LINK,1,10,CALCULATE RETURN ADDRESS                             00150 J2 00005 000-1
+00220        CF   LINK                                                           00162 L3 00005 00000
+00230        BTM  FDV,FOUR,7,SCALE AND FIX SIZE                                  00174 1P 04162 -1740
+00240        BTM  FAD,HALF,7                                                     00186 1P 04090 -1750
+00250 BTM    BTM  FIX,FAC,7                                                      00198 17 03854 -2492
+00260        TF   SIZE,FAC                                                       00210 K6 01730 02492
+00270        SF   STYLE-1,,,SPLIT STYLE IN TWO                                   00222 L2 00197 00000
+             SF   STYLE-3                                                        00234 L2 00195 00000
+00280 DAVID  CM   STYLE,10,10,EXAMINE ARGUMENTS FOR ERRORS                       00246 J4 00198 000J0
+00290        BP   ER1                                                            00258 M6 00706 01100
+00300        CM   STYLE,1,10                                                     00270 J4 00198 000-1
+00310        BN   ER1                                                            00282 M7 00706 01300
+00320        CM   SIZE,30,10                                                     00294 J4 01730 000L0
+00330        BP   ER2                                                            00306 M6 00750 01100
+00340        CM   SIZE,1,10                                                      00318 J4 01730 000-1
+00350        BN   ER3                                                            00330 M7 00794 01300
+00360        CM   TIMES,5,10                                                     00342 J4 00017 000-5
+00370        BP   ER4                                                            00354 M6 00838 01100
+00380        CM   TIMES,1,10                                                     00366 J4 00017 000-1
+00390        BN   ER4                                                            00378 M7 00838 01300
+00400        BD   NODOT,DOT,,EXAMINE DOT AND BRANCH IF NOT REQUIRED              00390 ML 00414 00065
+00410        WN   R1,200,,PLOT DOT                                               00402 L8 01751 00200
+00420 NODOT  WN   R2,200,,PEN DOWN                                               00414 L8 01571 00200
+00430        TF   X,TIMES,,SET TIMES LOOP                                        00426 KO 00509 00017
+00440        MM   STYLE,5,10,CALCULATE STYLE ADDRESS                             00438 J3 00198 000-5
+00450        SF   95                                                             00450 32 00095 00000
+00460        CF   96                                                             00462 33 00096 00000
+00470 CT     AM   99,PLUS-5,7                                                    00474 1J 00099 -0880
+00480 ROUND  TF   N,-99,,PLANT INDIRECT ADDRESS OF PLOTTING INSTRUCTION          00486 K6 00528 0009R
+00490        SF   N                                                              00498 L2 00528 00000
+00500 LOOP   TF   COUNT,SIZE,,SET LOOP FOR NUMBER OF TIMES EACH SIDE IS TO BE    00510 KO 00473 01730
+00510 BIGGER WN   ,200,,PLOT SIDE                                   REPEATED     00522 38 00000 00200
+00520        BNF  SKIP,N,11,DETERMINE IF PEN UP OR DOWN,IF SO DO ONLY ONCE       00534 MM 00582 0052Q
+00530        SM   COUNT,1,10                                                     00546 J2 00473 000-1
+00540        CM   COUNT,0,10                                                     00558 J4 00473 000-0
+00550        BNE  BIGGER,,,COMPLETE LOOP FOR ONE SIDE                            00570 M7 00522 01200
+00560 SKIP   SM   N,5,10,INCREMENT PLOTTING ADDRESS                              00582 J2 00528 000-5
+00570        BNR  LOOP,N,711,DETERMINE IF CHARACTER IS COMPLETE                  00594 MN 00510 -052Q
+00580        SM   X,1,10                                                         00606 J2 00509 000-1
+00590        CM   X,0,10,DETERMINE IF TIMES LOOP IS COMPLETE,IF NOT,             00618 J4 00509 000-0
+00600        BNE  ROUND,,,REPEAT CHARACTER                                       00630 M7 00486 01200
+00610        CM   STYLE2,0,10,SEE IF A SECOND CHARACTER IS REQUIRED,IF NOT,      00642 J4 00196 000-0
+00620        BE   OUT,,,RETURN                                                   00654 M6 00698 01200
+00630        TF   STYLE,STYLE2,,,PLACE STYLE2 IN STYLE AND                       00666 KO 00198 00196
+00640        TFM  STYLE2,0,10,PUT NAUGHT IN STYLE AND                            00678 J6 00196 000-0
+00650        B7   DAVID,,,REPEAT OPERATION                                       00690 M9 00246 00000
+00660 OUT    B7   -LINK,,,     ****RETURN****                                    00698 M9 0000N 00000
+00670 ER1    RCTY ,,,PRINT APPROPRIATE ERROR MESSAGES                            00706 34 00000 00102
+00680        WATY EC                                                             00718 L9 01575 00100
+00690        WATY E1                                                             00730 L9 01601 00100
+00700        B7   -LINK                                                          00742 M9 0000N 00000
+00710 ER2    RCTY                                                                00750 34 00000 00102
+00720        WATY EC                                                             00762 L9 01575 00100
+00730        WATY E2                                                             00774 L9 01631 00100
+00740        B7   -LINK                                                          00786 M9 0000N 00000
+00750 ER3    RCTY                                                                00794 34 00000 00102
+00760        WATY EC                                                             00806 L9 01575 00100
+00770        WATY E3                                                             00818 L9 01661 00100
+00780        B7   -LINK                                                          00830 M9 0000N 00000
+00790 ER4    RCTY                                                                00838 34 00000 00102
+00800        WATY EC                                                             00850 L9 01575 00100
+00810        WATY E4                                                             00862 L9 01691 00100
+00820        B7   -LINK                                                          00874 M9 0000N 00000
+00830 N      DS   ,BIGGER+6,P ADDRESS OF PLOTTER INSTRUCTION                     00528 00000
+00840 COUNT  DS   ,CT-1                                                          00473 00000
+00850 X      DS   ,LOOP-1                                                        00509 00000
+00860*ADDRESSES OF ADDRESSES OF FIRST SIDES
+00870 PLUS   DSA  ONE,TWO,THREE,FOURQ,FIVE,SIX,SEVEN,EIGHT,NINE,TEN              00885 00005 -0935
+                                                                                 00890 00005 -0980
+                                                                                 00895 00005 -1045
+                                                                                 00900 00005 -1090
+                                                                                 00905 00005 -1165
+                                                                                 00910 00005 -1220
+                                                                                 00915 00005 -1285
+                                                                                 00920 00005 -1350
+                                                                                 00925 00005 -1415
+                                                                                 00930 00005 -1470
+00880*ADDRESSES OF SIDES
+00890 ONE    DSA     A,B,B,A,G,H,H,G,END1                                        00935 00005 -1521
+                                                                                 00940 00005 -1524
+                                                                                 00945 00005 -1524
+                                                                                 00950 00005 -1521
+                                                                                 00955 00005 -1539
+                                                                                 00960 00005 -1542
+                                                                                 00965 00005 -1542
+                                                                                 00970 00005 -1539
+                                                                                 00975 00005 -1573
+00900 TWO    DSA  UP,P,A,DN,I,L,A,A,UP                                           00980 00005 -1569
+                                                                                 00985 00005 -1561
+                                                                                 00990 00005 -1521
+                                                                                 00995 00005 -1571
+                                                                                 01000 00005 -1545
+                                                                                 01005 00005 -1557
+                                                                                 01010 00005 -1521
+                                                                                 01015 00005 -1521
+                                                                                 01020 00005 -1569
+00910        DSA  B,R,DN,END1                                                    01025 00005 -1524
+                                                                                 01030 00005 -1565
+                                                                                 01035 00005 -1571
+                                                                                 01040 00005 -1573
+00920 THREE  DSA     C,D,D,C,F,E,E,F,END1                                        01045 00005 -1527
+                                                                                 01050 00005 -1530
+                                                                                 01055 00005 -1530
+                                                                                 01060 00005 -1527
+                                                                                 01065 00005 -1536
+                                                                                 01070 00005 -1533
+                                                                                 01075 00005 -1533
+                                                                                 01080 00005 -1536
+                                                                                 01085 00005 -1573
+00930 FOURQ  DSA  UP,E,DN,G,G,B,B,H,H,A                                          01090 00005 -1569
+                                                                                 01095 00005 -1533
+                                                                                 01100 00005 -1571
+                                                                                 01105 00005 -1539
+                                                                                 01110 00005 -1539
+                                                                                 01115 00005 -1524
+                                                                                 01120 00005 -1524
+                                                                                 01125 00005 -1542
+                                                                                 01130 00005 -1542
+                                                                                 01135 00005 -1521
+00940        DSA  A,UP,F,DN,END1                                                 01140 00005 -1521
+                                                                                 01145 00005 -1569
+                                                                                 01150 00005 -1536
+                                                                                 01155 00005 -1571
+                                                                                 01160 00005 -1573
+00950 FIVE   DSA  UP,H,DN,C,F,D,E, UP                                            01165 00005 -1569
+                                                                                 01170 00005 -1542
+                                                                                 01175 00005 -1571
+                                                                                 01180 00005 -1527
+                                                                                 01185 00005 -1536
+                                                                                 01190 00005 -1530
+                                                                                 01195 00005 -1533
+                                                                                 01200 00005 -1569
+00960        DSA       G,DN,END1                                                 01205 00005 -1539
+                                                                                 01210 00005 -1571
+                                                                                 01215 00005 -1573
+00970 SIX    DSA  UP,R,A,DN,L,I,A,A,UP,B                                         01220 00005 -1569
+                                                                                 01225 00005 -1565
+                                                                                 01230 00005 -1521
+                                                                                 01235 00005 -1571
+                                                                                 01240 00005 -1557
+                                                                                 01245 00005 -1545
+                                                                                 01250 00005 -1521
+                                                                                 01255 00005 -1521
+                                                                                 01260 00005 -1569
+                                                                                 01265 00005 -1524
+00980        DSA  P,DN,END1                                                      01270 00005 -1561
+                                                                                 01275 00005 -1571
+                                                                                 01280 00005 -1573
+00990 SEVEN  DSA  UP,T,H,DN,J,K,H,H,UP,G                                         01285 00005 -1569
+                                                                                 01290 00005 -1567
+                                                                                 01295 00005 -1542
+                                                                                 01300 00005 -1571
+                                                                                 01305 00005 -1549
+                                                                                 01310 00005 -1553
+                                                                                 01315 00005 -1542
+                                                                                 01320 00005 -1542
+                                                                                 01325 00005 -1569
+                                                                                 01330 00005 -1539
+01000        DSA  Q,DN,END1                                                      01335 00005 -1563
+                                                                                 01340 00005 -1571
+                                                                                 01345 00005 -1573
+01010 EIGHT  DSA  UP,Q,H,DN,K,J,H,H,UP,G                                         01350 00005 -1569
+                                                                                 01355 00005 -1563
+                                                                                 01360 00005 -1542
+                                                                                 01365 00005 -1571
+                                                                                 01370 00005 -1553
+                                                                                 01375 00005 -1549
+                                                                                 01380 00005 -1542
+                                                                                 01385 00005 -1542
+                                                                                 01390 00005 -1569
+                                                                                 01395 00005 -1539
+01020        DSA  T,DN,END1                                                      01400 00005 -1567
+                                                                                 01405 00005 -1571
+                                                                                 01410 00005 -1573
+01030 NINE   DSA     G,Q,A,Q,H,H,Q,A,Q                                           01415 00005 -1539
+                                                                                 01420 00005 -1563
+                                                                                 01425 00005 -1521
+                                                                                 01430 00005 -1563
+                                                                                 01435 00005 -1542
+                                                                                 01440 00005 -1542
+                                                                                 01445 00005 -1563
+                                                                                 01450 00005 -1521
+                                                                                 01455 00005 -1563
+01040        DSA  G,END1                                                         01460 00005 -1539
+                                                                                 01465 00005 -1573
+01050 TEN    DSA     A,R,H,R,B,B,R,H,R                                           01470 00005 -1521
+                                                                                 01475 00005 -1565
+                                                                                 01480 00005 -1542
+                                                                                 01485 00005 -1565
+                                                                                 01490 00005 -1524
+                                                                                 01495 00005 -1524
+                                                                                 01500 00005 -1565
+                                                                                 01505 00005 -1542
+                                                                                 01510 00005 -1565
+01060        DSA  A,END1                                                         01515 00005 -1521
+                                                                                 01520 00005 -1573
+01070*PLOTTING OPERATIONS
+01080 A      DSC  3,N5@                                                          01521 00003
+01090 B      DSC  3,J1@                                                          01524 00003
+01100 C      DSC  3,M4@                                                          01527 00003
+01110 D      DSC  3,Q8@                                                          01530 00003
+01120 E      DSC  3,O6@                                                          01533 00003
+01130 F      DSC  3,K2@                                                          01536 00003
+01140 G      DSC  3,L3@                                                          01539 00003
+01150 H      DSC  3,P7@                                                          01542 00003
+01160 I      DSC  4,K32@                                                         01545 00004
+01170 J      DSC  4,K12@                                                         01549 00004
+01180 K      DSC  4,M54@                                                         01553 00004
+01190 L      DSC  4,Q78@                                                         01557 00004
+01200 P      DSC  2,P@                                                           01561 00002
+01210 Q      DSC  2,J@                                                           01563 00002
+01220 R      DSC  2,L@                                                           01565 00002
+01230 T      DSC  2,N@                                                           01567 00002
+01240 UP     DSC  2,9@                                                           01569 00002
+01250 DN     DSC  2,0@                                                           01571 00002
+01260 END1   DSC  1,@                                                            01573 00001
+01270*ERROR MESSAGES
+01280 EC     DAC  13,POINT ERROR-@                                               01575 00026
+01290 E1     DAC  14,UNKOWN SYMBOL@                                              01601 00028
+01300 E2     DAC  15,SIZE TOO LARGE@                                             01629 00030
+01310 E3     DAC  15,SIZE TOO SMALL@                                             01659 00030
+01320 E4     DAC  18,TOO MANY RETRACES@                                          01689 00036
+01330 STYLE  DS   ,BTM+11,DEFINE SYMBOLS IN Q ADDRESSES OF                       00209 00000
+01340 STYLE2 DS   ,STYLE-2, SF AND CF INSTRUCTIONS                               00196 00000
+01350 LINK   DS   ,POINT-1,RETURN ADDRESS                                        00005 00000
+01360 SIZE   DS   5                                                              01728 00005
+01370 TIMES  DS   ,POINT+11                                                      00017 00000
+01380 FOUR   DC   10,M0000000-J                                                  01738 00010
+01390 HALF   DC   10,N0000000-0                                                  01748 00010
+01400 COUNT1 DS   ,SF+11                                                         00089 00000
+01410 R1     DSC  6,07135@                                                       01749 00006
+01420 R2     DS   ,DN                                                            01571 00000
+01430 DOT    DS   ,CF+11                                                         00065 00000
+01440 FDV    DS   ,4162,ADDRESSES OF FORTRAN SUBROUTINES                         04162 00000
+01450 FAD    DS   ,4090                                                          04090 00000
+01460 FIX    DS   ,3854                                                          03854 00000
+01470 FAC    DS   ,2492                                                          02492 00000
+01480 TOFAC  DS   ,3408                                                          03408 00000
+01490 END    DAC  1, ,                                                           01757 00002
+01500        DC   1,@,END-1                                                      01756 00001
+01510        DEND                                                                00000
+
+01758
+      CORE POSITIONS REQUIRED
+ PLUS RELOCATION INCREMENT
+00152
+      STATEMENTS PROCESSED
+
+
+

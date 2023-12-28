@@ -1,0 +1,27 @@
+3400032007013600032007024902402511963611300102 COLD START CARD - 1620 MONITOR I
+||JOB                        CHAR DEMO 1
+||FORX5   |
+*LIST PRINTER
+C-----------------------------------------------------------------------
+C CHAR DEMO 1
+C PROGRAM TO DEMONSTRATE USE OF THE PLOTTER CHAR SUBROUTINE.
+C
+C 2023-12-26  P.KIMPEL
+C   ORIGINAL VERSION.
+C-----------------------------------------------------------------------
+C
+C INITIALIZATION
+      XMAX = 12.0
+      XMIN = 0.0
+      YMAX = 7.0
+      YMIN = 0.0
+      CALL PLOT (201, XMIN, XMAX, XMAX, 1.0, YMIN, YMAX, YMAX, 1.0)
+      CALL PLOT(98, 0.0, 0.0)
+      CALL CHAR(2, 0.25, 1, XMAX, YMAX)
+  900 FORMAT(19HPLOTTER CHAR TEST (, 2F8.2, 2H).)
+      CALL CHAR(0, 1.0, 0)
+  901 FORMAT(49H.)+$*-/,(=@ ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789)
+      CALL PLOT(7)
+      CALL EXIT
+      END
+||||              END OF JOB
