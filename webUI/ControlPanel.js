@@ -520,6 +520,7 @@ class ControlPanel {
             line = "// Devices:";
             if (config.Card.hasCard) {line += ` Card ${config.Card.cpmRead}/${config.Card.cpmPunch} CPM,`}
             if (config.Printer.hasPrinter) {line += ` Printer ${config.Printer.lpm} LPM,`}
+            if (config.Plotter.hasPlotter) {line += ` Plotter Model 1,`}
             if (config.Disk.hasDisk) {
                 line += " Disk modules ";
                 for (let x=0; x<config.Disk.module.length; ++x) {

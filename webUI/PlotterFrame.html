@@ -24,57 +24,21 @@
 <link id=defaultStyleSheet rel=stylesheet type="text/css" href="Common.css">
 <style id=PlotterFrameStyles>
 BODY {
-    height:             calc(100% - 8px);
-    margin:             4px;
+    height:             100%;
+    margin:             0;
     padding:            0;
     background-color:   white}
-#PlotterDiv {
-    position:           absolute;
-    width:              578px;
-    height:             480px;
-    overflow-x:         hidden;
-    overflow-y:         scroll;
-    background-color:   white}
-#CanvasBox {
-    position:           absolute;
-    left:               50%;
-    top:                0;
-    height:             100%;
-    width:              100%;
-    transform:          translate(-50%, 0)}
 #PlotterCanvas {
     position:           absolute;
     left:               0;
     top:                0}
-#HCursor {
-    position:           absolute;
-    left:               50%;
-    width:              2px;
-    top:                0;
-    bottom:             0;
-    z-index:            10;
-    border-left:        1px dashed red}
-#VCursor {
-    position:           absolute;
-    left:               0;
-    right:              0;
-    top:                50%;
-    height:             2px;
-    z-index:            10;
-    border-top:         1px dashed red}
 </style>
 </head>
 
 <body id=FrameBody>
-
-<div id=PlotterDiv>
-    <div id=CanvasBox>
-        <canvas id=PlotterCanvas>
-            This browser does not support the HTML &lt;canvas&gt; element.
-        </canvas>
-        <div id=HCursor></div>
-        <div id=VCursor></div>
-    </div>
+    <canvas id=PlotterCanvas>
+        This browser does not support the HTML &lt;canvas&gt; element.
+    </canvas>
 </div>
 
 </body>

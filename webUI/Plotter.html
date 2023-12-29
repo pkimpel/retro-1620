@@ -26,8 +26,12 @@
 
 <body id=PlotterBody class=deviceBody>
 
-<iframe id=PlotterFrame src="./PlotterFrame.html">
-</iframe>
+<div id=PlotterDiv>
+    <iframe id=PlotterFrame src="./PlotterFrame.html">
+    </iframe>
+    <div id=HCursor></div>
+    <div id=VCursor></div>
+</div>
 
 <div id=ControlsDiv>
     <img id=IBMLogo src="./resources/IBM-logo-BW.png" title="Actually, it's a CALCOMP">
@@ -63,7 +67,7 @@
     </div>
 
     <div id=ButtonDiv>
-        <button id=PrintBtn DISABLED title="Print the plot">PRINT</button>
+        <button id=PrintBtn title="Print the plot">PRINT</button>
         <br>
         <button id=HomeBtn title="Reposition pen to (0,0)">HOME</button>
         <br>

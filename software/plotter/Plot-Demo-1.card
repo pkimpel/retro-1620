@@ -1,6 +1,6 @@
 3400032007013600032007024902402511963611300102 COLD START CARD - 1620 MONITOR I
 ||JOB                        PLOT DEMO 1
-||FORX52  |
+||FORX5   |
 *LIST PRINTER
 C-----------------------------------------------------------------------
 C PLOT DEMO 1
@@ -30,12 +30,12 @@ C A SIMPLE LINEAR PLOT
 C
 C THE CLASSIC SIN WAVE
       PI = 3.1415926
-      RADS = PI/180.0
+      TORADS = PI/180.0
       CALL PLOT(1, 0.0, 2.0*PI, 8.0, PI/4.0, -1.0, 1.0, 6.0, 0.1)
       CALL PLOT(99)
-      DO 20 I=1,360,1
+      DO 20 I=1,360,2
         DEG = I
-        X = DEG*RADS
+        X = DEG*TORADS
         Y = SIN(X)
         CALL PLOT(90, X, Y)
    20 CONTINUE
@@ -66,6 +66,7 @@ C NESTED BOXES FROM PLOT POC 6
       CALL PLOT(99)
       CALL PLOT(90, XMIN, YMIN-16.0)
       CALL PLOT(90, XMIN, YMAX+16.0)
+      CALL PLOT(98, XMIN, YMIN)
       CALL PLOT(7)
 C
       CALL EXIT

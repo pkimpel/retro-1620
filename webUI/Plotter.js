@@ -28,7 +28,7 @@ class Plotter {
     static stepPeriod = 1000/300;       // ms per step
     static penPeriod = 100;             // ms for pen up/down
     static minWait = 10;                // ms for minimum throttling dealy
-    static windowHeight = 488;          // window innerHeight, pixels
+    static windowHeight = 480;          // window innerHeight, pixels
     static windowWidth = 646;           // window innerWidth, pixels
 
     static canvasStepSize = 0.01;       // step size in inches
@@ -145,10 +145,11 @@ class Plotter {
 
     movingFast = false;                 // true if doing manual fast move
     penDown = false;                    // pen up=0, down=1
+    outputReadyStamp = 0;               // timestamp when ready for next point
     pixelHOrigin = 0;                   // horizontal pixel origin
     pixelVOrigin = 0;                   // vertical pixel origin
     timer = new Timer();                // delay management timer
-    x = 0;                              // vertical offset (to down on the canvas
+    x = 0;                              // vertical offset (to down on the canvas)
     y = 0;                              // horizontal offset (to left on the canvas)
 
 
@@ -165,8 +166,8 @@ class Plotter {
         this.processor = context.processor;
 
         this.boundControlClick = this.controlClick.bind(this);
-        this.boundControlDown = this.controlDown.bind(this);
-        this.boundControlUp = this.controlUp.bind(this);
+        this.boundControlMouseDown = this.controlMouseDown.bind(this);
+        this.boundControlMouseUp = this.controlMouseUp.bind(this);
 
         // Create the Plotter window
         let geometry = this.config.formatWindowGeometry("Plotter");
@@ -182,8 +183,6 @@ class Plotter {
         openPopup(window, "../webUI/Plotter.html", "retro-1620.Plotter",
                 "location=no,scrollbars,resizable" + geometry,
                 this, this.plotterOnLoad);
-
-        this.clear();
     }
 
     /**************************************/
@@ -202,16 +201,16 @@ class Plotter {
         this.doc = ev.target;           // now we can use this.$$()
         this.window = this.doc.defaultView;
         this.doc.title = "retro-1620 Plotter";
-        this.frame = this.$$("PlotterFrame");
-        this.frameDoc = this.frame.contentDocument;
-        this.plotView = this.frameDoc.getElementById("PlotterDiv");
-        this.hCursor = this.frameDoc.getElementById("HCursor");
-        this.vCursor = this.frameDoc.getElementById("VCursor");
-        this.canvas = this.frameDoc.getElementById("PlotterCanvas");
-        this.dc = this.canvas.getContext("2d");
+        this.hCursor = this.$$("HCursor");
+        this.vCursor = this.$$("VCursor");
         this.hCoord = this.$$("HCoordSpan");
         this.vCoord = this.$$("VCoordSpan");
         this.penStat = this.$$("PenStatusSpan");
+        this.frame = this.$$("PlotterFrame");
+        this.frameWin = this.frame.contentWindow;
+        this.frameDoc = this.frame.contentDocument;
+        this.canvas = this.frameDoc.getElementById("PlotterCanvas");
+        this.dc = this.canvas.getContext("2d");
 
         this.canvasPixelHeight = Math.round(Math.abs(Plotter.canvasMaxHeight*Plotter.canvasVScale));
         this.canvasPixelWidth = Math.round(Math.abs(Plotter.canvasWidth/Plotter.canvasStepSize*Plotter.canvasHScale));
@@ -219,15 +218,13 @@ class Plotter {
         this.canvasUnitWidth = Math.round(Plotter.canvasWidth/Plotter.canvasStepSize);
         this.canvasLineWidth = 1;       // was Math.abs(1/Plotter.canvasHScale);
 
+        const plotView = this.frameDoc.getElementById("FrameBody");
         this.canvasHOffset = this.canvasPixelWidth - 0.5;
-        this.canvasVOffset = Math.round(Math.abs(this.plotView.offsetHeight/2)) + 0.5;
+        this.canvasVOffset = Math.round(plotView.offsetHeight/2) + 0.5;
 
         [this.pixelHOrigin, this.pixelVOrigin] = this.toPixelCoord(0, 0);
         this.canvas.height = Math.abs(this.canvasUnitHeight*Plotter.canvasVScale);
         this.canvas.width = Math.abs(this.canvasUnitWidth*Plotter.canvasHScale);
-        this.frameDoc.getElementById("CanvasBox").style.width =
-                `${Math.abs(this.canvasUnitWidth*Plotter.canvasHScale)}px`;
-        this.hCursor.style.height = `${this.canvasPixelHeight}px`;
 
         // Do translation before scaling!
         this.dc.translate(this.canvasHOffset, this.canvasVOffset);
@@ -239,8 +236,8 @@ class Plotter {
         // Events
         this.window.addEventListener("beforeunload", this.beforeUnload);
         this.$$("ControlsDiv").addEventListener("click", this.boundControlClick);
-        this.$$("ControlsDiv").addEventListener("mousedown", this.boundControlDown);
-        this.$$("ControlsDiv").addEventListener("mouseup", this.boundControlUp);
+        this.$$("ControlsDiv").addEventListener("mousedown", this.boundControlMouseDown);
+        this.$$("ControlsDiv").addEventListener("mouseup", this.boundControlMouseUp);
 
         // Resize the window to take into account the difference between
         // inner and outer heights (WebKit quirk).
@@ -251,12 +248,13 @@ class Plotter {
 
     /**************************************/
     clear() {
-        /* Initializes (and if necessary, creates) the plotter unit state */
+        /* Initializes the plotter unit state */
 
         this.busy = false;              // an I/O is in progress
-        this.outputReadyStamp = 0;      // timestamp when ready for output
         this.x = 0;
         this.y = 0;
+        this.positionCursor(0, 0);
+        this.outputReadyStamp = 0;      // timestamp when ready for output
     }
 
     /**************************************/
@@ -305,6 +303,7 @@ class Plotter {
             this.printBtnClick(ev);
             break;
         case "HomeBtn":
+            this.x = this.y = 0;
             this.positionCursor(0, 0);
             break;
         case "ClearBtn":
@@ -316,7 +315,7 @@ class Plotter {
     }
 
     /**************************************/
-    controlDown(ev) {
+    controlMouseDown(ev) {
         /* Handles mousedown events for the controls pane */
 
         switch (ev.target.id) {
@@ -335,7 +334,7 @@ class Plotter {
         }
     }
     /**************************************/
-    controlUp(ev) {
+    controlMouseUp(ev) {
         /* Handles mouseup events for the controls pane */
 
         switch (ev.target.id) {
@@ -357,7 +356,7 @@ class Plotter {
 
 
     /*******************************************************************
-    *  Plotter Output                                               *
+    *  Plotter Output                                                  *
     *******************************************************************/
 
     /**************************************/
@@ -379,14 +378,11 @@ class Plotter {
 
     /**************************************/
     setCanvasEmpty() {
-        /* Clears the plotter canvas and initializes it for new output */
-        //const [x, y] = this.toUnitCoord(this.canvasPixelWidth, this.canvasPixelHeight);
+        /* Erases the plotter canvas and initializes it for new output */
 
-        this.x = 0;
-        this.y = 0;
-        this.dc.clearRect(0, 0, this.canvasUnitWidth, this.canvasUnitHeight);
-        this.positionCursor(0, 0);
+        this.clear();
         this.setPenUp();
+        this.dc.clearRect(-1, -1, this.canvasUnitWidth+1, this.canvasUnitHeight+1);
     }
 
     /**************************************/
@@ -397,8 +393,7 @@ class Plotter {
         this.hCoord.textContent = y;
         this.vCoord.textContent = x;
         this.hCursor.style.left = `${px}px`;
-        this.vCursor.style.top =  `${py}px`;
-        this.plotView.scrollTop = py-this.pixelVOrigin;
+        this.frameWin.scrollTo(0, py-this.pixelVOrigin);
     }
 
     /**************************************/
@@ -546,8 +541,8 @@ class Plotter {
 
         if (this.window) {
             this.$$("ControlsDiv").removeEventListener("click", this.boundControlClick);
-            this.$$("ControlsDiv").removeEventListener("mousedown", this.boundControlDown);
-            this.$$("ControlsDiv").removeEventListener("mouseup", this.boundControlUp);
+            this.$$("ControlsDiv").removeEventListener("mousedown", this.boundControlMouseDown);
+            this.$$("ControlsDiv").removeEventListener("mouseup", this.boundControlMouseUp);
 
             this.config.putWindowGeometry(this.window, "Plotter");
             this.window.removeEventListener("beforeunload", this.beforeUnload);
