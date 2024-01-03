@@ -33,6 +33,11 @@
     <div id=VCursor></div>
 </div>
 
+<div id=PrintingDiv>
+    <iframe id=PrintingFrame src="./PlotterFrame.html">
+    </iframe>
+</div>
+
 <div id=ControlsDiv>
     <img id=IBMLogo src="./resources/IBM-logo-BW.png" title="Actually, it's a CALCOMP">
     <div id=ModelLogo>1627</div>
@@ -68,10 +73,20 @@
 
     <div id=ButtonDiv>
         <button id=PrintBtn title="Print the plot">PRINT</button>
-        <br>
+        <button id=SaveBtn title="Save the plot as PNG">SAVE</button>
         <button id=HomeBtn title="Reposition pen to (0,0)">HOME</button>
-        <br>
         <button id=ClearBtn title="Erase the plot area">CLEAR</button>
+    </div>
+
+    <div id=PaletteDiv>
+        <div id=BlackBtn class=paletteButton title="Draw black lines">&nbsp;</div>
+        <div id=BlackLamp class=paletteLamp></div>
+        <div id=RedBtn class=paletteButton title="Draw red lines">&nbsp;</div>
+        <div id=RedLamp class=paletteLamp></div>
+        <div id=GreenBtn class=paletteButton title="Draw green lines">&nbsp;</div>
+        <div id=GreenLamp class=paletteLamp></div>
+        <div id=BlueBtn class=paletteButton title="Draw blue lines">&nbsp;</div>
+        <div id=BlueLamp class=paletteLamp></div>
     </div>
 </div>
 

@@ -1,0 +1,90 @@
+3400032007013600032007024902402511963611300102 COLD START CARD - 1620 MONITOR I
+||JOB                        PLOT DEMO 2
+||FORX5   |
+*LIST PRINTER
+C-----------------------------------------------------------------------
+C PLOT DEMO 2
+C PROGRAM TO DEMONSTRATE USE OF THE PLOT SUBROUTINE.
+C
+C 2023-12-31  P.KIMPEL
+C   ORIGINAL VERSION.
+C-----------------------------------------------------------------------
+C
+      DL = 6.0
+      DMAX = 600.0
+      DMIN = 0.0
+      ILINES = 20
+      DLINES = ILINES
+      DINC = DMAX/DLINES
+      CALL PLOT(201, DMIN, DMAX, DL, DMAX, DMIN, DMAX, DL, DMAX)
+
+      IQUAD = 1
+      XA = DMIN
+      YA = DMIN
+      XB = DMIN
+      YB = DMAX
+
+  100 CONTINUE
+      ITER = ILINES
+      GO TO (110, 120, 130, 140), IQUAD
+
+C     CONFIGURE FIRST QUANDRANT
+  110 CONTINUE
+      DXA = 0.0
+      DYA = DINC
+      DXB = DINC
+      DYB = 0.0
+      GO TO 150
+
+C     CONFIGURE SECOND QUADRANT
+  120 CONTINUE
+      DXA = DINC
+      DYA = 0.0
+      DXB = 0.0
+      DYB = -DINC
+      GO TO 150
+
+C     CONFIGURE THIRD QUADRANT
+  130 CONTINUE
+      DXA = 0.0
+      DYA = -DINC
+      DXB = -DINC
+      DYB = 0.0
+      GO TO 150
+
+C     CONFIGURE FOURTH QUADRANT
+  140 CONTINUE
+      DXA = -DINC
+      DYA = 0.0
+      DXB = 0.0
+      DYB = DINC
+      GO TO 150
+
+C     PLOT THE QUADRANT
+  150 CONTINUE
+      CALL PLOT(99)
+      CALL PLOT(90, XA, YA)
+      XA = XA + DXA
+      YA = YA + DYA
+      CALL PLOT(90, XB, YB)
+      XB = XB + DXB
+      YB = YB + DYB
+      CALL PLOT(99)
+      CALL PLOT(90, XB, YB)
+      XB = XB + DXB
+      YB = YB + DYB
+      CALL PLOT(90, XA, YA)
+      XA = XA + DXA
+      YA = YA + DYA
+      ITER = ITER-2
+      IF (ITER) 190, 190, 150
+  190 CONTINUE
+      IQUAD = IQUAD+1
+      IF (IQUAD-4) 100, 100, 200
+
+  200 CONTINUE
+C     CALL PLOT(7)
+      CALL PLOT(98, (DMAX-DMIN)/2.0, (DMAX-DMIN)/2.0)
+      CALL EXIT
+      END
+||||              END OF JOB

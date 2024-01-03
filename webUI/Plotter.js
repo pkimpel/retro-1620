@@ -5,9 +5,48 @@
 * Licensed under the MIT License, see
 *       http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* IBM 1620 Model 2 Emulator Plotter device.
+* IBM 1620 Model 2 Emulator 1627 Plotter device.
 *
-* Defines the plotter device.
+* Defines the plotter device. The device uses a <canvas> element for its
+* drawing surface. The canvas coordinate system has the X-axis along the
+* horizontal dimension and the Y-axis along the vertical dimension, with
+* coordinate values increasing from left to right and top to bottom.
+*
+* The 1627 (a rebranded CALCOMP 565) did not have a coordinate system.
+* It simply moved in 0.01-inch increments one step at a time in one of
+* eight directions, left/right, up/down, and along the two diagnonals.
+* See the 1627 Plotter Manual for a description of the commands:
+* https://bitsavers.org/pdf/ibm/1130/A26-5710-0_1627_Plotter.pdf.
+*
+* The plotter worked by moving its pen horizontally along a carriage.
+* The paper underneath the pen was moved up and down by a rotating, pin-
+* feed drum. The paper unspooled from a roll at the back of the device,
+* across the top, down under the pen, and out the bottom of the device,
+* where it was either wound on a take-up roll or allowed to fall to the
+* floor. Thus, the area being plotted moved upward as the paper moved
+* downward.
+*
+* That orientation is the opposite from the way that most GUI windows
+* scroll, so in this emulation, the plotter is effectively turned upside
+* down, as if the supply spool was on the bottom and the take-up spool
+* on the top. As the plot advances, the image moves downward and the
+* plotting area moves upward. Also, the usual convention with the 1627
+* was that the X-axis was considered to be vertical (along the length
+* of the paper) and the Y-axis was horizontal across the front of the
+* plotter.
+*
+* Therefore, in this emulation, X-axis coordinates increase as the plot
+* moves down the plotter's window, and Y-axis coordinates increase as
+* the pen moves to the right. The (0,0) coordinate is at the upper-
+* right of the plotting area. All of this will make much better sense
+* if you watch the emulated plotter while standing on your head.
+*
+* The system configuration has an option to scale the plotting area at
+* 100% (one pixel per emulated plotter step) or 50% (one pixel for every
+* two emulated steps). The 50% setting is recommended for general use.
+*
+* See the wiki on the device for more information:
+* https://github.com/pkimpel/retro-1620/wiki/UsingThePlotter.
 *
 ************************************************************************
 * 2022-12-22  P.Kimpel
@@ -16,7 +55,6 @@
 
 export {Plotter};
 
-import {Envir} from "../emulator/Envir.js";
 import {Register} from "../emulator/Register.js";
 import {Timer} from "../emulator/Timer.js";
 import {openPopup} from "./PopupUtil.js";
@@ -25,20 +63,21 @@ class Plotter {
 
     // Static properties
 
-    static stepPeriod = 1000/300;       // ms per step
+    static frameExtraWidth = 20;        // plot/print non-frame width, pixels
+    static minWait = 5;                 // ms for minimum throttling delay
     static penPeriod = 100;             // ms for pen up/down
-    static minWait = 10;                // ms for minimum throttling dealy
-    static windowHeight = 480;          // window innerHeight, pixels
-    static windowWidth = 646;           // window innerWidth, pixels
+    static stepPeriod = 1000/300;       // ms per step
+    static windowHeight = 488;          // window heighteight, pixels
+    static windowExtraWidth = 96;       // window non-canvas width, pixels
 
-    static canvasStepSize = 0.01;       // step size in inches
-    static canvasWidth = 11;            // carriage width in inches
-    static canvasHScale = -0.5;         // horizontal scale factor
-    static canvasVScale = 0.5;          // vertical scale factor
+    static canvasStepSize = 0.01;       // plotter step size, inches
+    static canvasWidth = 11;            // plotter carriage width, inches
     static canvasMaxHeight = 32764;     // max canvas unit height, Firefox, 2023
-    static canvasHeight = Plotter.canvasMaxHeight*Plotter.canvasStepSize;  // inches, about 27 feet
+    static canvasHeight = Plotter.canvasMaxHeight*Plotter.canvasStepSize;  // inches, about 27.3 feet
+    static vCursorLowerFactor = 0.25;   // lower scrolling limit factor
+    static vCursorUpperFactor = 0.75;   // upper scrolling limit factor
 
-    static numericGlyphs = [            // translate numeric codes to paper tape glyphs
+    static numericGlyphs = [            // translate numeric codes to paper-tape glyphs
         "0", "1", "2",  "3", "4", "5", "6", "7", "8", "9", "|", "<", "@",  "<", "<", "\\"];
 
     static alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit BCD)
@@ -75,7 +114,7 @@ class Plotter {
             "<", "<", "<", "<", "<", "<", "<", "<",     // F0
             "<", "<", "<", "<", "<", "<", "<", "<"];    // F8
 
-    static plotXlate = {        // 1620 paper tape code to plotter commands
+    static plotXlate = {        // 1620 paper-tape code to plotter commands
         "0": {bits: 0b00100000, dx:  0, dy:  0, penUp: 0, penDown: 1},
         "1": {bits: 0b00000001, dx:  0, dy:  1, penUp: 0, penDown: 0},
         "2": {bits: 0b00000010, dx:  1, dy:  1, penUp: 0, penDown: 0},
@@ -137,20 +176,19 @@ class Plotter {
     // Public Instance Properties
 
     doc = null;                         // window document object
-    innerHeight = 0;                    // window specified innerHeight
-    paper = null;                       // the output canvas
-    paperDoc = null;                    // window paper-area
-    platen = null;                      // the scrolling area
     window = null;                      // window object
 
     movingFast = false;                 // true if doing manual fast move
-    penDown = false;                    // pen up=0, down=1
     outputReadyStamp = 0;               // timestamp when ready for next point
+    penDown = false;                    // pen up=0, down=1
     pixelHOrigin = 0;                   // horizontal pixel origin
     pixelVOrigin = 0;                   // vertical pixel origin
+    pyLast = 0;                         // last vertical pixel offset
     timer = new Timer();                // delay management timer
     x = 0;                              // vertical offset (to down on the canvas)
     y = 0;                              // horizontal offset (to left on the canvas)
+    xMax = 0;                           // maximum vertical offset attained
+    yMax = 0;                           // maximum horizontal offset attained
 
 
     constructor(context) {
@@ -168,16 +206,32 @@ class Plotter {
         this.boundControlClick = this.controlClick.bind(this);
         this.boundControlMouseDown = this.controlMouseDown.bind(this);
         this.boundControlMouseUp = this.controlMouseUp.bind(this);
+        this.boundResizeWindow = this.resizeWindow.bind(this);
+
+        this.innerHeight = Plotter.windowHeight;
+        switch (this.config.getNode("Plotter.scale")) {
+        case 2:
+            this.canvasHScale = -1.0;
+            this.canvasVScale = 1.0;
+            break;
+        default:
+            this.canvasHScale = -0.5;
+            this.canvasVScale = 0.5;
+            break;
+        }
+
+        this.canvasPixelHeight = Math.round(Math.abs(Plotter.canvasMaxHeight*this.canvasVScale));
+        this.canvasPixelWidth = Math.round(Math.abs(Plotter.canvasWidth/Plotter.canvasStepSize*this.canvasHScale));
 
         // Create the Plotter window
         let geometry = this.config.formatWindowGeometry("Plotter");
         if (geometry.length) {
             this.innerHeight = this.config.getWindowProperty("Plotter", "innerHeight");
         } else {
-            this.innerHeight = Plotter.windowHeight;
-            geometry = `,left=${(screen.availWidth-Plotter.windowWidth)/2}` +
+            const width = this.canvasPixelWidth + Plotter.windowExtraWidth;
+            geometry = `,left=${(screen.availWidth-width)/2}` +
                        `,top=${screen.availHeight-Plotter.windowHeight}` +
-                       `,width=${Plotter.windowWidth},height=${Plotter.windowHeight}`;
+                       `,width=${width},height=${Plotter.windowHeight}`;
         }
 
         openPopup(window, "../webUI/Plotter.html", "retro-1620.Plotter",
@@ -206,35 +260,47 @@ class Plotter {
         this.hCoord = this.$$("HCoordSpan");
         this.vCoord = this.$$("VCoordSpan");
         this.penStat = this.$$("PenStatusSpan");
+
+        this.$$("PlotterDiv").style.width = `${this.canvasPixelWidth + Plotter.frameExtraWidth}px`;
+        this.$$("PrintingDiv").style.width = `${this.canvasPixelWidth + Plotter.frameExtraWidth}px`;
+        this.vCursor.style.width = `${this.canvasPixelWidth}px`;
+
         this.frame = this.$$("PlotterFrame");
         this.frameWin = this.frame.contentWindow;
         this.frameDoc = this.frame.contentDocument;
         this.canvas = this.frameDoc.getElementById("PlotterCanvas");
         this.dc = this.canvas.getContext("2d");
 
-        this.canvasPixelHeight = Math.round(Math.abs(Plotter.canvasMaxHeight*Plotter.canvasVScale));
-        this.canvasPixelWidth = Math.round(Math.abs(Plotter.canvasWidth/Plotter.canvasStepSize*Plotter.canvasHScale));
-        this.canvasUnitHeight = Math.round(Plotter.canvasHeight/Plotter.canvasStepSize);
-        this.canvasUnitWidth = Math.round(Plotter.canvasWidth/Plotter.canvasStepSize);
-        this.canvasLineWidth = 1;       // was Math.abs(1/Plotter.canvasHScale);
+        this.printingFrame = this.$$("PrintingFrame");
+        this.printingFrameDoc = this.printingFrame.contentDocument;
+        this.printingBody = this.printingFrameDoc.getElementById("FrameBody");
+        this.printingCanvas = this.printingFrameDoc.getElementById("PlotterCanvas");
 
         const plotView = this.frameDoc.getElementById("FrameBody");
-        this.canvasHOffset = this.canvasPixelWidth - 0.5;
-        this.canvasVOffset = Math.round(plotView.offsetHeight/2) + 0.5;
+        this.canvasHOffset = this.canvasPixelWidth;     // was ~ + 0.5;
+        this.canvasVOffset = 0;         // was 0.5; // Math.round(plotView.offsetHeight/2) + 0.5;
+        this.canvasUnitHeight = Math.round(Plotter.canvasHeight/Plotter.canvasStepSize);
+        this.canvasUnitWidth = Math.round(Plotter.canvasWidth/Plotter.canvasStepSize);
+        this.canvasLineWidth = 1;       // was Math.abs(1/this.canvasHScale);
 
         [this.pixelHOrigin, this.pixelVOrigin] = this.toPixelCoord(0, 0);
-        this.canvas.height = Math.abs(this.canvasUnitHeight*Plotter.canvasVScale);
-        this.canvas.width = Math.abs(this.canvasUnitWidth*Plotter.canvasHScale);
+        this.canvas.height = Math.abs(this.canvasUnitHeight*this.canvasVScale);
+        this.canvas.width = Math.round(Math.abs(this.canvasUnitWidth*this.canvasHScale) + 0.5);
+
+        this.vCursorOffset = 0;
+        this.vCursorLower = this.innerHeight*Plotter.vCursorLowerFactor;
+        this.vCursorUpper = this.innerHeight*Plotter.vCursorUpperFactor;
 
         // Do translation before scaling!
         this.dc.translate(this.canvasHOffset, this.canvasVOffset);
-        this.dc.scale(Plotter.canvasHScale, Plotter.canvasVScale);
-        this.dc.fillStyle = "black";
+        this.dc.scale(this.canvasHScale, this.canvasVScale);
+        this.changeColor("black");      // the default
 
-        this.setCanvasEmpty();
+        this.emptyCanvas();
 
         // Events
         this.window.addEventListener("beforeunload", this.beforeUnload);
+        this.window.addEventListener("resize", this.boundResizeWindow);
         this.$$("ControlsDiv").addEventListener("click", this.boundControlClick);
         this.$$("ControlsDiv").addEventListener("mousedown", this.boundControlMouseDown);
         this.$$("ControlsDiv").addEventListener("mouseup", this.boundControlMouseUp);
@@ -244,6 +310,8 @@ class Plotter {
         if (this.window.innerHeight < this.innerHeight) {        // Safari bug
             this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
         }
+
+        this.innerHeight = this.window.innerHeight;
     }
 
     /**************************************/
@@ -251,9 +319,9 @@ class Plotter {
         /* Initializes the plotter unit state */
 
         this.busy = false;              // an I/O is in progress
-        this.x = 0;
-        this.y = 0;
-        this.positionCursor(0, 0);
+        this.xMax = 0;
+        this.yMax = 0;
+        this.homeCursor();
         this.outputReadyStamp = 0;      // timestamp when ready for output
     }
 
@@ -294,22 +362,36 @@ class Plotter {
             this.move(0, -1);
             break;
         case "PenUpBtn":
-            this.setPenUp();
+            this.raisePen();
             break;
         case "PenDownBtn":
-            this.setPenDown();
+            this.lowerPen();
             break;
         case "PrintBtn":
-            this.printBtnClick(ev);
+            this.printCanvas(ev);
+            break;
+        case "SaveBtn":
+            this.saveCanvas(ev);
             break;
         case "HomeBtn":
-            this.x = this.y = 0;
-            this.positionCursor(0, 0);
+            this.homeCursor();
             break;
         case "ClearBtn":
             if (this.window.confirm("Are you sure you want to erase the plot area?")) {
-                this.setCanvasEmpty();
+                this.emptyCanvas();
             }
+            break;
+        case "BlackBtn":
+            this.changeColor("black");
+            break;
+        case "RedBtn":
+            this.changeColor("red");
+            break;
+        case "GreenBtn":
+            this.changeColor("green");
+            break;
+        case "BlueBtn":
+            this.changeColor("blue");
             break;
         }
     }
@@ -348,10 +430,45 @@ class Plotter {
     }
 
     /**************************************/
-    printBtnClick(ev) {
-        /* Handler for clicking the Selectric logo and printing the paper area */
+    resizeWindow(ev) {
+        /* Reconfigures the vertical cursor position when the window is resized */
+        const height = this.frame.offsetHeight;
 
-        this.frame.contentWindow.print();
+        this.vCursorLower = height*Plotter.vCursorLowerFactor;
+        this.vCursorUpper = height*Plotter.vCursorUpperFactor;
+        this.innerHeight = height;
+        this.positionCursor(this.x, this.y);
+    }
+
+    /**************************************/
+    printCanvas(ev) {
+        /* Handler for clicking the Print button and printing the plotting area.
+        Clones the visible canvas and inserts it into the (hidden) <iframe>
+        behind the visible <iframe>, then initiates the print dialog for that
+        (hidden) <iframe> */
+
+        if (this.printingCanvas) {      // remove any old canvas from its frame
+            this.printingBody.removeChild(this.printingCanvas);
+        }
+
+        this.printingCanvas = this.cloneCanvas(0);
+        this.printingCanvas.id = "PlotterCanvas";
+        this.printingBody.appendChild(this.printingCanvas);
+        this.printingCanvas.left = (this.canvasPixelWidth - this.printingCanvas.width)/2;
+        this.printingFrame.contentWindow.print();
+    }
+
+    /**************************************/
+    saveCanvas(ev) {
+        /* Handler for clicking the Save button and conventing the canvas to
+        a PNG image */
+        const canvas = this.cloneCanvas(8);
+        const data = canvas.toDataURL("image/png");
+        const hiddenLink = this.doc.createElement('a');
+
+        hiddenLink.setAttribute('download', 'PlotterImage.png');
+        hiddenLink.setAttribute('href', data);
+        hiddenLink.click();
     }
 
 
@@ -363,8 +480,8 @@ class Plotter {
     toUnitCoord(x, y) {
         /* Converts canvas (pixel) coordinates to transformed unit coordinates */
 
-        return [(x-this.canvasHOffset)/Plotter.canvasHScale,
-                (y-this.canvasVOffset)/Plotter.canvasVScale];
+        return [(x-this.canvasHOffset)/this.canvasHScale,
+                (y-this.canvasVOffset)/this.canvasVScale];
     }
 
     /**************************************/
@@ -372,17 +489,83 @@ class Plotter {
         /* Converts transformed canvas unit coordinates into canvas (pixel)
         coordinates */
 
-        return [Math.floor(x*Plotter.canvasHScale + this.canvasHOffset),
-                Math.floor(y*Plotter.canvasVScale + this.canvasVOffset)];
+        return [Math.floor(x*this.canvasHScale + this.canvasHOffset),
+                Math.floor(y*this.canvasVScale + this.canvasVOffset)];
     }
 
     /**************************************/
-    setCanvasEmpty() {
+    homeCursor() {
+        /* Homes the cursor and resets the related properties */
+
+        this.x = this.y = 0;
+        this.pyLast = 0;
+        this.vCursorOffset = 0;
+        this.vCursor.style.top = "0px";
+        this.frameWin.scrollTo(0, 0)
+        this.positionCursor(0, 0);
+    }
+
+    /**************************************/
+    emptyCanvas() {
         /* Erases the plotter canvas and initializes it for new output */
 
         this.clear();
-        this.setPenUp();
+        this.raisePen();
         this.dc.clearRect(-1, -1, this.canvasUnitWidth+1, this.canvasUnitHeight+1);
+        if (this.printingCanvas) {      // remove any print canvas from its frame
+            this.printingBody.removeChild(this.printingCanvas);
+            this.printingCanvas = null;
+        }
+    }
+
+    /**************************************/
+    changeColor(color) {
+        /* Changes the pen color */
+        const lamps = this.$$("PaletteDiv").querySelectorAll(".paletteLamp");
+
+        // Reset all of the color-selection lamps.
+        for (const lamp of lamps) {
+            lamp.style.display = "none";
+        }
+
+        // Set the pen color and the corresponding lamp.
+        this.dc.fillStyle = color;
+        switch (color) {
+        case "black":
+            this.$$("BlackLamp").style.display = "block";
+            break;
+        case "red":
+            this.$$("RedLamp").style.display = "block";
+            break;
+        case "green":
+            this.$$("GreenLamp").style.display = "block";
+            break;
+        case "blue":
+            this.$$("BlueLamp").style.display = "block";
+            break;
+        }
+    }
+
+    /**************************************/
+    cloneCanvas(margin) {
+        /* Copies that part of the visible canvas from (0,0) to (xMax,yMax) and
+        returns that portion as a new canvas object. "margin" specifies the
+        number of margin pixels to be added around the original canvas */
+        const margin2 = margin*2;
+        const [px0, py0] = this.toPixelCoord(0, 0);
+        const [pxMax, pyMax] = this.toPixelCoord(this.xMax, this.yMax);
+        const width = px0-pxMax+2;
+        const height = pyMax-py0+1;
+        const iData = this.dc.getImageData(pxMax-1, py0, width, height);
+
+        const newCanvas = this.doc.createElement("canvas");
+        newCanvas.width = width+margin2;
+        newCanvas.height = height+margin2;
+        const newDC = newCanvas.getContext("2d");
+        newDC.fillStyle = "white";
+        newDC.clearRect(0, 0, width+margin2, top+margin2);
+        newDC.putImageData(iData, margin, margin);
+        return newCanvas;
     }
 
     /**************************************/
@@ -393,24 +576,43 @@ class Plotter {
         this.hCoord.textContent = y;
         this.vCoord.textContent = x;
         this.hCursor.style.left = `${px}px`;
-        this.frameWin.scrollTo(0, py-this.pixelVOrigin);
+
+        const delta = py - this.pyLast;
+        if (delta) {
+            const newOffset = this.vCursorOffset + delta;
+            if (newOffset > this.vCursorUpper) {        // cursor is below the high boundary
+                this.frameWin.scrollTo(0, py - newOffset);
+            } else if (newOffset > this.vCursorLower) { // cursor is between the boundaries
+                this.vCursorOffset = newOffset;
+                this.vCursor.style.top = `${newOffset}px`;
+            } else if (py > this.vCursorLower) {        // current point is below the low boundary
+                this.frameWin.scrollTo(0, py - newOffset);
+            } else {                                    // current point is above the low boundary
+                this.vCursorOffset = newOffset;
+                this.vCursor.style.top = `${newOffset}px`;
+            }
+
+            this.pyLast = py;
+        }
     }
 
     /**************************************/
-    async setPenUp() {
+    async raisePen() {
         /* Sets the pen in the up position */
 
         this.penDown = false;
         this.penStat.textContent = "UP";
+        this.penStat.classList.remove("red");
         this.outputReadyStamp += Plotter.penPeriod;
 }
 
     /**************************************/
-    async setPenDown() {
+    async lowerPen() {
         /* Sets the pen in the down position */
 
         this.penDown = true;
         this.penStat.textContent = "DOWN";
+        this.penStat.classList.add("red");
         this.outputReadyStamp += Plotter.penPeriod;
 }
 
@@ -424,11 +626,11 @@ class Plotter {
 
         if (delay < 0) {
             this.outputReadyStamp = now + Plotter.stepPeriod;
-        } else if (delay < Plotter.minWait) {
-            this.outputReadyStamp += Plotter.stepPeriod;
         } else {
-            await this.timer.delayFor(delay);
-            this.outputReadyStamp = now + Plotter.stepPeriod;
+            this.outputReadyStamp += Plotter.stepPeriod;
+            if (delay > Plotter.minWait) {
+                await this.timer.delayFor(delay);
+            }
         }
 
         let x = this.x + dx;
@@ -436,6 +638,8 @@ class Plotter {
             x = 0;
         } else if (x >= this.canvasUnitWidth) {
             x = this.canvasUnitWidth-1;
+        } else if (this.penDown && x > this.xMax) {
+            this.xMax = x;
         }
 
         let y = this.y + dy;
@@ -443,6 +647,8 @@ class Plotter {
             y = 0;
         } else if (y >= this.canvasUnitHeight) {
             y = this.canvasUnitHeight-1;
+        } else if (this.penDown && y > this.yMax) {
+            this.yMax = y;
         }
 
         this.x = x;
@@ -464,8 +670,8 @@ class Plotter {
     }
 
     /**************************************/
-    plotChar(char) {
-        /* Decodes one paper tape character code into the appropriate plotting
+    plotCommand(char) {
+        /* Decodes one paper-tape character code into the appropriate plotting
         command. Returns a Promise that resolves once any pending delay has
         taken place */
         const command = Plotter.plotXlate[char];
@@ -475,9 +681,9 @@ class Plotter {
         if (!command) {
             return this.move(0, 0);     // no action
         } else if (command.penUp) {
-            return this.setPenUp();
+            return this.raisePen();
         } else if (command.penDown) {
-            return this.setPenDown();
+            return this.lowerPen();
         } else {
             return this.move(-command.dy, command.dx);
         }
@@ -490,7 +696,7 @@ class Plotter {
         Dump Numerically. Returns a Promise for completion */
         const digit = code & Register.digitMask;
 
-        return this.plotChar(Plotter.numericGlyphs[digit & Register.bcdMask]);
+        return this.plotCommand(Plotter.numericGlyphs[digit & Register.bcdMask]);
     }
 
     /**************************************/
@@ -501,7 +707,7 @@ class Plotter {
         const odd = digitPair & Register.digitMask;
         const code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
 
-        return this.plotChar(Plotter.alphaGlyphs[code]);
+        return this.plotCommand(Plotter.alphaGlyphs[code]);
     }
 
     /**************************************/
@@ -545,6 +751,7 @@ class Plotter {
             this.$$("ControlsDiv").removeEventListener("mouseup", this.boundControlMouseUp);
 
             this.config.putWindowGeometry(this.window, "Plotter");
+            this.window.removeEventListener("resize", this.boundResizeWindow);
             this.window.removeEventListener("beforeunload", this.beforeUnload);
             this.window.close();
         }

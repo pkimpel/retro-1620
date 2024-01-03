@@ -5,7 +5,10 @@ The source files for PLOT, CHAR, and POINT were transcribed in December
 2023 by Paul Kimpel from:
     https://www.kgs.ku.edu/Publications/Bulletins/CC/15/CompContr15.pdf.
 
-Some sketchy notes on the use of PLOT and CHAR are available in
+Notes on PLOT, CHAR, and POINT are included in the plotter wiki page,
+https://github.com/pkimpel/retro-1620/wiki/UsingThePlotter.
+
+Some sketchy notes on the use of PLOT and CHAR are also available in
 "Programming the IBM 1620, Second Edition", Clarence B. Germain,
 Prentice-Hall, Inc., Englewood Cliffs, NY, 1965, LCCN 65-17860,
 pp. 139-141.
@@ -24,6 +27,10 @@ pp. 139-141.
 Plot-Demo-1.card
     Sample FORTRAN II-D program to demonstrate the PLOT subroutine.
 
+Plot-Demo-2.card
+    Another FORTRAN II-D program for a more complicated "string art"
+    plot.
+
 1620-LM-042-CHAR.sps
     SPS assembly job for the FORTRAN-callable CHAR subroutine.
     Essentially a formatted write to the plotter using a list of values
@@ -35,15 +42,16 @@ Plot-Demo-1.card
     Assembly listing for the CHAR subroutine.
 
 Char-Demo-1.card
-    Sample FORTRAN II-D program to demonstrate the Char subroutine.
+    Sample FORTRAN II-D program to demonstrate the CHAR subroutine.
 
-1620-LM-042-POINT.sps
+POINT.sps
     SPS assembly job for the FORTRAN-callable POINT subroutine. Draws
     one of ten available symbols centered on the current pen location.
 
-1620-LM-042-POINT-Listing.txt
+POINT-Listing.txt
     Assembly listing for the POINT subroutine.
 
 Point-Demo-1.card
     Sample FORTRAN II-D program to demonstrate the POINT subroutine.
+
 
