@@ -28,7 +28,7 @@ class Envir {
     static maxMemorySize = 60000;       // maximum allowable memory on a 1620 Mod 2, digits
     static tickTime = 0.0005;           // 1620 clock period, ms (0.5µs period, 2Mhz frequency)
     static cycleTime = 0.010;           // 1620 memory cycle time, ms (10µs period)
-    static minSliceTime = 5;            // minimum time slice before throttling, ms
+    static minSliceTime = 10;           // minimum time slice before throttling, ms
 
     // Table to translate 1620 digits to binary values. Ignores the C and F bits.
     // For "undigits" (BCD values > 9), converts to an 8 or 9 by treating the 2 and 4

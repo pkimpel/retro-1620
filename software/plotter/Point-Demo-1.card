@@ -1,7 +1,10 @@
 3400032007013600032007024902402511963611300102 COLD START CARD - 1620 MONITOR I
 ||JOB                        POINT DEMO 1
-||FORX5   |
+||DUP                        ON FIRST USE, WILL HALT BECUASE POINTD ISNT THERE
+*DELETPOINTD
+||FOR 5   |
 *LIST PRINTER
+*LDISKPOINTD
 C-----------------------------------------------------------------------
 C POINT DEMO 1
 C PROGRAM TO DEMONSTRATE USE OF THE PLOTTER POINT SUBROUTINE.
@@ -9,7 +12,14 @@ C
 C 2023-12-25  P.KIMPEL
 C   ORIGINAL VERSION.
 C-----------------------------------------------------------------------
-C
+
+C POSITION THE PEN AT X=100 AND Y=250
+C                   XMIN  XMAX  XL    XD YMIN   YMAX   YL     YD
+      CALL PLOT(201, 0.0,100.0,1.0,100.0, 0.0,1100.0,11.0,1100.0)
+      CALL PLOT(98, 0.0, 1100.0)
+      CALL PLOT(98, 100.0, 250.0)
+      CALL PLOT(8)
+
 C INITIALIZATION
       XMAX = 12.0
       XMIN = 0.0
@@ -44,3 +54,6 @@ C TRY STUFF
       CALL EXIT
       END
 ||||              END OF JOB
+||JOB                        XEQ POINT DEMO |
+||XEQ POINTD
+||||

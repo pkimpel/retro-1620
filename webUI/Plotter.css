@@ -39,6 +39,7 @@
     top:                0;
     bottom:             0;
     z-index:            10;
+    transform:          translate(2px, 0);      /* align to pen coordinates */
     border-left:        1px dashed red}
 #VCursor {
     position:           absolute;
@@ -47,6 +48,7 @@
     bottom:             50%;
     height:             2px;
     z-index:            10;
+    transform:          translate(0, 1px);      /* align to pen coordinates */
     border-top:         1px dashed red}
 
 #PrintingDiv {
@@ -54,7 +56,7 @@
     width:              570px;
     height:             480px;
     margin:             4px;
-    z-index:            -1;             /* hide below the PlotterDiv */
+    z-index:            -1;                     /* hide below the PlotterDiv */
     background-color:   white}
 #PrintingFrame {
     position:           absolute;

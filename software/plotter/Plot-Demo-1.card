@@ -1,7 +1,10 @@
 3400032007013600032007024902402511963611300102 COLD START CARD - 1620 MONITOR I
 ||JOB                        PLOT DEMO 1
-||FORX5   |
+||DUP                        ON FIRST USE, WILL HALT BECUASE PLOTD1 ISNT THERE
+*DELETPLOTD1
+||FOR 5   |
 *LIST PRINTER
+*LDISKPLOTD1
 C-----------------------------------------------------------------------
 C PLOT DEMO 1
 C PROGRAM TO DEMONSTRATE USE OF THE PLOT SUBROUTINE.
@@ -9,7 +12,14 @@ C
 C 2023-12-24  P.KIMPEL
 C   ORIGINAL VERSION.
 C-----------------------------------------------------------------------
-C
+
+C POSITION THE PEN AT X=100 AND Y=250
+C                   XMIN  XMAX  XL    XD YMIN   YMAX   YL     YD
+      CALL PLOT(201, 0.0,100.0,1.0,100.0, 0.0,1100.0,11.0,1100.0)
+      CALL PLOT(98, 0.0, 1100.0)
+      CALL PLOT(98, 100.0, 250.0)
+      CALL PLOT(8)
+
 C A SIMPLE LINEAR PLOT
       XMIN = 0.0
       XMAX = 100.0
@@ -72,3 +82,6 @@ C
       CALL EXIT
       END
 ||||              END OF JOB
+||JOB                        XEQ PLOT DEMO 1 |
+||XEQ PLOTD1
+||||

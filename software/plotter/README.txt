@@ -13,6 +13,13 @@ Some sketchy notes on the use of PLOT and CHAR are also available in
 Prentice-Hall, Inc., Englewood Cliffs, NY, 1965, LCCN 65-17860,
 pp. 139-141.
 
+Plot-Demo-1.card, Plot-Demo-2.card, Char-Demo-1.card, and Point-
+Demo-1.card now all compile to disk and execute from the compiled file.
+You can extract the last three cards from each of those decks as
+standalone jobs to run the demos without having to compile them each
+time. Each of the demos also now positions the pen automatically during
+its initialization.
+
 1620-LM-042-PLOT.sps
     SPS assembly job for the FORTRAN-callable PLOT subroutine. Specifies
     the size of the plot area in inches, scales the plot area to
@@ -53,5 +60,6 @@ POINT-Listing.txt
 
 Point-Demo-1.card
     Sample FORTRAN II-D program to demonstrate the POINT subroutine.
+
 
 
