@@ -76,18 +76,18 @@ class Plotter {
     // Static properties
 
     static frameExtraWidth = 20;        // plot/print non-frame width, pixels
-    static minWait = 5;                 // ms for minimum throttling delay
+    static minWait = 4;                 // ms for minimum throttling delay
     static penPeriod = 100;             // ms for pen up/down
     static stepPeriod = 1000/300;       // ms per step
-    static windowHeight = 488;          // window heighteight, pixels
-    static windowExtraWidth = 96;       // window non-canvas width, pixels
+    static windowHeight = 488;          // window height, pixels
+    static windowExtraWidth = 96;       // window non-canvas width, pixels:
+                                        // ControlDiv=68, scrollbar=20, margin=4+4
 
     static canvasStepSize = 0.01;       // plotter step size, inches
-    static canvasWidth = 11;            // plotter carriage width, inches
-    static canvasMaxHeight = 16383;     // max canvas unit height
-    static canvasHeight = Plotter.canvasMaxHeight*Plotter.canvasStepSize;  // inches, about 13.6 feet
-    static vCursorLowerFactor = 0.50;   // lower scrolling boundary factor
-    static vCursorUpperFactor = 0.50;   // upper scrolling boundary factor
+    static canvasMaxHeight = 16383;     // max canvas step height, about 13.6 feet
+    static canvasMaxWidth = 1100;       // max canvas step width, 11 inches
+    static vCursorTopFactor = 0.50;     // top scrolling boundary offset factor
+    static vCursorBottomFactor = 0.50;  // bottom scrolling boundary offset factor
 
     static numericGlyphs = [            // translate numeric codes to paper-tape glyphs
         "0", "1", "2",  "3", "4", "5", "6", "7", "8", "9", "|", "<", "@",  "<", "<", "\\"];
@@ -185,22 +185,30 @@ class Plotter {
     };
 
 
-    // Public Instance Properties
+    // Public Instance Properties (more in contructor and plotterOnLoad method)
 
     doc = null;                         // window document object
     window = null;                      // window object
 
+    busy = false;                       // I/O in progress (not really used)
+    canvasHOffset = 0;                  // canvas coordinate horizontal offset
+    canvasScaleHeight = 0;              // current canvas height, pixels
+    canvasScaleWidth = 0;               // current canvas width, pixels
+    canvasVOffset = 0;                  // canvas coordinate vertical offset
+    canvasLineWidth = 1;                // width of dots drawn by plotter steps, canvas units
     movingFast = false;                 // true if doing manual fast move
     outputReadyStamp = 0;               // timestamp when ready for next point
-    penDown = false;                    // pen up=0, down=1
-    pixelHOrigin = 0;                   // horizontal pixel origin
-    pixelVOrigin = 0;                   // vertical pixel origin
+    penDown = false;                    // pen up=false, down=true
+    pxLast = 0;                         // last horizontal pixel offset
     pyLast = 0;                         // last vertical pixel offset
     timer = new Timer();                // delay management timer
+    vCursorBottom = 0;                  // current bottom cursor scrolling boundary offset, pixels
+    vCursorOffset = 0;                  // current offset of the vertical-coordinate cursor line, pixels
+    vCursorTop = 0;                     // current top cursor scrolling boundary offset, pixels
     x = 0;                              // vertical offset (to down on the canvas)
-    y = 0;                              // horizontal offset (to left on the canvas)
     xMax = 0;                           // maximum vertical offset attained
     xMin = 0;                           // minimum vertical offset attained
+    y = 0;                              // horizontal offset (to left on the canvas)
     yMax = 0;                           // maximum horizontal offset attained
     yMin = 0;                           // minimum horizontal offset attained
 
@@ -211,7 +219,7 @@ class Plotter {
         the global script:
             config is the SystemConfig object
             processor is the Processor object
-        */
+        Additional properties are created in the plotterOnLoad method */
 
         this.context = context;
         this.config = context.config;
@@ -222,30 +230,20 @@ class Plotter {
         this.boundControlMouseUp = this.controlMouseUp.bind(this);
         this.boundResizeWindow = this.resizeWindow.bind(this);
 
+        this.canvasScaleFactor = (this.config.getNode("Plotter.scale") == 2 ? 1.0 : 0.5);
         this.innerHeight = Plotter.windowHeight;
-        switch (this.config.getNode("Plotter.scale")) {
-        case 2:
-            this.canvasHScale = -1.0;
-            this.canvasVScale = 1.0;
-            break;
-        default:
-            this.canvasHScale = -0.5;
-            this.canvasVScale = 0.5;
-            break;
-        }
-
-        this.canvasPixelHeight = Math.round(Math.abs(Plotter.canvasMaxHeight*this.canvasVScale));
-        this.canvasPixelWidth = Math.round(Math.abs(Plotter.canvasWidth/Plotter.canvasStepSize*this.canvasHScale));
+        this.innerWidth = Plotter.windowExtraWidth +
+                Math.round(Plotter.canvasMaxWidth*this.canvasScaleFactor);
 
         // Create the Plotter window
         let geometry = this.config.formatWindowGeometry("Plotter");
         if (geometry.length) {
             this.innerHeight = this.config.getWindowProperty("Plotter", "innerHeight");
+            this.innerWidth = this.config.getWindowProperty("Plotter", "innerWidth");
         } else {
-            const width = this.canvasPixelWidth + Plotter.windowExtraWidth;
-            geometry = `,left=${(screen.availWidth-width)/2}` +
+            geometry = `,left=${(screen.availWidth-this.innerWidth)/2}` +
                        `,top=${screen.availHeight-Plotter.windowHeight}` +
-                       `,width=${width},height=${Plotter.windowHeight}`;
+                       `,width=${this.innerWidth},height=${Plotter.windowHeight}`;
         }
 
         openPopup(window, "../webUI/Plotter.html", "retro-1620.Plotter",
@@ -263,52 +261,38 @@ class Plotter {
 
     /**************************************/
     plotterOnLoad(ev) {
-        /* Initializes the Plotter window and user interface */
+        /* Initializes the Plotter window and user interface. Creates many
+        additional global properties */
         const prefs = this.config.getNode("Plotter");
 
         this.doc = ev.target;           // now we can use this.$$()
-        this.window = this.doc.defaultView;
         this.doc.title = "retro-1620 Plotter";
+        this.window = this.doc.defaultView;
         this.hCursor = this.$$("HCursor");
         this.vCursor = this.$$("VCursor");
         this.hCoord = this.$$("HCoordSpan");
         this.vCoord = this.$$("VCoordSpan");
         this.penStat = this.$$("PenStatusSpan");
 
-        this.$$("PlotterDiv").style.width = `${this.canvasPixelWidth + Plotter.frameExtraWidth}px`;
-        this.$$("PrintingDiv").style.width = `${this.canvasPixelWidth + Plotter.frameExtraWidth}px`;
-        this.vCursor.style.width = `${this.canvasPixelWidth}px`;
-
         this.frame = this.$$("PlotterFrame");
         this.frameWin = this.frame.contentWindow;
         this.frameDoc = this.frame.contentDocument;
         this.frameBody = this.frameDoc.getElementById("FrameBody");
+        this.canvasDiv = this.frameDoc.getElementById("CanvasDiv");
         this.canvas = this.frameDoc.getElementById("PlotterCanvas");
         this.dc = this.canvas.getContext("2d", {alpha: false, willReadFrequently: false});
 
         this.printingFrame = this.$$("PrintingFrame");
         this.printingFrameDoc = this.printingFrame.contentDocument;
         this.printingBody = this.printingFrameDoc.getElementById("FrameBody");
+        this.printingCanvasDiv = this.printingFrameDoc.getElementById("CanvasDiv");
         this.printingCanvas = this.printingFrameDoc.getElementById("PlotterCanvas");
 
-        this.innerHeight = this.frameBody.offsetHeight;
-        this.canvasHOffset = this.canvasPixelWidth-1;   // pixels are drawn to the right of the point
-        this.canvasVOffset = Math.round(this.innerHeight/2);
-        this.canvasUnitHeight = Math.round(Plotter.canvasHeight/Plotter.canvasStepSize);
-        this.canvasUnitWidth = Math.round(Plotter.canvasWidth/Plotter.canvasStepSize);
-        this.canvasLineWidth = 1;
+        this.calculateScaling();
+        this.calculateCanvasOffsets();
 
-        [this.pixelHOrigin, this.pixelVOrigin] = this.toPixelCoord(0, 0);
-        this.canvas.height = Math.abs(this.canvasUnitHeight*this.canvasVScale);
-        this.canvas.width = Math.round(Math.abs(this.canvasUnitWidth*this.canvasHScale));
-
-        this.vCursorOffset = this.canvasVOffset;
-        this.vCursorLower = this.innerHeight*Plotter.vCursorLowerFactor;
-        this.vCursorUpper = this.innerHeight*Plotter.vCursorUpperFactor;
-
-        this.dc.fillStyle = "white";
-        this.dc.fillRect(0, 0, this.canvasPixelWidth+1, this.canvasPixelHeight+1);
-
+        this.canvas.height = Plotter.canvasMaxHeight;
+        this.canvas.width = Plotter.canvasMaxWidth;
         this.emptyCanvas();
         this.changeColor("black");      // the default
 
@@ -319,13 +303,13 @@ class Plotter {
         this.$$("ControlsDiv").addEventListener("mousedown", this.boundControlMouseDown);
         this.$$("ControlsDiv").addEventListener("mouseup", this.boundControlMouseUp);
 
-        // Resize the window to take into account the difference between
-        // inner and outer heights (WebKit quirk).
-        if (this.window.innerHeight < this.innerHeight) {        // Safari bug
-            this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
-        }
-
-        this.innerHeight = this.window.innerHeight;
+        // Resize the window to take into account the difference between inner
+        // and outer heights (WebKit quirk). Also force the width to match the
+        // initial scale factor.
+        this.window.resizeBy(
+                Plotter.canvasMaxWidth/Math.round(1/this.canvasScaleFactor) -
+                        this.canvasDiv.offsetWidth,
+                this.innerHeight - this.window.innerHeight);
     }
 
     /**************************************/
@@ -334,8 +318,8 @@ class Plotter {
 
         this.busy = false;              // an I/O is in progress
         this.xMax = this.yMax = 0;
-        this.xMin = this.canvasUnitHeight;
-        this.yMin = this.canvasUnitWidth;
+        this.xMin = Plotter.canvasMaxHeight;
+        this.yMin = Plotter.canvasMaxWidth;
         this.homeCursor();
         this.outputReadyStamp = 0;      // timestamp when ready for output
     }
@@ -351,6 +335,8 @@ class Plotter {
 
     /**************************************/
     beforeUnload(ev) {
+        /* Handles the beforeunload event to warn the user that closing the
+        window is not a good idea */
         const msg = "Closing this window will make the device unusable.\n" +
                     "Suggest you stay on the page and minimize this window instead";
 
@@ -445,22 +431,49 @@ class Plotter {
     }
 
     /**************************************/
-    resizeWindow(ev) {
-        /* Reconfigures the vertical cursor position when the window is resized */
-        const height = this.frameBody.offsetHeight;
+    calculateScaling() {
+        /* Calculates the canvas scaling and scrolling factors initially and
+        whenever the window is resized */
 
-        this.innerHeight = height;
-        this.vCursorLower = height*Plotter.vCursorLowerFactor;
-        this.vCursorUpper = height*Plotter.vCursorUpperFactor;
-        this.vCursorOffset = Math.round(height/2);
-        if (this.pyLast >= this.vCursorOffset) {
-            this.frameWin.scrollTo(0, this.pyLast - this.vCursorOffset);
+        this.canvasScaleHeight = this.frameBody.offsetHeight;
+        this.canvasScaleWidth = this.canvasDiv.offsetWidth;
+        this.canvasScaleFactor = this.canvasScaleWidth/Plotter.canvasMaxWidth;
+        this.$$("ScaleFactor").textContent = this.canvasScaleFactor.toFixed(3);
+
+        this.vCursorTop = Math.round(this.canvasScaleHeight*Plotter.vCursorTopFactor);
+        this.vCursorBottom = Math.round(this.canvasScaleHeight*Plotter.vCursorBottomFactor);
+    }
+
+    /**************************************/
+    calculateCanvasOffsets() {
+        /* Calculates the coordinate and vertical-cursor offsets */
+
+        this.vCursorOffset = Math.round(this.canvasScaleHeight/2);
+        this.canvasHOffset = Plotter.canvasMaxWidth-1;          // pixels are drawn to the right of the coord
+        this.canvasVOffset = Math.round(this.vCursorOffset/this.canvasScaleFactor);
+    }
+
+    /**************************************/
+    resizeWindow(ev) {
+        /* Reconfigures the scaling vertical cursor position when the window
+        is resized */
+
+        this.calculateScaling();
+        const lastOffset = Math.round(this.pyLast*this.canvasScaleFactor);
+        const newOffset = Math.round(this.canvasScaleHeight/2);
+        if (lastOffset >= newOffset) {
+            this.vCursorOffset = newOffset;
+            this.frameWin.scrollTo(0, Math.round(lastOffset - newOffset));
         } else {
-            this.vCursorOffset = this.pyLast;
+            this.vCursorOffset = lastOffset;
             this.frameWin.scrollTo(0, 0);
         }
 
+        //console.debug("Plotter resize (%5d, %5d) %f vCursor @ %d",
+        //        this.canvasScaleWidth, this.canvasScaleHeight, this.canvasScaleFactor, this.vCursorOffset);
+
         this.vCursor.style.top = `${this.vCursorOffset}px`;
+        this.hCursor.style.left = `${Math.round(this.pxLast*this.canvasScaleFactor)}px`;
     }
 
     /**************************************/
@@ -471,13 +484,13 @@ class Plotter {
         (hidden) <iframe> */
 
         if (this.printingCanvas) {      // remove any old canvas from its frame
-            this.printingBody.removeChild(this.printingCanvas);
+            this.printingCanvasDiv.removeChild(this.printingCanvas);
         }
 
         this.printingCanvas = this.cloneCanvas(0);
         this.printingCanvas.id = "PlotterCanvas";
-        this.printingBody.appendChild(this.printingCanvas);
-        this.printingCanvas.left = (this.canvasPixelWidth - this.printingCanvas.width)/2;
+        this.printingCanvasDiv.appendChild(this.printingCanvas);
+        this.printingCanvas.left = (Plotter.canvasMaxWidth - this.printingCanvas.width)/2;
         this.printingFrame.contentWindow.print();
     }
 
@@ -503,17 +516,15 @@ class Plotter {
     toUnitCoord(x, y) {
         /* Converts pixel (screen) coordinates to transformed unit coordinates */
 
-        return [Math.round((x-this.canvasHOffset)/this.canvasHScale),
-                Math.round((y-this.canvasVOffset)/this.canvasVScale)];
+        return [this.canvasHOffset-x, y-this.canvasVOffset];
     }
 
     /**************************************/
     toPixelCoord(x, y) {
-        /* Converts transformed canvas unit coordinates into pixel (screen)
+        /* Converts canvas internal coordinates into pixel (screen)
         coordinates */
 
-        return [Math.round(x*this.canvasHScale + this.canvasHOffset),
-                Math.round(y*this.canvasVScale + this.canvasVOffset)];
+        return [this.canvasHOffset-x, y+this.canvasVOffset];
     }
 
     /**************************************/
@@ -521,7 +532,8 @@ class Plotter {
         /* Homes the cursor and resets the related properties */
 
         this.x = this.y = 0;
-        this.pyLast = this.vCursorOffset;
+        this.pxLast = Plotter.canvasMaxWidth-1;
+        this.pyLast = Math.round(this.vCursorOffset/this.canvasScaleFactor);
         this.vCursor.style.top = `${this.vCursorOffset}px`;
         this.frameWin.scrollTo(0, 0)
         const [px, py] = this.toPixelCoord(this.x, this.y);
@@ -530,20 +542,20 @@ class Plotter {
 
     /**************************************/
     emptyCanvas() {
-        /* Erases the plotter canvas and initializes it for new output */
+        /* Erases the plotter canvas, initializes it for new output, and resets
+        the vertical origin to the middle of the plotting area */
 
-        this.canvasVOffset = Math.round(this.innerHeight/2);
-        this.vCursorOffset = this.canvasVOffset;
-        this.clear();
+        this.calculateCanvasOffsets();
+        this.clear();                   // calls this.homeCursor()
         this.raisePen();
         if (this.printingCanvas) {      // remove any print canvas from its frame
-            this.printingBody.removeChild(this.printingCanvas);
+            this.printingCanvasDiv.removeChild(this.printingCanvas);
             this.printingCanvas = null;
         }
 
         const saveStyle = this.dc.fillStyle;
         this.dc.fillStyle = "white";
-        this.dc.fillRect(0, 0, this.canvasPixelWidth+1, this.canvasPixelHeight+1);
+        this.dc.fillRect(0, 0, Plotter.canvasMaxWidth+1, Plotter.canvasMaxHeight+1);
         this.dc.fillStyle = saveStyle;
     }
 
@@ -552,8 +564,7 @@ class Plotter {
         /* Changes the pen color */
         const lamps = this.$$("PaletteDiv").querySelectorAll(".paletteLamp");
 
-        // Reset all of the color-selection lamps.
-        for (const lamp of lamps) {
+        for (const lamp of lamps) {     // reset all of the color-selection lamps
             lamp.style.display = "none";
         }
 
@@ -584,8 +595,8 @@ class Plotter {
         const [pxMin, pyMin] = this.toPixelCoord(this.xMin, this.yMin);
         const [pxMax, pyMax] = this.toPixelCoord(this.xMax, this.yMax);
         const width = pxMin-pxMax+2;
-        const height = pyMax-pyMin+1;
-        const iData = this.dc.getImageData(pxMax-1, pyMin, width, height);
+        const height = pyMax-pyMin+2;
+        const iData = this.dc.getImageData(pxMax, pyMin, width, height);
 
         const newCanvas = this.doc.createElement("canvas");
         newCanvas.width = width+margin2;
@@ -606,19 +617,26 @@ class Plotter {
 
         this.hCoord.textContent = this.y;
         this.vCoord.textContent = this.x;
-        this.hCursor.style.left = `${px}px`;
+        if (this.pxLast != px) {
+            this.hCursor.style.left = `${Math.round(px*this.canvasScaleFactor)}px`;
+            this.pxLast = px;
+        }
 
-        const delta = py - this.pyLast;
+        const delta = Math.round((py - this.pyLast)*this.canvasScaleFactor);
         if (delta) {
             const newOffset = this.vCursorOffset + delta;
-            if (newOffset > this.vCursorUpper) {        // cursor is below the high boundary
-                this.frameWin.scrollTo(0, py - newOffset);
-            } else if (newOffset > this.vCursorLower) { // cursor is between the boundaries
+            if (newOffset > this.vCursorBottom) {
+                // Cursor is below the bottom boundary.
+                this.frameWin.scrollTo(0, Math.round(py*this.canvasScaleFactor - newOffset));
+            } else if (newOffset > this.vCursorTop) {
+                // Cursor is between the boundaries.
                 this.vCursorOffset = newOffset;
                 this.vCursor.style.top = `${newOffset}px`;
-            } else if (py > this.vCursorLower) {        // current point is below the low boundary
-                this.frameWin.scrollTo(0, py - newOffset);
-            } else {                                    // current point is above the low boundary
+            } else if (Math.round(py*this.canvasScaleFactor) > this.vCursorTop) {
+                // Current point is below the top boundary.
+                this.frameWin.scrollTo(0, Math.round(py*this.canvasScaleFactor - newOffset));
+            } else {
+                // Current point is above the top boundary.
                 this.vCursorOffset = newOffset;
                 this.vCursor.style.top = `${newOffset}px`;
             }
@@ -659,8 +677,8 @@ class Plotter {
 
     /**************************************/
     async move(dx, dy) {
-        /* Moves the plot in the indicated direction(s). If the pen is down,
-        plots a point at the new location. Delays to the actual speed of the
+        /* Steps the plot in the indicated direction(s). If the pen is down,
+        plots a point at the new location. Throttles to the actual speed of the
         plotter as needed */
         const now = performance.now();
         const delay = this.outputReadyStamp - now;
@@ -677,8 +695,8 @@ class Plotter {
         let x = this.x + dx;
         if (x < 0) {
             x = 0;
-        } else if (x >= this.canvasUnitWidth) {
-            x = this.canvasUnitWidth-1;
+        } else if (x >= Plotter.canvasMaxWidth) {
+            x = Plotter.canvasMaxWidth-1;
         } else if (this.penDown) {
             if (x > this.xMax) {this.xMax = x}
             if (x < this.xMin) {this.xMin = x}
@@ -687,8 +705,8 @@ class Plotter {
         let y = this.y + dy;
         if (y < 0) {
             y = 0;
-        } else if (y >= this.canvasUnitHeight) {
-            y = this.canvasUnitHeight-1;
+        } else if (y >= Plotter.canvasMaxHeight) {
+            y = Plotter.canvasMaxHeight-1;
         } else if (this.penDown) {
             if (y > this.yMax) {this.yMax = y}
             if (y < this.yMin) {this.yMin = y}
@@ -705,7 +723,7 @@ class Plotter {
 
     /**************************************/
     async moveFast(dx, dy) {
-        /* Initiates and control manual fast moving of the cursor */
+        /* Initiates and terminates fast manual movement of the cursor */
 
         this.movingFast = true;
         do {
@@ -720,7 +738,7 @@ class Plotter {
         taken place */
         const command = Plotter.plotXlate[char];
 
-        //console.log("Plotter: '%s' %5i %5i %i", char, this.x, this.y, this.penDown);
+        //console.debug("Plotter: '%s' %5i %5i %i", char, this.x, this.y, this.penDown);
 
         if (!command) {
             return this.move(0, 0);     // no action
@@ -728,7 +746,7 @@ class Plotter {
             return this.raisePen();
         } else if (command.penDown) {
             return this.lowerPen();
-        } else {
+        } else {                        // a stepping command
             return this.move(-command.dy, command.dx);
         }
 

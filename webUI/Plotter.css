@@ -21,9 +21,11 @@
     position:           absolute;
     top:                4px;
     bottom:             4px;
-    width:              570px;
-    margin-left:        4px;
-    margin-right:       4px;
+    left:               calc(50% - 36px);       /* middle - ControlDiv/2(34) - R.margin(4) */
+    width:              calc(100% - 76px);      /* window - ControlDiv(68) - L.margin(4) - R.margin(4) */
+    min-width:          200px;
+    min-height:         200px;
+    transform:          translate(-50%, 0);
     background-color:   white}
 #PlotterFrame {
     position:           absolute;
@@ -35,28 +37,26 @@
 #HCursor {
     position:           absolute;
     left:               50%;
-    width:              2px;
+    width:              1px;
     top:                0;
     bottom:             0;
     z-index:            10;
-    transform:          translate(2px, 0);      /* align to pen coordinates */
     border-left:        1px dashed red}
 #VCursor {
     position:           absolute;
     left:               0;
-    right:              0;
-    bottom:             50%;
-    height:             2px;
+    right:              20px;
+    top:                50%;
+    height:             1px;
     z-index:            10;
-    transform:          translate(0, 1px);      /* align to pen coordinates */
     border-top:         1px dashed red}
 
 #PrintingDiv {
     position:           absolute;
+    visibility:         hidden;
     width:              570px;
     height:             480px;
     margin:             4px;
-    z-index:            -1;                     /* hide below the PlotterDiv */
     background-color:   white}
 #PrintingFrame {
     position:           absolute;
@@ -95,27 +95,25 @@
     top:                76px;
     width:              100%;
     height:             72px;
-    margin-top:         4px;
-    margin-bottom:      4px;
     text-align:         center}
 #StepCaption {
     width:              100%}
 #StepLeftBtn {
     position:           absolute;
-    top:                16px;
-    left:               calc(50% - 20px)}
+    top:                28px;
+    right:              calc(50% + 8px)}
 #StepRightBtn {
     position:           absolute;
-    top:                16px;
-    right:              calc(50% - 20px)}
+    top:                28px;
+    left:               calc(50% + 8px)}
 #StepUpBtn {
     position:           absolute;
-    top:                40px;
-    left:               calc(50% - 20px)}
+    top:                12px;
+    left:               calc(50% - 8px)}
 #StepDownBtn {
     position:           absolute;
-    top:                40px;
-    right:              calc(50% - 20px)}
+    top:                44px;
+    left:               calc(50% - 8px)}
 
 #CoordDiv {
     position:           absolute;
@@ -126,30 +124,28 @@
 
 #FastControlsDiv {
     position:           absolute;
-    top:                164px;
+    top:                168px;
     width:              100%;
     height:             72px;
-    margin-top:         4px;
-    margin-bottom:      4px;
     text-align:         center}
 #FastCaption {
     width:              100%}
 #FastLeftBtn {
     position:           absolute;
-    top:                16px;
-    left:               calc(50% - 20px)}
+    top:                28px;
+    right:              calc(50% + 8px)}
 #FastRightBtn {
     position:           absolute;
-    top:                16px;
-    right:              calc(50% - 20px)}
+    top:                28px;
+    left:               calc(50% + 8px)}
 #FastUpBtn {
     position:           absolute;
-    top:                40px;
-    left:               calc(50% - 20px)}
+    top:                12px;
+    left:               calc(50% - 8px)}
 #FastDownBtn {
     position:           absolute;
-    top:                40px;
-    right:              calc(50% - 20px)}
+    top:                44px;
+    left:               calc(50% - 8px)}
 
 #PenControlsDiv {
     position:           absolute;
@@ -237,6 +233,17 @@
     background-color:   blue}
 #BlueLamp {
     left:               56px}
+#ScaleFactor {
+    position:           absolute;
+    left:               50%;
+    bottom:             4px;
+    width:              7ch;
+    transform:          translate(-50%, 0);
+    text-align:         center;
+    font-size:          10px;
+    padding:            2px;
+    color:              white;
+    background-color:   inherit}
 
 .red {
     color:              red}

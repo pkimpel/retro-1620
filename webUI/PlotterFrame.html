@@ -25,21 +25,31 @@
 <style id=PlotterFrameStyles>
 BODY {
     height:             100%;
+    width:              100%;
+    background-color:   white;
     margin:             0;
     padding:            0;
-    background-color:   white}
+    border:             none}
+#CanvasDiv {
+    position:           absolute;
+    top:                0;
+    left:               0;
+    width:              100%;
+    height:             fit-content}
 #PlotterCanvas {
     position:           absolute;
-    left:               50%;
     top:                0;
-    transform:          translate(-50%, 0)}
+    left:               0;
+    width:              100%}
 </style>
 </head>
 
 <body id=FrameBody>
-    <canvas id=PlotterCanvas>
-        This browser does not support the HTML &lt;canvas&gt; element.
-    </canvas>
+    <div id=CanvasDiv>
+        <canvas id=PlotterCanvas>
+            This browser does not support the HTML &lt;canvas&gt; element.
+        </canvas>
+    </div>
 </div>
 
 </body>
