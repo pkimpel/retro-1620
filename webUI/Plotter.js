@@ -207,6 +207,12 @@ class Plotter {
     stepCache = new Array(20);          // cache of steps to be drawn at next frame time as x,y pairs
     stepCacheToken = 0;                 // cancellation token for requestAnimationFrame
     stepCacheTop = 0;                   // current length of this.stepCache
+    stepXLast = 0;                      // last cached X pixel coord
+    stepXMax = 0;                       // highest X pixel coord in this frame time
+    stepXMin = Plotter.canvasMaxWidth;  // lowest X pixel coord in this frame time
+    stepYLast = 0;                      // last cached Y pixel coord
+    stepYMax = 0;                       // highest Y pixel coord in this frame time
+    stepYMin = Plotter.canvasMaxHeight; // lowest Y pixel coord in this frame time
     timer = new Timer();                // delay management timer
     vCursorBottom = 0;                  // current bottom cursor scrolling boundary offset, pixels
     vCursorOffset = 0;                  // current offset of the vertical-coordinate cursor line, pixels
@@ -288,6 +294,9 @@ class Plotter {
         this.canvasDiv = this.frameDoc.getElementById("CanvasDiv");
         this.canvas = this.frameDoc.getElementById("PlotterCanvas");
         this.dc = this.canvas.getContext("2d", {alpha: false, willReadFrequently: false});
+
+        this.drawCanvas = new OffscreenCanvas(20, 20);  // offscreen drawing canvas
+        this.drawDC = this.drawCanvas.getContext("2d", {alpha: false});
 
         this.printingFrame = this.$$("PrintingFrame");
         this.printingFrameDoc = this.printingFrame.contentDocument;
@@ -685,20 +694,59 @@ class Plotter {
     /**************************************/
     drawSteps(timestamp) {
         /* Called by the requestAnimationFrame mechanism to draw any plotter
-        steps accumulated this.stepCache */
+        steps accumulated in this.stepCache. Copies the region of the onscreen
+        canvas that would have been drawn to the offscreen canvas, draws the
+        cached steps onto the offscreen canvas, then copies the new drawing
+        to where it belongs on the onscreen canvas. All of this in the name
+        of performance */
         const top = this.stepCacheTop;
 
-        this.stepCacheToken = 0;
-        if (top > 1) {
+        // If there has been only pen-up movement since the last frame, then the
+        // cache will be empty, so all we need to do is position the cursor lines.
+
+        if (top) {
             const cache = this.stepCache;
-            for (let x=0; x<top; x+=2) {
-                this.dc.fillRect(cache[x], cache[x+1], this.canvasLineWidth, this.canvasLineWidth);
+            // Get bounds of the region that has been drawn since the last frame.
+            const xOffset = this.stepXMin;
+            const yOffset = this.stepYMin;
+            const width = this.stepXMax - xOffset + 1;
+            const height = this.stepYMax - yOffset + 1;
+
+            // Resize the drawing canvas if necessary.
+            if (width > this.drawCanvas.width) {
+                this.drawCanvas.width = width+5;
             }
 
-            this.positionCursor(cache[top-2], cache[top-1]);
+            if (height > this.drawCanvas.height) {
+                this.drawCanvas.height = height+5;
+            }
+
+            // Copy the drawn region of the onscreen canvas to the offscreen one.
+            this.drawDC.putImageData(
+                    this.dc.getImageData(xOffset, yOffset, width, height), 0, 0);
+
+            // Draw the cached step movements on the drawing canvas.
+            for (let x=0; x<top; x+=2) {
+                this.drawDC.fillRect(cache[x]-xOffset, cache[x+1]-yOffset,
+                        this.canvasLineWidth, this.canvasLineWidth);
+            }
+
+            // Copy the offscreen canvas to the onscreen one.
+            this.dc.putImageData(
+                    this.drawDC.getImageData(0, 0, width, height), xOffset, yOffset);
+
+            //  Reset for the next frame.
             this.stepCacheTop = 0;
+            this.stepXMax = 0;
+            this.stepXMin = Plotter.canvasMaxWidth;
+            this.stepYMax = 0;
+            this.stepYMin = Plotter.canvasMaxHeight;
         }
 
+        this.stepCacheToken = 0;
+        this.positionCursor(this.stepXLast, this.stepYLast);
+
+        // Update average frames/second.
         const elapsed = timestamp - this.frameLastStamp;                                // frame time, ms
         this.frameLastStamp = timestamp;
         this.fps = this.fps*(1-Plotter.fpsAlpha) + Plotter.fpsAlpha*1000/elapsed;       // avg frame/sec
@@ -707,9 +755,11 @@ class Plotter {
 
     /**************************************/
     async move(dx, dy) {
-        /* Steps the plot in the indicated direction(s). If the pen is down,
-        plots a point at the new location. Throttles to the actual speed of the
-        plotter as needed */
+        /* Steps the plot in the indicated direction(s). Caches all movement
+        until the next animation frame time, when it will then be drawn. If the
+        pen is down, caches the coordinates of a new point to be drawn;
+        otherwise just caches the last pen coordinates Throttles I/O timing to
+        the actual speed of the plotter as needed */
         const now = performance.now();
         const delay = this.outputReadyStamp - now;
 
@@ -722,6 +772,7 @@ class Plotter {
             }
         }
 
+        // Determine new (x,y) from (dx,dy) and overall extents of the plot
         let x = this.x + dx;
         if (x < 0) {
             x = 0;
@@ -745,9 +796,27 @@ class Plotter {
         this.x = x;
         this.y = y;
         const [px, py] = this.toPixelCoord(x, y);
-        if (!this.penDown) {
-            this.positionCursor(px, py);
-        } else {
+
+        // Determine the extents of movement in this frame time
+        if (this.stepXMin > px) {
+            this.stepXMin = px;
+        }
+        if (this.stepXMax < px) {
+            this.stepXMax = px;
+        }
+
+
+        if (this.stepYMin > py) {
+            this.stepYMin = py;
+        }
+        if (this.stepYMax < py) {
+            this.stepYMax = py;
+        }
+
+        // Cache this step until the next frame time
+        this.stepXLast = px;
+        this.stepYLast = py;
+        if (this.penDown) {
             if (this.stepCacheTop) {
                 if (this.stepCache.length <= this.stepCacheTop) {
                     this.stepCache.push(px, py);
@@ -758,11 +827,15 @@ class Plotter {
 
                 this.stepCacheTop += 2;
             } else {
-                this.stepCache[this.stepCacheTop] = px;
-                this.stepCache[this.stepCacheTop+1] = py;
+                this.stepCache[0] = px;
+                this.stepCache[1] = py;
                 this.stepCacheTop = 2;
-                this.stepCacheToken = this.window.requestAnimationFrame(this.boundDrawSteps);
             }
+        }
+
+        // Schedule the next frame update
+        if (!this.stepCacheToken) {
+            this.stepCacheToken = this.window.requestAnimationFrame(this.boundDrawSteps);
         }
     }
 
