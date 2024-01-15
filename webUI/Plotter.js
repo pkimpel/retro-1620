@@ -75,6 +75,7 @@ class Plotter {
 
     // Static properties
 
+    static fpsAlpha = 0.001;            // alpha for fps moving exponential average
     static frameExtraWidth = 20;        // plot/print non-frame width, pixels
     static minWait = 4;                 // ms for minimum throttling delay
     static penPeriod = 100;             // ms for pen up/down
@@ -84,7 +85,7 @@ class Plotter {
                                         // ControlDiv=68, scrollbar=20, margin=4+4
 
     static canvasStepSize = 0.01;       // plotter step size, inches
-    static canvasMaxHeight = 16383;     // max canvas step height, about 13.6 feet
+    static canvasMaxHeight = 32767;     // max canvas step height, about 27.3 feet
     static canvasMaxWidth = 1100;       // max canvas step width, 11 inches
     static vCursorTopFactor = 0.50;     // top scrolling boundary offset factor
     static vCursorBottomFactor = 0.50;  // bottom scrolling boundary offset factor
@@ -192,15 +193,20 @@ class Plotter {
 
     busy = false;                       // I/O in progress (not really used)
     canvasHOffset = 0;                  // canvas coordinate horizontal offset
+    canvasLineWidth = 1;                // width of dots drawn by plotter steps, canvas units
     canvasScaleHeight = 0;              // current canvas height, pixels
     canvasScaleWidth = 0;               // current canvas width, pixels
     canvasVOffset = 0;                  // canvas coordinate vertical offset
-    canvasLineWidth = 1;                // width of dots drawn by plotter steps, canvas units
+    fps = 60.0;                         // moving exponential average frames/sec
+    frameLastStamp = 0;                 // last animation frame timestamp
     movingFast = false;                 // true if doing manual fast move
-    outputReadyStamp = 0;               // timestamp when ready for next point
+    outputReadyStamp = 0;               // timestamp when ready for next step
     penDown = false;                    // pen up=false, down=true
     pxLast = 0;                         // last horizontal pixel offset
     pyLast = 0;                         // last vertical pixel offset
+    stepCache = new Array(20);          // cache of steps to be drawn at next frame time as x,y pairs
+    stepCacheToken = 0;                 // cancellation token for requestAnimationFrame
+    stepCacheTop = 0;                   // current length of this.stepCache
     timer = new Timer();                // delay management timer
     vCursorBottom = 0;                  // current bottom cursor scrolling boundary offset, pixels
     vCursorOffset = 0;                  // current offset of the vertical-coordinate cursor line, pixels
@@ -228,6 +234,7 @@ class Plotter {
         this.boundControlClick = this.controlClick.bind(this);
         this.boundControlMouseDown = this.controlMouseDown.bind(this);
         this.boundControlMouseUp = this.controlMouseUp.bind(this);
+        this.boundDrawSteps = this.drawSteps.bind(this);
         this.boundResizeWindow = this.resizeWindow.bind(this);
 
         this.canvasScaleFactor = (this.config.getNode("Plotter.scale") == 2 ? 1.0 : 0.5);
@@ -676,6 +683,29 @@ class Plotter {
     }
 
     /**************************************/
+    drawSteps(timestamp) {
+        /* Called by the requestAnimationFrame mechanism to draw any plotter
+        steps accumulated this.stepCache */
+        const top = this.stepCacheTop;
+
+        this.stepCacheToken = 0;
+        if (top > 1) {
+            const cache = this.stepCache;
+            for (let x=0; x<top; x+=2) {
+                this.dc.fillRect(cache[x], cache[x+1], this.canvasLineWidth, this.canvasLineWidth);
+            }
+
+            this.positionCursor(cache[top-2], cache[top-1]);
+            this.stepCacheTop = 0;
+        }
+
+        const elapsed = timestamp - this.frameLastStamp;                                // frame time, ms
+        this.frameLastStamp = timestamp;
+        this.fps = this.fps*(1-Plotter.fpsAlpha) + Plotter.fpsAlpha*1000/elapsed;       // avg frame/sec
+        this.$$("FPS").textContent = this.fps.toFixed(2);
+    }
+
+    /**************************************/
     async move(dx, dy) {
         /* Steps the plot in the indicated direction(s). If the pen is down,
         plots a point at the new location. Throttles to the actual speed of the
@@ -715,9 +745,24 @@ class Plotter {
         this.x = x;
         this.y = y;
         const [px, py] = this.toPixelCoord(x, y);
-        this.positionCursor(px, py);
-        if (this.penDown) {
-            this.dc.fillRect(px, py, this.canvasLineWidth, this.canvasLineWidth);
+        if (!this.penDown) {
+            this.positionCursor(px, py);
+        } else {
+            if (this.stepCacheTop) {
+                if (this.stepCache.length <= this.stepCacheTop) {
+                    this.stepCache.push(px, py);
+                } else {
+                    this.stepCache[this.stepCacheTop] = px;
+                    this.stepCache[this.stepCacheTop+1] = py;
+                }
+
+                this.stepCacheTop += 2;
+            } else {
+                this.stepCache[this.stepCacheTop] = px;
+                this.stepCache[this.stepCacheTop+1] = py;
+                this.stepCacheTop = 2;
+                this.stepCacheToken = this.window.requestAnimationFrame(this.boundDrawSteps);
+            }
         }
     }
 
@@ -805,6 +850,11 @@ class Plotter {
     shutDown() {
         /* Shuts down the device. If the window open failed and onLoad didn't
         run, do nothing because this.window, etc., didn't get initialized */
+
+        if (this.stepCacheToken) {
+            this.window.cancelAnimationFrame(this.stepCacheToken);
+            this.stepCacheToken = 0;
+        }
 
         if (this.window) {
             this.$$("ControlsDiv").removeEventListener("click", this.boundControlClick);

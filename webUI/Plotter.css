@@ -50,6 +50,13 @@
     height:             1px;
     z-index:            10;
     border-top:         1px dashed red}
+#FPS {
+    position:           absolute;
+    left:               4px;
+    bottom:             4px;
+    width:              6ch;
+    color:              red;
+    text-align:         right}
 
 #PrintingDiv {
     position:           absolute;
