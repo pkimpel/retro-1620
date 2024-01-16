@@ -75,7 +75,8 @@ class SystemConfig {
 
         Plotter: {
             hasPlotter: 0,
-            scale: 1
+            scale: 1,
+            maxHeight: 4096
         },
 
         Disk: {
@@ -509,6 +510,7 @@ class SystemConfig {
         // Plotter
         this.setListValue("PlotterModel", cd.Plotter.hasPlotter);
         this.setListValue("PlotterScale", cd.Plotter.scale);
+        this.setListValue("PlotterMaxHeight", cd.Plotter.maxHeight);
 
         // Disk
         for (let x=0; x<4; ++x) {
@@ -638,6 +640,9 @@ class SystemConfig {
         cd.Plotter.hasPlotter = (e.selectedIndex > 0 ? 1 : 0);
         e = this.$$("PlotterScale");
         cd.Plotter.scale = (e.selectedIndex > 0 ? 2 : 1);
+        e = this.$$("PlotterMaxHeight");
+        x = parseInt(e.options[e.selectedIndex].value, 10);
+        cd.Plotter.maxHeight = (isNaN(x) ? 4096 : x);
 
         // Disk
         cd.Disk.hasDisk = (this.$$("Disk0Exists").checked ? 1 : 0);

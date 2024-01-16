@@ -41,6 +41,11 @@
 * of the plotting area. All of this will make much better sense if you
 * watch the emulated plotter while standing on your head.
 *
+* The system configuration has an option to size the display of the
+* plotting area at 100% (one screen pixel per plotter step) or 50% (one
+* screen pixel for every two steps). The 50% setting is recommended for
+* general use. The plotting area is not scaled, only the display of it.
+*
 * Different browsers support different maximum sizes of the <canvas>
 * element. As of late 2023, desktop versions of the following browsers
 * support maximum coordinate values of: Firefox 32767, Chrome and Edge
@@ -48,14 +53,14 @@
 * There are further restrictions on the total area of a canvas.
 * See https://github.com/jhildenbiddle/canvas-size#test-results.
 *
-* This implementation currently uses a maximum width of 1100 and the
-* maximum height given by the Plotter.canvasMaxHeight static property.
-* 1100 corresponds to the 1627's 11-inch carriage and the max height
-* was chosen to allow for adequate performance.
-*
-* The system configuration has an option to scale the plotting area at
-* 100% (one pixel per emulated plotter step) or 50% (one pixel for every
-* two emulated steps). The 50% setting is recommended for general use.
+* This implementation currently uses a canvas width of 1100 pixels and
+* allows the height to be selected in the system configuration. One of
+* several height values can be selected, ranging from 2048 to 32767
+* pixels. Smaller heights generally result in better drawing performance.
+* At or above a height of 16384 pixels, performance in most browsers
+* becomes poor, althogh the actual effect varies by browser. The default
+* height is 4094 pixels, allowing a drawing of 11 inches wide by almost
+* 41 inches long.
 *
 * See the wiki on the device for more information:
 * https://github.com/pkimpel/retro-1620/wiki/UsingThePlotter.
@@ -75,14 +80,15 @@ class Plotter {
 
     // Static properties
 
-    static fpsAlpha = 0.001;            // alpha for fps moving exponential average
+    static fpsAlpha = 0.01;             // alpha for fps moving exponential average
     static frameExtraWidth = 20;        // plot/print non-frame width, pixels
     static minWait = 4;                 // ms for minimum throttling delay
     static penPeriod = 100;             // ms for pen up/down
+    static resizeDelay = 250;           // delay to apply a window resize event, ms
     static stepPeriod = 1000/300;       // ms per step
     static windowHeight = 488;          // window height, pixels
-    static windowExtraWidth = 96;       // window non-canvas width, pixels:
-                                        // ControlDiv=68, scrollbar=20, margin=4+4
+    static windowExtraWidth = 93;       // window non-canvas width, pixels:
+                                        // ControlDiv=68, scrollbar=17, margin=4+4
 
     static canvasStepSize = 0.01;       // plotter step size, inches
     static canvasMaxHeight = 32767;     // max canvas step height, about 27.3 feet
@@ -194,25 +200,23 @@ class Plotter {
     busy = false;                       // I/O in progress (not really used)
     canvasHOffset = 0;                  // canvas coordinate horizontal offset
     canvasLineWidth = 1;                // width of dots drawn by plotter steps, canvas units
+    canvasMaxHeight = Plotter.canvasMaxHeight; // maximum canvas height, pixels
     canvasScaleHeight = 0;              // current canvas height, pixels
     canvasScaleWidth = 0;               // current canvas width, pixels
     canvasVOffset = 0;                  // canvas coordinate vertical offset
     fps = 60.0;                         // moving exponential average frames/sec
-    frameLastStamp = 0;                 // last animation frame timestamp
+    frameLastStamp = performance.now(); // last animation frame timestamp
     movingFast = false;                 // true if doing manual fast move
     outputReadyStamp = 0;               // timestamp when ready for next step
     penDown = false;                    // pen up=false, down=true
     pxLast = 0;                         // last horizontal pixel offset
     pyLast = 0;                         // last vertical pixel offset
+    resizeDelayToken = 0;               // setTimeout cancel token for resize events
     stepCache = new Array(20);          // cache of steps to be drawn at next frame time as x,y pairs
     stepCacheToken = 0;                 // cancellation token for requestAnimationFrame
     stepCacheTop = 0;                   // current length of this.stepCache
     stepXLast = 0;                      // last cached X pixel coord
-    stepXMax = 0;                       // highest X pixel coord in this frame time
-    stepXMin = Plotter.canvasMaxWidth;  // lowest X pixel coord in this frame time
     stepYLast = 0;                      // last cached Y pixel coord
-    stepYMax = 0;                       // highest Y pixel coord in this frame time
-    stepYMin = Plotter.canvasMaxHeight; // lowest Y pixel coord in this frame time
     timer = new Timer();                // delay management timer
     vCursorBottom = 0;                  // current bottom cursor scrolling boundary offset, pixels
     vCursorOffset = 0;                  // current offset of the vertical-coordinate cursor line, pixels
@@ -237,25 +241,30 @@ class Plotter {
         this.config = context.config;
         this.processor = context.processor;
 
+        this.boundApplyResize = this.applyResize.bind(this);
         this.boundControlClick = this.controlClick.bind(this);
         this.boundControlMouseDown = this.controlMouseDown.bind(this);
         this.boundControlMouseUp = this.controlMouseUp.bind(this);
         this.boundDrawSteps = this.drawSteps.bind(this);
         this.boundResizeWindow = this.resizeWindow.bind(this);
 
-        this.canvasScaleFactor = (this.config.getNode("Plotter.scale") == 2 ? 1.0 : 0.5);
-        this.innerHeight = Plotter.windowHeight;
-        this.innerWidth = Plotter.windowExtraWidth +
-                Math.round(Plotter.canvasMaxWidth*this.canvasScaleFactor);
+        this.canvasMaxHeight = Math.min(Math.max(this.config.getNode("Plotter.maxHeight"),
+                Plotter.windowHeight), Plotter.canvasMaxHeight);
 
         // Create the Plotter window
         let geometry = this.config.formatWindowGeometry("Plotter");
-        if (geometry.length) {
+        this.persistentWindowPosition = (geometry.length > 0);
+        if (this.persistentWindowPosition) {
             this.innerHeight = this.config.getWindowProperty("Plotter", "innerHeight");
             this.innerWidth = this.config.getWindowProperty("Plotter", "innerWidth");
+            this.canvasScaleFactor = (this.innerWidth - Plotter.windowExtraWidth)/Plotter.canvasMaxWidth;
         } else {
-            geometry = `,left=${(screen.availWidth-this.innerWidth)/2}` +
-                       `,top=${screen.availHeight-Plotter.windowHeight}` +
+            this.canvasScaleFactor = (this.config.getNode("Plotter.scale") == 2 ? 1.0 : 0.5);
+            this.innerHeight = Plotter.windowHeight;
+            this.innerWidth = Plotter.windowExtraWidth +
+                    Math.round(Plotter.canvasMaxWidth*this.canvasScaleFactor);
+            geometry = `,left=${(screen.availWidth - this.innerWidth)/2}` +
+                       `,top=${screen.availHeight - Plotter.windowHeight}` +
                        `,width=${this.innerWidth},height=${Plotter.windowHeight}`;
         }
 
@@ -295,9 +304,6 @@ class Plotter {
         this.canvas = this.frameDoc.getElementById("PlotterCanvas");
         this.dc = this.canvas.getContext("2d", {alpha: false, willReadFrequently: false});
 
-        this.drawCanvas = new OffscreenCanvas(20, 20);  // offscreen drawing canvas
-        this.drawDC = this.drawCanvas.getContext("2d", {alpha: false});
-
         this.printingFrame = this.$$("PrintingFrame");
         this.printingFrameDoc = this.printingFrame.contentDocument;
         this.printingBody = this.printingFrameDoc.getElementById("FrameBody");
@@ -307,8 +313,9 @@ class Plotter {
         this.calculateScaling();
         this.calculateCanvasOffsets();
 
-        this.canvas.height = Plotter.canvasMaxHeight;
+        this.canvas.height = this.canvasMaxHeight;
         this.canvas.width = Plotter.canvasMaxWidth;
+        this.canvas.title = `Max plot area: ${Plotter.canvasMaxWidth} × ${this.canvasMaxHeight} pixels`;
         this.emptyCanvas();
         this.changeColor("black");      // the default
 
@@ -322,10 +329,21 @@ class Plotter {
         // Resize the window to take into account the difference between inner
         // and outer heights (WebKit quirk). Also force the width to match the
         // initial scale factor.
-        this.window.resizeBy(
-                Plotter.canvasMaxWidth/Math.round(1/this.canvasScaleFactor) -
-                        this.canvasDiv.offsetWidth,
-                this.innerHeight - this.window.innerHeight);
+        if (this.persistentWindowPosition) {
+            this.innerWidth = this.canvasDiv.offsetWidth + Plotter.windowExtraWidth;
+            const dw = this.innerWidth - this.window.innerWidth;
+            this.canvasScaleFactor = (this.canvasDiv.offsetWidth + dw)/Plotter.canvasMaxWidth;
+            this.window.resizeBy(dw, this.innerHeight - this.window.innerHeight);
+        } else {
+            this.window.resizeBy(
+                    Plotter.canvasMaxWidth/Math.round(1/this.canvasScaleFactor) -
+                            this.canvasDiv.offsetWidth,
+                    this.innerHeight - this.window.innerHeight);
+        }
+
+        // Recalculate scaling and offsets after initial window resize.
+        this.calculateScaling();
+        this.calculateCanvasOffsets();
     }
 
     /**************************************/
@@ -334,7 +352,7 @@ class Plotter {
 
         this.busy = false;              // an I/O is in progress
         this.xMax = this.yMax = 0;
-        this.xMin = Plotter.canvasMaxHeight;
+        this.xMin = this.canvasMaxHeight;
         this.yMin = Plotter.canvasMaxWidth;
         this.homeCursor();
         this.outputReadyStamp = 0;      // timestamp when ready for output
@@ -470,10 +488,11 @@ class Plotter {
     }
 
     /**************************************/
-    resizeWindow(ev) {
-        /* Reconfigures the scaling vertical cursor position when the window
-        is resized */
+    applyResize() {
+        /* Apply the effect of the last resize event after a delay to allow the
+        effect of any prior resize to finish completely */
 
+        this.resizeDelayToken = 0;
         this.calculateScaling();
         const lastOffset = Math.round(this.pyLast*this.canvasScaleFactor);
         const newOffset = Math.round(this.canvasScaleHeight/2);
@@ -493,6 +512,18 @@ class Plotter {
     }
 
     /**************************************/
+    resizeWindow(ev) {
+        /* Handles Plotter resize events. Schedules reconfiguration of the
+        scaling parameters and changing the vertical cursor position after a
+        short delay when the window is resized. If resize events happen too
+        fast, only the final one every Plotter.resizeDelay ms will be used */
+
+        if (this.resizeDelayToken == 0) {
+            this.resizeDelayToken = setTimeout(this.boundApplyResize, Plotter.resizeDelay);
+        }
+    }
+
+    /**************************************/
     printCanvas(ev) {
         /* Handler for clicking the Print button and printing the plotting area.
         Clones the visible canvas and inserts it into the (hidden) <iframe>
@@ -506,7 +537,12 @@ class Plotter {
         this.printingCanvas = this.cloneCanvas(0);
         this.printingCanvas.id = "PlotterCanvas";
         this.printingCanvasDiv.appendChild(this.printingCanvas);
-        this.printingCanvas.left = (Plotter.canvasMaxWidth - this.printingCanvas.width)/2;
+        this.printingCanvasDiv.style.left = "50%";
+        this.printingCanvasDiv.style.width = "fit-content";
+        this.printingCanvasDiv.style.height = "fit-content";
+        this.printingCanvasDiv.style.transform = "translate(-50%,0)";
+        this.printingCanvas.style.position = "static";
+        this.printingCanvas.style.width = "revert";
         this.printingFrame.contentWindow.print();
     }
 
@@ -571,7 +607,7 @@ class Plotter {
 
         const saveStyle = this.dc.fillStyle;
         this.dc.fillStyle = "white";
-        this.dc.fillRect(0, 0, Plotter.canvasMaxWidth+1, Plotter.canvasMaxHeight+1);
+        this.dc.fillRect(0, 0, Plotter.canvasMaxWidth+1, this.canvasMaxHeight+1);
         this.dc.fillStyle = saveStyle;
     }
 
@@ -694,63 +730,30 @@ class Plotter {
     /**************************************/
     drawSteps(timestamp) {
         /* Called by the requestAnimationFrame mechanism to draw any plotter
-        steps accumulated in this.stepCache. Copies the region of the onscreen
-        canvas that would have been drawn to the offscreen canvas, draws the
-        cached steps onto the offscreen canvas, then copies the new drawing
-        to where it belongs on the onscreen canvas. All of this in the name
-        of performance */
+        steps accumulated in this.stepCache. If there has been only pen-up
+        movement since the last frame, then the cache will be empty, so all
+        that we need to do is reposition the cursor lines */
         const top = this.stepCacheTop;
 
-        // If there has been only pen-up movement since the last frame, then the
-        // cache will be empty, so all we need to do is position the cursor lines.
-
+        // Draw the cached step movements on the drawing canvas.
         if (top) {
             const cache = this.stepCache;
-            // Get bounds of the region that has been drawn since the last frame.
-            const xOffset = this.stepXMin;
-            const yOffset = this.stepYMin;
-            const width = this.stepXMax - xOffset + 1;
-            const height = this.stepYMax - yOffset + 1;
-
-            // Resize the drawing canvas if necessary.
-            if (width > this.drawCanvas.width) {
-                this.drawCanvas.width = width+5;
-            }
-
-            if (height > this.drawCanvas.height) {
-                this.drawCanvas.height = height+5;
-            }
-
-            // Copy the drawn region of the onscreen canvas to the offscreen one.
-            this.drawDC.putImageData(
-                    this.dc.getImageData(xOffset, yOffset, width, height), 0, 0);
-
-            // Draw the cached step movements on the drawing canvas.
             for (let x=0; x<top; x+=2) {
-                this.drawDC.fillRect(cache[x]-xOffset, cache[x+1]-yOffset,
+                this.dc.fillRect(cache[x], cache[x+1],
                         this.canvasLineWidth, this.canvasLineWidth);
             }
 
-            // Copy the offscreen canvas to the onscreen one.
-            this.dc.putImageData(
-                    this.drawDC.getImageData(0, 0, width, height), xOffset, yOffset);
-
-            //  Reset for the next frame.
             this.stepCacheTop = 0;
-            this.stepXMax = 0;
-            this.stepXMin = Plotter.canvasMaxWidth;
-            this.stepYMax = 0;
-            this.stepYMin = Plotter.canvasMaxHeight;
         }
 
         this.stepCacheToken = 0;
         this.positionCursor(this.stepXLast, this.stepYLast);
 
         // Update average frames/second.
-        const elapsed = timestamp - this.frameLastStamp;                                // frame time, ms
-        this.frameLastStamp = timestamp;
-        this.fps = this.fps*(1-Plotter.fpsAlpha) + Plotter.fpsAlpha*1000/elapsed;       // avg frame/sec
-        this.$$("FPS").textContent = this.fps.toFixed(2);
+        // const elapsed = timestamp - this.frameLastStamp;                                // frame time, ms
+        // this.frameLastStamp = timestamp;
+        // this.fps = this.fps*(1-Plotter.fpsAlpha) + Plotter.fpsAlpha*1000/elapsed;       // avg frame/sec
+        // this.$$("FPS").textContent = this.fps.toFixed(2);
     }
 
     /**************************************/
@@ -758,7 +761,7 @@ class Plotter {
         /* Steps the plot in the indicated direction(s). Caches all movement
         until the next animation frame time, when it will then be drawn. If the
         pen is down, caches the coordinates of a new point to be drawn;
-        otherwise just caches the last pen coordinates Throttles I/O timing to
+        otherwise just caches the last pen position. Throttles I/O timing to
         the actual speed of the plotter as needed */
         const now = performance.now();
         const delay = this.outputReadyStamp - now;
@@ -772,7 +775,7 @@ class Plotter {
             }
         }
 
-        // Determine new (x,y) from (dx,dy) and overall extents of the plot
+        // Determine new (x,y) from (dx,dy) and update overall extents of the plot.
         let x = this.x + dx;
         if (x < 0) {
             x = 0;
@@ -786,8 +789,8 @@ class Plotter {
         let y = this.y + dy;
         if (y < 0) {
             y = 0;
-        } else if (y >= Plotter.canvasMaxHeight) {
-            y = Plotter.canvasMaxHeight-1;
+        } else if (y >= this.canvasMaxHeight) {
+            y = this.canvasMaxHeight-1;
         } else if (this.penDown) {
             if (y > this.yMax) {this.yMax = y}
             if (y < this.yMin) {this.yMin = y}
@@ -797,23 +800,7 @@ class Plotter {
         this.y = y;
         const [px, py] = this.toPixelCoord(x, y);
 
-        // Determine the extents of movement in this frame time
-        if (this.stepXMin > px) {
-            this.stepXMin = px;
-        }
-        if (this.stepXMax < px) {
-            this.stepXMax = px;
-        }
-
-
-        if (this.stepYMin > py) {
-            this.stepYMin = py;
-        }
-        if (this.stepYMax < py) {
-            this.stepYMax = py;
-        }
-
-        // Cache this step until the next frame time
+        // Cache this step until the next frame time.
         this.stepXLast = px;
         this.stepYLast = py;
         if (this.penDown) {
@@ -833,7 +820,7 @@ class Plotter {
             }
         }
 
-        // Schedule the next frame update
+        // Schedule the next frame update.
         if (!this.stepCacheToken) {
             this.stepCacheToken = this.window.requestAnimationFrame(this.boundDrawSteps);
         }
