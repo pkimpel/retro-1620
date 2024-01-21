@@ -21,12 +21,13 @@
     position:           absolute;
     top:                4px;
     bottom:             4px;
-    left:               calc(50% - 36px);       /* middle - ControlDiv/2(34) - R.margin(4) */
+    left:               calc(50% - 36px);       /* middle - (ControlDiv(68) + R.margin(4))/2 */
     width:              calc(100% - 76px);      /* window - ControlDiv(68) - L.margin(4) - R.margin(4) */
     min-width:          200px;
     min-height:         200px;
     transform:          translate(-50%, 0);
-    background-color:   white}
+    overflow:           hidden;
+    background-color:   #DDD}
 #PlotterFrame {
     position:           absolute;
     width:              100%;
@@ -202,42 +203,47 @@
 
 #PaletteDiv {
     position:           absolute;
-    top:                412px;
+    top:                408px;
     width:              100%;
     height:             100px}
 #PaletteDiv DIV.paletteButton {
     position:           absolute;
     top:                0;
-    width:              12px;
-    height:             32px;
+    width:              10px;
+    height:             24px;
     border-radius:      4px}
 #PaletteDiv DIV.paletteLamp {
     position:           absolute;
     display:            none;
-    top:                36px;
+    top:                28px;
     width:              4px;
     height:             4px;
     background-color:   white;
     border-radius:      2px}
 #BlackBtn {
-    left:               4px;
+    left:               5px;
     background-color:   black}
 #BlackLamp {
     left:               8px}
 #RedBtn {
-    left:               20px;
+    left:               17px;
     background-color:   red}
 #RedLamp {
-    left:               24px}
+    left:               20px}
 #GreenBtn {
-    left:               36px;
+    left:               29px;
     background-color:   green}
 #GreenLamp {
-    left:               40px}
+    left:               32px}
 #BlueBtn {
-    left:               52px;
+    left:               41px;
     background-color:   blue}
 #BlueLamp {
+    left:               44px}
+#BrownBtn {
+    left:               53px;
+    background-color:   #630}
+#BrownLamp {
     left:               56px}
 #ScaleFactor {
     position:           absolute;
