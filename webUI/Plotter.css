@@ -27,30 +27,98 @@
     min-height:         200px;
     transform:          translate(-50%, 0);
     overflow:           hidden;
-    background-color:   #DDD}
+    background-color:   white}
+
 #PlotterFrame {
     position:           absolute;
     width:              100%;
     height:             100%;
     background-color:   white;
+    margin:             0;
     padding:            0;
     border:             none}
-#HCursor {
+
+#Carriage {
+    position:           absolute;
+    display:            none;
+    left:               0;
+    right:              0;
+    height:             78px;
+    z-index:            5;
+    transform:          translate(0, -50%);
+    overflow:           visible}
+#Carriage .carriageRail {
+    position:           absolute;
+    left:               -8px;
+    right:              0;
+    height:             12px;
+    background-image:   linear-gradient(#666 0%, white 20%, #999 40%, white 50%, #999 60%, #333 100%);
+    box-shadow:         4px 4px 4px #666}
+#CarriageUpperRail {
+    top:                0}
+#CarriageLowerRail {
+    bottom:             0}
+#PenCursor {
     position:           absolute;
     left:               0;
-    width:              1px;
-    top:                0;
-    bottom:             0;
-    z-index:            10;
-    border-left:        1px dashed red}
-#VCursor {
+    top:                50%;
+    height:             100%;
+    width:              36px;
+    z-index:            6;
+    transform:          translate(-21px, -50%)} /* x: -17px for scrollbar, -4px for right margin */
+#PenCursor .carriageGuide {
+    position:           absolute;
+    left:               -12px;
+    height:             20px;
+    width:              68px;
+    z-index:            8;
+    background-image:   linear-gradient(135deg, #f5f5dc, #b4b49b);
+    border:             none;           /* was 1px solid white; */
+    border-radius:      4px;
+    box-shadow:         4px 4px 4px #666}
+#CarriageUpperGuide {
+    top:                -4px}
+#CarriageLowerGuide {
+    bottom:             -4px}
+#PenReticle {
     position:           absolute;
     left:               0;
-    right:              20px;
+    top:                50%;
+    height:             36px;
+    width:              36px;
+    top:                50%;
+    z-index:            8;
+    transform:          translate(0, -50%);
+    opacity:            0.5;
+    border-radius:      50%;
+    border:             4px solid blue;
+    box-shadow:         4px 4px 8px black, inset 4px 4px 8px black}
+#PenCursor.penDown #PenReticle {
+    border:             4px solid red}
+#PenReticle .hairline {
+    position:           absolute;
+    background-color:   red}
+#LeftHairline {
+    left:               0;
     top:                50%;
     height:             1px;
-    z-index:            10;
-    border-top:         1px dashed red}
+    width:              25%}
+#RightHairline {
+    right:              0;
+    top:                50%;
+    height:             1px;
+    width:              25%}
+#TopHairline {
+    left:               50%;
+    top:                0;
+    height:             25%;
+    width:              1px}
+#BottomHairline {
+    left:               50%;
+    bottom:             0;
+    height:             25%;
+    width:              1px}
+
 #FPS {
     position:           absolute;
     left:               4px;
@@ -166,22 +234,28 @@
     width:              100%}
 #PenUpBtn {
     position:           absolute;
-    top:                16px;
-    left:               calc(50% - 20px)}
+    top:                12px;
+    left:               calc(50% - 20px);
+    padding:            1px;
+    border:             2px solid transparent;
+    border-radius:      4px}
+#PenUpLamp {
+    top:                34px;
+    left:               calc(50% - 11px)}
 #PenDownBtn {
     position:           absolute;
-    top:                16px;
-    right:              calc(50% - 20px)}
-#PenStatusDiv {
-    position:           absolute;
-    top:                36px;
-    left:               50%;
-    font-size:          12px;
-    transform:          translate(-50%, 0)}
+    top:                12px;
+    right:              calc(50% - 20px);
+    padding:            1px;
+    border:             2px solid transparent;
+    border-radius:      4px}
+#PenDownLamp {
+    top:                34px;
+    right:              calc(50% - 11px)}
 
 #ButtonDiv {
     position:           absolute;
-    top:                298px;
+    top:                282px;
     width:              100%;
     height:             100px}
 #ButtonDiv BUTTON {
@@ -203,48 +277,65 @@
 
 #PaletteDiv {
     position:           absolute;
-    top:                408px;
+    top:                392px;
     width:              100%;
-    height:             100px}
-#PaletteDiv DIV.paletteButton {
+    height:             34px}
+#PaletteDiv .paletteButton {
     position:           absolute;
     top:                0;
     width:              10px;
     height:             24px;
     border-radius:      4px}
-#PaletteDiv DIV.paletteLamp {
-    position:           absolute;
-    display:            none;
-    top:                28px;
-    width:              4px;
-    height:             4px;
-    background-color:   white;
-    border-radius:      2px}
 #BlackBtn {
     left:               5px;
     background-color:   black}
 #BlackLamp {
+    top:                28px;
     left:               8px}
 #RedBtn {
     left:               17px;
     background-color:   red}
 #RedLamp {
+    top:                28px;
     left:               20px}
 #GreenBtn {
     left:               29px;
     background-color:   green}
 #GreenLamp {
+    top:                28px;
     left:               32px}
 #BlueBtn {
     left:               41px;
     background-color:   blue}
 #BlueLamp {
+    top:                28px;
     left:               44px}
 #BrownBtn {
     left:               53px;
     background-color:   #630}
 #BrownLamp {
+    top:                28px;
     left:               56px}
+
+#LineWidthDiv {
+    position:           absolute;
+    left:               50%;
+    top:                430px;
+    width:              60px;
+    height:             24px;
+    transform:          translate(-50%, 0)}
+#LineWidthCaption {
+    position:           absolute;
+    left:               0;
+    top:                50%;
+    line-height:        1.0;
+    transform:          translate(0, -50%)}
+#LineWidthSelect {
+    position:           absolute;
+    right:              0;
+    top:                50%;
+    font-size:          12px;
+    transform:          translate(0, -50%)}
 #ScaleFactor {
     position:           absolute;
     left:               50%;
@@ -257,5 +348,10 @@
     color:              white;
     background-color:   inherit}
 
-.red {
-    color:              red}
+.panelLamp {
+    position:           absolute;
+    display:            none;
+    width:              4px;
+    height:             4px;
+    background-color:   white;
+    border-radius:      2px}

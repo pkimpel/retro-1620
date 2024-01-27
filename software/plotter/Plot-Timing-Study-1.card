@@ -1,0 +1,46 @@
+3400032007013600032007024902402511963611300102 COLD START CARD - 1620 MONITOR I
+||JOB                        PLOTTER TIMING STUDY
+||DUP                        WILL HALT ON FIRST USE BECAUSE PLOTTS ISNT THERE
+*DELETPLOTTS
+||FOR 5   |
+*LIST PRINTER
+*LDISKPLOTTS
+C-----------------------------------------------------------------------
+C PLOTTER TIMING STUDY
+C PROGRAM TO SIMPLY DRAW CONTINUOUSLY FOR A WHILE SO IT CAN BE TIMED.
+C
+C 2024-01-19  P.KIMPEL
+C   ORIGINAL VERSION.
+C-----------------------------------------------------------------------
+
+C POSITION THE PEN AT X=0 AND Y=0
+C                   XMIN   XMAX   XL     XD YMIN   YMAX   YL     YD
+      CALL PLOT(201, 0.0,1100.0,11.0,1100.0, 0.0,1100.0,11.0,1100.0)
+      CALL PLOT(98, 0.0, 1100.0)
+      CALL PLOT(98, 0.0, 0.0)
+      CALL PLOT(8)
+
+C JUST DRAW A BIG BOX
+      XMAX = 1090.0
+      XMIN = 10.0
+      YMAX = 1090.0
+      YMIN = 10.0
+      TYPE 101
+  101 FORMAT(48HGET READY TO START YOUR TIMER, THEN PRESS START.)
+      CALL PLOT(99)
+      CALL PLOT(90, XMIN, YMIN)
+      PAUSE 1
+
+      CALL PLOT(90, XMAX, YMIN)
+      CALL PLOT(90, XMAX, YMAX)
+      CALL PLOT(90, XMIN, YMAX)
+      CALL PLOT(90, XMIN, YMIN)
+
+      PAUSE 2
+      CALL PLOT(99)
+      CALL EXIT
+      END
+||||              END OF JOB
+||JOB                        XEQ PLOT TIMING STUDY |
+||XEQ PLOTTS
+||||

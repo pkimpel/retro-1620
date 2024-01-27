@@ -13,12 +13,12 @@ Some sketchy notes on the use of PLOT and CHAR are also available in
 Prentice-Hall, Inc., Englewood Cliffs, NY, 1965, LCCN 65-17860,
 pp. 139-141.
 
-Plot-Demo-1.card, Plot-Demo-2.card, Char-Demo-1.card, and Point-
-Demo-1.card now all compile to disk and execute from the compiled file.
-You can extract the last three cards from each of those decks as
-standalone jobs to run the demos without having to compile them each
-time. Each of the demos also now positions the pen automatically during
-its initialization.
+Plot-Demo-1.card, Plot-Demo-2.card, Plot-Timing-Study-1.card, Char-
+Demo-1.card, and Point-Demo-1.card all compile to disk and execute from
+the compiled file. You can extract the last three cards from each of
+those decks as standalone jobs to run the demos without having to
+compile them each time. Each of the demos also positions the pen
+automatically during its initialization.
 
 1620-LM-042-PLOT.sps
     SPS assembly job for the FORTRAN-callable PLOT subroutine. Specifies
@@ -37,6 +37,14 @@ Plot-Demo-1.card
 Plot-Demo-2.card
     Another FORTRAN II-D program for a more complicated "string art"
     plot.
+
+Plot-Timing-Study-1.card
+    A FORTRAN II-D program to assist in timing the performance of the
+    plotter. It requires the PLOT subroutine. The program simply draws a
+    rectangle 1080 steps on a side, for a total of 4320 steps. At 300
+    steps/second, this drawing should take exactly 14.40 seconds to
+    complete. The program halts before and after drawing the rectangle
+    to assist in timing the plot.
 
 1620-LM-042-CHAR.sps
     SPS assembly job for the FORTRAN-callable CHAR subroutine.
@@ -60,6 +68,7 @@ POINT-Listing.txt
 
 Point-Demo-1.card
     Sample FORTRAN II-D program to demonstrate the POINT subroutine.
+
 
 
 

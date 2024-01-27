@@ -64,7 +64,7 @@
 *
 * Note that canvas pixels are not the same as css (window) pixels,
 * except at a scale factor of 1.000 (100%). At 50% scale, there are
-* two canvas pixels per css pixels, and that relationship will change
+* two canvas pixels per css pixels, but that relationship will change
 * as the Plotter window is resized.
 *
 * See the wiki on the device for more information:
@@ -88,7 +88,6 @@ class Plotter {
     static fpsAlpha = 0.01;             // alpha for moving exponential average frames/sec
     static minWait = 4;                 // ms for minimum throttling delay
     static penPeriod = 100;             // ms for pen up/down
-    static resizeDelay = 100;           // delay to apply a window resize event, ms
     static stepPeriod = 1000/300;       // ms per step
     static windowHeight = 488;          // window height, css pixels
     static windowExtraWidth = 93;       // window non-canvas width, css pixels:
@@ -205,18 +204,21 @@ class Plotter {
     window = null;                      // window object
 
     busy = false;                       // I/O in progress (not really used)
+    canvasLineOffset = 0;               // offset from (X,y) coordinate to draw a point
     canvasLineWidth = 1;                // width of dots drawn by plotter steps, canvas units
     canvasMaxHeight = 0;                // maximum canvas height, canvas pixels
     canvasScrollLimit = 0;              // current max vertical offset where scrolling is allowed, css pixels
+    canvasScrollMax = 0;                // current max canvas scroll offset, css pixels
     canvasScrollOffset = 0;             // amount canvas has been scrolled, css pixels
     cxLast = 0;                         // last horizontal canvas coord
     cyLast = 0;                         // last vertical canvas coord
     fps = 60.0;                         // moving exponential average frames/sec
     frameLastStamp = performance.now(); // last animation frame timestamp
+    innerHeight = 0;                    // window inner height, css pixels
+    innerWidth = 0;                     // window inner width, css pixels
     movingFast = false;                 // true if doing manual fast move
     outputReadyStamp = 0;               // timestamp when ready for next step
     penDown = false;                    // pen up=false, down=true
-    resizeDelayToken = 0;               // setTimeout cancel token for resize events
     stepCache = new Array(20);          // cache of steps to be drawn at next frame time as x,y pairs
     stepCacheToken = 0;                 // cancellation token for requestAnimationFrame
     stepCacheTop = 0;                   // current length of this.stepCache
@@ -230,6 +232,9 @@ class Plotter {
     viewScaleFactor = 1;                // current scale factor of viewed canvas
     viewSlideOffset = 0;                // offset of canvas in <iframe> to keep cursor in middle of view, css pixels
     viewWidth = 0;                      // current canvas width, css pixels
+    visibleCarriage = false;            // true if pen carriage is visible
+    windowLeft = 0;                     // window initial left offset
+    windowTop = 0;                      // window initial top offset
     x = 0;                              // vertical offset (to down on the canvas)
     xMax = 0;                           // maximum vertical offset attained
     xMin = 0;                           // minimum vertical offset attained
@@ -250,12 +255,14 @@ class Plotter {
         this.config = context.config;
         this.processor = context.processor;
 
-        this.boundApplyResize = this.applyResize.bind(this);
+        this.boundChangeLineWidth = this.changeLineWidth.bind(this);
         this.boundControlClick = this.controlClick.bind(this);
         this.boundControlMouseDown = this.controlMouseDown.bind(this);
         this.boundControlMouseUp = this.controlMouseUp.bind(this);
         this.boundDrawSteps = this.drawSteps.bind(this);
         this.boundResizeWindow = this.resizeWindow.bind(this);
+        this.boundRestoreConfiguredWindowSize = this.restoreConfiguredWindowSize.bind(this);
+        this.boundToggleVisibleCarriage = this.toggleVisibleCarriage.bind(this);
 
         this.canvasHeight = Math.min(Math.max(this.config.getNode("Plotter.maxHeight"),
                 Plotter.windowHeight), Plotter.canvasMaxHeight);
@@ -266,14 +273,18 @@ class Plotter {
         if (this.persistentWindowPosition) {
             this.innerHeight = this.config.getWindowProperty("Plotter", "innerHeight");
             this.innerWidth = this.config.getWindowProperty("Plotter", "innerWidth");
-            this.viewScaleFactor = (this.innerWidth - Plotter.windowExtraWidth)/Plotter.canvasMaxWidth;
+            this.windowLeft = this.config.getWindowProperty("Plotter", "screenX") || 0;
+            this.windowTop = this.config.getWindowProperty("Plotter", "screenY") || 0;
+            this.viewScaleFactor =
+                    Math.floor((this.innerWidth - Plotter.windowExtraWidth)/Plotter.canvasMaxWidth*1000)/1000;
         } else {
             this.viewScaleFactor = (this.config.getNode("Plotter.scale") == 2 ? 1.0 : 0.5);
             this.innerHeight = Plotter.windowHeight;
             this.innerWidth = Plotter.windowExtraWidth +
                     Math.round(Plotter.canvasMaxWidth*this.viewScaleFactor);
-            geometry = `,left=${(screen.availWidth - this.innerWidth)/2}` +
-                       `,top=${screen.availHeight - Plotter.windowHeight}` +
+            this.windowLeft = Math.round((screen.availWidth - this.innerWidth)/2);
+            this.windowTop = screen.availHeight - Plotter.windowHeight;
+            geometry = `,left=${this.windowLeft},top=${this.windowTop}` +
                        `,width=${this.innerWidth},height=${Plotter.windowHeight}`;
         }
 
@@ -299,11 +310,14 @@ class Plotter {
         this.doc = ev.target;           // now we can use this.$$()
         this.doc.title = "retro-1620 Plotter";
         this.window = this.doc.defaultView;
-        this.hCursor = this.$$("HCursor");
-        this.vCursor = this.$$("VCursor");
+
         this.hCoord = this.$$("HCoordSpan");
         this.vCoord = this.$$("VCoordSpan");
-        this.penStat = this.$$("PenStatusSpan");
+        this.carriage = this.$$("Carriage");
+        this.penCursor = this.$$("PenCursor");
+        this.penUpLamp = this.$$("PenUpLamp");
+        this.penDownLamp = this.$$("PenDownLamp");
+        this.scaleFactorSpan = this.$$("ScaleFactor");
 
         this.frame = this.$$("PlotterFrame");
         this.frameWin = this.frame.contentWindow;
@@ -320,8 +334,6 @@ class Plotter {
         this.printingCanvas = this.printingFrameDoc.getElementById("PlotterCanvas");
 
         this.calculateScaling();
-        this.setCursorOffset();
-
         this.canvas.height = this.canvasHeight;
         this.canvas.width = Plotter.canvasMaxWidth;
         this.canvas.title = `Max plot area: ${Plotter.canvasMaxWidth} × ${this.canvasHeight} pixels`;
@@ -329,30 +341,22 @@ class Plotter {
         // Events
         this.window.addEventListener("beforeunload", this.beforeUnload);
         this.window.addEventListener("resize", this.boundResizeWindow);
+        this.$$("LineWidthSelect").addEventListener("change", this.boundChangeLineWidth);
         this.$$("ControlsDiv").addEventListener("click", this.boundControlClick);
         this.$$("ControlsDiv").addEventListener("mousedown", this.boundControlMouseDown);
         this.$$("ControlsDiv").addEventListener("mouseup", this.boundControlMouseUp);
-
-        // Resize the window to take into account the difference between inner
-        // and outer heights (WebKit quirk). Also force the width to match the
-        // initial scale factor.
-        if (this.persistentWindowPosition) {
-            this.innerWidth = this.canvasDiv.offsetWidth + Plotter.windowExtraWidth;
-            const dw = this.innerWidth - this.window.innerWidth;
-            this.viewScaleFactor = (this.canvasDiv.offsetWidth + dw)/Plotter.canvasMaxWidth;
-            this.window.resizeBy(dw, this.innerHeight - this.window.innerHeight);
-        } else {
-            this.window.resizeBy(
-                    Plotter.canvasMaxWidth/Math.round(1/this.viewScaleFactor) -
-                            this.canvasDiv.offsetWidth,
-                    this.innerHeight - this.window.innerHeight);
-        }
+        this.$$("PenCaption").addEventListener("dblclick", this.boundToggleVisibleCarriage);
+        this.scaleFactorSpan.addEventListener("dblclick", this.boundRestoreConfiguredWindowSize);
 
         // Recalculate scaling and offsets after initial window resize.
-        this.applyResize();
-        this.setCursorOffset();
-        this.emptyCanvas();
-        this.changeColor("black");      // the default
+        this.restoreConfiguredWindowSize();
+        setTimeout(() => {
+            this.emptyCanvas();
+            this.changeColor("black");          // the default
+            this.carriage.style.display = "block";
+            this.visibleCarriage = (this.config.getNode("Plotter.visibleCarriage") ? false : true); // negated for toggle, next
+            this.toggleVisibleCarriage();
+        }, 40);
     }
 
     /**************************************/
@@ -360,10 +364,7 @@ class Plotter {
         /* Initializes the plotter unit state */
 
         this.busy = false;              // an I/O is in progress
-        this.xMax = this.yMax = 0;
-        this.xMin = this.canvasHeight;
-        this.yMin = Plotter.canvasMaxWidth;
-        this.homeCursor();
+        this.emptyCanvas();
         this.outputReadyStamp = 0;      // timestamp when ready for output
     }
 
@@ -484,91 +485,105 @@ class Plotter {
         this.viewHeight = this.frameBody.offsetHeight;
         this.viewWidth = this.canvasDiv.offsetWidth;
         this.viewScaleFactor = this.viewWidth/Plotter.canvasMaxWidth;
-        this.$$("ScaleFactor").textContent = this.viewScaleFactor.toFixed(3);
-
-        this.vCursorTop = Math.round(this.viewHeight*Plotter.vCursorTopFactor);
-        this.vCursorBottom = Math.round(this.viewHeight*Plotter.vCursorBottomFactor);
-        this.canvasScrollLimit =
-                Math.round((this.canvasHeight)*this.viewScaleFactor) -
-                (this.viewHeight - this.vCursorBottom);
-    }
-
-    /**************************************/
-    setCursorOffset() {
-        /* Calculates the vertical-cursor offsets. this.calculateScaling() must
-        be called before this method */
+        this.scaleFactorSpan.textContent = this.viewScaleFactor.toFixed(3);
 
         this.vCursorOffset = Math.round(this.viewHeight/2);
+        this.vCursorTop = Math.round(this.viewHeight*Plotter.vCursorTopFactor);
+        this.vCursorBottom = Math.round(this.viewHeight*Plotter.vCursorBottomFactor);
+        this.canvasScrollMax = this.canvas.scrollHeight - this.viewHeight;
+        this.canvasScrollLimit = this.canvasScrollMax + this.vCursorBottom;
     }
 
     /**************************************/
-    applyResize() {
-        /* Apply the effect of the last resize event after a delay to allow the
-        effect of any prior resize to finish completely. After a resize, the
-        cursor will still be a mid-height in the canvas view. If the resized
-        window is larger, the plot will have moved upward with respect to the
-        cursor, so the plot will need either to scroll or slide downward to
-        compensate. If the resized window is smaller, the plot will have moved
-        downward with respect to the cursor, so the plot will need either to
-        scroll or slide upward to compensate. That's what makes resize tricky */
-        const lastOffset = this.vCursorOffset;
+    resizeWindow() {
+        /* Handles Plotter window resize events and sizing of the canvas during
+        initialization. After a resize, the cursor will still be a mid-height
+        in the canvas view. If the resized window is larger, the plot will have
+        moved upward with respect to the cursor, so the plot will need to either
+        scroll or slide downward to compensate. If the resized window is smaller,
+        the plot will have moved downward with respect to the cursor, so the
+        plot will need to either scroll or slide upward to compensate. That's
+        what makes resize tricky */
+        const lastOffset = Math.round(this.stepYLast*this.viewScaleFactor);
 
         this.resizeDelayToken = 0;
         this.calculateScaling();
-        const newOffset = Math.round(this.viewHeight/2);
+        const newOffset = Math.round(this.stepYLast*this.viewScaleFactor);
         let delta = lastOffset - newOffset;
 
         if (delta > 0) {
             // Window is smaller, so move the plot upward, first by decreasing any slide offset.
-            if (this.canvasSlideOffset > 0) {
-                this.canvasSlideOffset -= delta;
-                if (this.canvasSlideOffset > 0) {
+            if (this.viewSlideOffset > 0) {
+                this.viewSlideOffset -= delta;
+                if (this.viewSlideOffset > 0) { // sliding was sufficient
                     delta = 0;
                 } else {
-                    delta = -this.canvasSlideOffset;
-                    this.canvasSlideOffset = 0;
+                    delta = -this.viewSlideOffset; // some scrolling needed
+                    this.viewSlideOffset = 0;
+                }
+            } else {
+                this.viewSlideOffset += delta;
+                if (this.viewSlideOffset < 0) { // sliding was sufficient
+                    delta = 0;
+                } else {                        // scroll as much as we can, slide up the rest
+                    delta = Math.min(delta, this.canvasScrollMax - this.canvasScrollOffset);
+                    this.viewSlideOffset = delta - this.viewSlideOffset;
                 }
             }
 
-            // Move any remaining distance by increasing scrolling.
-            this.canvasScrollOffset = Math.min(this.canvasScrollOffset+delta, this.canvasScrollLimit);
+            // Move any remaining distance by increasing the scroll offset.
+            this.canvasScrollOffset += delta;
         } else if (delta < 0) {
             // Window is larger, so move the plot downward, first by decreasing any scroll offset.
+            this.canvasScrollOffset += delta;           // note delta < 0, so this subtracts
             if (this.canvasScrollOffset > 0) {
-                this.canvasScrollOffset += delta;       // note delta < 0, so this subtracts
-                if (this.canvasScrollOffset > 0) {
-                    delta = 0;
+                if (this.canvasScrollOffset < this.canvasScrollMax) {
+                    delta = 0;                          // the adjustment was handled by scrolling
                 } else {
-                    delta = this.canvasScrollOffset;    // both < 0, so this moves delta toward zero
-                    this.canvasScrollOffset = 0;
+                    delta = this.canvasScrollOffset - this.canvasScrollMax;     // will need some bottom sliding
+                    this.canvasScrollOffset = this.canvasScrollMax;
                 }
+            } else if (this.canvasScrollOffset < 0) {
+                delta = this.canvasScrollOffset;        // will need some top sliding
+                this.canvasScrollOffset = 0;
             }
 
-            // Move any remaining distance by increasing sliding.
-            this.canvasSlideOffset = Math.min(this.canvasSlideOffset-delta, newOffset);
+            // Move any remaining distance by sliding.
+            this.viewSlideOffset -= delta;
         }
 
         //console.debug("Plotter resize (%5d, %5d) %f vCursor @ %d",
-        //        this.viewWidth, this.viewHeight, this.viewScaleFactor, newOffset);
+        //        this.viewWidth, this.viewHeight, this.viewScaleFactor, this.vCursorOffset);
 
-        this.vCursorOffset = newOffset;
-        this.vCursor.style.top = `${newOffset}px`;
-        this.hCursor.style.left = `${Math.round(this.cxLast*this.viewScaleFactor)}px`;
-        this.frame.style.top = `${this.canvasSlideOffset}px`;
+        this.carriage.style.top = `${this.vCursorOffset}px`;
+        this.penCursor.style.left = `${Math.round(this.cxLast*this.viewScaleFactor)}px`;
+        this.frame.style.top = `${this.viewSlideOffset}px`;
         this.frameWin.scrollTo(0, this.canvasScrollOffset);
-        this.positionCursor(this.cxLast, this.cyLast);
+        //this.positionCursor(this.stepXLast, this.stepYLast, true);      // force the reposition
     }
 
     /**************************************/
-    resizeWindow(ev) {
-        /* Handles Plotter resize events. Schedules reconfiguration of the
-        scaling parameters and changing the vertical cursor position after a
-        short delay when the window is resized. If resize events happen too
-        fast, only the final one every Plotter.resizeDelay ms will be used */
+    restoreConfiguredWindowSize() {
+        /* Resize the window to its configured size, taking into account the
+        difference between inner and outer heights (WebKit quirk). Also force
+        the width to match the initial scale factor */
+        const dh = this.innerHeight - this.window.innerHeight;
 
-        if (this.resizeDelayToken == 0) {
-            this.resizeDelayToken = setTimeout(this.boundApplyResize, Plotter.resizeDelay);
+        if (this.persistentWindowPosition) {
+            const dw = this.innerWidth - this.window.innerWidth;
+            this.viewScaleFactor = Math.floor((this.canvasDiv.offsetWidth + dw)/Plotter.canvasMaxWidth*1000)/1000;
+            this.window.resizeBy(dw, dh);
+        } else {
+            this.viewScaleFactor = (this.config.getNode("Plotter.scale") == 2 ? 1.0 : 0.5);
+            this.window.resizeBy(
+                    Plotter.canvasMaxWidth/Math.round(1/this.viewScaleFactor) -
+                            this.canvasDiv.offsetWidth, dh);
         }
+
+        setTimeout(() => {
+            this.window.moveTo(this.windowLeft, this.windowTop);
+            this.resizeWindow();
+        }, 20);
     }
 
     /**************************************/
@@ -633,14 +648,15 @@ class Plotter {
         this.x = this.y = 0;
         const [cx, cy] = this.toCanvasCoord(this.x, this.y);
         this.canvasScrollOffset = 0;
-        this.canvasSlideOffset = this.vCursorOffset;
-        this.cxLast = cx-1;
-        this.cyLast = cy+1;
+        this.viewSlideOffset = this.vCursorOffset;
+        this.cxLast = this.stepXLast = cx;
+        this.cyLast = this.stepYLast = cy;
         this.raisePen();
         this.frameWin.scrollTo(0, 0)
-        this.frame.style.top = `${this.vCursorOffset}px`;
-        this.vCursor.style.top = `${this.vCursorOffset}px`;
-        this.positionCursor(cx, cy);
+        this.frame.style.top = `${this.viewSlideOffset}px`;
+        this.carriage.style.top = `${this.vCursorOffset}px`;
+        this.penCursor.style.left = `${cx}px`;
+        this.positionCursor(cx, cy, true);      // force the re-position to happen
     }
 
     /**************************************/
@@ -648,24 +664,39 @@ class Plotter {
         /* Erases the plotter canvas, initializes it for new output, and resets
         the vertical origin to the middle of the plotting area */
 
-        this.setCursorOffset();
-        this.clear();                   // calls this.homeCursor()
+        this.xMax = this.yMax = 0;
+        this.xMin = this.canvasHeight;
+        this.yMin = Plotter.canvasMaxWidth;
         this.raisePen();
-        if (this.printingCanvas) {      // remove any print canvas from its frame
-            this.printingCanvasDiv.removeChild(this.printingCanvas);
-            this.printingCanvas = null;
-        }
+        this.homeCursor();
 
         const saveStyle = this.dc.fillStyle;
         this.dc.fillStyle = "white";
         this.dc.fillRect(0, 0, Plotter.canvasMaxWidth+1, this.canvasHeight+1);
         this.dc.fillStyle = saveStyle;
+        if (this.printingCanvas) {      // remove any print canvas from its frame
+            this.printingCanvasDiv.removeChild(this.printingCanvas);
+            this.printingCanvas = null;
+        }
+    }
+
+    /**************************************/
+    changeLineWidth() {
+        /* Changes the canvas drawing line with to the current LineWidthSelect
+        option setting */
+        const sel = this.$$("LineWidthSelect");
+        const opt = sel.options[sel.selectedIndex || 0];
+
+        if (opt) {
+            this.canvasLineWidth = parseInt(opt.value, 10) || 1;
+            this.canvasLineOffset = -Math.floor(this.canvasLineWidth/2);
+        }
     }
 
     /**************************************/
     changeColor(color) {
         /* Changes the pen color */
-        const lamps = this.$$("PaletteDiv").querySelectorAll(".paletteLamp");
+        const lamps = this.$$("PaletteDiv").querySelectorAll(".panelLamp");
 
         for (const lamp of lamps) {     // reset all of the color-selection lamps
             lamp.style.display = "none";
@@ -715,35 +746,59 @@ class Plotter {
     }
 
     /**************************************/
-    positionCursor(cx, cy) {
+    toggleVisibleCarriage() {
+        /* Toggles the visibility of the pen carriage, but leaves the pen
+        reticle visible */
+
+        this.visibleCarriage = !this.visibleCarriage;
+        const display = (this.visibleCarriage ? "block" : "none");
+        this.$$("CarriageUpperRail").style.display = display;
+        this.$$("CarriageUpperGuide").style.display = display;
+        this.$$("CarriageLowerRail").style.display = display;
+        this.$$("CarriageLowerGuide").style.display = display;
+        this.config.putNode("Plotter.visibleCarriage", (this.visibleCarriage ? 1 : 0));
+    }
+
+    /**************************************/
+    positionCursor(cx, cy, force=false) {
         /* Positions the cursor crosshairs to the specified canvas pixel
         coordinates. If the current point is between the upper and lower
         scrolling boundaries, or the window is already scrolled to the top,
-        moves the vCursor line, otherwise scrolls the window */
+        moves the penCursor, otherwise scrolls the window. if "force" is
+        truthy, the cursor will be positioned even if its coordinates
+        have not changed (required when resizing the window) */
         const vx = Math.round(cx*this.viewScaleFactor);
         const vy = Math.round(cy*this.viewScaleFactor);
         const yLast = Math.round(this.cyLast*this.viewScaleFactor);
 
         this.hCoord.textContent = this.y;
         this.vCoord.textContent = this.x;
-        if (this.cxLast != cx) {
-            this.hCursor.style.left = `${vx}px`;
+        if (this.cxLast != cx || force) {
+            this.penCursor.style.left = `${vx}px`;
             this.cxLast = cx;
         }
 
-        if (vy != yLast) {
+        if (vy != yLast || force) {
             if (vy < this.vCursorTop) {
                 // If the new vertical position is less than the top boundary, slide the canvas down.
-                this.vSlideOffset = this.vCursorTop - vy;
-                this.frame.style.top = `${this.vSlideOffset}px`;
-                if (this.canvasScrollOffset) {
-                    this.canvasScrollOffset = 0;
-                    this.frameWin.scrollTo(0, 0);
+                this.viewSlideOffset = this.vCursorOffset - vy;
+                if (this.canvasScrollOffset > 0) {
+                    this.canvasScrollOffset -= this.viewSlideOffset;
+                    if (this.canvasScrollOffset > 0) {
+                        this.viewSlideOffset = 0;
+                    } else {
+                        this.viewSlideOffset = -this.canvasScrollOffset;
+                        this.canvasScrollOffset = 0;
+                    }
+
+                    this.frameWin.scrollTo(0, this.canvasScrollOffset);
                 }
+
+                this.frame.style.top = `${this.viewSlideOffset}px`;
             } else {
                 // Slide the canvas all the way up before doing any scrolling or cursor movement.
-                if (this.vSlideOffset) {
-                    this.vSlideOffset = 0;
+                if (this.viewSlideOffset > 0) {
+                    this.viewSlideOffset = 0;
                     this.frame.style.top = "0";
                 }
 
@@ -755,18 +810,20 @@ class Plotter {
                         this.canvasScrollOffset = vy - this.vCursorOffset;
                         this.frameWin.scrollTo(0, this.canvasScrollOffset);
                     } else {
-                        // New point will be below the bottom scroll limit, so move cursor line.
-                        this.vCursorOffset = newOffset;
-                        this.vCursor.style.top = `${newOffset}px`;
+                        // New point will be below the bottom scroll limit, so move canvas up.
+                        this.viewSlideOffset = this.vCursorOffset - newOffset;
+                        this.frame.style.top = `${this.viewSlideOffset}px`;
+                        if (this.canvasScrollOffset < this.canvasScrollMax) {
+                            this.canvasScrollOffset = this.canvasScrollMax;
+                            this.frameWin.scrollTo(0, this.canvasScrollOffset);
+                        }
                     }
                 } else if (newOffset > this.vCursorTop) {
                     // Cursor will be between the boundaries, so move cursor line.
                     this.vCursorOffset = newOffset;
-                    this.vCursor.style.top = `${newOffset}px`;
+                    this.carriage.style.top = `${newOffset}px`;
                 } else {
                     // Cursor will be above the top boundary.
-                    console.warn("Plotter: cursor above top boundary vy=%d newO=%d vCO=%d",
-                            vy, newOffset, this.vCursorOffset);
                     this.canvasScrollOffset = vy - this.vCursorOffset;
                     this.frameWin.scrollTo(0, this.canvasScrollOffset);
                 }
@@ -783,8 +840,9 @@ class Plotter {
         const delay = this.outputReadyStamp - now;
 
         this.penDown = false;
-        this.penStat.textContent = "UP";
-        this.penStat.classList.remove("red");
+        this.penCursor.classList.remove("penDown");
+        this.penDownLamp.style.display = "none";
+        this.penUpLamp.style.display = "block";
         this.outputReadyStamp += Plotter.penPeriod;
         if (delay > Plotter.minWait) {
             await this.timer.delayFor(delay);
@@ -798,8 +856,9 @@ class Plotter {
         const delay = this.outputReadyStamp - now;
 
         this.penDown = true;
-        this.penStat.textContent = "DOWN";
-        this.penStat.classList.add("red");
+        this.penCursor.classList.add("penDown");
+        this.penDownLamp.style.display = "block";
+        this.penUpLamp.style.display = "none";
         this.outputReadyStamp += Plotter.penPeriod;
         if (delay > Plotter.minWait) {
             await this.timer.delayFor(delay);
@@ -811,14 +870,14 @@ class Plotter {
         /* Called by the requestAnimationFrame mechanism to draw any plotter
         steps accumulated in this.stepCache. If there has been only pen-up
         movement since the last frame, then the cache will be empty, so all
-        that we need to do is reposition the cursor lines */
+        that we need to do is reposition the cursor */
         const top = this.stepCacheTop;
 
         // Draw the cached step movements on the drawing canvas.
         if (top) {
             const cache = this.stepCache;
             for (let x=0; x<top; x+=2) {
-                this.dc.fillRect(cache[x], cache[x+1],
+                this.dc.fillRect(cache[x]+this.canvasLineOffset, cache[x+1]+this.canvasLineOffset,
                         this.canvasLineWidth, this.canvasLineWidth);
             }
 
@@ -996,9 +1055,12 @@ class Plotter {
         }
 
         if (this.window) {
+            this.$$("LineWidthSelect").removeEventListener("change", this.boundChangeLineWidth);
             this.$$("ControlsDiv").removeEventListener("click", this.boundControlClick);
             this.$$("ControlsDiv").removeEventListener("mousedown", this.boundControlMouseDown);
             this.$$("ControlsDiv").removeEventListener("mouseup", this.boundControlMouseUp);
+            this.$$("PenCaption").removeEventListener("dblclick", this.boundToggleVisibleCarriage);
+            this.scaleFactorSpan.removeEventListener("dblclick", this.boundRestoreConfiguredWindowSize);
 
             this.config.putWindowGeometry(this.window, "Plotter");
             this.window.removeEventListener("resize", this.boundResizeWindow);

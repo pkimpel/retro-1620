@@ -76,7 +76,8 @@ class SystemConfig {
         Plotter: {
             hasPlotter: 0,
             scale: 1,
-            maxHeight: 4096
+            maxHeight: 4096,
+            visibleCarriage: 1
         },
 
         Disk: {
@@ -511,6 +512,7 @@ class SystemConfig {
         this.setListValue("PlotterModel", cd.Plotter.hasPlotter);
         this.setListValue("PlotterScale", cd.Plotter.scale);
         this.setListValue("PlotterMaxHeight", cd.Plotter.maxHeight);
+        this.$$("PlotterVisibleCarriage").checked = cd.Plotter.visibleCarriage;
 
         // Disk
         for (let x=0; x<4; ++x) {
@@ -643,6 +645,8 @@ class SystemConfig {
         e = this.$$("PlotterMaxHeight");
         x = parseInt(e.options[e.selectedIndex].value, 10);
         cd.Plotter.maxHeight = (isNaN(x) ? 4096 : x);
+        e = this.$$("PlotterVisibleCarriage");
+        cd.Plotter.visibleCarriage = (e.checked ? 1 : 0);
 
         // Disk
         cd.Disk.hasDisk = (this.$$("Disk0Exists").checked ? 1 : 0);

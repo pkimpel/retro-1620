@@ -29,8 +29,20 @@
 <div id=PlotterDiv>
     <iframe id=PlotterFrame src="./PlotterFrame.html">
     </iframe>
-    <div id=HCursor></div>
-    <div id=VCursor></div>
+    <div id=Carriage>
+        <div id=CarriageUpperRail class=carriageRail></div>
+        <div id=PenCursor>
+            <div id=CarriageUpperGuide class=carriageGuide></div>
+            <div id=PenReticle>
+                <div id=TopHairline class=hairline></div>
+                <div id=LeftHairline class=hairline></div>
+                <div id=BottomHairline class=hairline></div>
+                <div id=RightHairline class=hairline></div>
+            </div>
+            <div id=CarriageLowerGuide class=carriageGuide></div>
+        </div>
+        <div id=CarriageLowerRail class=carriageRail></div>
+    </div>
     <div id=FPS></div>
 </div>
 
@@ -65,11 +77,10 @@
 
     <div id=PenControlsDiv>
         <div id=PenCaption class=caption>PEN</div>
-        <img id=PenUpBtn src="./resources/ArrowUp-16.png" title="Pen Up">
-        <img id=PenDownBtn src="./resources/ArrowDown-16.png" title="Pen Down">
-        <div id=PenStatusDiv>
-            <span id=PenStatusSpan>UP</span>
-        </div>
+        <img id=PenUpBtn src="./resources/ArrowUp-16.png" title="Raise pen">
+        <div id=PenUpLamp class=panelLamp></div>
+        <img id=PenDownBtn src="./resources/ArrowDown-16.png" title="Lower pen">
+        <div id=PenDownLamp class=panelLamp></div>
     </div>
 
     <div id=ButtonDiv>
@@ -81,18 +92,34 @@
 
     <div id=PaletteDiv>
         <div id=BlackBtn class=paletteButton title="Draw black lines">&nbsp;</div>
-        <div id=BlackLamp class=paletteLamp></div>
+        <div id=BlackLamp class=panelLamp></div>
         <div id=RedBtn class=paletteButton title="Draw red lines">&nbsp;</div>
-        <div id=RedLamp class=paletteLamp></div>
+        <div id=RedLamp class=panelLamp></div>
         <div id=GreenBtn class=paletteButton title="Draw green lines">&nbsp;</div>
-        <div id=GreenLamp class=paletteLamp></div>
+        <div id=GreenLamp class=panelLamp></div>
         <div id=BlueBtn class=paletteButton title="Draw blue lines">&nbsp;</div>
-        <div id=BlueLamp class=paletteLamp></div>
+        <div id=BlueLamp class=panelLamp></div>
         <div id=BrownBtn class=paletteButton title="Draw brown lines">&nbsp;</div>
-        <div id=BrownLamp class=paletteLamp></div>
+        <div id=BrownLamp class=panelLamp></div>
     </div>
 
-    <div id=ScaleFactor title="Plot display scale facator"></div>
+    <div id=LineWidthDiv title="Select the line drawing width">
+        <div id=LineWidthCaption class=caption>LINE</div>
+        <select id=LineWidthSelect>
+            <option value=1 SELECTED>1
+            <option value=2         >2
+            <option value=3         >3
+            <option value=4         >4
+            <option value=5         >5
+            <option value=6         >6
+            <option value=7         >7
+            <option value=8         >8
+            <option value=9         >9
+        </select>
+    </div>
+
+    <div id=ScaleFactor
+         title="Plot display scale factor \nDouble-click to restore original window size"></div>
 </div>
 
 </body>
