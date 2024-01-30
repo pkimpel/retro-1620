@@ -2,10 +2,10 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>retro-1620 1627 Plotter POC-4</title>
+<title>retro-1620 1627 Plotter POC-5</title>
 <!--
 /***********************************************************************
-* retro-1620/Misc Plotter-POC-4.html
+* retro-1620/Misc Plotter-POC-5.html
 ************************************************************************
 * Copyright (c) 2023, Paul Kimpel.
 * Licensed under the MIT License, see
@@ -33,47 +33,85 @@
     position:           relative;
     width:              578px;
     height:             480px;
-    overflow:           scroll;
+    overflow-x:         hidden;
+    overflow-y:         scroll;
     background-color:   white;
     border:             1px solid black;
     box-shadow:         6px 6px 6px #333}
+#CanvasBox {
+    position:           absolute;
+    left:               50%;
+    top:                0;
+    height:             100%;
+    width:              100%;
+    transform:          translate(-50%, 0)}
 #PlotterCanvas {
-    margin:             4px;
-    border:             1px dotted black}
+    position:           absolute;
+    left:               0;
+    top:                0}
+#XCursor {
+    position:           absolute;
+    left:               50%;
+    width:              2px;
+    top:                0;
+    bottom:             0;
+    z-index:            10;
+    border-left:        1px dashed gray}
+#YCursor {
+    position:           absolute;
+    left:               0;
+    right:              0;
+    top:                50%;
+    height:             2px;
+    z-index:            10;
+    border-top:         1px dashed gray}
 </style>
 
 <script>
 window.addEventListener("load", async (ev) => {
-    const canvas = this.document.getElementById("PlotterCanvas");
-    const container = this.document.getElementById("PlotterDiv");
+    const container = document.getElementById("PlotterDiv");
     const containerRect = container.getBoundingClientRect();
+    const canvasBox = document.getElementById("CanvasBox");
+    const canvas = document.getElementById("PlotterCanvas");
+    const canvasRect = canvas.getBoundingClientRect();
+    const xCursor = document.getElementById("XCursor");
+    const yCursor = document.getElementById("YCursor");
     const dc = canvas.getContext("2d");
 
     const canvasMaxSize =               32764;          // pixels (for Firefox in 2023)
     const canvasStepSize =              0.01;           // inch
     const canvasWidth =                 11;             // inch
-    const canvasPixelWidth =            canvasWidth/canvasStepSize;
-    const canvasScaleFactor =           (containerRect.width-8-20)/canvasPixelWidth;
-    const canvasHeight =                canvasMaxSize*canvasStepSize/canvasScaleFactor; // inch (about 54 feet)
-    const canvasPixelHeight =           canvasHeight/canvasStepSize;
+    const canvasScaleFactor =           0.5;
+    const canvasUnitWidth =             canvasWidth/canvasStepSize;
+    const canvasHeight =                canvasMaxSize*canvasStepSize; // inch (about 27 feet)
+    const canvasUnitHeight =            Math.round(canvasHeight/canvasStepSize);
     const canvasLineWidth =             1/canvasScaleFactor;
     const canvasOffsetX =               0.5/canvasScaleFactor;
-    const canvasOffsetY =               0.5/canvasScaleFactor;
+    const canvasOffsetY =               (0.5 + container.offsetHeight/2)/canvasScaleFactor;
     const stepPeriod =                  1000/300;       // milliseconds, 1627 Model 1
     const minWait =                     8;              // milliseconds
 
     let lastx = 0;
     let lasty = 0;
     let pendingWait = 0;
+    const [originLeft, originTop] = toPixelCoord(0, 0);
 
-    canvas.height = canvasPixelHeight*canvasScaleFactor;
-    canvas.width = canvasPixelWidth*canvasScaleFactor;
+    canvas.height = canvasUnitHeight*canvasScaleFactor;
+    canvas.width = canvasUnitWidth*canvasScaleFactor;
+    canvasBox.style.width = `${canvasUnitWidth*canvasScaleFactor}px`;
+    xCursor.style.height = `${canvasUnitHeight*canvasScaleFactor}px`;
 
-    function toCanvasCoord(x, y) {
+    function toUnitCoord(x, y) {
+        /* Converts canvas (pixel) coordinates to transformed unit coordinates */
+
+        return [x/canvasScaleFactor - canvasOffsetX, y/canvasScaleFactor - canvasOffsetY];
+    }
+
+    function toPixelCoord(x, y) {
         /* Converts transformed canvas unit coordinates into canvas (pixel)
         coordinates */
 
-        return [(x-canvasOffsetX)*canvasScaleFactor, (y-canvasOffsetY)*canvasScaleFactor];
+        return [Math.round((x+canvasOffsetX)*canvasScaleFactor), Math.round((y+canvasOffsetY)*canvasScaleFactor)];
     }
 
     function delay(period) {
@@ -88,27 +126,20 @@ window.addEventListener("load", async (ev) => {
         }
     }
 
-    async function drawCursor(x, y) {
-        const [px, py] = toCanvasCoord(x, y);
-        const savePix = dc.getImageData(py-4, px-4, 8, 8);
-
-        dc.save();
-        dc.strokeStyle = "gray";
-        dc.beginPath();
-        dc.arc(y, x, 3, Math.PI*2, false);
-        dc.stroke();
-        dc.restore();
-        await delay(stepPeriod);
-        dc.putImageData(savePix, py-4, px-4);
+    function positionCursor(x, y) {
+        const [ux,uy] = toPixelCoord(x, y);
+        xCursor.style.left = `${ux}px`;
+        yCursor.style.top =  `${uy}px`;
+        container.scrollTop = uy-originTop;
     }
 
-    // Bresenham's algorithm.
     async function moveTo(x, y) {
         if (x != lastx || y != lasty) {
             await plotLine(lastx, lasty, x, y, null);
         }
     }
 
+    // Bresenham's algorithm.
     async function plotLine(x0, y0, x1, y1, color) {
         const dx = Math.abs(x1 - x0);
         const dy = -Math.abs(y1 - y0);
@@ -126,11 +157,10 @@ window.addEventListener("load", async (ev) => {
         for (;;) {
             if (color) {
                 dc.fillRect(y, x, canvasLineWidth, canvasLineWidth);
-                await delay(stepPeriod);
-            } else {
-                await drawCursor(x, y);
             }
 
+            positionCursor(y, x);
+            await delay(stepPeriod);
             const e2 = 2*err;
             if (e2 >= dy) {
                 if (x == x1) {
@@ -155,14 +185,26 @@ window.addEventListener("load", async (ev) => {
         lasty = y;
     }
 
+    let ux = 0;
+    let uy = 0;
+
     dc.save();
     dc.scale(canvasScaleFactor, canvasScaleFactor);
-    dc.translate(canvasScaleFactor/2, canvasScaleFactor/2);
+    dc.translate(canvasOffsetX, canvasOffsetY);
     dc.fillStyle = "transparent";       // fill in the panel background (aids antialiasing)
-    dc.strokeStyle = "black";
+    //dc.strokeStyle = "black";
     dc.lineWidth = canvasLineWidth;
-    dc.clearRect(0, 0, canvasPixelWidth, canvasPixelHeight);
+    dc.clearRect(0, 0, canvasUnitWidth, canvasUnitHeight);
 
+    // Plot the crosshair alignment test.
+    positionCursor(0, 0);
+    await delay(2000);
+    await plotLine(-16, canvasUnitWidth/2, 16, canvasUnitWidth/2, "red");
+    await plotLine(0, canvasUnitWidth/2-16, 0, canvasUnitWidth/2+16, "green");
+    await delay(1000);
+    await moveTo(0, 0);
+
+    // Draw the concentric boxes.
     let left = 50;
     let right = 750;
     let top = 200;
@@ -179,25 +221,31 @@ window.addEventListener("load", async (ev) => {
         bottom -= 50;
     }
 
+    // Fool around.
     await plotLine(700,50, 1000,300, "red");
     await plotLine(1000,300, 800,500, "blue");
     await plotLine(800,500, 1200,200, "green");
     await plotLine(1200,200, 700,1000, "orange");
+    await moveTo(400, 550);
 
     dc.restore();
-    alert("Done");
+    await delay(1000);
 }, {once:true});
 </script>
 
 </head>
 
 <body class=panelBody>
-<p><strong>retro-1620 1627 Plotter Proof-of-Concept 4</stong></p>
+<p><strong>retro-1620 1627 Plotter Proof-of-Concept 5</stong></p>
 
 <div id=PlotterDiv>
+    <div id=CanvasBox>
         <canvas id=PlotterCanvas>
             This browser does not support the HTML &lt;canvas&gt; element.
         </canvas>
+        <div id=XCursor></div>
+        <div id=YCursor></div>
+    </div>
 </div>
 
 </body>
