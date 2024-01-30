@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>retro-1620 1627 Plotter POC</title>
+<title>retro-1620 1627 Plotter POC-2</title>
 <!--
 /***********************************************************************
 * retro-1620/Misc Plotter-POC-2.html
@@ -41,10 +41,11 @@
 </style>
 
 <script>
-window.addEventListener("load", (ev) => {
+window.addEventListener("load", async (ev) => {
     const canvas = this.document.getElementById("PlotterCanvas");
     const container = this.document.getElementById("PlotterDiv");
     const clientRect = container.getBoundingClientRect();
+    const dc = canvas.getContext("2d");
 
     const canvasMaxSize =               32764;          // pixels (for Firefox in 2023)
     const canvasStepSize =              0.01;           // inch
@@ -53,87 +54,93 @@ window.addEventListener("load", (ev) => {
     const canvasScaleFactor =           (clientRect.width-8-20)/canvasPixelWidth;
     const canvasHeight =                canvasMaxSize*canvasStepSize/canvasScaleFactor; // inch (about 54 feet)
     const canvasPixelHeight =           canvasHeight/canvasStepSize;
+    const lineWidth =                   1/canvasScaleFactor;
+    const stepPeriod =                  1000/300;       // milliseconds, 1627 Model 1
+    const minWait =                     4;              // milliseconds
 
+    let lastx = 0;
+    let lasty = 0;
+    let pendingWait = 0;
 
     canvas.height = canvasPixelHeight*canvasScaleFactor;
     canvas.width = canvasPixelWidth*canvasScaleFactor;
 
-    // Swap coordinates, as "x" for the 1627 is along the paper length.
-    const moveTo = (x,y) => {dc.moveTo(y,x)};
-    const lineTo = (x,y) => {dc.lineTo(y,x)};
+    const delay = (period) => {
+        pendingWait += period;
+        if (pendingWait > minWait) {
+            return new Promise((resolve, reject) => {
+                setTimeout(resolve, pendingWait);
+                pendingWait = 0;
+            });
+        } else {
+            return Promise.resolve();
+        }
+    };
 
-    // Breshenham's algorithm.
-    const plotLine = (x0, y0, x1, y1) => {
+    // Bresenham's algorithm.
+    const moveTo = async (x, y) => {
+        await plotLine(lastx, lasty, x, y, null);
+    };
+
+    const plotLine = async (x0, y0, x1, y1, color) => {
         const dx = x1 - x0;
         const dy = y1 - y0;
+        const incx = (dx < 0 ? -1 : 1);
+        const incy = (dy < 0 ? -1 : 1);
         let D = 2*dy - dx;
         let y = y0;
-        let lastx = x0;
-        let lasty = y0;
 
-        dc.beginPath();
-        moveTo(x0, y0);
-        for (x=x0; x<=x1; ++x) {
-            if (y != lasty) {
-                lineTo(x, y);
-                lastx = x;
-                lasty = y;
+        if (color) {
+            await moveTo(x0, y0);
+            dc.fillStyle = color;
+        }
+
+        for (let x=x0; x<=x1; ++x) {
+            await delay(stepPeriod);
+            if (color) {
+                dc.fillRect(y, x, lineWidth, lineWidth);
             }
+
             if (D > 0) {
                 y += 1;
                 D -= 2*dx;
             }
 
+            lastx = x;
+            lasty = y;
             D += 2*dy;
         }
-
-        lineTo(x1, y1);
-        dc.stroke();
     };
 
-    const dc = canvas.getContext("2d");
+
     dc.save();
     dc.scale(canvasScaleFactor, canvasScaleFactor);
     dc.translate(canvasScaleFactor/2, canvasScaleFactor/2);
     dc.fillStyle = "transparent";       // fill in the panel background (aids antialiasing)
     dc.strokeStyle = "black";
-    dc.lineWidth = 1/canvasScaleFactor;
+    dc.lineWidth = lineWidth;
     dc.lineJoin = "round";
     dc.clearRect(0, 0, canvasPixelWidth, canvasPixelHeight);
 
-    /**********
-    dc.beginPath();
-    moveTo(10,10);
-    lineTo(20,20);
-    lineTo(20,50);
-    lineTo(50,50);
-    lineTo(30,30);
-    dc.stroke();
-    **********/
+    await plotLine(25,50, 200,300, "red");
+    await plotLine(200,300, 500,500, "blue");
+    await plotLine(500,500, 400,200, "green");
+    await plotLine(400,200, 333,1000, "black");
 
-    dc.strokeStyle = "red";
-    plotLine(25,50, 200,300);
-    dc.strokeStyle = "blue";
-    plotLine(200,300, 500,500);
-    dc.strokeStyle = "green";
-    plotLine(500,500, 400,200);
-    dc.strokeStyle = "black";
-    plotLine(400,200, 333,1000);
-
-    plotLine(100,100, 100,500);
-    plotLine(100,500, 500,500);
-    plotLine(500,500, 500,100);
-    plotLine(500,100, 100,100);
+    await plotLine(100,100, 100,500, "orange");
+    await plotLine(100,500, 500,500, "orange");
+    await plotLine(500,500, 500,100, "orange");
+    await plotLine(500,100, 100,100, "orange");
 
     dc.restore();
-
+    alert("Done");
 }, {once:true});
 </script>
 
 </head>
 
 <body class=panelBody>
-<p><strong>retro-1620 1627 Plotter Proof-of-Concept</stong></p>
+<p><strong>retro-1620 1627 Plotter Proof-of-Concept 2</stong></p>
 
 <div id=PlotterDiv>
     <canvas id=PlotterCanvas>
