@@ -13,12 +13,18 @@ C 2024-01-31      P.KIMPEL
 C   ORIGINAL VERSION.
 C-----------------------------------------------------------------------
 C
+C     -- ARITHMETIC STATEMENT FUNCTIONS
+      ROTXF(X, Y, XC, YC, THETA) =
+     1       (X-XC)*COSF(THETA) - (Y-YC)*SINF(THETA) + XC
+      ROTYF(X, Y, XC, YC, THETA) =
+     1       (Y-YC)*COSF(THETA) + (X-XC)*SINF(THETA) + YC
+C
 C     -- PLOT DIMENSIONS
       RINGR = 4.76/2.0
       RINGW = 1.27
-      RSTEMD = 2.28
+      RSTEMD = 2.79
       CAPT = 7.63
-      CAPW = 7.14
+      CAPW = 8.23
       CAPH = 2.07
       CAPB = CAPT+CAPH
       CAPR = CAPW/2.0
@@ -100,22 +106,28 @@ C     -- THE BENT FRAME
 C
 C     -- THE ARCHAIC GREEK NUMERIALS
       CALL PLOT(99)
-      AGLW = CAPH*0.475
-      AGLH = CAPH*0.75
-      AGL1 = AGLH*0.05
+      AGLW = CAPH*0.60
+      AGLH = CAPH*0.825
+      AGL1 = AGLH*0.10
       AGL2 = AGLH*0.075
       AGL3 = AGLH*0.25
       A = CAPH/4.0
       X = CAPT+AGL1
 C
-      Y = 3.2*A-CAPR
-      CALL PLOT(90, X+2.5*A, Y)
-      CALL PLOT(90, X, Y-0.7*A)
-      CALL PLOT(90, X+1.9*A, Y-2.5*A)
-      CALL PLOT(90, X+1.5*A, Y-0.5*A)
+      Y = 2.6*A-CAPR
+      THETA = ATANF(1.1/3.0)
+      CALL PLOT(90, ROTXF(X+3.1*A, Y,       X, Y, THETA),
+     1              ROTYF(X+3.1*A, Y,       X, Y, THETA))
+      CALL PLOT(90, X, Y)
+      CALL PLOT(90, ROTXF(X+1.4*A, Y-2.5*A, X, Y, THETA),
+     1              ROTYF(X+1.4*A, Y-2.5*A, X, Y, THETA))
+      CALL PLOT(90, ROTXF(X+2.1*A, Y,       X, Y, THETA),
+     1              ROTYF(X+2.1*A, Y,       X, Y, THETA))
       CALL PLOT(99)
-      CALL PLOT(90, X+2.2*A, Y-2.0*A)
-      CALL PLOT(90, X+3.2*A, Y-2.0*A)
+      CALL PLOT(90, ROTXF(X+2.9*A, Y-2.6*A, X, Y, THETA),
+     1              ROTYF(X+2.9*A, Y-2.6*A, X, Y, THETA))
+      CALL PLOT(90, ROTXF(X+1.6*A, Y-2.0*A, X, Y, THETA),
+     1              ROTYF(X+1.6*A, Y-2.0*A, X, Y, THETA))
 C
       CALL PLOT(99)
       Y = 4.7*A-CAPR
@@ -124,31 +136,38 @@ C
       CALL PLOT(90, X, Y+AGLW)
       CALL PLOT(90, X+AGLH, Y+AGLW)
       CALL PLOT(99)
-      CALL PLOT(90, CAPT, 0.0)
-      CALL PLOT(90, CAPT+AGL3, 0.0)
+      CALL PLOT(90, CAPT, Y+3.0*A)
+      CALL PLOT(90, CAPT+AGL3, Y+3.0*A)
 C
       CALL PLOT(99)
       Y = CAPR-7.0*A
       CALL PLOT(90, X+AGLH, Y)
       CALL PLOT(90, X, Y)
       CALL PLOT(90, X, Y+AGLW)
-      CALL PLOT(90, X+AGL1, Y+AGLW)
+      CALL PLOT(90, X+AGL3, Y+AGLW)
       CALL PLOT(99)
       CALL PLOT(90, CAPT, Y+2.8*A)
       CALL PLOT(90, CAPT+AGL3, Y+2.8*A)
 C
       CALL PLOT(99)
-      Y = CAPR-3.7*A
-      CALL PLOT(90, X+1.2*A, Y)
-      CALL PLOT(90, X, Y+1.5*A)
-      CALL PLOT(90, X+2.0*A, Y+2.7*A)
-      CALL PLOT(90, X+1.7, Y+1.1*A)
+      Y = CAPR-1.9*A
+      THETA = ATANF(1.4/2.2)
+      CALL PLOT(90, ROTXF(X,       Y-2.3*A, X, Y, THETA),
+     1              ROTYF(X,       Y-2.3*A, X, Y, THETA))
+      CALL PLOT(90, ROTXF(X,       Y,       X, Y, THETA),
+     1              ROTYF(X,       Y,       X, Y, THETA))
+      CALL PLOT(90, ROTXF(X+2.6*A, Y,       X, Y, THETA),
+     1              ROTYF(X+2.6*A, Y,       X, Y, THETA))
+      CALL PLOT(90, ROTXF(X+2.6*A, Y-2.3*A, X, Y, THETA),
+     1              ROTYF(X+2.6*A, Y-2.3*A, X, Y, THETA))
       CALL PLOT(99)
-      CALL PLOT(90, X+1.8*A, Y+1.1*A)
-      CALL PLOT(90, X+1.2*A, Y+2.0*A)
+      CALL PLOT(90, ROTXF(X+1.3*A, Y-1.6*A, X, Y, THETA),
+     1              ROTYF(X+1.3*A, Y-1.6*A, X, Y, THETA))
+      CALL PLOT(90, ROTXF(X+1.3*A, Y,       X, Y, THETA),
+     1              ROTYF(X+1.3*A, Y,       X, Y, THETA))
       CALL PLOT(99)
-      CALL PLOT(90, X+AGL3, Y+3.0*A)
-      CALL PLOT(90, X+AGL3+AGL2, Y+3.0*A)
+      CALL PLOT(90, X+AGL3, Y+1.1*A)
+      CALL PLOT(90, X+AGL3+AGL1, Y+1.1*A)
 C
 C     -- THE ARCHAIC GREEK LETTERS - FIRST DRAW THE TAU
       CALL PLOT(99)
