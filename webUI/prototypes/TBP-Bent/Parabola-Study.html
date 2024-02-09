@@ -53,10 +53,6 @@ window.addEventListener("load", async (ev) => {
     const xBox = document.getElementById("XBox");
     const yBox = document.getElementById("YBox");
     const pSpan = document.getElementById("PSpan");
-    const plusX = document.getElementById("PlusX");
-    const minusX = document.getElementById("MinusX");
-    const plusY = document.getElementById("PlusY");
-    const minusY = document.getElementById("MinusY");
     const dc = canvas.getContext("2d");
 
     const canvasWidth = 550;            // pixels
@@ -86,17 +82,19 @@ window.addEventListener("load", async (ev) => {
             [py, px] = [px, py]
         }
 
+        dc.fillStyle = "black";
         dc.fillRect(px+offsetX,  py+offsetY, 1, 1);
+        dc.fillStyle = "red";
         dc.fillRect(rx+offsetX,  ry+offsetY, 1, 1);
     }
 
     function parabola(p, bound) {
         /* Adapted from
         EFFICIENT INTEGER ALGORITHMS FOR THE GENERATION OF CONIC SECTIONS
-        A. AGATHOS, T. THEOHARIS and A. BOEHM
-        Department of Informatics, University of Athens,
-        Panepistimioupolis, TYPA Buildings, 157 71 Athens, Greece
-        Comput. & Graphics, Vol. 22. No. 5, pp. 621-628. 1998
+            A. AGATHOS, T. THEOHARIS and A. BOEHM
+            Department of Informatics, University of Athens,
+            Panepistimioupolis, TYPA Buildings, 157 71 Athens, Greece
+            Comput. & Graphics, Vol. 22. No. 5, pp. 621-628. 1998
         https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=0a069cc3137c2f0133ec3c299080c58073d4a6c5
         and https://cgi.di.uoa.gr/~graphics/Downloads/papers/journals/p7.pdf */
 
@@ -139,25 +137,21 @@ window.addEventListener("load", async (ev) => {
         const x = parseInt(xBox.value, 10) || 0;
         const y = parseInt(yBox.value, 10) || 0;
 
-        if (x > 0 && y > 0) {
-            const p = Math.round(x*x/y/2);
+        if (x != 0 && y != 0) {
+            const p = Math.round(Math.abs(y*y/x/2));
 
             pSpan.textContent = p;
-            xd = (plusX.checked ? 1 : -1);
-            yd = (plusY.checked ? 1 : -1);
+            xd = (x > 0 ? 1 : -1);
+            yd = (y > 0 ? 1 : -1);
             dc.fillStyle = "transparent";       // fill in the panel background (aids antialiasing)
             dc.clearRect(0, 0, canvasWidth, canvasHeight);
             dc.fillStyle = "black";
-            parabola(p, y);
+            parabola(p, Math.abs(x));
         }
     }
 
     xBox.addEventListener("change", drawParabola);
     yBox.addEventListener("change", drawParabola);
-    plusX.addEventListener("click", drawParabola);
-    minusX.addEventListener("click", drawParabola);
-    plusY.addEventListener("click", drawParabola);
-    minusY.addEventListener("click", drawParabola);
 
 }, {once:true});
 </script>
@@ -167,15 +161,9 @@ window.addEventListener("load", async (ev) => {
 <body class=panelBody>
 <p>
     <strong>retro-1620 1627 Plotter Parabola Study</stong><hr>
-    x<sub>b</sub> <input id=XBox type=text size=4 maxLength=3>
-    y<sub>b</sub> <input id=YBox type=text size=4 maxLength=3>
-    p=<span id=PSpan>0</span>,
-    &nbsp;
-    &#916;x <input id=PlusX  name=DeltaX type=radio CHECKED><label for=PlusX >+1</label>
-            <input id=MinusX name=DeltaX type=radio        ><label for=MinusX>-1</label>,
-    &nbsp;
-    &#916;y <input id=PlusY  name=DeltaY type=radio CHECKED><label for=PlusY >+1</label>
-            <input id=MinusY name=DeltaY type=radio        ><label for=MinusY>-1</label>
+    x<sub>b</sub> <input id=XBox type=text size=4 maxLength=4>
+    y<sub>b</sub> <input id=YBox type=text size=4 maxLength=4>
+    p=<span id=PSpan>0</span>
 </p>
 
 <div id=PlotterDiv>
