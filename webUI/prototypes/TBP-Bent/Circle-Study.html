@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>retro-1620 1627 Circle Study</title>
+<!--
+/***********************************************************************
+* retro-1620/webUI/prototypes/TBP-Bent Circle-Study.html
+************************************************************************
+* Copyright (c) 2024, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1627 plotter circle drawing study.
+************************************************************************
+* 2024-02-12  P.Kimpel
+*   Original version.
+***********************************************************************/
+-->
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+
+<style>
+#PlotterDiv {
+    position:           relative;
+    width:              578px;
+    height:             550px;
+    overflow-x:         hidden;
+    overflow-y:         scroll;
+    background-color:   white;
+    border:             1px solid black;
+    box-shadow:         6px 6px 6px #999}
+#CanvasBox {
+    position:           absolute;
+    left:               50%;
+    top:                0;
+    height:             100%;
+    width:              100%;
+    transform:          translate(-50%, 0)}
+#PlotterCanvas {
+    position:           absolute;
+    left:               0;
+    top:                0}
+INPUT {
+    text-align:         center}
+</style>
+
+<script>
+window.addEventListener("load", async (ev) => {
+    const container = document.getElementById("PlotterDiv");
+    const canvas = document.getElementById("PlotterCanvas");
+    const rBox = document.getElementById("RBox");
+    const dc = canvas.getContext("2d");
+
+    const canvasWidth = 550;            // pixels
+    const canvasHeight =550             // pixels
+    const xOffset =     Math.round(canvasWidth/2);
+    const yOffset =     Math.round(canvasHeight/2);
+    const stepPeriod =  1000/300;       // milliseconds, 1627 Model 1
+    const xMove = [0, 0,  1,  1,  1,  0, -1, -1, -1];
+    const yMove = [0, 1,  1,  0, -1, -1, -1,  0,  1];
+
+    let xLast = 0;
+    let yLast = 0;
+
+    canvas.height = canvasHeight;
+    canvas.width = canvasWidth;
+
+    function draw(move) {
+        /* Draws one pixel at the current position, then moves the pen in the
+        indicated direction. */
+
+        dc.fillStyle = "black";
+        dc.fillRect(xLast+xOffset,  yLast+yOffset, 1, 1);
+        xLast += xMove[move];
+        yLast += yMove[move];
+    }
+
+    function circle(radius) {
+        /* Adapted from
+            "A Linear Algorithm for Incremental Digital Display of Circular Arcs",
+            Jack Bresenham, Comm. ACM, vol. 20, no. 2, February 1977, pp. 100-106.
+            https://dl.acm.org/doi/pdf/10.1145/359423.359432 */
+        let d = 0;
+        let delta = 0;
+        let m1 = 0;
+        let m2 = 0;
+        let m3 = 1;
+        let move = 0;
+        let x = 0;
+        let y = 0;
+
+        do {
+            x = 1;
+            y = radius+radius-1;
+            delta = y-1;
+            m1 = m3;
+            m2 = m1+1;
+            m3 = m2+1;
+            if (m3 == 9) {
+                m3 = 1;
+            }
+
+            while (y >= 0) {
+                d = delta+delta;
+                if (d < 0) {
+                    d += x;
+                    if (d >= 0) {
+                        x += 2;
+                        y -= 2;
+                        delta += y-x;
+                        move = m2;
+                    } else {
+                        y -= 2;
+                        delta += y;
+                        move = m3;
+                    }
+                } else {
+                    d -= y;
+                    if (d < 0) {
+                        x += 2;
+                        y -= 2;
+                        delta += y-x;
+                        move = m2;
+                    } else {
+                        x += 2;
+                        delta -= x;
+                        move = m1;
+                    }
+                }
+
+                draw(move);
+            }
+        } while (m3 != 1);
+    }
+
+    function drawCircle(ev) {
+        const r = parseInt(rBox.value, 10) || 0;
+
+        if (r > 0) {
+            dc.fillStyle = "transparent";       // fill in the panel background (aids antialiasing)
+            dc.clearRect(0, 0, canvasWidth, canvasHeight);
+            dc.fillStyle = "black";
+            xLast = -r;
+            yLast = 0;
+            circle(r);
+        }
+    }
+
+    document.getElementById("DrawBtn").addEventListener("click", drawCircle);
+
+}, {once:true});
+</script>
+
+</head>
+
+<body class=panelBody>
+<p>
+    <strong>retro-1620 1627 Plotter Circle Study</stong><hr>
+    Radius <input id=RBox type=text size=4 maxLength=4>
+    &nbsp;
+    <button id=DrawBtn type=button>Draw</button>
+</p>
+
+<div id=PlotterDiv>
+    <div id=CanvasBox>
+        <canvas id=PlotterCanvas>
+            This browser does not support the HTML &lt;canvas&gt; element.
+        </canvas>
+    </div>
+</div>
+
+</body>
+</html>

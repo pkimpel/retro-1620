@@ -50,7 +50,6 @@ INPUT {
 window.addEventListener("load", async (ev) => {
     const container = document.getElementById("PlotterDiv");
     const canvas = document.getElementById("PlotterCanvas");
-    const rBox = document.getElementById("RBox");
     const dc = canvas.getContext("2d");
 
     const canvasWidth = 550;            // pixels
@@ -58,97 +57,207 @@ window.addEventListener("load", async (ev) => {
     const xOffset =     Math.round(canvasWidth/2);
     const yOffset =     Math.round(canvasHeight/2);
     const stepPeriod =  1000/300;       // milliseconds, 1627 Model 1
-    const xMove = [0, 0,  1,  1,  1,  0, -1, -1, -1];
-    const yMove = [0, 1,  1,  0, -1, -1, -1,  0,  1];
+    const minWait =     5;              // minimum wait time, ms
 
+    let aborted = false;
+    let nextDrawStamp = 0;
     let xLast = 0;
     let yLast = 0;
 
     canvas.height = canvasHeight;
     canvas.width = canvasWidth;
 
-    function draw(move) {
-        /* Draws one pixel at the current position, then moves the pen in the
-        indicated direction. */
+    function waitFor(ms) {
+        /* Returns a Promise that resolves after the specified number of milliseconds */
 
-        dc.fillStyle = "black";
-        dc.fillRect(xLast+xOffset-1,  yLast+yOffset-1, 2, 2);
-        xLast += xMove[move];
-        yLast += yMove[move];
+        return new Promise((resolve, reject) => {
+            setTimeout(resolve, ms);
+        });
     }
 
-    function arc(radius) {
+    async function draw(move) {
+        /* Draws one pixel at the current position, then moves the pen in the
+        indicated direction. */
+        const now = performance.now();
+        const delay = nextDrawStamp - now;
+
+        if (delay < 0) {
+            nextDrawStamp = now + stepPeriod;
+        } else {
+            nextDrawStamp += stepPeriod;
+            if (delay > minWait) {
+                await waitFor(delay);
+            }
+        }
+
+        dc.fillStyle = "black";
+        dc.fillRect(xLast+xOffset,  yOffset-yLast, 1, 1);
+        xLast += move.x;
+        yLast += move.y;
+        return aborted;
+    }
+
+    async function arc(xs, ys, xt, yt, rot) {
         /* Adapted from
             "A Linear Algorithm for Incremental Digital Display of Circular Arcs",
             Jack Bresenham, Comm. ACM, vol. 20, no. 2, February 1977, pp. 100-106.
             https://dl.acm.org/doi/pdf/10.1145/359423.359432 */
-        let d = 0;
-        let delta = 0;
-        let m1 = 0;
-        let m2 = 0;
-        let m3 = 1;
-        let move = 0;
-        let x = 0;
-        let y = 0;
+        const xForm = [
+            {xySwap: true,  q: 3, m1: {x: 0, y:-1}, m2: {x: 1, y:-1}, m3: {x: 1, y: 0}},  // III, CCW, j=0
+            {xySwap: false, q: 2, m1: {x:-1, y: 0}, m2: {x:-1, y:-1}, m3: {x: 0, y:-1}},  // II,  CCW, j=1
+            {xySwap: false, q: 0, m1: {x: 1, y: 0}, m2: {x: 1, y: 1}, m3: {x: 0, y: 1}},  // IV,  CCW, j=2
+            {xySwap: true,  q: 1, m1: {x: 0, y: 1}, m2: {x:-1, y: 1}, m3: {x:-1, y: 0}},  // I,   CCW, j=3
+            {xySwap: false, q: 2, m1: {x:-1, y: 0}, m2: {x:-1, y: 1}, m3: {x: 0, y: 1}},  // III, CW,  j=4
+            {xySwap: true,  q: 3, m1: {x: 0, y: 1}, m2: {x: 1, y: 1}, m3: {x: 1, y: 0}},  // II,  CW,  j=5
+            {xySwap: true,  q: 1, m1: {x: 0, y:-1}, m2: {x:-1, y:-1}, m3: {x:-1, y: 0}},  // IV,  CW,  j=6
+            {xySwap: false, q: 0, m1: {x: 1, y: 0}, m2: {x: 1, y:-1}, m3: {x: 0, y:-1}}   // I,   CW,  j=7
+        ];
 
-        do {
-            x = 1;
-            y = radius+radius-1;
-            delta = y-1;
-            m1 = m3;
-            m2 = m1+1;
-            m3 = m2+1;
-            if (m3 == 9) {
-                m3 = 1;
+        function findMeshPoint(x0, y0) {
+            /* Find and return the closest plotter mesh point (xm,ym) to (x0,y0) */
+            const xysq = x0*x0 + y0*y0;
+            let min = Number.MAX_VALUE;
+            let xm = 0;
+            let ym = 0;
+
+            for (let i=0; i<4; ++i) {
+                const x = (i & 1) ? Math.ceil(x0) : Math.floor(x0);
+                const y = (i & 2) ? Math.ceil(y0) : Math.floor(y0);
+                const dist = x*x + y*y - xysq;
+                if (dist < min) {
+                    min = dist;
+                    xm = x;
+                    ym = y;
+                }
             }
 
-            while (y >= 0) {
-                d = delta+delta;
-                if (d < 0) {
-                    d += x;
-                    if (d >= 0) {
-                        x += 2;
-                        y -= 2;
-                        delta += y-x;
-                        move = m2;
+            return [xm, ym];
+        }
+
+        // Find the closest mesh point (xsm,ysm) for (xs,ys).
+        let [xsm, ysm] = findMeshPoint(xs, ys);
+
+        // Find the closest mesh point (xtm,ytm) for (xt,yt).
+        let [xtm, ytm] = findMeshPoint(xt, yt);
+
+        // Check that both points lie on the same circle.
+        if ((xsm*xsm + ysm*ysm) != (xtm*xtm + ytm*ytm)) {
+            alert(`(${xs},${ys}) and (${xt},${yt}) do not lie on the same circle`);
+            return;
+        }
+
+        // Transform the mesh coordinates to normalized, 1st quadrant,
+        // clockwise coordinates, which are already (0,0)-relative.
+        let d = (rot < 0 ? -1 : 1);
+        let js = (d < 0 ? 0 : 4) + (xs < 0 ? 0 : 2) + (ys < 0 ? 0 : 1);
+        let jt = (d < 0 ? 0 : 4) + (xt < 0 ? 0 : 2) + (yt < 0 ? 0 : 1);
+        let m1 = xForm[js].m1;
+        let m2 = xForm[js].m2;
+        let m3 = xForm[js].m3;
+
+        if (xForm[js].xySwap) {
+            [xsm, ysm] = [Math.abs(ysm), Math.abs(xsm)];
+        } else {
+            [xsm, ysm] = [Math.abs(xsm), Math.abs(ysm)];
+        }
+        if (xForm[jt].xySwap) {
+            [xtm, ytm] = [Math.abs(ytm), Math.abs(xtm)];
+        } else {
+            [xtm, ytm] = [Math.abs(xtm), Math.abs(ytm)];
+        }
+
+        // Determine the number of quadrant crossings necessary.
+        let q = (4 + xForm[jt].q - xForm[js].q)%4;
+        if (q == 0 && xtm <= xsm && ytm >= ysm) {
+            q = 3;
+        } else {
+            q -= 1;
+        }
+
+        // Draw the arc.
+        let x = xsm;
+        let y = ysm;
+        let delta = (x*x + y*y) - (xs*xs + ys*ys) + 2*(x - y + 1);
+        let del = 0;
+
+        console.debug("Arc: s=%i,%i, t=%i,%i, d=%i, xt=%i,%i, yt=%i,%i, js=%i, qs=%i, jt=%i, qt=%i, q=%i, delta=%i",
+                      xs, ys, xt, yt, d, xsm, ysm, xtm, ytm, js, xForm[js].q, jt, xForm[jt].q, q, delta);
+        console.debug("     m1=%i,%i, m2=%i,%im m3=%i,%i", m1.x, m1.y, m2.x, m2.y, m3.x, m3.y);
+
+        while (q >= 0 || xtm > x || ytm < y) {
+            if (y < 1) {                // reinitialize for next quadrant
+                delta -= 4*x;
+                q -= 1;
+                [x, y] = [y, x];
+                [m1.x, m1.y] = [m3.x, m3.y];
+                [m2.x, m2.y] = [d*m2.y, -d*m2.x];
+                [m3.x, m3.y] = [d*m3.y, -d*m3.x];
+            } else {
+                if (delta <= 0) {
+                    del = 2*delta + 2*y - 1;
+                    if (del <= 0) {
+                        if (await draw(m1)) return;
+                        x += 1;
+                        delta += 2*x + 1;
                     } else {
-                        y -= 2;
-                        delta += y;
-                        move = m3;
+                        if (await draw(m2)) return;
+                        x += 1;
+                        y -= 1;
+                        delta += 2*x - 2*y + 2;
                     }
                 } else {
-                    d -= y;
-                    if (d < 0) {
-                        x += 2;
-                        y -= 2;
-                        delta += y-x;
-                        move = m2;
+                    del = 2*delta - 2*x - 1;
+                    if (del <= 0) {
+                        if (await draw(m2)) return;
+                        x += 1;
+                        y -= 1;
+                        delta += 2*x - 2*y + 2;
                     } else {
-                        x += 2;
-                        delta -= x;
-                        move = m1;
+                        if (await draw(m3)) return;
+                        y -= 1;
+                        delta += -2*y + 1;
                     }
                 }
-
-                draw(move);
             }
-        } while (m3 != 1);
-    }
-
-    function drawArc(ev) {
-        const r = parseInt(rBox.value, 10) || 0;
-
-        if (r > 0) {
-            dc.fillStyle = "transparent";       // fill in the panel background (aids antialiasing)
-            dc.clearRect(0, 0, canvasWidth, canvasHeight);
-            dc.fillStyle = "black";
-            xLast = -r;
-            yLast = 0;
-            arc(r);
         }
     }
 
-    rBox.addEventListener("change", drawArc);
+    async function drawArc(ev) {
+        const xs = parseInt(document.getElementById("XsBox").value, 10) || 0;
+        const ys = parseInt(document.getElementById("YsBox").value, 10) || 0;
+        const xt = parseInt(document.getElementById("XtBox").value, 10) || 0;
+        const yt = parseInt(document.getElementById("YtBox").value, 10) || 0;
+        const rot  = (document.getElementById("CCWCheck").checked ? -1 : 1);
+
+        dc.fillStyle = "transparent";       // fill in the panel background (aids antialiasing)
+        dc.clearRect(0, 0, canvasWidth, canvasHeight);
+        for (let x=xOffset+0.5-Math.floor(xOffset/100)*100; x<canvasWidth; x+=100) {
+           dc.strokeStyle = (Math.floor(x) == xOffset ? "#66F" : "#CCC");
+           dc.beginPath();
+           dc.moveTo(x, 0);
+           dc.lineTo(x, canvasHeight);
+           dc.moveTo(0, x);
+           dc.lineTo(canvasHeight, x);
+           dc.stroke();
+        }
+
+        aborted = false;
+        if (xs || ys || xt || yt) {
+            document.getElementById("DrawBtn").disabled = true;
+            document.getElementById("AbortBtn").disabled = false;
+            dc.fillStyle = "black";
+            xLast = xs;
+            yLast = ys;
+            await arc(xs, ys, xt, yt, rot);
+            document.getElementById("AbortBtn").disabled = true;
+            document.getElementById("DrawBtn").disabled = false;
+        }
+    }
+
+    document.getElementById("DrawBtn").addEventListener("click", drawArc);
+    document.getElementById("AbortBtn").addEventListener("click", (ev) => {
+        aborted = true;
+    });
 
 }, {once:true});
 </script>
@@ -158,7 +267,17 @@ window.addEventListener("load", async (ev) => {
 <body class=panelBody>
 <p>
     <strong>retro-1620 1627 Plotter Arc Study</stong><hr>
-    R <input id=RBox type=text size=4 maxLength=4>
+    ( x<sub>s</sub> <input id=XsBox type=text size=4 maxLength=4>,
+      y<sub>s</sub> <input id=YsBox type=text size=4 maxLength=4> ),&nbsp;
+    ( x<sub>t</sub> <input id=XtBox type=text size=4 maxLength=4>,
+      y<sub>t</sub> <input id=YtBox type=text size=4 maxLength=4> ),&nbsp;
+    <span for=CCWCheck title="Tick for counter-clockwise">
+        <input id=CCWCheck type=checkbox> <label for=CCWCheck>CCW</label>
+    </span>
+    &nbsp;
+    <button id=DrawBtn type=button>Draw</button>
+    &nbsp;&nbsp;
+    <button id=AbortBtn type=button DISABLED>Abort</button>
 </p>
 
 <div id=PlotterDiv>
