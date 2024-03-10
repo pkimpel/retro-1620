@@ -69,6 +69,25 @@ POINT-Listing.txt
 Point-Demo-1.card
     Sample FORTRAN II-D program to demonstrate the POINT subroutine.
 
+CIRCLE.sps
+    SPS assembly job for the FORTRAN-callable CIRCLE subroutine. Draws
+    a circle of a specified radius in inches centered on the current
+    pen position. Written by Paul Kimpel in February 2024.
 
+CIRCLE-Listing.txt
+    Assembly listing for the CIRCLE subroutine.
 
+Circle-Demo-1.card
+    Sample FORTRAN II-D program to demonstrate the CIRCLE subroutine.
 
+PARAB.sps
+    SPS assembly job for the FORTRAN-callable PARAB subroutine. Draws
+    a parabola with specified bounds, having the vertex ("nose" of the
+    parabola) at the current pen position. Written by Paul Kimpel in
+    March 2024.
+
+PARAB-Listing.txt
+    Assembly listing for the PARAB subroutine.
+
+Parabola-Demo-1.card
+    Sample FORTRAN II-D program to demonstrate the PARAB subroutine.

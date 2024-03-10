@@ -1,0 +1,179 @@
+  (ID)  **CIRCLE -- SPS II-D PLOTTER CIRCLE ROUTINE
+        *PRINT SYMBOL TABLE
+        *LIST PRINTER
+        *ASSEMBLE RELOCATABLE
+        *STORE RELOADABLE
+        *NAME CIRCLE
+
+
+
+
+CIRCLE -- SPS II-D PLOTTER CIRCLE ROUTINE                                         PAGE   1
+
+RETURN 00005R   CIRCLE 00006R    CMD   00882R    DEL   00872R    DELTA 00868R
+ END   00889R    EQUAD 00702R    FAC   02492     FIX   03854     HEAD  00100R
+ MOVE  00882R    MS    00874R    MVM2  00622R    M1    00876R    M1M2  00486R
+ M2    00878R    M2M3  00554R    M3    00880R    PENDN 00886R    PENUP 00884R
+ PLOT  00682R    PSTEP 00426R    QUAD  00258R    R     00856R    TOFAC 03408
+ X     00860R    Y     00864R
+
+
+
+
+CIRCLE -- SPS II-D PLOTTER CIRCLE ROUTINE                                         PAGE   1
+
+     *********************************************************************
+     *     CIRCLE SUBROUTINE                                             *
+     *********************************************************************
+     * SUBROUTINE TO DRAW A CIRCLE ON THE 1627 PLOTTER.
+     * CALLABLE FROM FORTRAN AS--
+     *
+     *     CALL CIRCLE(RADIUS)
+     *
+     * THE RADIUS PARAMETER IS A FLOATING-POINT NUMBER SPECIFYING THE
+     * RADIUS OF THE CIRCLE IN INCHES. THE ROUTINE ASSUMES THE CENTER OF
+     * THE CIRCLE IS AT THE CURRENT PEN POSITION, AND RETURNS TO THAT
+     * POSITION WITH THE PEN UP AFTER THE CIRCLE IS DRAWN.
+     *
+     * ADAPTED FROM /A LINEAR ALGORITHM FOR INCREMENTAL DIGITAL DISPLAY OF
+     * ARCS/, JACK BRESENHAM, COMM. ACM, VOL 20, NUMBER 2, FEBRUARY 1977,
+     * PAGE 100.
+     *
+     * 2024-02-16  P.KIMPEL
+     *   ORIGINAL VERSION, BASED ON THE FORTRAN II-D PROTOTYPE.
+     *********************************************************************
+      HEAD   DS   ,*+101,,                 STANDARD FORTRAN ROUTINE HEADING      00100 00000
+             DC   6,987898,5-HEAD                                                0009N 00006
+             DAC  6,CIRCLE,7-HEAD                                                0009L 00012
+             DVLC 22-HEAD,5,END-1,2,08,2,04,5,CIRCLE-6,5,0,30,0                  0007Q 00049
+             DSC  17,0,0                                                         00000 00017
+             DORG HEAD-100                                                       00000
+     *
+             DS   5,,,                     RETURN/PARAMETER-BLOCK ADDR-1         00004 00005
+     *
+      CIRCLE AM   RETURN,5,10,             ADVANCE RETURN TO RADIUS ADDR         00006 J1 00005 000-5
+             TF   *+23,-RETURN,,           SET RADIUS PARAM ADDR IN BTM NEXT     00018 KO 00041 0000N
+             BTM  TOFAC,*-*,,              FETCH RADIUS VALUE TO FAC             00030 17 03408 -0000
+             AM   RETURN,2,10,             ADVANCE PARAM ADDR TO RETURN LOC      00042 J1 00005 000-2
+     *
+     *         CONVERT RADIUS VALUE FROM INCHES TO PLOTTER STEPS
+     *
+             AM   FAC,2,10,                ADD 2 TO RADIUS EXPONENT (*100)       00054 11 02492 000-2
+             BTM  FIX,FAC,,                CONVERT RADIUS*100 TO INTEGER         00066 17 03854 -2492
+             SF   FAC-3,,,                 SET FAC LENGTH TO 4 DIGITS            00078 32 02489 00000
+             TF   R,FAC,,                  TRANSFER RADIUS AS STEPS TO R         00090 K6 00856 02492
+     *
+     *         STEP PEN FROM CENTER TO RADIUS
+     *
+             WNPT PENUP,,,                 RAISE PEN                             00102 L8 00884 00200
+             TFM  MS,7,10,,                SET PLOTTER MOVE TO (-1,0)            00114 J6 00874 000-7
+             TF   MOVE,MS,,                SET MOVE IN COMMAND                   00126 KO 00882 00874
+             TF   DEL,R,,                  SET NR STEPS TO THE RADIUS            00138 KO 00872 00856
+             WNPT CMD,,,                   STEP PEN                              00150 L8 00882 00200
+             SM   DEL,1,10,,               DECREMENT STEPS LEFT                  00162 J2 00872 000-1
+             BP   *-24,,,                  LOOP BACK IF STEPS LEFT               00174 M6 00150 01100
+     *
+     *         LOWER PEN AND SET INITIAL MOVE DIRECTION
+     *
+             WNPT PENDN,,,                 LOWER PEN                             00186 L8 00886 00200
+             AM   MS,2,10,,                ADJUST STARTING MOVE FOR 1ST QUAD     00198 J1 00874 000-2
+             CM   MS,9,10,,                IF MS LSS 9                           00210 J4 00874 000-9
+             BL   *+24,,,                    SKIP AROUND MS RESET                00222 M7 00246 01300
+             TFM  MS,1,10,,                RESET STARTING MOVE FROM 9 TO 1       00234 J6 00874 000-1
+             TF   M3,MS,,                  SET M3 TO STARTING MOVE               00246 KO 00880 00874
+     *
+     *         QUADRANT LOOP
+     *
+      QUAD   TFM  X,1,8,                   X=1                                   00258 J6 00860 0-001
+             TF   Y,R,,                    Y=R+R-1                               00270 KO 00864 00856
+             A    Y,R,,                    DOUBLE THE R VALUE                    00282 KJ 00864 00856
+             SM   Y,1,10,,                 SUBTRACT 1                            00294 J2 00864 000-1
+             TF   DELTA,Y,,                DELTA=Y-1                             00306 KO 00868 00864
+             SM   DELTA,1,10,,             MINUS 1                               00318 J2 00868 000-1
+             TF   M1,M3,,                  SET MOVE DIRECTIONS FOR THIS QUAD     00330 KO 00876 00880
+             TF   M2,M1,,                  M2=M1+1                               00342 KO 00878 00876
+             AM   M2,1,10,                 PLUS 1                                00354 J1 00878 000-1
+             TF   M3,M2,,                  M3=M2+1                               00366 KO 00880 00878
+             AM   M3,1,10,                 PLUS 1                                00378 J1 00880 000-1
+             CM   M3,9,10,                 IF M3 LSS 9                           00390 J4 00880 000-9
+             BL   *+24,,,                    SKIP AROUND M3 RESET                00402 M7 00426 01300
+             TFM  M3,1,10,,                RESET M3 FROM 9+ TO 1                 00414 J6 00880 000-1
+     *
+     *         PLOTTER STEP LOOP
+     *
+      PSTEP  CM   Y,0,10,                  IF Y LSS 0                            00426 J4 00864 000-0
+             BL   EQUAD,,,                   AT END OF QUADRANT                  00438 M7 00702 01300
+             TF   DEL,DELTA,,              DEL = DELTA*2                         00450 KO 00872 00868
+             A    DEL,DELTA,,              ADD AGAIN FOR *2                      00462 KJ 00872 00868
+             BL   M2M3,,,                  IF DEL LSS 0, CK MOVE M2 OR M3        00474 M7 00554 01300
+     *
+      M1M2   S    DEL,Y,,                  MOVE IS M1 OR M2, DEL -= Y            00486 KK 00872 00864
+             BL   MVM2,,,                  IF DEL LSS 0, MOVE IS M2              00498 M7 00622 01300
+             AM   X,2,10,                  ELSE MOVE IS M1, X += 2               00510 J1 00860 000-2
+             S    DELTA,X,,                DELTA -= X                            00522 KK 00868 00860
+             TF   MOVE,M1,,                SET MOVE TO M1                        00534 KO 00882 00876
+             B7   PLOT,,,                  GO PLOT THE MOVE                      00546 M9 00682 00000
+     *
+      M2M3   A    DEL,X,,                  MOVE IS M2 OR M3, DEL += X            00554 KJ 00872 00860
+             BNL  MVM2,,,                  IF DEL GEQ 0, MOVE IS M2              00566 M6 00622 01300
+             SM   Y,2,10,,                 ELSE MOVE IS M3, Y -= 2               00578 J2 00864 000-2
+             A    DELTA,Y,,                DELTA += Y                            00590 KJ 00868 00864
+             TF   MOVE,M3,,                SET MOVE TO M3                        00602 KO 00882 00880
+             B7   PLOT,,,                  GO PLOT THE MOVE                      00614 M9 00682 00000
+     *
+      MVM2   AM   X,2,10,                  MOVE IS M2, X += 2                    00622 J1 00860 000-2
+             SM   Y,2,10,                  Y -= 2                                00634 J2 00864 000-2
+             A    DELTA,Y,,                DELTA += Y-X                          00646 KJ 00868 00864
+             S    DELTA,X,,                SUBTRACT X                            00658 KK 00868 00860
+             TF   MOVE,M2,,                SET MOVE TO M2 AND PLOT NEXT          00670 KO 00882 00878
+     *
+      PLOT   WNPT CMD,,,                   PLOT THE CURRENT MOVE                 00682 L8 00882 00200
+             B7   PSTEP,,,                 GO DETERMINE NEXT MOVE                00694 M9 00426 00000
+     *
+     *         END OF QUADRANT
+     *
+      EQUAD  C    M3,MS,,                  IF M3 NEQ MS                          00702 KM 00880 00874
+             BNE  QUAD,,,                    GO DO ANOTHER QUADRANT              00714 M7 00258 01200
+     *
+     *         END OF CIRCLE - RAISE PEN AND RETURN TO CENTER
+     *
+             WNPT PENUP,,,                 RAISE PEN                             00726 L8 00884 00200
+             TF   MOVE,M3,,                MOVE=M3+2                             00738 KO 00882 00880
+             AM   MOVE,2,10,               PLUS 2                                00750 J1 00882 000-2
+             CM   MOVE,9,10,               IF MOVE LSS 9                         00762 J4 00882 000-9
+             BL   *+24,,,                    SKIP AROUND MOVE RESET              00774 M7 00798 01300
+             TFM  MOVE,1,10,               RESET MOVE FROM 9+ TO 1               00786 J6 00882 000-1
+             TF   DEL,R,,                  SET NR STEPS TO THE CENTER            00798 KO 00872 00856
+             WNPT CMD,,,                   STEP PEN                              00810 L8 00882 00200
+             SM   DEL,1,10,,               DECREMENT STEPS LEFT                  00822 J2 00872 000-1
+             BP   *-24,,,                  LOOP BACK IF STEPS LEFT               00834 M6 00810 01100
+             B7   -RETURN,,,               EXIT                                  00846 M9 0000N 00000
+     *
+      RETURN DS   5,CIRCLE-1,,             ADDR OF RETURN/PARAMETER-BLOCK        00005 00005
+      R      DS   4,,,                     INTEGERIZED RADIUS, PLOTTER STEPS     00856 00004
+      X      DS   4,,,                     CURRENT X COORDINATE                  00860 00004
+      Y      DS   4,,,                     CURRENT Y COORDINATE                  00864 00004
+      DELTA  DS   4,,,                     CURRENT LINE ERROR TERM               00868 00004
+      DEL    DS   4,,,                     CURRENT STEP ERROR TERM               00872 00004
+      MS     DC   2,0,,                    STARTING MOVE FOR THE CIRCLE          00874 00002
+      M1     DC   2,0,,                    MOVE 1 DIRECTION                      00876 00002
+      M2     DC   2,0,,                    MOVE 2 DIRECTION                      00878 00002
+      M3     DC   2,0,,                    MOVE 3 DIRECTION                      00880 00002
+      MOVE   DC   2,0,,                    CURRENT PLOTTER MOVE                  00882 00002
+      CMD    DS   1,MOVE,,                 CURRENT PLOTTER COMMAND               00882 00001
+             DSC  1,@,,                    RM TO END PLOTTER COMMAND             00883 00001
+      PENUP  DSC  2,9@,,                   RAISE PEN COMMAND                     00884 00002
+      PENDN  DSC  2,0@,,                   LOWER PEN COMMAND                     00886 00002
+     *
+      FAC    DS   ,2492,,                  ADDRESS OF FORTRAN ACCUMULATOR        02492 00000
+      TOFAC  DS   ,3408,,                  ADDRESS OF ACCUMULATOR LOADER         03408 00000
+      FIX    DS   ,3854,,                  ADDRESS OF FLOAT-TO-INT ROUTINE       03854 00000
+      END    DAC  1, ,,                    ROUTINE ENDING RM SENTINEL            00889 00002
+             DC   1,@,END-1,               PLANT THE RM IN THE DAC               00888 00001
+             DEND                                                                00000
+
+00890
+      CORE POSITIONS REQUIRED
+ PLUS RELOCATION INCREMENT
+00149
+      STATEMENTS PROCESSED

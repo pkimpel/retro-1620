@@ -1,0 +1,37 @@
+3400032007013600032007024902402511963611300102 COLD START CARD - 1620 MONITOR I
+||JOB                        PARABOLA DEMO 1
+||DUP                        WILL HALT ON FIRST USE BECAUSE PARBD1 ISNT THERE
+*DELETPARBD1
+||FOR 5   |
+*LIST PRINTER
+*LDISKPARBD1
+C-----------------------------------------------------------------------
+C PARABOLA DEMO 1
+C PROGRAM TO DEMONSTRATE THE PARABOLA SUBROUTINE
+C
+C 2024-02-06  P.KIMPEL
+C   ORIGINAL VERSION.
+C-----------------------------------------------------------------------
+C
+C POSITION THE PEN AT X=550 AND Y=550
+C                   XMIN   XMAX  XL     XD YMIN   YMAX   YL     YD
+      CALL PLOT(201, 0.0,1100.0,11.0,100.0, 0.0,1100.0,11.0,1100.0)
+      CALL PLOT(98, 0.0, 1100.0)
+      CALL PLOT(98, 550.0, 550.0)
+      CALL PLOT(8)
+C
+      CALL PLOT(98, 25.0, 0.0)
+      CALL PARAB( 5.0,  1.25)
+      CALL PLOT(98, 0.0, -25.0)
+      CALL PARAB( 1.25, -5.0)
+      CALL PLOT(98, -25.0, 0.0)
+      CALL PARAB(-5.0, -1.25)
+      CALL PLOT(98, 0.0, 25.0)
+      CALL PARAB(-1.25,  5.0)
+      CALL PLOT(98, 0.0, 0.0)
+      CALL EXIT
+      END
+||||              END OF JOB
+||JOB                        PARABOLA SUBROUTINE DEMO 1 |
+||XEQ PARBD1
+||||

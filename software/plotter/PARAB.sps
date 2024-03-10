@@ -1,0 +1,335 @@
+3400032007013600032007024902402511963611300102 COLD START CARD - 1620 MONITOR I
+||JOB 5                         PARAB FOR FORTRAN II-D
+||DUP                           WILL HALT ON FIRST USE BECAUSE PARAB ISNT THERE
+*DELETPARAB
+||SPS 5
+**PARAB -- SPS II-D PLOTTER PARAB ROUTINE
+*PRINT SYMBOL TABLE
+*LIST PRINTER
+*ASSEMBLE RELOCATABLE
+*STORE RELOADABLE
+*NAME PARAB
+00010*********************************************************************
+00020*     PARABOLA SUBROUTINE                                             *
+00030*********************************************************************
+00040* SUBROUTINE TO DRAW A PARABOLA ON THE 1627 PLOTTER.
+00050* CALLABLE FROM FORTRAN AS--
+00060*
+00070*     CALL PARAB(XB, YB)
+00080*
+00090* THE VERTEX (THE /NOSE/ OF THE PARABOLA) IS ASSUMED TO BE AT THE
+00100* CURRENT PEN LOCATION. (XB,YB) ARE THE SIGNED OFFSETS FROM THE
+00110* VERTEX FOR EITHER OF THE BOUNDS (THE TAIL ENDS OF THE PARABOLA)
+00120* FROM THE VERTEX. THESE OFFSETS ARE FLOATING-POINT NUMBERS AND MUST
+00130* BE EXPRESSED IN /INCHES/. IF THE VALUES OF BOTH XB AND YB ARE ZERO,
+00140* THE PARABOLA  HAS NO SIZE, AND THE ROUTINE SIMPLY EXITS.
+00150*
+00160* THIS ROUTINE IS DESIGNED FOR FORTRAN 4-DIGIT INTEGERS AND 8-DIGIT
+00170* FLOATING-POINT MANTISSAS. LARGER MAGNITUDES WILL REQUIRE DETAILED
+00180* CHANGES TO THE CODE. THEREFORE, THE LARGEST (XB,YB) PARAMETER
+00190* VALUES SUPPORTED ARE +/- 99.99 INCHES (9999 PLOTTER STEPS) EACH.
+00200*
+00210* ONE LEG OF THE PARABOLA WILL BE DRAWN FROM VERTEX TO TAIL, THE PEN
+00220* WILL RAISE AND RETURN TO THE VERTEX, THEN THE OTHER TAIL WILL BE
+00230* DRAWN, AND FINALLY THE PEN WILL RAISE AND RETURN TO THE VERTEX, IN
+00240* ITS  ORIGINAL POSITION.
+00250*
+00260* THE SIGNS OF XB AND YB DETERMINE THE PARABOLA ORIENTATION, THUS --
+00270*   +XB,+YB  PARABOLA OPEN END IS TOWARDS +X
+00280*   +XB,-YB  PARABOLA OPEN END IS TOWARDS -Y
+00290*   -XB,-YB  PARABOLA OPEN END IS TOWARDS -X
+00300*   -XB,+YB  PARABOLA OPEN END IS TOWARDS +Y
+00310*
+00320* VARIABLES --
+00330*   D     CURRENT ERROR TERM
+00340*   HALF  INDICATES HALF-PARABOLAS ALREADY DRAWN, 0/1
+00350*   P     INTEGERIZED P FACTOR (TWICE THE PARABOLA FOCAL LENGTH)
+00360*   P2    P*2
+00370*   P4    P*4
+00380*   R     CURRENT PARABOLA REGION, 1=Y LSS P, 2=Y GEQ P, 3=RTN TO VERTEX
+00390*   RXY   PARABOLA IS ROTATED, SO DIRECTIONS WILL BE SWAPPED, 0/1
+00400*   X     CURRENT X COORDINATE
+00410*   Y     CURRENT Y COORDINATE
+00420*   XB    INTEGERIZED X COORDINATE BOUND, ABSOLUTE VALUE, CONVERTED
+00430*             FROM INCHES TO 0.01-INCH PLOTTER STEPS
+00440*   YB    INTEGERIZED Y COORDINATE BOUND, ABSOLUTE VALUE, CONVERTED
+00450*             FROM INCHES TO 0.01-INCH PLOTTER STEPS
+00460*   XD    X STEPPING DIRECTION, +1/-1
+00470*   YD    Y STEPPING DIRECTION, +1/-1
+00480*   XPD   CURRENT X PEN DIRECTION, +1/-1
+00490*   YPD   CURRENT Y PEN DIRECTION, +1/-1
+00500*   XRETN NUMBER OF X STEPS TO RETURN PEN TO VERTEX
+00510*   YRETN NUMBER OF Y STEPS TO RETURN PEN TO VERTEX
+00520*
+00530* ADAPTED FROM--
+00540*     /EFFICIENT INTEGER ALGORITHMS FOR THE GENERATION OF
+00550*             CONIC SECTIONS/
+00560*       A. AGATHOS, T. THEOHARIS AND A. BOEHM
+00570*       DEPARTMENT OF INFORMATICS, UNIVERSITY OF ATHENS,
+00580*       PANEPISTIMIOUPOLIS, TYPA BUILDINGS, 157 71 ATHENS, GREECE
+00590*       COMPUT. + GRAPHICS, VOL. 22. NO. 5, PP. 621-628. 1998
+00600*
+00610* 2024-03-08  P.KIMPEL
+00620*   ORIGINAL VERSION, BASED ON THE FORTRAN II-D PROTOTYPE.
+01000*********************************************************************
+01010HEAD  DS  ,*+101,,                 STANDARD FORTRAN ROUTINE HEADING
+01020      DC  6,987898,5-HEAD,
+01030      DAC 6,PARAB ,7-HEAD,
+01040      DVLC22-HEAD,5,END-1,2,08,2,04,5,PARAB-6,5,0,30,0
+01050      DSC 17,0,0,
+01060      DORGHEAD-100,,,
+01070*
+01080      DS  5,,,                     RETURN/PARAMETER-BLOCK ADDR-1
+01090*
+01100PARAB AM  RETURN,5,10,             ADVANCE RETURN TO XB ADDR
+01110      TF  *+23,-RETURN,,           SET XB PARAM ADDR IN BTM NEXT
+01120      BTM TOFAC,*-*,,              FETCH XB VALUE TO FAC
+01130      AM  FAC,2,10,                ADD 2 TO XB EXPONENT (*100)
+01140      BTM FIX,FAC,,                CONVERT XB*100 TO INTEGER
+01150      SF  FAC-3,,,                 SET FAC LENGTH TO 4 DIGITS
+01160      TF  XB,FAC,,                 TRANSFER TO LOCAL XB AS STEPS
+01170      AM  RETURN,5,10,             ADVANCE RETURN TO YB ADDR
+01180*
+01190      TF  *+23,-RETURN,,           SET YB PARAM ADDR IN BTM NEXT
+01200      BTM TOFAC,*-*,,              FETCH YB VALUE TO FAC
+01210      AM  FAC,2,10,                ADD 2 TO YB EXPONENT (*100)
+01220      BTM FIX,FAC,,                CONVERT YB*100 TO INTEGER
+01230      SF  FAC-3,,,                 SET FAC LENGTH TO 4 DIGITS
+01240      TF  YB,FAC,,                 TRANSFER TO LOCAL YB AS STEPS
+01250      AM  RETURN,1,10,             ADVANCE PARAM ADDR TO RETURN LOC
+01260*
+01270*         DETERMINE IF SIGNS OF XA AND XB ARE DIFFERENT. IF SO,
+01280*         PARABOLA IS ROTATED AND DIRECTIONS NEED TO BE SWAPPED.
+01290*         IF XB=YB=0, THE PARABOLA HAS NO SIZE, SO JUST  EXIT
+01300*         WITHOUT DRAWING ANYTHING.
+01310*
+01320      TDM RXY,0,,                  RESET THE ROTATION FLAG
+01330      CM  XB,0,10,
+01340      BNL *+44,,,                  IF XB LSS 0, CHECK YB LSS 0
+01350      CM  YB,0,10,                                                    32
+01360      BL  ORIENT,,,                XB LSS 0, YB LSS 0, NO ROTATION
+01370      B7  *+44,,,                  XB LSS 0, YB GEQ 0, ROTATE
+01380      CM  YB,0,10,                                                    34
+01390      BH  ORIENT,,,                XB GTR 0, YB GTR 0, NO ROTATION
+01400      BE  -RETURN,,,               XB=YB=0, SO EXIT, ELSE ROTATE
+01410*
+01420      TDM RXY,1,,                  SET THE ROTATION FLAG              36
+01430      TF  PROD,XB,,                SWAP COORDINATES
+01440      TF  XB,YB,,
+01450      TF  YB,PROD,,
+01460*
+01470*         DETERMINE PARABOLA ORIENTATION
+01480*
+01490ORIENTTFM XD,1,10,                 INITIALIZE X DIRECTION             50
+01500      TFM YD,1,10,                 INITIALIZE Y DIRECTION
+01510      CM  XB,0,10,                 TEST XB SIGN
+01520      BNL *+24,,,                  IF XB LSS 0,
+01530      TFM XD,-1,10,                SET XB INCREMENT TO -1             52
+01540      CM  YB,0,10,                 TEST YB SIGN                       54
+01550      BNL *+24,,,                  IF YB LSS 0,
+01560      TFM YD,-1,10,                  SET YB INCREMENT TO -1
+01570      CF  XB,,,                    ABS(XB)                            80
+01580      CF  YB,,,                    ABS(YB)
+01590*
+01600*         INITIALIZE STEPPING ALGORITHM
+01610*
+01620      M   YB,YB,,                  YB**2 TO PROD AREA
+01630      SF  PROD-7,,,                LIMIT PRODUCT TO 8 DIGITS
+01640      TF  PROD-20,PROD,,           MOVE PRODUCT TO PREPARE FOR LD
+01650      LD  PROD,PROD-20,,           LOAD DIVIDEND
+01660      D   PROD-3,XB,,              DIVIDE BY XB TO 4-DIGIT QUOTIENT
+01670      TF  PROD-20,PROD-4,,         MOVE QUOTIENT TO PREPARE FOR LD
+01700      AM  PROD-20,1,10,            ADD 1 FOR ROUNDING ***
+01710      LD  PROD,PROD-20,,           LOAD DIVIDEND FOR NEXT DIVIDE
+01720      DM  PROD-3,2,10,             DIVIDE BY 2 TO 4-DIGIT QUOTIENT
+01760      SF  PROD-5,,,                LIMIT QUOTIENT TO 4 DIGITS
+01770      TF  P,PROD-2,,               MOVE QUOTIENT TO P
+01780      TF  P2,P,,                   P2 = 2*P
+01790      A   P2,P,,
+01800      TF  P4,P2,,                  P4 = 2*P2
+01810      A   P4,P2,,
+01820      TDM HALF,0,,                 SET TO FIRST HALF OF PARABOLA
+01830*
+01840*         HALF-PARABOLA DRAWING LOOP, STARTING AT VERTEX
+01850*
+01860HPLOOPTFM X,0,8,                   X=0                                100
+01870      TFM Y,0,8,                   Y=0
+01880      TFM DELTA,1,8,               DELTA=1-P
+01890      S   DELTA,P,,
+01900      TFM R,1,10,                  SET TO REGION 1
+01910      TFM XPD,0,10,                XPD=0
+01920      TFM YPD,0,10,                YPD=0
+01930      TFM XRETN,0,8,               XRETN=0
+01940      TFM YRETN,0,8,               YRETN=0
+01950      WNPTPENDN,,,                 LOWER THE PEN
+01960*
+01970*         DRAW CURRENT MOVE
+01980*
+01990DRAW  C   X,XB,,                   CHECK IF BOUND REACHED             200
+02000      BH  HPEND,,,                 BR IF YES, X GTR XB
+02010*
+02020DRAW2 BD  *+20,RXY,,               BR IF ROTATED                      210
+02030      B7  *+44,,,                  BR IF NOT ROTATED
+02040      TF  PROD,XPD,,               IS ROTATED, SO SWAP STEPS
+02050      TF  XPD,YPD,,
+02060      TF  YPD,PROD,,
+02070* DETERMINE PLOTTER COMMAND
+02080      CM  XPD,0,10,                TEST X DIRECTION                   230
+02090      BE  XPDE,,,                  BR IF XPD=0
+02100      BH  XPDH,,,                  BR IF XPD GTR 0
+02110*                              XPD LSS 0 CASES
+02120XPDL  AM  XRETN,1,10,              INCREMENT X RETURN COUNT           240
+02130      CM  YPD,0,10,                TEST Y DIRECTION
+02140      BE  *+56,,,                  XPD LSS 0, YPD=0
+02150      BH  *+64,,,                  XPD LSS 0, YPD GTR 0
+02160      TDM CMD,6,,                  XPD LSS 0, YPD LSS 0               242
+02170      AM  YRETN,1,10,              INCREMENT Y RETURN COUNT
+02180      B7  WRCMD,,,
+02190      TDM CMD,7,,                  XPD LSS 0, YPD=0                   244
+02200      B7  WRCMD,,,
+02210      TDM CMD,8,,                  XPD LSS 0, YPD GTR 0               246
+02220      AM  YRETN,1,10,              INCREMENT Y RETURN COUNT
+02230      B7  WRCMD,,,
+02240*                              XPD = 0 CASES
+02250XPDE  CM  YPD,0,10,                TEST Y DIRECTION                   250
+02260      BE  WRCMD+12,,,              XPD=YPD=0, NO MOVEMENT, BYPASS IO
+02270      BH  *+44,,,                  YPD GTR 0
+02280      TDM CMD,5,,                  XPD=0, YPD LSS 0                   252
+02290      AM  YRETN,1,10,              INCREMENT Y RETURN COUNT
+02300      B7  WRCMD,,,
+02310      TDM CMD,1,,                  XPD=0, YPD GTR 0                   256
+02320      AM  YRETN,1,10,              INCREMENT Y RETURN COUNT
+02330      B7  WRCMD,,,
+02340*                              XPD GTR 0 CASES
+02350XPDH  AM  XRETN,1,10,              INCREMENT X RETURN COUNT           260
+02360      CM  YPD,0,10,                TEST Y DIRECTION
+02370      BE  *+56,,,
+02380      BH  *+64,,,
+02390      TDM CMD,4,,                  XPD GTR 0, YPD LSS 0               262
+02400      AM  YRETN,1,10,              INCREMENT Y RETURN COUNT
+02410      B7  WRCMD,,,
+02420      TDM CMD,3,,                  XPD GTR 0, YPD=0                   264
+02430      B7  WRCMD,,,
+02440      TDM CMD,2,,                  XPD GTR 0, YPD GTR 0               266
+02450      AM  YRETN,1,10,              INCREMENT Y RETURN COUNT
+02460*
+02470WRCMD WNPTCMD,,,                   WRITE COMMAND DIGIT TO PLOTTER
+02480*
+02490*         GO OR RETURN TO APPROPRIATE REGION OF DRAWING
+02500*
+02510      CM  R,2,10,                  TEST REGION NUMBER                 290+
+02520      BE  REG2,,,                  REGION=2
+02530      BH  REG3,,,                  REGION=3 (RETURN TO VERTEX)
+02540*
+02550*         STEPPING FOR REGION 1 OF A HALF-PARABOLA - Y LSS P
+02560*
+02570REG1  TFM XPD,0,10,                NO X MOVEMENT BY DEFAULT           300
+02580      C   Y,P,,
+02590      BNL SWR2,,,                  BR Y GEQ P, SWITCH TO REGION 2
+02600      CM  DELTA,0,10,              TEST SIGN OF DELTA                 310
+02610      BL  *+48,,,                  BR DELTA LSS 0
+02620      AM  X,1,10,                  INCREMENT X OFFSET                 320
+02630      S   DELTA,P2,,               DELTA -= P2
+02640      TF  XPD,XD,,                 SET X DIRECTION
+02650      AM  Y,1,10,                  INCREMENT Y OFFSET                 330
+02660      A   DELTA,Y,,
+02670      A   DELTA,Y,,
+02680      AM  DELTA,1,10,              DELTA += Y*2+1
+02690      TF  YPD,YD,,                 SET Y DIRECTION
+02700      B7  DRAW,,,                  OUTPUT THE MOVEMENT
+02710*
+02720SWR2  TFM R,2,10,                  SWITCH TO REGION 2                 390
+02730      CM  DELTA,1,10,
+02740      BNE *+32,,,                  IF DELTA=1
+02750      S   DELTA,P4,,                 DELTA = 1-P4                     392
+02760      B7  DRAW,,,                    OUTPUT THE LAST MOVEMENT
+02770      TFM DELTA,1,8,               ELSE                               394
+02780      S   DELTA,P2,,                 DELTA = 1-P2
+02790      B7  DRAW,,,                    OUTPUT THE LAST MOVEMENT
+02800*
+02810*         STEPPING FOR REGION 2 OF A HALF-PARABOLA - Y GEQ P
+02820*
+02830REG2  TFM YPD,0,10,                NO Y MOVEMENT BY DEFAULT           400
+02840      CM  DELTA,0,10,
+02850      BH  *+84,,,                  BR DELTA GTR 0
+02860      AM  Y,1,10,                  INCREMENT Y OFFSET                 410
+02870      A   DELTA,Y,,
+02880      A   DELTA,Y,,
+02890      A   DELTA,Y,,
+02900      A   DELTA,Y,,                DELTA += Y*4
+02910      TF  YPD,YD,,                 SET Y DIRECTION
+02920      AM  X,1,10,                  DELTA GTR 0, INCREMENT X OFFSET    420
+02930      S   DELTA,P4,,               DELTA -= P4
+02940      TF  XPD,XD,,                 SET X DIRECTION
+02950      B7  DRAW,,,                  OUTPUT THE MOVEMENT
+02960*
+02970*         END OF HALF PARABOLA - RAISE PEN AND RETURN TO VERTEX
+02980*
+02990HPEND WNPTPENUP,,,                 RAISE PEN                          500
+03000      TFM R,3,10,                  SET REGION TO 3 (TO VERTEX)
+03010      BD  *+44,RXY,,               BR IF COORDINATES ROTATED
+03020      TF  X,XRETN,,                SET X COUNT                        502
+03030      TF  Y,YRETN,,                SET Y COUNT
+03040      B7  REG3,,,
+03050      TF  X,YRETN,,                SET COUNTS SWAPPED                 504
+03060      TF  Y,XRETN,,
+03070*                              STEPPING FOR RETURN TO VERTEX
+03080REG3  TFM YPD,0,10,                NO Y MOVEMENT BY DEFAULT           510
+03090      CM  Y,0,10,                  TEST Y
+03100      BH  *+44,,,                  BR IF Y GTR 0
+03110      CM  X,0,10,                  TEST X                             512
+03120      BNH HALFCK,,,                BR IF X LEQ 0
+03130      B7  *+44,,,
+03140      SM  Y,1,10,                  DECREMENT Y COUNT                  520
+03150      TFM YPD,0,10,                YPD = -YD
+03160      S   YPD,YD,,
+03170      TFM XPD,0,10,                NO X MOVEMENT BY DEFAULT           530
+03180      CM  X,0,10,                  TEST SIGN OF X
+03190      BNH DRAW2,,,                 MOVE PEN, DO NOT CHECK BOUNDS
+03200      SM  X,1,10,                  DECREMENT X COUNT                  540
+03210      TFM XPD,0,10,                XPD = -XD
+03220      S   XPD,XD,,
+03230      B7  DRAW2,,,                 MOVE PEN, DO NOT CHECK BOUNDS
+03240*
+03250*         DETERMINE IF BOTH PARABOLA HALVES HAVE BEEN DRAWN
+03260*
+03270HALFCKBD  -RETURN,HALF,,           RETURN IF BOTH HALVES ARE DONE     550
+03280      TDM HALF,1,,                 ELSE SET TO SECOND HALF
+03290      TFM PROD,0,10,
+03300      S   PROD,YD,,                PROD = -YD
+03310      TF  YD,PROD,,                YD = -YD
+03320      B7  HPLOOP,,,                BRANCH TO DRAW THE OTHER HALF
+03330*
+03340DELTA DS  4,,,                     CURRENT LINE ERROR TERM
+03350HALF  DSS 1,,,                     0=FIRST, 1=SECOND HALF OF PARABOLA
+03360P     DS  4,,,                     POINT P OFFSET (REGION CHANGE)
+03370P2    DS  4,,,                     P*2
+03380P4    DS  4,,,                     P2*2 (=P*4)
+03390R     DS  2,,,                     REGION NUMBER
+03400RXY   DSS 1,,,                     1=COORDINATES ARE ROTATED
+03410X     DS  4,,,                     CURRENT X COORDINATE
+03420Y     DS  4,,,                     CURRENT Y COORDINATE
+03430XB    DS  4,,,                     INTEGER XB OFFSET, PLOTTER STEPS
+03440YB    DS  4,,,                     INTEGER YB OFFSET, PLOTTER STEPS
+03450XD    DS  2,,,                     X STEPPING DIRECTION +/- 1
+03460YD    DS  2,,,                     Y STEPPING DIRECTION +/- 1
+03470XPD   DS  2,,,                     CURRENT PEN X-DIRECTION, +/- 1
+03480YPD   DS  2,,,                     CURRENT PEN Y-DIRECTION, +/- 1
+03490XRETN DS  4,,,                     NR X STEPS TO RETURN TO VERTEX
+03500YRETN DS  4,,,                     NR Y STEPS TO RETURN TO VERTEX
+03510*
+03520MOVE  DC  2,,,                     CURRENT PLOTTER MOVE
+03530CMD   DS  1,MOVE,,                 CURRENT PLOTTER COMMAND
+03540      DSC 1,@,,                    RM TO END PLOTTER COMMAND
+03550PENUP DSC 2,9@,,                   RAISE PEN COMMAND
+03560PENDN DSC 2,0@,,                   LOWER PEN COMMAND
+03570*
+03580RETURNDS  5,PARAB-1,,              ADDR OF RETURN/PARAMETER-BLOCK
+03590PROD  DS  ,99,,                    ADDRESS OF PRODUCT AREA
+03600FAC   DS  ,2492,,                  ADDRESS OF FORTRAN ACCUMULATOR
+03610TOFAC DS  ,3408,,                  ADDRESS OF ACCUMULATOR LOADER
+03620FIX   DS  ,3854,,                  ADDRESS OF FLOAT-TO-INT ROUTINE
+03630END   DAC 1, ,,                    ROUTINE ENDING RM SENTINEL
+03640      DC  1,@,END-1,               PLANT THE RM IN THE DAC
+03650      DEND
+||||

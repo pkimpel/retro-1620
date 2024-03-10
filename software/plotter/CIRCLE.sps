@@ -1,0 +1,161 @@
+3400032007013600032007024902402511963611300102 COLD START CARD - 1620 MONITOR I
+||JOB 5                         CIRCLE FOR FORTRAN II-D
+||DUP                           WILL HALT ON FIRST USE BECAUSE CIRCLE ISNT THERE
+*DELETCIRCLE
+||SPS 5
+**CIRCLE -- SPS II-D PLOTTER CIRCLE ROUTINE
+*PRINT SYMBOL TABLE
+*LIST PRINTER
+*ASSEMBLE RELOCATABLE
+*STORE RELOADABLE
+*NAME CIRCLE
+00010*********************************************************************
+00020*     CIRCLE SUBROUTINE                                             *
+00030*********************************************************************
+00040* SUBROUTINE TO DRAW A CIRCLE ON THE 1627 PLOTTER.
+00050* CALLABLE FROM FORTRAN AS--
+00060*
+00070*     CALL CIRCLE(RADIUS)
+00080*
+00090* THE RADIUS PARAMETER IS A FLOATING-POINT NUMBER SPECIFYING THE
+00100* RADIUS OF THE CIRCLE IN INCHES. THE ROUTINE ASSUMES THE CENTER OF
+00110* THE CIRCLE IS AT THE CURRENT PEN POSITION, AND RETURNS TO THAT
+00120* POSITION WITH THE PEN UP AFTER THE CIRCLE IS DRAWN.
+00130*
+00140* ADAPTED FROM /A LINEAR ALGORITHM FOR INCREMENTAL DIGITAL DISPLAY OF
+00150* ARCS/, JACK BRESENHAM, COMM. ACM, VOL 20, NUMBER 2, FEBRUARY 1977,
+00160* PAGE 100.
+00170*
+00180* 2024-02-16  P.KIMPEL
+00190*   ORIGINAL VERSION, BASED ON THE FORTRAN II-D PROTOTYPE.
+00200*********************************************************************
+00210HEAD  DS  ,*+101,,                 STANDARD FORTRAN ROUTINE HEADING
+00220      DC  6,987898,5-HEAD
+00230      DAC 6,CIRCLE,7-HEAD
+00240      DVLC22-HEAD,5,END-1,2,08,2,04,5,CIRCLE-6,5,0,30,0
+00250      DSC 17,0,0
+00260      DORGHEAD-100
+00270*
+00280      DS  5,,,                     RETURN/PARAMETER-BLOCK ADDR-1
+00290*
+00300CIRCLEAM  RETURN,5,10,             ADVANCE RETURN TO RADIUS ADDR
+00310      TF  *+23,-RETURN,,           SET RADIUS PARAM ADDR IN BTM NEXT
+00320      BTM TOFAC,*-*,,              FETCH RADIUS VALUE TO FAC
+00330      AM  RETURN,2,10,             ADVANCE PARAM ADDR TO RETURN LOC
+00340*
+00350*         CONVERT RADIUS VALUE FROM INCHES TO PLOTTER STEPS
+00360*
+00370      AM  FAC,2,10,                ADD 2 TO RADIUS EXPONENT (*100)
+00380      BTM FIX,FAC,,                CONVERT RADIUS*100 TO INTEGER
+00390      SF  FAC-3,,,                 SET FAC LENGTH TO 4 DIGITS
+00400      TF  R,FAC,,                  TRANSFER RADIUS AS STEPS TO R
+00410*
+00420*         STEP PEN FROM CENTER TO RADIUS
+00430*
+00440      WNPTPENUP,,,                 RAISE PEN
+00450      TFM MS,7,10,,                SET PLOTTER MOVE TO (-1,0)
+00460      TF  MOVE,MS,,                SET MOVE IN COMMAND
+00470      TF  DEL,R,,                  SET NR STEPS TO THE RADIUS
+00480      WNPTCMD,,,                   STEP PEN
+00490      SM  DEL,1,10,,               DECREMENT STEPS LEFT
+00500      BP  *-24,,,                  LOOP BACK IF STEPS LEFT
+00510*
+00520*         LOWER PEN AND SET INITIAL MOVE DIRECTION
+00530*
+00540      WNPTPENDN,,,                 LOWER PEN
+00550      AM  MS,2,10,,                ADJUST STARTING MOVE FOR 1ST QUAD
+00560      CM  MS,9,10,,                IF MS LSS 9
+00570      BL  *+24,,,                    SKIP AROUND MS RESET
+00580      TFM MS,1,10,,                RESET STARTING MOVE FROM 9 TO 1
+00590      TF  M3,MS,,                  SET M3 TO STARTING MOVE
+00600*
+00610*         QUADRANT LOOP
+00620*
+00630QUAD  TFM X,1,8,                   X=1
+00640      TF  Y,R,,                    Y=R+R-1
+00650      A   Y,R,,                    DOUBLE THE R VALUE
+00660      SM  Y,1,10,,                 SUBTRACT 1
+00670      TF  DELTA,Y,,                DELTA=Y-1
+00680      SM  DELTA,1,10,,             MINUS 1
+00690      TF  M1,M3,,                  SET MOVE DIRECTIONS FOR THIS QUAD
+00700      TF  M2,M1,,                  M2=M1+1
+00710      AM  M2,1,10,                 PLUS 1
+00720      TF  M3,M2,,                  M3=M2+1
+00730      AM  M3,1,10,                 PLUS 1
+00740      CM  M3,9,10,                 IF M3 LSS 9
+00750      BL  *+24,,,                    SKIP AROUND M3 RESET
+00760      TFM M3,1,10,,                RESET M3 FROM 9+ TO 1
+00770*
+00780*         PLOTTER STEP LOOP
+00790*
+00800PSTEP CM  Y,0,10,                  IF Y LSS 0
+00810      BL  EQUAD,,,                   AT END OF QUADRANT
+00820      TF  DEL,DELTA,,              DEL = DELTA*2
+00830      A   DEL,DELTA,,              ADD AGAIN FOR *2
+00840      BL  M2M3,,,                  IF DEL LSS 0, CK MOVE M2 OR M3
+00850*
+00860M1M2  S   DEL,Y,,                  MOVE IS M1 OR M2, DEL -= Y
+00870      BL  MVM2,,,                  IF DEL LSS 0, MOVE IS M2
+00880      AM  X,2,10,                  ELSE MOVE IS M1, X += 2
+00890      S   DELTA,X,,                DELTA -= X
+00900      TF  MOVE,M1,,                SET MOVE TO M1
+00910      B7  PLOT,,,                  GO PLOT THE MOVE
+00920*
+00930M2M3  A   DEL,X,,                  MOVE IS M2 OR M3, DEL += X
+00940      BNL MVM2,,,                  IF DEL GEQ 0, MOVE IS M2
+00950      SM  Y,2,10,,                 ELSE MOVE IS M3, Y -= 2
+00960      A   DELTA,Y,,                DELTA += Y
+00970      TF  MOVE,M3,,                SET MOVE TO M3
+00980      B7  PLOT,,,                  GO PLOT THE MOVE
+00990*
+01000MVM2  AM  X,2,10,                  MOVE IS M2, X += 2
+01010      SM  Y,2,10,                  Y -= 2
+01020      A   DELTA,Y,,                DELTA += Y-X
+01030      S   DELTA,X,,                SUBTRACT X
+01040      TF  MOVE,M2,,                SET MOVE TO M2 AND PLOT NEXT
+01050*
+01060PLOT  WNPTCMD,,,                   PLOT THE CURRENT MOVE
+01070      B7  PSTEP,,,                 GO DETERMINE NEXT MOVE
+01080*
+01090*         END OF QUADRANT
+01100*
+01110EQUAD C   M3,MS,,                  IF M3 NEQ MS
+01120      BNE QUAD,,,                    GO DO ANOTHER QUADRANT
+01130*
+01140*         END OF CIRCLE - RAISE PEN AND RETURN TO CENTER
+01150*
+01160      WNPTPENUP,,,                 RAISE PEN
+01170      TF  MOVE,M3,,                MOVE=M3+2
+01180      AM  MOVE,2,10,               PLUS 2
+01190      CM  MOVE,9,10,               IF MOVE LSS 9
+01200      BL  *+24,,,                    SKIP AROUND MOVE RESET
+01210      TFM MOVE,1,10,               RESET MOVE FROM 9+ TO 1
+01220      TF  DEL,R,,                  SET NR STEPS TO THE CENTER
+01230      WNPTCMD,,,                   STEP PEN
+01240      SM  DEL,1,10,,               DECREMENT STEPS LEFT
+01250      BP  *-24,,,                  LOOP BACK IF STEPS LEFT
+01260      B7  -RETURN,,,               EXIT
+01270*
+01280RETURNDS  5,CIRCLE-1,,             ADDR OF RETURN/PARAMETER-BLOCK
+01290R     DS  4,,,                     INTEGERIZED RADIUS, PLOTTER STEPS
+01300X     DS  4,,,                     CURRENT X COORDINATE
+01310Y     DS  4,,,                     CURRENT Y COORDINATE
+01320DELTA DS  4,,,                     CURRENT LINE ERROR TERM
+01330DEL   DS  4,,,                     CURRENT STEP ERROR TERM
+01340MS    DC  2,0,,                    STARTING MOVE FOR THE CIRCLE
+01350M1    DC  2,0,,                    MOVE 1 DIRECTION
+01360M2    DC  2,0,,                    MOVE 2 DIRECTION
+01370M3    DC  2,0,,                    MOVE 3 DIRECTION
+01380MOVE  DC  2,0,,                    CURRENT PLOTTER MOVE
+01390CMD   DS  1,MOVE,,                 CURRENT PLOTTER COMMAND
+01400      DSC 1,@,,                    RM TO END PLOTTER COMMAND
+01410PENUP DSC 2,9@,,                   RAISE PEN COMMAND
+01420PENDN DSC 2,0@,,                   LOWER PEN COMMAND
+01430*
+01440FAC   DS  ,2492,,                  ADDRESS OF FORTRAN ACCUMULATOR
+01450TOFAC DS  ,3408,,                  ADDRESS OF ACCUMULATOR LOADER
+01460FIX   DS  ,3854,,                  ADDRESS OF FLOAT-TO-INT ROUTINE
+01470END   DAC 1, ,,                    ROUTINE ENDING RM SENTINEL
+01480      DC  1,@,END-1,               PLANT THE RM IN THE DAC
+01490      DEND
+||||
