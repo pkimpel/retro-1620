@@ -1,0 +1,448 @@
+*LIST PRINTER
+*LDISKBENTDX
+
+
+
+
+                                                                                  PAGE   1
+
+C-----------------------------------------------------------------------
+C BENT DEMO X
+C PROGRAM TO DRAW THE TAU BETA PI BENT REPEATEDLY
+C
+C 2024-03-15      P.KIMPEL
+C   REPEATING DEMO VERSION.
+C-----------------------------------------------------------------------
+C
+C     -- COORDINATE ROTATION FUNCTIONS
+      RXF(X, Y, XC, YC, THETA) =
+     1       (X-XC)*COSF(THETA) - (Y-YC)*SINF(THETA) + XC
+      RYF(X, Y, XC, YC, THETA) =
+     1       (Y-YC)*COSF(THETA) + (X-XC)*SINF(THETA) + YC
+C
+C     -- PLOT DIMENSIONS
+      RINGR = 5.43/2.0
+      RINGW = 1.27
+      RSTEMD = 2.79
+      CAPT = 8.30
+      CAPW = 8.23
+      CAPH = 2.07
+      CAPB = CAPT+CAPH
+      CAPR = CAPW/2.0
+      ARMW = 1.27
+      ARMIND = 1.58
+      BENTH = 13.49
+      BSTEMH = 7.93
+      BSTEMD = 2.79
+      BSTEMR = BSTEMD/2.0
+      BSTEMB = CAPT+BENTH+BSTEMH
+      SILLH = 2.38
+      SILLW = 12.70
+      SILLR = SILLW/2.0
+      SILLB = CAPT+BENTH
+      SILLT = SILLB-SILLH
+      BENTR = SILLW/2.0 - ARMIND
+      TRAPBR = SILLW/2.0 - ARMIND - ARMW
+      TRAPTR = TRAPBR/(SILLT-RINGR)*(CAPB-RINGR)
+C
+C     -- CONFIGURE PLOT SIZE AND SCALE
+      XL = 10.0
+      XMAX = 30.1
+      XMIN = -0.1
+      SCALE = XL/(XMAX-XMIN)
+      YL = 11.0
+      YMAX = YL/SCALE/2.0
+      YMIN = -YMAX
+C
+C     -- POSITION THE PEN AT X=0.0 AND Y=0.0
+      CALL PLOT(201, XMIN, XMAX, XL, XMAX, YMIN, YMAX, YL, YMAX)
+      CALL PLOT(98, 0.0, YMAX-YMIN)
+      CALL PLOT(98, 0.0, 0.0)
+      CALL PLOT(8)
+C
+  100 CONTINUE
+C
+C     -- THE RING STEM
+      Y = RSTEMD/2.0
+      X = RINGR + SQRT(RINGR*RINGR - Y*Y)
+      CALL PLOT(99)
+      CALL PLOT(90, X,      -Y)
+      CALL PLOT(90, CAPT,   -Y)
+      CALL PLOT(99)
+      CALL PLOT(90, X,       Y)
+      CALL PLOT(90, CAPT,    Y)
+      X1 = RSTEMD*0.5
+      X2 = X+X1
+      X3 = -X1*SCALE
+      Y3 = -Y*SCALE
+      CALL PLOT(98, X2, 0.0)
+      CALL PARAB(X3, Y3)
+      X1 = RSTEMD*0.3
+      X2 = CAPT-X1
+      X3 = X1*SCALE
+      Y3 = -Y3
+      CALL PLOT(98, X2, 0.0)
+      CALL PARAB(X3, Y3)
+C
+C     -- THE BOTTOM STEM
+      CALL PLOT(99)
+      CALL PLOT(90, SILLB,  -BSTEMR)
+      CALL PLOT(90, BSTEMB, -BSTEMR)
+      CALL PLOT(90, BSTEMB,  BSTEMR)
+      CALL PLOT(90, SILLB,   BSTEMR)
+      X1 = SILLH*0.9
+      Y1 = BSTEMD/2.0
+      X3 = -X1*SCALE
+      Y3 = -Y1*SCALE
+      X = SILLB+X1
+      CALL PLOT(98, X, 0.0)
+      CALL PARAB(X3, Y3)
+C
+C     -- THE RING
+      CALL PLOT(98, RINGR, 0.0)
+      CALL CIRCLE((RINGR-RINGW)*SCALE)
+      CALL CIRCLE(RINGR*SCALE)
+C
+C     -- THE INNER TRAPEZOID
+      CALL PLOT(99)
+      CALL PLOT(90, CAPB,    TRAPTR)
+      CALL PLOT(90, SILLT,   TRAPBR)
+      CALL PLOT(90, SILLT,  -TRAPBR)
+      CALL PLOT(90, CAPB,   -TRAPTR)
+      CALL PLOT(90, CAPB,    TRAPTR)
+C
+C     -- THE BENT FRAME
+      CALL PLOT(99)
+      Y1 = TRAPTR+ARMW
+      Y2 = SILLR-ARMIND
+      CALL PLOT(90, CAPT,   -CAPR)
+      CALL PLOT(90, CAPB,   -CAPR)
+      CALL PLOT(90, CAPB,   -Y1)
+      CALL PLOT(90, SILLT,  -Y2)
+      CALL PLOT(90, SILLT,  -SILLR)
+      CALL PLOT(90, SILLB,  -SILLR)
+      CALL PLOT(90, SILLB,   SILLR)
+      CALL PLOT(90, SILLT,   SILLR)
+      CALL PLOT(90, SILLT,   Y2)
+      CALL PLOT(90, CAPB,    Y1)
+      CALL PLOT(90, CAPB,    CAPR)
+      CALL PLOT(90, CAPT,    CAPR)
+      CALL PLOT(90, CAPT,   -CAPR)
+C
+C     -- THE ARCHAIC GREEK NUMERIALS
+      CALL PLOT(99)
+      AGLW = CAPH*0.60
+      AGLH = CAPH*0.825
+      AGL1 = AGLH*0.10
+      AGL2 = AGLH*0.075
+      AGL3 = AGLH*0.25
+      A = CAPH/4.0
+      X = CAPT+AGL1
+C     -- DRAW NUMERAL 1
+      Y = 2.6*A-CAPR
+      RAD = ATANF(1.1/3.0)
+      X1 = X+3.1*A
+      CALL PLOT(90, RXF(X1, Y,  X, Y, RAD), RYF(X1, Y,  X, Y, RAD))
+      CALL PLOT(90, X, Y)
+      X2 = X+1.4*A
+      Y2 = Y-2.5*A
+      CALL PLOT(90, RXF(X2, Y2, X, Y, RAD), RYF(X2, Y2, X, Y, RAD))
+      X3 = X+(X1-X)*0.6
+      Y3 = Y-AGL1
+      S = (X3-X2)/(Y3-Y2)
+      X4 = X2+AGL3*S
+      Y4 = Y2+AGL1
+      CALL PLOT(90, RXF(X4, Y4, X, Y, RAD), RYF(X4, Y4, X, Y, RAD))
+      X4 = X1-AGL1
+      CALL PLOT(90, RXF(X4, Y2, X, Y, RAD), RYF(X4, Y2, X, Y, RAD))
+      Y4 = Y2+AGL1
+      CALL PLOT(90, RXF(X4, Y4, X, Y, RAD), RYF(X4, Y4, X, Y, RAD))
+      Y4 = AGL1*2.0
+      X4 = X2+Y4*S
+      Y4 = Y2+Y4
+      CALL PLOT(90, RXF(X4, Y4, X, Y, RAD), RYF(X4, Y4, X, Y, RAD))
+      CALL PLOT(90, RXF(X3, Y3, X, Y, RAD), RYF(X3, Y3, X, Y, RAD))
+      CALL PLOT(90, RXF(X1, Y3, X, Y, RAD), RYF(X1, Y3, X, Y, RAD))
+      CALL PLOT(90, RXF(X1, Y,  X, Y, RAD), RYF(X1, Y,  X, Y, RAD))
+      CALL PLOT(99)
+      X3 = X3-AGL1
+      CALL PLOT(90, RXF(X3, Y3, X, Y, RAD), RYF(X3, Y3, X, Y, RAD))
+      X4 = X+0.55*A
+      CALL PLOT(90, RXF(X4, Y3, X, Y, RAD), RYF(X4, Y3, X, Y, RAD))
+      X4 = X+1.30*A
+      Y4 = Y-1.65*A
+      CALL PLOT(90, RXF(X4, Y4, X, Y, RAD), RYF(X4, Y4, X, Y, RAD))
+      CALL PLOT(90, RXF(X3, Y3, X, Y, RAD), RYF(X3, Y3, X, Y, RAD))
+C     -- DRAW NUMERAL 2
+      CALL PLOT(99)
+      Y = 4.7*A-CAPR
+      X1 = X+AGLH
+      Y1 = Y+AGLW
+      CALL PLOT(90, X1, Y)
+      CALL PLOT(90, X,  Y)
+      CALL PLOT(90, X,  Y1)
+      CALL PLOT(90, X1, Y1)
+      Y1 = Y1-AGL1
+      Y2 = Y+AGL1
+      X2 = X+AGL1
+      CALL PLOT(90, X1, Y1)
+      CALL PLOT(90, X2, Y1)
+      CALL PLOT(90, X2, Y2)
+      CALL PLOT(90, X1, Y2)
+      CALL PLOT(90, X1, Y)
+      CALL PLOT(99)
+      X1 = CAPT+AGL3
+      Y1 = Y+3.0*A
+      Y2 = Y1+AGL1
+      CALL PLOT(90, CAPT, Y1)
+      CALL PLOT(90, X1,   Y1)
+      CALL PLOT(90, X1,   Y2)
+      CALL PLOT(90, CAPT, Y2)
+      CALL PLOT(90, CAPT, Y1)
+C     -- DRAW NUMERIAL 3
+      CALL PLOT(99)
+      Y = CAPR-7.0*A
+      X1 = X+AGLH
+      X2 = X+AGL3
+      Y1 = Y+AGLW
+      CALL PLOT(90, X1, Y)
+      CALL PLOT(90, X,  Y)
+      CALL PLOT(90, X,  Y1)
+      CALL PLOT(90, X2, Y1)
+      Y1 = Y1-AGL1
+      Y2 = Y+AGL1
+      CALL PLOT(90, X2, Y1)
+      X2 = X+AGL1
+      CALL PLOT(90, X2, Y1)
+      CALL PLOT(90, X2, Y2)
+      CALL PLOT(90, X1, Y2)
+      CALL PLOT(90, X1, Y)
+      CALL PLOT(99)
+      X1 = CAPT+AGL3
+      Y1 = Y+2.8*A
+      Y2 = Y1+AGL1
+      CALL PLOT(90, CAPT, Y1)
+      CALL PLOT(90, X1,   Y1)
+      CALL PLOT(90, X1,   Y2)
+      CALL PLOT(90, CAPT, Y2)
+      CALL PLOT(90, CAPT, Y1)
+C     -- DRAW NUMERAL 4
+      CALL PLOT(99)
+      Y = CAPR-1.9*A
+      RAD = ATANF(1.4/2.2)
+      Y1 = Y-2.3*A
+      CALL PLOT(90, RXF(X,  Y1, X, Y, RAD), RYF(X,  Y1, X, Y, RAD))
+      CALL PLOT(90, RXF(X,  Y,  X, Y, RAD), RYF(X,  Y,  X, Y, RAD))
+      X1 = X+2.6*A
+      CALL PLOT(90, RXF(X1, Y,  X, Y, RAD), RYF(X1, Y,  X, Y, RAD))
+      CALL PLOT(90, RXF(X1, Y1, X, Y, RAD), RYF(X1, Y1, X, Y, RAD))
+      X2 = X1-AGL1
+      CALL PLOT(90, RXF(X2, Y1, X, Y, RAD), RYF(X2, Y1, X, Y, RAD))
+      Y2 = Y-AGL1
+      CALL PLOT(90, RXF(X2, Y2, X, Y, RAD), RYF(X2, Y2, X, Y, RAD))
+      X2 = X+(X1-X+AGL1)/2.0
+      CALL PLOT(90, RXF(X2, Y2, X, Y, RAD), RYF(X2, Y2, X, Y, RAD))
+      Y3 = Y-AGLW*0.75
+      CALL PLOT(90, RXF(X2, Y3, X, Y, RAD), RYF(X2, Y3, X, Y, RAD))
+      X2 = X2-AGL1
+      CALL PLOT(90, RXF(X2, Y3, X, Y, RAD), RYF(X2, Y3, X, Y, RAD))
+      CALL PLOT(90, RXF(X2, Y2, X, Y, RAD), RYF(X2, Y2, X, Y, RAD))
+      X2 = X+AGL1
+      CALL PLOT(90, RXF(X2, Y2, X, Y, RAD), RYF(X2, Y2, X, Y, RAD))
+      CALL PLOT(90, RXF(X2, Y1, X, Y, RAD), RYF(X2, Y1, X, Y, RAD))
+      CALL PLOT(90, RXF(X,  Y1, X, Y, RAD), RYF(X,  Y1, X, Y, RAD))
+      CALL PLOT(99)
+      X1 = CAPT+AGL3
+      Y1 = Y+1.1*A
+      CALL PLOT(90, X1, Y1)
+      X2 = X1+AGL1*2.0
+      CALL PLOT(90, X2, Y1)
+      Y2 = Y1+AGL1
+      CALL PLOT(90, X2, Y2)
+      CALL PLOT(90, X1, Y2)
+      CALL PLOT(90, X1, Y1)
+C
+C     -- THE ARCHAIC GREEK LETTERS
+      CALL PLOT(99)
+      AGLW = BSTEMD*0.7
+      AGLH = SILLH*0.83
+      AGL1 = AGLH*0.1
+      AGL2 = AGLH*0.3
+      AGL3 = AGL1/0.7
+      X = SILLT+(SILLH-AGLH)/2.0
+C     -- DRAW THE TAU
+      Y = -(SILLR-ARMIND+(AGLW-ARMW)/2.0)
+      X1 = X+AGL1
+      X2 = X+AGLH
+      Y1 = Y+AGLW
+      Y2 = Y+(AGLW+AGL2)/2.0
+      CALL PLOT(90, X,  Y)
+      CALL PLOT(90, X,  Y1)
+      CALL PLOT(90, X1, Y1)
+      CALL PLOT(90, X1, Y2)
+      CALL PLOT(90, X2, Y2)
+      Y2 = Y+(AGLW-AGL2)/2.0
+      CALL PLOT(90, X2, Y2)
+      CALL PLOT(90, X1, Y2)
+      CALL PLOT(90, X1, Y)
+      CALL PLOT(90, X,  Y)
+C     -- DRAW THE BETA (MYSTERY NUMBERS WERE TAKEN FROM AN IMAGE)
+      CALL PLOT(99)
+      A = AGLH/3.9
+      Y = 4.7*A/2.0
+      X1 = X+AGLH
+      Y1 = Y-AGL2
+      CALL PLOT(90, X,  Y)
+      CALL PLOT(90, X,  Y1)
+      X2 = X+1.8*A
+      Y2 = Y1-2.0*A
+      CALL PLOT(90, X2, Y2)
+      Y2 = Y1-1.4*A
+      CALL PLOT(90, X2, Y2)
+      Y2 = Y-4.7*A
+      CALL PLOT(90, X1, Y2)
+      CALL PLOT(90, X1, Y)
+      CALL PLOT(90, X,  Y)
+      CALL PLOT(99)
+      CALL PLOT(90, X2, Y1)
+      X3 = X1-AGL1
+      CALL PLOT(90, X3, Y1)
+      Y2 = Y1-2.5*A
+      CALL PLOT(90, X3, Y2)
+      Y2 = Y1-0.8*A
+      CALL PLOT(90, X2, Y2)
+      CALL PLOT(90, X2, Y1)
+      CALL PLOT(99)
+      X2 = X+1.3*A
+      CALL PLOT(90, X2, Y1)
+      X3 = X+0.5*A
+      CALL PLOT(90, X3, Y1)
+      Y2 = Y1-0.9*A
+      CALL PLOT(90, X2, Y2)
+      CALL PLOT(90, X2, Y1)
+C     -- DRAW THE PI
+      CALL PLOT(99)
+      Y = SILLR-ARMIND+(AGLW-ARMW)/2.0
+      X1 = X+AGLH
+      X2 = X+AGL2
+      Y1 = Y-AGL2
+      Y2 = Y-AGLW
+      CALL PLOT(90, X,  Y)
+      CALL PLOT(90, X,  Y2)
+      CALL PLOT(90, X2, Y2)
+      Y3 = Y2+AGL2
+      CALL PLOT(90, X2, Y3)
+      X2 = X+AGL1
+      CALL PLOT(90, X2, Y3)
+      CALL PLOT(90, X2, Y1)
+      CALL PLOT(90, X1, Y1)
+      CALL PLOT(90, X1, Y)
+      CALL PLOT(90, X,  Y)
+      CALL PLOT(99)
+      CALL PLOT(90, X1, Y2)
+      CALL PLOT(90, X1, Y3)
+      X2 = X1-AGL2
+      CALL PLOT(90, X2, Y3)
+      CALL PLOT(90, X2, Y2)
+      CALL PLOT(90, X1, Y2)
+C
+C     -- CENTER THE PLOT AND CHECK FOR TERMINATION
+      CALL PLOT(98, BSTEMB/2.0, 0.0)
+      IF (SENSE SWITCH 3) 910, 990
+C     -- WASTE SOME TIME
+  910 DO 920 IDLE=1,75
+        X = RXF(2.0, 3.0, 4.0, 5.0, 0.32288591)
+        Y = RYF(2.0, 3.0, 4.0, 5.0, 0.32288591)
+  920   CONTINUE
+C     -- CLEAR THE PLOT AND ITERATE
+      CALL PLOT(98, 0.0, YMAX)
+      PUNCH TAPE 930
+  930 FORMAT(1H@)
+      GO TO 100
+C
+  990 CONTINUE
+      CALL EXIT
+      END
+
+                                                                                  PAGE   2
+
+00009 54300000-1
+00019 20000000-1
+00029 12700000-1
+00039 27900000-1
+00049 83000000-1
+00059 82300000-1
+00069 20700000-1
+00079 15800000-1
+00089 13490000-2
+00099 79300000-1
+00109 23800000-1
+00119 12700000-2
+00129 10000000-2
+00139 30100000-2
+00149 10000000-0
+00159 11000000-2
+00163 0201
+00167 0098
+00177 00000000RR
+00181 0008
+00185 0099
+00189 0090
+00199 50000000-0
+00209 30000000-0
+00219 90000000-0
+00229 60000000-0
+00239 82500000-0
+00249 75000000-J
+00259 25000000-0
+00269 40000000-1
+00279 26000000-1
+00289 11000000-1
+00299 30000000-1
+00309 31000000-1
+00319 14000000-1
+00329 25000000-1
+00339 55000000-0
+00349 13000000-1
+00359 16500000-1
+00369 47000000-1
+00379 70000000-1
+00389 28000000-1
+00399 19000000-1
+00409 22000000-1
+00419 23000000-1
+00429 75000000-0
+00439 70000000-0
+00449 83000000-0
+00459 39000000-1
+00469 18000000-1
+00479 80000000-0
+00483 0001
+00487 0075
+00497 50000000-1
+00507 32288591-0
+ 00517     X*        00527     Y*        00537    XC*        00547    YC*        00557 THETA*        00567     X*
+ 00577     Y*        00587    XC*        00597    YC*        00607 THETA*        00617  RINGR        00627  RINGW
+ 00637 RSTEMD        00647   CAPT        00657   CAPW        00667   CAPH        00677   CAPB        00687   CAPR
+ 00697   ARMW        00707 ARMIND        00717  BENTH        00727 BSTEMH        00737 BSTEMD        00747 BSTEMR
+ 00757 BSTEMB        00767  SILLH        00777  SILLW        00787  SILLR        00797  SILLB        00807  SILLT
+ 00817  BENTR        00827 TRAPBR        00837 TRAPTR        00847     XL        00857   XMAX        00867   XMIN
+ 00877  SCALE        00887     YL        00897   YMAX        00907   YMIN        00917      Y        00927      X
+ 00937     X1        00947     X2        00957     X3        00967     Y3        00977     Y1        00987     Y2
+ 00997   AGLW        01007   AGLH        01017   AGL1        01027   AGL2        01037   AGL3        01047      A
+ 01057    RAD        01067      S        01077     X4        01087     Y4        01091   IDLE        01096   PLOT
+ 01101  PARAB        01106 CIRCLE
+
+
+
+
+                                                                                  PAGE   3
+
+0100 03134  0910 15208  0990 15444  0920 15320  0930 15414
+
+
+15472
+      CORES USED
+59999
+      NEXT COMMON
+END OF COMPILATION
