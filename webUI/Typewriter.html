@@ -13,7 +13,7 @@
 ************************************************************************
 * IBM 1620 Model 2 Emulator Console typewriter window.
 ************************************************************************
-* 2017-12-09  P.Kimpel
+* 2022-12-09  P.Kimpel
 *   Original version, from retro-220 B220ConsolePrinter.html.
 ***********************************************************************/
 -->
@@ -27,8 +27,19 @@
 <body id=PrinterBody class=deviceBody>
 
 <div id=Printer class="ibmGray">
-    <iframe id=PrinterPlaten src="./FramePaper.html">
-    </iframe>
+    <div id=TypewriterPaperDiv>
+        <iframe id=PrinterPlaten src="./FramePaper.html">
+        </iframe>
+        <img id=TypewriterMenuIcon src="./resources/icons8-menu-24.png"
+             alt="Menu icon" title="Click to open menu">
+        <div id=TypewriterMenu>
+            <button id=TypewriterExtractBtn type=button>Extract</button>&nbsp;
+            <button id=TypewriterPrintBtn type=button>Print</button>&nbsp;
+            <button id=TypewriterSaveBtn type=button>Save</button>&nbsp;
+            <button id=TypewriterClearBtn type=button>Clear</button>&nbsp;
+            <button id=TypewriterCloseBtn type=button>Close</button>
+        </div>
+    </div>
 
     <div id=FormatControlsDiv>
         <div id=MarginsDiv>

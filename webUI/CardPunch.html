@@ -46,10 +46,18 @@
 
     <div id=StackerDiv>
         <label id=StackerCaption for=StackerBar>OUTPUT STACKER</label>
-        <meter id=StackerBar min=0 max=100 value=0
-               title="Punch stacker level. Click to clear the stacker"></meter>
+        <meter id=StackerBar min=0 max=100 value=0 title="Punch stacker level"></meter>
         <div id=StackerFrameDiv>
             <iframe id=StackerFrame class=paper scrolling=auto src="./FramePaper.html"></iframe>
+            <img id=StackerMenuIcon src="./resources/icons8-menu-24.png"
+                 alt="Menu icon" title="Click to open menu">
+            <div id=StackerMenu>
+                <button id=StackerExtractBtn type=button>Extract</button>&nbsp;
+                <button id=StackerPrintBtn type=button>Print</button>&nbsp;
+                <button id=StackerSaveBtn type=button>Save</button>&nbsp;
+                <button id=StackerClearBtn type=button>Clear</button>&nbsp;
+                <button id=StackerCloseBtn type=button>Close</button>
+            </div>
         </div>
     </div>
 </div>

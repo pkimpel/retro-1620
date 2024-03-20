@@ -1,13 +1,13 @@
 /***********************************************************************
 * retro-1620/webUI Typewriter.css
 ************************************************************************
-* Copyright (c) 2017, Paul Kimpel.
+* Copyright (c) 2023, Paul Kimpel.
 * Licensed under the MIT License, see
 *       http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* Burroughs 220 Console Printer Unit.
+* IBM 1620 emulator Console Printer Unit.
 ************************************************************************
-* 2017-03-17  P.Kimpel
+* 2022-12-09  P.Kimpel
 *   Original version, from retro-205 D205ConsoleOutput.css.
 ***********************************************************************/
 
@@ -25,6 +25,16 @@
     right:              0;
     margin:             0}
 
+#TypewriterPaperDiv {
+    position:           absolute;
+    height:             100%;
+    width:              calc(100% - 8px);
+    min-width:          600px;                  /* same as ControlPanelFrame */
+    max-width:          calc(133ch + 20px);     /* allow for scroll bar */
+    left:               50%;
+    transform:          translate(-50%, 0);
+    font-size:          12px;
+    font-family:        Courier New, Courier, Consolas, monospace}
 #PrinterPlaten {
     position:           absolute;
     left:               2px;
@@ -43,14 +53,33 @@
 #PrinterPlaten.inputEnabled {
     border:             2px solid red}
 
-#Paper {
-    margin-left:        0;
-    margin-right:       0;
-    margin-top:         0;
-    margin-bottom:      0;
-    padding:            0;
-    white-space:        pre;
-    cursor:             auto}
+#TypewriterMenuIcon {
+    position:           absolute;
+    top:                4px;
+    right:              24px;
+    opacity:            0.5;
+    z-index:            10}
+#TypewriterMenu {
+    position:           absolute;
+    display:            none;
+    top:                8px;
+    right:              8px;
+    width:              300px;
+    height:             40px;
+    z-index:            12;
+    text-align:         center;
+    background-color:   #FFC;
+    border:             1px solid #666;
+    box-shadow:         3px 3px 3px #999}
+#TypewriterMenu BUTTON {
+    position:           relative;
+    top:                50%;
+    height:             24px;
+    line-height:        100%;
+    background-color:   white;
+    border-radius:      8px;
+    border:             2px solid #666;
+    transform:          translate(0, -50%)}
 
 /***** Typewriter Control Panel *****/
 

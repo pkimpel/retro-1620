@@ -42,10 +42,11 @@
     <div id=StackerDiv>
         <input id=FileSelector type=file size=60 multiple>
         <label id=HopperCaption for=HopperBar>INPUT HOPPER</label>
-        <meter id=HopperBar min=0 max=100 value=0
-               title="Reader input hopper level. Click to clear the hopper"></meter>
+        <meter id=HopperBar min=0 max=100 value=0 title="Reader input hopper level"></meter>
         <div id=StackerFrameDiv>
-            <iframe id=StackerFrame class=paper scrolling=auto src="./FramePaper.html"></iframe>
+            <iframe id=StackerFrame class=paper scrolling=auto src="./FramePaper.html"
+                    title="Double-click to view all input hopper and output stacker card images">
+            </iframe>
         </div>
     </div>
 </div>

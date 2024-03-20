@@ -79,7 +79,6 @@
 #SelectStopSwitch.nStop #SelectNStopSwitchCaption {
     top:                2px;
     font-size:          6pt}
-
 #SelectStopSwitchCaption {
     position:           absolute;
     bottom:             2px;
@@ -96,17 +95,14 @@
     left:               124px;
     top:                12px;
     width:              40px}
-
 #PunchReadyLamp {
     left:               124px;
     top:                36px;
     width:              40px}
-
 #PunchCheckLamp {
     left:               172px;
     top:                12px;
     width:              40px}
-
 #StackerLamp {
     left:               172px;
     top:                36px;
@@ -117,13 +113,11 @@
     top:                11px;
     right:              16px;
     box-shadow:         inset 2px 2px 2px #333}
-
 #StopBtn {
     position:           absolute;
     top:                11px;
     right:              88px;
     box-shadow:         2px 2px 2px #333}
-
 #StartBtn {
     position:           absolute;
     top:                11px;
@@ -136,7 +130,6 @@
     left:               4px;
     right:              6px;
     bottom:             6px}
-
 #StackerBar {
     position:           absolute;
     top:                0;
@@ -144,7 +137,6 @@
     width:              100%;
     height:             16px;
     border:             1px solid white}
-
 #StackerCaption {
     position:           absolute;
     display:            none;           /* for now... */
@@ -161,7 +153,6 @@
     bottom:             0;
     left:               0;
     right:              0}
-
 #StackerFrame {
     position:           absolute;
     top:                0;
@@ -169,3 +160,30 @@
     width:              100%;
     height:             100%;
     border:             1px solid white}
+#StackerMenuIcon {
+    position:           absolute;
+    top:                0;
+    right:              20px;
+    opacity:            0.5;
+    z-index:            10}
+#StackerMenu {
+    position:           absolute;
+    display:            none;
+    top:                0;
+    right:              8px;
+    width:              300px;
+    height:             40px;
+    z-index:            12;
+    text-align:         center;
+    background-color:   #FFC;
+    border:             1px solid #666;
+    box-shadow:         3px 3px 3px #999}
+#StackerMenu BUTTON {
+    position:           relative;
+    top:                50%;
+    height:             24px;
+    line-height:        100%;
+    background-color:   white;
+    border-radius:      8px;
+    border:             2px solid #666;
+    transform:          translate(0, -50%)}

@@ -271,10 +271,8 @@ class Plotter {
         let geometry = this.config.formatWindowGeometry("Plotter");
         this.persistentWindowPosition = (geometry.length > 0);
         if (this.persistentWindowPosition) {
-            this.innerHeight = this.config.getWindowProperty("Plotter", "innerHeight");
-            this.innerWidth = this.config.getWindowProperty("Plotter", "innerWidth");
-            this.windowLeft = this.config.getWindowProperty("Plotter", "screenX") || 0;
-            this.windowTop = this.config.getWindowProperty("Plotter", "screenY") || 0;
+            [this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop] =
+                    this.config.getWindowGeometry("Plotter");
             this.viewScaleFactor =
                     Math.floor((this.innerWidth - Plotter.windowExtraWidth)/Plotter.canvasMaxWidth*1000)/1000;
         } else {
@@ -285,7 +283,7 @@ class Plotter {
             this.windowLeft = Math.round((screen.availWidth - this.innerWidth)/2);
             this.windowTop = screen.availHeight - Plotter.windowHeight;
             geometry = `,left=${this.windowLeft},top=${this.windowTop}` +
-                       `,width=${this.innerWidth},height=${Plotter.windowHeight}`;
+                       `,innerWidth=${this.innerWidth},innerHeight=${Plotter.windowHeight}`;
         }
 
         openPopup(window, "../webUI/Plotter.html", "retro-1620.Plotter",
@@ -348,7 +346,9 @@ class Plotter {
         this.$$("PenCaption").addEventListener("dblclick", this.boundToggleVisibleCarriage);
         this.scaleFactorSpan.addEventListener("dblclick", this.boundRestoreWindowGeometry);
 
-        // Recalculate scaling and offsets after initial window resize.
+        // Recalculate scaling and offsets after initial window resize. The
+        // Plotter does this differently because its window is sized to the
+        // drawing canvas, rather than the canvas being sized to the window.
         this.restoreWindowGeometry();
         setTimeout(() => {
             this.emptyCanvas();
@@ -526,10 +526,9 @@ class Plotter {
             this.viewScaleFactor = Math.floor((this.canvasDiv.offsetWidth + dw)/Plotter.canvasMaxWidth*1000)/1000;
             this.window.resizeBy(dw, dh);
         } else {
+            const dw = Plotter.canvasMaxWidth/Math.round(1/this.viewScaleFactor) - this.canvasDiv.offsetWidth;
             this.viewScaleFactor = (this.config.getNode("Plotter.scale") == 2 ? 1.0 : 0.5);
-            this.window.resizeBy(
-                    Plotter.canvasMaxWidth/Math.round(1/this.viewScaleFactor) -
-                            this.canvasDiv.offsetWidth, dh);
+            this.window.resizeBy(dw, dh);
         }
 
         setTimeout(() => {
@@ -563,14 +562,14 @@ class Plotter {
 
     /**************************************/
     saveCanvas(ev) {
-        /* Handler for clicking the Save button and conventing the canvas to
+        /* Handler for clicking the Save button and converting the canvas to
         a PNG image */
         const canvas = this.cloneCanvas(1);
         const data = canvas.toDataURL("image/png");
-        const hiddenLink = this.doc.createElement('a');
+        const hiddenLink = this.doc.createElement("a");
 
-        hiddenLink.setAttribute('download', 'PlotterImage.png');
-        hiddenLink.setAttribute('href', data);
+        hiddenLink.setAttribute("download", "PlotterImage.png");
+        hiddenLink.setAttribute("href", data);
         hiddenLink.click();
     }
 
@@ -839,7 +838,7 @@ class Plotter {
     }
 
     /**************************************/
-    async move(dx, dy) {
+    move(dx, dy) {
         /* Steps the plot in the indicated direction(s). Caches all movement
         until the next animation frame time, when it will then be drawn. If the
         pen is down, caches the coordinates of a new point to be drawn;
@@ -908,9 +907,11 @@ class Plotter {
         } else {
             this.outputReadyStamp += Plotter.stepPeriod;
             if (delay > Plotter.minWait) {
-                await this.timer.delayFor(delay);
+                return this.timer.delayFor(delay);
             }
         }
+
+        return Promise.resolve();
     }
 
     /**************************************/
@@ -941,6 +942,11 @@ class Plotter {
         } else if (command.dx || command.dy) {  // a stepping command
             return this.move(-command.dy, command.dx);
         } else {
+            // Experimental feature to programmatically clear the plot. Not documented //
+            if (char == "@") {
+                this.emptyCanvas();
+            }
+
             return Promise.resolve();           // no action
         }
 

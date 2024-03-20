@@ -275,6 +275,27 @@ DIV.evenOddCaption {
     line-height:        110%;
     padding-right:      4px}
 
+.powerUp {
+    animation-name:     powerUpAnimation;
+    animation-duration: 4s;
+    animation-timing-function: ease-in;
+    animation-direction:normal;
+    animation-fill-mode:forwards}
+
+.powerDown {
+    animation-name:     powerUpAnimation;
+    animation-duration: 3s;
+    animation-timing-function: ease-in;
+    animation-direction:reverse;
+    animation-fill-mode:forwards}
+
+@keyframes powerUpAnimation {
+    from {
+        opacity:        0}
+    to {
+        opacity:        1}
+    }
+
 #IndicatorButtonPanel {
     position:           absolute;
     top:                76px;
@@ -287,9 +308,14 @@ DIV.evenOddCaption {
 #Row1LeftSpacer {
     top:                0;
     left:               0}
-#PowerOnLamp {
+#PowerOnLamp,
+#PowerOnLampFX {
     top:                3px;
     left:               4px}
+#PowerOnLampFX {     /* used to animate the power up/down sequence */
+    opacity:            0;
+    z-index:            1;
+    background-image:   radial-gradient(circle, #0F0 33%, #0E0 67%, #0C0)}
 #PowerOnLampSpacer {
     top:                0;
     left:               60px}

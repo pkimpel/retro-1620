@@ -45,8 +45,8 @@ class Typewriter {
     static windowWidth = 660;           // window innerWidth, pixels
 
     static numericGlyphs = [
-        "0", "1",  "2",  "3", "4", "5", "6", "7", "8", "9",
-        Envir.glyphRecMark, Envir.glyphPillow, "@",  Envir.glyphPillow, Envir.glyphPillow, Envir.glyphGroupMark];
+            "0", "1",  "2",  "3", "4", "5", "6", "7", "8", "9",
+            Envir.glyphRecMark, Envir.glyphPillow, "@",  Envir.glyphPillow, Envir.glyphPillow, Envir.glyphGroupMark];
 
     static alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit BCD)
             " ",                    Envir.glyphPillow,      Envir.glyphPillow,      ".",                    // 00
@@ -114,6 +114,33 @@ class Typewriter {
             Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      // F8
             Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow,      Envir.glyphPillow];     // FC
 
+    static xlateFlag = {
+            "0":"]", "1":"j", "2":"k", "3":"l", "4":"m", "5":"n", "6":"o", "7":"p",
+            "8":"q", "9":"r", "@":"~", "\u2021":"!", "\u2262":"\"", "\u25AE":"?"};
+
+    static convertToASCII(text) {
+        /* Translates the special non-ASCII typewriter characters to their
+        ASCII equivalents */
+
+        return text.replace(/[\u2021\u2262\u25AE\u00A7]/g, (text) => {
+            switch (text) {
+            case Envir.glyphRecMark:        // \u2021
+                return "|";
+                break;
+            case Envir.glyphGroupMark:      // \u2262
+                return "}";
+                break;
+            case Typewriter.RSChar:         // \u00A7
+                return "#";
+                break;
+            default:                        // includes pillow, \u25AE
+                return "?";
+                break;
+            }
+        });
+    }
+
+
     // Public Instance Properties
 
     doc = null;                         // window document object
@@ -145,21 +172,23 @@ class Typewriter {
         this.processor = context.processor;
 
         this.boundKeydown = this.keydown.bind(this);
+        this.boundMenuClick = this.menuClick.bind(this);
         this.boundResizeWindow = this.resizeWindow.bind(this);
-        this.boundUnloadPaperClick = this.unloadPaperClick.bind(this);
         this.boundTextOnChange = this.textOnChange.bind(this);
         this.boundInsertBtnClick = this.insertBtnClick.bind(this);
-        this.boundSelectricLogoClick = this.selectricLogoClick.bind(this);
 
         // Create the Typewriter window
         let geometry = this.config.formatWindowGeometry("Typewriter");
         if (geometry.length) {
-            this.innerHeight = this.config.getWindowProperty("Typewriter", "innerHeight");
+            [this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop] =
+                    this.config.getWindowGeometry("Typewriter");
         } else {
+            this.innerWidth  = Typewriter.windowWidth;
             this.innerHeight = Typewriter.windowHeight;
-            geometry = `,left=${screen.availWidth-Typewriter.windowWidth}` +
-                       `,top=${screen.availHeight-Typewriter.windowHeight}` +
-                       `,width=${Typewriter.windowWidth},height=${Typewriter.windowHeight}`;
+            this.windowLeft =  screen.availWidth - Typewriter.windowWidth;
+            this.windowTop =   screen.availHeight - Typewriter.windowHeight;
+            geometry = `,left=${this.windowLeft},top=${this.windowTop}` +
+                       `,innerWidth=${this.innerWidth},innerHeight=${this.innerHeight}`;
         }
 
         openPopup(window, "../webUI/Typewriter.html", "retro-1620.Typewriter",
@@ -182,7 +211,6 @@ class Typewriter {
         /* Initializes (and if necessary, creates) the typewriter unit state */
 
         this.busy = false;              // an I/O is in progress
-        this.canceled = false;          // current I/O canceled
         this.inputReady = true;         // typewriter is ready for input
         this.inputReadyStamp = 0;       // timestamp when ready for input
         this.lastUseStamp = 0;          // last I/O activity (for idle checking)
@@ -197,10 +225,7 @@ class Typewriter {
         to interrupt, so this routine does nothing useful. It exists only to
         satisfy the Processor's I/O cancelation interface */
 
-        if (this.busy) {
-            this.busy = false;
-            //this.canceled = true;     // currently affects nothing
-        }
+        this.busy = false;
     }
 
     /**************************************/
@@ -230,6 +255,7 @@ class Typewriter {
         this.doc.title = "retro-1620 Typewriter";
         this.platen = this.$$("PrinterPlaten");
         this.paperDoc = this.platen.contentDocument;
+        this.paperDoc.title = this.doc.title + " Paper";
         this.paper = this.paperDoc.getElementById("Paper");
         this.setPaperEmpty();
 
@@ -247,20 +273,13 @@ class Typewriter {
         this.window.addEventListener("resize", this.boundResizeWindow);
         this.window.addEventListener("keydown", this.boundKeydown);
         this.paperDoc.addEventListener("keydown", this.boundKeydown);
-        this.paper.addEventListener("dblclick", this.boundUnloadPaperClick);
+        this.$$("TypewriterMenuIcon").addEventListener("click", this.boundMenuClick);
         this.$$("InsertBtn").addEventListener("click", this.boundInsertBtnClick);
-        this.$$("SelectricLogo").addEventListener("click", this.boundSelectricLogoClick);
         this.$$("FormatControlsDiv").addEventListener("change", this.boundTextOnChange);
 
-        // Resize the window to take into account the difference between
-        // inner and outer heights (WebKit quirk).
-        if (this.window.innerHeight < this.innerHeight) {        // Safari bug
-            this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
-        }
-
-        //setTimeout(() => {
-        //    this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        //}, 250);
+        // Recalculate scaling and offsets after initial window resize.
+        this.config.restoreWindowGeometry(this.window,
+                this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop);
     }
 
 
@@ -483,7 +502,6 @@ class Typewriter {
         /* Called by Processor to indicate the device has been released manually */
 
         this.busy = false;              // no I/O is in progress
-        this.canceled = false;          // current I/O canceled
         this.inputReady = true;         // typewriter is ready for input
     }
 
@@ -881,8 +899,8 @@ class Typewriter {
         directly by Write Alphanumerically. Returns a Promise for completion */
         const even = (digitPair >> Register.digitBits) & Register.digitMask;
         const odd = digitPair & Register.digitMask;
-
         const code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
+
         return this.printChar(Typewriter.alphaGlyphs[code],
                 false, (Envir.oddParity5[even] != even || Envir.oddParity5[odd] != odd));
     }
@@ -950,35 +968,13 @@ class Typewriter {
     }
 
     /**************************************/
-    copyPaper(ev) {
+    extractPaper() {
         /* Copies the text contents of the "paper" area of the device, opens a
         new temporary window, and converts that text and pastes it into the
         window so it can be copied, printed, or saved by the user. Flagged digits
-        are converted to j-sign letters, and special characters are converted to
+        are converted to J-sign letters, and special characters are converted to
         ASCII according to the convention used by the 1620-Jr project */
         const title = "retro-1620 Typewriter Extract";
-        const xlateFlag = {
-            "0":"]", "1":"j", "2":"k", "3":"l", "4":"m", "5":"n", "6":"o", "7":"p",
-            "8":"q", "9":"r", "@":"~", "\u2021":"!", "\u2262":"\"", "\u25AE":"?"};
-
-        const convertToASCII = (text) => {
-            return text.replace(/[\u2021\u2262\u25AE\u00A7]/g, (text) => {
-                switch (text) {
-                case Envir.glyphRecMark:        // \u2021
-                    return "|";
-                    break;
-                case Envir.glyphGroupMark:      // \u2262
-                    return "}";
-                    break;
-                case Typewriter.RSChar:         // \u00A7
-                    return "#";
-                    break;
-                default:                        // includes pillow, \u25AE
-                    return "?";
-                    break;
-                }
-            });
-        };
 
         const convertTypewriterPaper = (ev) => {
             const doc = ev.target;
@@ -989,16 +985,18 @@ class Typewriter {
             win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
 
             let node = this.paper.firstChild;
+            let text = "";
             while (node) {
                 switch (node.nodeType) {
                 case Node.TEXT_NODE:    // plain text
-                    content.appendChild(doc.createTextNode(convertToASCII(node.nodeValue)));
+                    text = node.nodeValue;
+                    content.appendChild(doc.createTextNode(Typewriter.convertToASCII(text)));
                     break;
                 case Node.ELEMENT_NODE: // hopefully a flag/strike span
                     if (node.tagName == "SPAN") {
                         if (node.classList.contains("flag")) {
                             const c = node.textContent;
-                            const a = xlateFlag[c];
+                            const a = Typewriter.xlateFlag[c];
                             if (a) {
                                 content.appendChild(doc.createTextNode(a));
                             } else {
@@ -1019,8 +1017,10 @@ class Typewriter {
                 node = node.nextSibling;
             }
 
-            this.setPaperEmpty();
-
+            node = content.lastChild;
+            if (node.nodeType == Node.TEXT_NODE && node.nodeValue.endsWith("_")) {
+                node.nodeValue = node.nodeValue.substring(0, node.nodeValue.length-1);
+            }
         };
 
         openPopup(this.window, "./FramePaper.html", "",
@@ -1029,20 +1029,102 @@ class Typewriter {
     }
 
     /**************************************/
-    unloadPaperClick(ev) {
-        /* Clears the internal scroll buffer in response to double-clicking
-        the paper area */
+    savePaper() {
+        /* Extracts the text of the typewriter paper area, converts it to a
+        DataURL, and constructs a link to cause the URL to be "downloaded" and
+        stored on the local device. Flagged digits are converted to J-sign
+        letters, and special characters are converted to ASCII according to the
+        convention used by the 1620-Jr project */
+        const title = "retro-1620 Typewriter Paper";
 
-        this.copyPaper();
-        ev.preventDefault();
-        ev.stopPropagation();
+        let text = "";
+        let node = this.paper.firstChild;
+        while (node) {
+            switch (node.nodeType) {
+            case Node.TEXT_NODE:        // plain text
+                text += Typewriter.convertToASCII(node.nodeValue);
+                break;
+            case Node.ELEMENT_NODE:     // hopefully a flag/strike span
+                if (node.tagName == "SPAN") {
+                    if (node.classList.contains("flag")) {
+                        const c = node.textContent;
+                        const a = Typewriter.xlateFlag[c];
+                        if (a) {
+                            text += a;
+                        } else {
+                            text += Typewriter.convertToASCII(c);
+                        }
+                    } else {            // strike-outs and stuff that shouldn't be here
+                        text += "?";
+                    }
+                } else {                // unknown tag, should never happen
+                    text += "?";
+                }
+                break;
+            default:                    // unknown node type, should never happen
+                text += "?";
+                break;
+            }
+
+            node = node.nextSibling;
+        }
+
+        if (text.endsWith("_")) {       // strip the cursor character
+            text = text.slice(0, -1);
+        }
+
+        if (!text.endsWith("\n")) {     // make sure there's a final new-line
+            text = text + "\n";
+        }
+
+        const url = `data:text/plain,${encodeURIComponent(text)}`;
+        const hiddenLink = this.doc.createElement("a");
+
+        hiddenLink.setAttribute("download", title);
+        hiddenLink.setAttribute("href", url);
+        hiddenLink.click();
     }
 
     /**************************************/
-    selectricLogoClick(ev) {
-        /* Handler for clicking the Selectric logo and printing the paper area */
+    menuOpen() {
+        /* Opens the Typewriter menu panel and wires up events */
 
-        this.platen.contentWindow.print();
+        this.$$("TypewriterMenu").style.display = "block";
+        this.$$("TypewriterMenu").addEventListener("click", this.boundMenuClick, false);
+    }
+
+    /**************************************/
+    menuClose() {
+        /* Closes the Typewriter menu panel and disconnects events */
+
+        this.$$("TypewriterMenu").removeEventListener("click", this.boundMenuClick, false);
+        this.$$("TypewriterMenu").style.display = "none";
+    }
+
+    /**************************************/
+    menuClick(ev) {
+        /* Handles click for the menu icon and menu panel */
+
+        switch (ev.target.id) {
+        case "TypewriterMenuIcon":
+            this.menuOpen();
+            break;
+        case "TypewriterExtractBtn":
+            this.extractPaper();
+            break;
+        case "TypewriterPrintBtn":
+            this.platen.contentWindow.print();
+            break;
+        case "TypewriterSaveBtn":
+            this.savePaper();
+            break;
+        case "TypewriterClearBtn":
+            this.setPaperEmpty();
+            //-no break -- clear always closes the panel
+        case "TypewriterCloseBtn":
+            this.menuClose();
+            break;
+        }
     }
 
     /**************************************/
@@ -1052,9 +1134,8 @@ class Typewriter {
 
         if (this.window) {
             this.$$("FormatControlsDiv").removeEventListener("change", this.boundTextOnChange);
-            this.$$("SelectricLogo").removeEventListener("click", this.boundSelectricLogoClick);
             this.$$("InsertBtn").removeEventListener("click", this.boundInsertBtnClick);
-            this.paper.removeEventListener("dblclick", this.boundUnloadPaperClick);
+            this.$$("TypewriterMenuIcon").removeEventListener("click", this.boundMenuClick);
             this.paperDoc.removeEventListener("keydown", this.boundKeydown);
             this.window.removeEventListener("keydown", this.boundKeydown);
 

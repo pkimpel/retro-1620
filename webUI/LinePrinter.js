@@ -28,8 +28,8 @@ class LinePrinter {
 
     // Static Properties
 
-    static printerTop = 248;            // top coordinate of LinePrinter window
-    static windowHeight = 290;          // window innerHeight, pixels
+    static printerTop = 140;            // top coordinate of LinePrinter window
+    static windowHeight = 203;          // window innerHeight, pixels
     static windowWidth120 = 820;        // window innerWidth for 120 columns, pixels
     static windowWidth144 = 984;        // window innerWidth for 144 columns, pixels
 
@@ -78,7 +78,7 @@ class LinePrinter {
     window = null;                      // window object
     innerHeight = 0;                    // window specified innerHeight
 
-    atTopOfForm = true;                 // start new page flag
+    atTopOfForm = false;                // start new page flag
     barGroup = null;                    // current greenbar line group
     carriageTape = [];                  // per-line skip-to-channel marker masks
     formLength = 0;                     // form length for carriage control (0=>simple CC)
@@ -114,8 +114,7 @@ class LinePrinter {
         this.createCarriageControl(this.config.getNode("Printer.carriageControl"));
 
         this.boundControlClick = this.controlClick.bind(this);
-        this.boundEndOfFormClick = this.endOfFormClick.bind(this);
-        this.boundLoadCarriageControl = this.loadCarriageControl.bind(this);
+        this.boundMenuClick = this.menuClick.bind(this);
 
         this.waitForBuffer = new WaitSignal();
         this.waitForCarriage = new WaitSignal();
@@ -124,12 +123,15 @@ class LinePrinter {
 
         let geometry = this.config.formatWindowGeometry("LinePrinter");
         if (geometry.length) {
-            this.innerHeight = this.config.getWindowProperty("LinePrinter", "innerHeight");
+            [this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop] =
+                    this.config.getWindowGeometry("LinePrinter");
         } else {
-            let width = (this.columns == 120 ? LinePrinter.windowWidth120 : LinePrinter.windowWidth144);
+            this.innerWidth  = (this.columns == 120 ? LinePrinter.windowWidth120 : LinePrinter.windowWidth144);
             this.innerHeight = LinePrinter.windowHeight;
-            geometry = `,left=0,top=${LinePrinter.printerTop}` +
-                       `,width=${width},height=${LinePrinter.windowHeight}`;
+            this.windowLeft =  0;
+            this.windowTop =   LinePrinter.printerTop;
+            geometry = `,left=${this.windowLeft},top=${this.windowTop}` +
+                       `,innerWidth=${this.innerWidth},innerHeight=${this.innerHeight}`;
         }
 
         openPopup(window, "../webUI/LinePrinter.html", "retro-1620.LinePrinter",
@@ -183,7 +185,6 @@ class LinePrinter {
         const wasReady = this.printerReady;
 
         this.printerReady = this.carriageReady; // formerly included: && !this.printCheck;
-        this.$$("CCLoadBtn").disabled = this.printerReady;
         if (this.printerReady && !wasReady) {
             this.$$("ReadyLamp").classList.add("annunciatorLit");
         } else if (wasReady && !this.printerReady) {
@@ -283,16 +284,6 @@ class LinePrinter {
     }
 
     /**************************************/
-    paperMeterClick(ev) {
-        /* Handle the click event for the "output stacker" meter bar to export
-        the print data and empty the printer's stacker */
-
-        if (!this.carriageReady) {
-            this.unloadStacker();
-        }
-    }
-
-    /**************************************/
     setGreenbar(useGreen) {
         /* Controls the display of "greenbar" shading on the paper */
         const ss = this.paperFrame.contentDocument.styleSheets;
@@ -314,57 +305,6 @@ class LinePrinter {
         }
         this.$$("GreenbarCheck").checked = useGreen;
         this.useGreenbar = useGreen;
-    }
-
-    /**************************************/
-    endOfFormClick(ev) {
-        /* Handler for double-clicking the END OF FORM lamp and printing the paper area */
-
-        this.paperFrame.contentWindow.print();
-    }
-
-    /**************************************/
-    unloadStacker() {
-        /* Copies the text contents of the output stacker of the device, opens a
-        new temporary window, and pastes that text into the window so it can be
-        copied, printed, or saved by the user. All characters are ASCII according
-        to the convention used by the 1620-Jr project */
-        const title = "retro-1620 Line Printer Extract";
-
-        const exportStacker = (ev) => {
-            const doc = ev.target;
-            const win = doc.defaultView;
-            const content = doc.getElementById("Paper");
-            let text = this.paper.textContent.replace(/[\u2021]/g, "|");        // record mark
-            if (text[0] == "\f") {
-                text = text.substring(1);       // drop leading form-feed
-            }
-
-            doc.title = title;
-            win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
-            content.textContent = text;
-            this.paper.textContent = "";
-            this.supplyRemaining = LinePrinter.maxPaperLines;
-            this.paperMeter.value = LinePrinter.maxPaperLines;
-            this.$$("EndOfFormLamp").classList.remove("annunciatorLit");
-            this.setCarriageReady(true);
-        };
-
-        this.overstrike = false;
-        this.lastLineDiv = null;
-
-        // Fill out the page before extracting the text.
-        if (this.formLength == 0) {             // use simple carriage control
-            this.skipToChannel(1, 0);
-        } else {
-            while (this.lineNr && this.lineNr < this.formLength) {
-                this.appendLine("");
-            }
-        }
-
-        openPopup(this.window, "./FramePaper.html", "",
-                "scrollbars,resizable,width=660,height=500",
-                this, exportStacker);
     }
 
     /**************************************/
@@ -497,6 +437,139 @@ class LinePrinter {
     }
 
     /**************************************/
+    extractPaper() {
+        /* Copies the text contents of the paper area, opens a new temporary
+        window, and pastes that text into the window so it can be copied,
+        printed, or saved by the user. All characters are ASCII according to
+        the convention used by the 1620-Jr project */
+        const title = "retro-1620 LinePrinter Extract";
+
+        const exportPaper = (ev) => {
+            const doc = ev.target;
+            const win = doc.defaultView;
+            const content = doc.getElementById("Paper");
+            let text = this.paper.textContent.replace(/[\u2021]/g, "|");        // record mark
+            if (text.startsWith("\f")) {
+                text = text.substring(1);       // drop leading form-feed
+            }
+
+            doc.title = title;
+            win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
+            content.textContent = text;
+        };
+
+        this.overstrike = false;
+        this.lastLineDiv = null;
+
+        // Fill out the page before extracting the text.
+        if (this.formLength == 0) {             // use simple carriage control
+            this.skipToChannel(1, 0);
+        } else {
+            while (this.lineNr > 0 && this.lineNr < this.formLength) {
+                this.appendLine("");
+            }
+        }
+
+        openPopup(this.window, "./FramePaper.html", "",
+                "scrollbars,resizable,width=660,height=500",
+                this, exportPaper);
+    }
+
+    /**************************************/
+    savePaper() {
+        /* Extracts the text of the paper area, converts it to a DataURL, and
+        constructs a link to cause the URL to be "downloaded" and stored on the
+        local device. All characters are ASCII according to the convention used
+        by the 1620-Jr project */
+        const title = "retro-1620 LinePrinter Output";
+
+        let text = this.paper.textContent;
+        if (!text.endsWith("\n")) {     // make sure there's a final new-line
+            text = text + "\n";
+        }
+
+        const url = `data:text/plain,${encodeURIComponent(text)}`;
+        const hiddenLink = this.doc.createElement("a");
+
+        hiddenLink.setAttribute("download", title);
+        hiddenLink.setAttribute("href", url);
+        hiddenLink.click();
+    }
+
+    /**************************************/
+    menuOpen() {
+        /* Opens the CardPunch menu panel and wires up events */
+
+        this.$$("LinePrinterMenu").style.display = "block";
+        this.$$("GreenbarCheck").addEventListener("click", this.boundMenuClick);
+        this.$$("CCLoadBtn").addEventListener("click", this.boundMenuControl);
+        this.$$("LinePrinterMenu").addEventListener("click", this.boundMenuClick, false);
+        this.$$("LinePrinterPrintBtn").disabled = this.carriageReady;
+        this.$$("LinePrinterSaveBtn").disabled = this.carriageReady;
+        this.$$("LinePrinterClearBtn").disabled = this.carriageReady;
+        this.$$("CCLoadBtn").disabled = this.carriageReady;
+    }
+
+    /**************************************/
+    menuClose() {
+        /* Closes the CardPunch menu panel and disconnects events */
+
+        this.$$("GreenbarCheck").removeEventListener("click", this.boundMenuClick);
+        this.$$("CCLoadBtn").removeEventListener("click", this.boundMenuControl);
+        this.$$("LinePrinterMenu").removeEventListener("click", this.boundMenuClick, false);
+        this.$$("LinePrinterMenu").style.display = "none";
+    }
+
+    /**************************************/
+    menuClick(ev) {
+        /* Handles click for the menu icon and menu panel */
+
+        switch (ev.target.id) {
+        case "LinePrinterMenuIcon":
+            this.menuOpen();
+            break;
+        case "LinePrinterExtractBtn":
+            this.extractPaper();
+            break;
+        case "LinePrinterPrintBtn":
+            // Fill out the page before printing the text.
+            if (this.formLength == 0) {             // using simple carriage control
+                this.skipToChannel(1, 0);
+            } else {
+                while (this.lineNr > 0 && this.lineNr < this.formLength) {
+                    this.appendLine("");
+                }
+            }
+            this.paperFrame.contentWindow.print();
+            break;
+        case "LinePrinterSaveBtn":
+            if (!this.carriageReady) {
+                this.savePaper();
+            }
+            break;
+        case "LinePrinterClearBtn":
+            this.paper.textContent = "";
+            this.supplyRemaining = LinePrinter.maxPaperLines;
+            this.paperMeter.value = LinePrinter.maxPaperLines;
+            this.$$("EndOfFormLamp").classList.remove("annunciatorLit");
+            this.setPrintCheck(false);
+            this.atTopOfForm = true;
+            //this.setCarriageReady(true);
+            //-no break -- clear always closes the panel
+        case "LinePrinterCloseBtn":
+            this.menuClose();
+            break;
+        case "GreenbarCheck":
+            this.setGreenbar(ev.target.checked);
+            this.config.putNode("Printer.greenBar", (this.useGreenbar ? 1 : 0));
+            break;
+        case "CCLoadBtn":
+            this.loadCarriageControl(ev);
+            break;
+        }
+    }
+
+    /**************************************/
     controlClick(ev) {
         /* Handles click events for the panel controls */
 
@@ -519,13 +592,6 @@ class LinePrinter {
             if (!this.carriageReady) {
                 this.printLine("", 1, 0);
             }
-            break;
-        case "GreenbarCheck":
-            this.setGreenbar(ev.target.checked);
-            this.config.putNode("Printer.greenBar", (this.useGreenbar ? 1 : 0));
-            break;
-        case "PaperMeter":
-            this.paperMeterClick(ev);
             break;
         }
     }
@@ -571,18 +637,13 @@ class LinePrinter {
         this.resetBtn.addEventListener("click", this.boundControlClick);
         this.carriageRestoreBtn.addEventListener("click", this.boundControlClick);
         this.carriageSpaceBtn.addEventListener("click", this.boundControlClick);
-        this.$$("GreenbarCheck").addEventListener("click", this.boundControlClick);
-        this.paperMeter.addEventListener("click", this.boundControlClick);
-        this.$$("EndOfFormLamp").addEventListener("dblclick", this.boundEndOfFormClick);
-        this.$$("CCLoadBtn").addEventListener("click", this.boundLoadCarriageControl);
+        this.$$("LinePrinterMenuIcon").addEventListener("click", this.boundMenuClick);
 
         this.setCarriageReady(true);
 
-        // Resize the window to take into account the difference between
-        // inner and outer heights (WebKit quirk).
-        if (this.window.innerHeight < this.innerHeight) {        // Safari bug
-            this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
-        }
+        // Recalculate scaling and offsets after initial window resize.
+        this.config.restoreWindowGeometry(this.window,
+                this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop);
 
         // Adjust the top margin and padding on the paper area.
         const paperBody = this.paperFrame.contentDocument.getElementById("PaperBody");
@@ -735,8 +796,12 @@ class LinePrinter {
     appendLine(text) {
         /* Appends one line to the current greenbar group, this.barGroup.
         Also handles top-of-form and greenbar highlighting */
-
         let lineText = text + "\n";
+
+        if (!this.paper.firstChild) {   // don't force a form-feed if the
+            this.atTopOfForm = false;   //    paper area is empty
+        }
+
         if (this.overstrike && this.lastLineDiv) {
             this.overstrikeBoldly(lineText);
             this.overstrike = false;
@@ -1102,10 +1167,7 @@ class LinePrinter {
         this.resetBtn.removeEventListener("click", this.boundControlClick);
         this.carriageRestoreBtn.removeEventListener("click", this.boundControlClick);
         this.carriageSpaceBtn.removeEventListener("click", this.boundControlClick);
-        this.$$("GreenbarCheck").removeEventListener("click", this.boundControlClick);
-        this.paperMeter.removeEventListener("click", this.boundControlClick);
-        this.$$("EndOfFormLamp").removeEventListener("dblclick", this.boundEndOfFormClick);
-        this.$$("CCLoadBtn").removeEventListener("click", this.boundLoadCarriageControl);
+        this.$$("LinePrinterMenuIcon").removeEventListener("click", this.boundMenuClick);
 
         this.config.putWindowGeometry(this.window, "LinePrinter");
         this.window.removeEventListener("beforeunload", this.beforeUnload);

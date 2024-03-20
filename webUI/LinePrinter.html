@@ -33,23 +33,31 @@
     <div id=ControlsDiv class="ibmBlue">
         <div id=PowerLamp       class="annunciator annunciatorLit">POWER</div>
         <div id=ReadyLamp       class="annunciator">READY</div>
-        <div id=EndOfFormLamp   class="annunciator"
-             title="Double-click to print the paper area">END OF<br>FORM</div>
+        <div id=EndOfFormLamp   class="annunciator">END OF<br>FORM</div>
         <div id=PrintCheckLamp  class="annunciator">PRINT<br>CHECK</div>
     </div>
 
-    <div id=OptionsDiv>
-      <input id=GreenbarCheck type=checkbox value=1 checked>
-      <label for=GreenbarCheck class="annunciator annunciatorLit">GREENBAR</label>
-      <button id=CCLoadBtn>CARRIAGE<br>CONTROL</button>
-    </div>
 
     <div id=PaperDiv>
         <label id=PaperMeterCaption for=StackerBar>OUTPUT STACKER</label>
-        <meter id=PaperMeter min=0 max=100 value=0
-               title="Paper supply remaining. Click to clear the stacker"></meter>
+        <meter id=PaperMeter min=0 max=100 value=0 title="Paper supply remaining"></meter>
         <div id=PaperFrameDiv>
             <iframe id=PaperFrame class=paper scrolling=auto src="./FramePaper.html"></iframe>
+            <img id=LinePrinterMenuIcon src="./resources/icons8-menu-24.png"
+                 alt="Menu icon" title="Click to open menu">
+            <div id=LinePrinterMenu>
+                <div id=LinePrinterMenuOptions>
+                <button id=LinePrinterExtractBtn type=button>Extract</button>&nbsp;
+                <button id=LinePrinterPrintBtn type=button>Print</button>&nbsp;
+                <button id=LinePrinterSaveBtn type=button>Save</button>&nbsp;
+                <button id=LinePrinterClearBtn type=button>Clear</button>&nbsp;
+                <button id=LinePrinterCloseBtn type=button>Close</button>
+                <br>
+                <button id=CCLoadBtn>Carriage Control</button>&nbsp;
+                <input id=GreenbarCheck type=checkbox value=1 checked>
+                <label for=GreenbarCheck>Greenbar</label>
+                </div>
+            </div>
         </div>
     </div>
 </div>

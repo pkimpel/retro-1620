@@ -83,11 +83,15 @@ class DiskDrive {
 
         let geometry = this.config.formatWindowGeometry("DiskDrive");
         if (geometry.length) {
-            this.innerHeight = this.config.getWindowProperty("DiskDrive", "innerHeight");
+            [this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop] =
+                    this.config.getWindowGeometry("DiskDrive");
         } else {
+            this.innerWidth  = DiskDrive.windowWidth;
             this.innerHeight = DiskDrive.windowHeight;
-            geometry = `,left=0,top=${DiskDrive.diskDriveTop}` +
-                       `,width=${DiskDrive.windowWidth},height=${DiskDrive.windowHeight}`;
+            this.windowLeft =  0;
+            this.windowTop =   DiskDrive.diskDriveTop;
+            geometry = `,left=${this.windowLeft},top=${this.windowTop}` +
+                       `,innerWidth=${this.innerWidth},innerHeight=${this.innerHeight}`;
         }
 
         this.openDatabase().then((result) => {
@@ -142,9 +146,8 @@ class DiskDrive {
         // Resize the window to take into account the number of modules, then
         // open the modules, initializing them if necessary.
         this.window.setTimeout(async () => {
-            if (this.window.innerHeight < this.innerHeight) {
-                this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
-            }
+            this.config.restoreWindowGeometry(this.window,
+                    this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop);
 
             for (const mod of this.module) {
                 if (mod) {

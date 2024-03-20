@@ -36,7 +36,6 @@ class CardReader {
     doc = null;                         // window document object
     window = null;                      // window object
     origin = null;                      // window origin for postMessage()
-    innerHeight = 0;                    // window specified innerHeight
 
     hopperBar = null;                   // input hopper meter bar
     stackerFrame = null;                // output stacker iframe object
@@ -83,7 +82,6 @@ class CardReader {
         this.boundStopBtnClick = this.stopBtnClick.bind(this);
         this.boundLoadBtnClick = this.loadBtnClick.bind(this);
         this.boundNPROSwitchAction = this.NPROSwitchAction.bind(this);
-        this.boundHopperBarClick = this.hopperBarClick.bind(this);
         this.boundReceiveMessage = this.receiveMessage.bind(this);
         this.boundStackerDblClick = this.stackerDblClick.bind(this);
 
@@ -91,11 +89,15 @@ class CardReader {
 
         let geometry = this.config.formatWindowGeometry("CardReader");
         if (geometry.length) {
-            this.innerHeight = this.config.getWindowProperty("CardReader", "innerHeight");
+            [this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop] =
+                    this.config.getWindowGeometry("CardReader");
         } else {
+            this.innerWidth =  CardReader.windowWidth;
             this.innerHeight = CardReader.windowHeight;
-            geometry = `,left=0,top=${screen.availHeight-CardReader.windowHeight}` +
-                       `,width=${CardReader.windowWidth},height=${CardReader.windowHeight}`;
+            this.windowLeft =  0;
+            this.windowTop =   screen.availHeight-CardReader.windowHeight;
+            geometry = `,left=${this.windowLeft},top=${this.windowTop}` +
+                       `,innerWidth=${this.innerWidth},innerHeight=${this.innerHeight}`;
         }
 
         openPopup(window, "../webUI/CardReader.html", "retro-1620.CardReader",
@@ -243,36 +245,22 @@ class CardReader {
             this.$$("NPROSwitch").classList.remove("clicked");
             break;
         case "click":
-            if (!this.transportReady && this.bufIndex >= this.bufLength) {
+            if (!this.transportReady) {
                 this.bufferReady = false;       // invalidate the card buffer
                 this.setReaderCheck(false);
-            }
-            break;
-        case "dblclick":
-            this.hopperBarClick(ev);
-            break;
-        }
-    }
-
-    /**************************************/
-    hopperBarClick(ev) {
-        /* Handle the click event for the "input hopper" meter bar and the
-        double-click event for the NPROSwitch to completely empty the reader's
-        input hopper */
-
-        if (!this.transportReady && this.bufIndex < this.bufLength) {
-            if (this.window.confirm((this.bufLength-this.bufIndex).toString() + " of " + this.bufLength.toString() +
-                         " characters remaining to read.\nDo you want to clear the input hopper?")) {
-                this.$$("FileSelector").value = null;   // reset the control
-                this.$$("FileSelector").disabled = false;
-                this.bufferReady = false;
-                this.setReaderCheck(false);
-                this.hopperBar.value = 0;
-                this.clear();
-                while (this.stacker.firstChild) {
-                    this.stacker.removeChild(this.stacker.firstChild);
+                if (this.bufIndex < this.bufLength && this.window.confirm(
+                             `${this.bufLength-this.bufIndex} of ${this.bufLength}` +
+                             " characters remaining to read.\nDo you want to clear the input hopper?")) {
+                    this.$$("FileSelector").value = null;   // reset the control
+                    this.$$("FileSelector").disabled = false;
+                    this.hopperBar.value = 0;
+                    this.clear();
+                    while (this.stacker.firstChild) {
+                        this.stacker.removeChild(this.stacker.firstChild);
+                    }
                 }
             }
+            break;
         }
     }
 
@@ -480,20 +468,12 @@ class CardReader {
         this.$$("NPROSwitch").addEventListener("click", this.boundNPROSwitchAction);
         this.$$("NPROSwitch").addEventListener("mousedown", this.boundNPROSwitchAction);
         this.$$("NPROSwitch").addEventListener("mouseup", this.boundNPROSwitchAction);
-        this.$$("NPROSwitch").addEventListener("dblclick", this.boundNPROSwitchAction);
         this.$$("FileSelector").addEventListener("change", this.boundFileSelectorChange);
-        this.hopperBar.addEventListener("click", this.boundHopperBarClick);
         this.stackerFrame.contentDocument.body.addEventListener("dblclick", this.boundStackerDblClick);
 
-        // Resize the window to take into account the difference between
-        // inner and outer heights (WebKit quirk).
-        if (this.window.innerHeight < this.innerHeight) {        // Safari bug
-            this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
-        }
-
-        //setTimeout(() => {
-        //    this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        //}, 250);
+        // Recalculate scaling and offsets after initial window resize.
+        this.config.restoreWindowGeometry(this.window,
+                this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop);
     }
 
     /**************************************/
@@ -638,9 +618,7 @@ class CardReader {
         this.$$("NPROSwitch").removeEventListener("click", this.boundNPROSwitchAction);
         this.$$("NPROSwitch").removeEventListener("mousedown", this.boundNPROSwitchAction);
         this.$$("NPROSwitch").removeEventListener("mouseup", this.boundNPROSwitchAction);
-        this.$$("NPROSwitch").removeEventListener("dblclick", this.boundNPROSwitchAction);
         this.$$("FileSelector").removeEventListener("change", this.boundFileSelectorChange);
-        this.hopperBar.removeEventListener("click", this.boundHopperBarClick);
         this.stackerFrame.contentDocument.body.removeEventListener("dblclick", this.boundStackerDblClick);
 
         this.config.putWindowGeometry(this.window, "CardReader");

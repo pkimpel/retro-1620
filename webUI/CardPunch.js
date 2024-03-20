@@ -112,7 +112,7 @@ class CardPunch {
         this.boundCheckResetBtnClick = this.checkResetBtnClick.bind(this);
         this.boundNPROSwitchAction = this.NPROSwitchAction.bind(this);
         this.boundSelectStopSwitchClick = this.selectStopSwitchClick.bind(this);
-        this.boundStackerBarClick = this.stackerBarClick.bind(this);
+        this.boundMenuClick = this.menuClick.bind(this);
         this.boundReceiveMessage = this.receiveMessage.bind(this);
 
         this.waitForBuffer = new WaitSignal();
@@ -121,11 +121,15 @@ class CardPunch {
         this.clear();
         let geometry = this.config.formatWindowGeometry("CardPunch");
         if (geometry.length) {
-            this.innerHeight = this.config.getWindowProperty("CardPunch", "innerHeight");
+            [this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop] =
+                    this.config.getWindowGeometry("CardPunch");
         } else {
+            this.innerWidth  = CardPunch.windowWidth;
             this.innerHeight = CardPunch.windowHeight;
-            geometry = `,left=0,top=${screen.availHeight-CardPunch.cardPunchTop}` +
-                       `,width=${CardPunch.windowWidth},height=${CardPunch.windowHeight}`;
+            this.windowLeft =  0;
+            this.windowTop =   screen.availHeight - CardPunch.windowHeight;
+            geometry = `,left=${this.windowLeft},top=${this.windowTop}` +
+                       `,innerWidth=${this.innerWidth},innerHeight=${this.innerHeight}`;
         }
 
         openPopup(window, "../webUI/CardPunch.html", "retro-1620.CardPunch",
@@ -257,9 +261,6 @@ class CardPunch {
                 this.setPunchCheck(false);
             }
             break;
-        case "dblclick":
-            this.stackerBarClick(ev);
-            break;
         }
     }
 
@@ -273,20 +274,7 @@ class CardPunch {
     }
 
     /**************************************/
-    stackerBarClick(ev) {
-        /* Handle the click event for the "output stacker" meter bar and the
-        double-click event for the NPROSwitch to export the card data and
-        empty the punch's stacker */
-
-        if (!this.transportReady) {
-            this.unloadStacker();
-            this.$$("StackerLamp").classList.remove("annunciatorLit");
-            this.setPunchCheck(false);
-        }
-    }
-
-    /**************************************/
-    unloadStacker() {
+    extractStacker() {
         /* Copies the text contents of the output stacker of the device, opens a
         new temporary window, and pastes that text into the window so it can be
         copied, printed, or saved by the user. All characters are ASCII according
@@ -301,14 +289,81 @@ class CardPunch {
             doc.title = title;
             win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
             content.textContent = this.stacker.textContent;
-            this.stacker.textContent = "";
-            this.stackerCount = 0;
-            this.stackerBar.value = 0;
         };
 
         openPopup(this.window, "./FramePaper.html", "",
                 "scrollbars,resizable,width=660,height=500",
                 this, exportStacker);
+    }
+
+    /**************************************/
+    saveStacker() {
+        /* Extracts the text of the CardPunch stacker area, converts it to a
+        DataURL, and constructs a link to cause the URL to be "downloaded" and
+        stored on the local device. All characters are ASCII according to the
+        convention used by the 1620-Jr project */
+        const title = "retro-1620 CardPunch Output";
+
+        let text = this.stacker.textContent;
+        if (!text.endsWith("\n")) {     // make sure there's a final new-line
+            text = text + "\n";
+        }
+
+        const url = `data:text/plain,${encodeURIComponent(text)}`;
+        const hiddenLink = this.doc.createElement("a");
+
+        hiddenLink.setAttribute("download", title);
+        hiddenLink.setAttribute("href", url);
+        hiddenLink.click();
+    }
+
+    /**************************************/
+    menuOpen() {
+        /* Opens the CardPunch menu panel and wires up events */
+
+        this.$$("StackerMenu").style.display = "block";
+        this.$$("StackerMenu").addEventListener("click", this.boundMenuClick, false);
+        this.$$("StackerPrintBtn").disabled = this.transportReady;
+        this.$$("StackerSaveBtn").disabled = this.transportReady;
+        this.$$("StackerClearBtn").disabled = this.transportReady;
+    }
+
+    /**************************************/
+    menuClose() {
+        /* Closes the CardPunch menu panel and disconnects events */
+
+        this.$$("StackerMenu").removeEventListener("click", this.boundMenuClick, false);
+        this.$$("StackerMenu").style.display = "none";
+    }
+
+    /**************************************/
+    menuClick(ev) {
+        /* Handles click for the menu icon and menu panel */
+
+        switch (ev.target.id) {
+        case "StackerMenuIcon":
+            this.menuOpen();
+            break;
+        case "StackerExtractBtn":
+            this.extractStacker();
+            break;
+        case "StackerPrintBtn":
+            this.stackerFrame.contentWindow.print();
+            break;
+        case "StackerSaveBtn":
+            this.saveStacker();
+            break;
+        case "StackerClearBtn":
+            this.stacker.textContent = "";
+            this.stackerCount = 0;
+            this.stackerBar.value = 0;
+            this.$$("StackerLamp").classList.remove("annunciatorLit");
+            this.setPunchCheck(false);
+            //-no break -- clear always closes the panel
+        case "StackerCloseBtn":
+            this.menuClose();
+            break;
+        }
     }
 
     /**************************************/
@@ -376,21 +431,14 @@ class CardPunch {
         this.$$("NPROSwitch").addEventListener("click", this.boundNPROSwitchAction);
         this.$$("NPROSwitch").addEventListener("mousedown", this.boundNPROSwitchAction);
         this.$$("NPROSwitch").addEventListener("mouseup", this.boundNPROSwitchAction);
-        this.$$("NPROSwitch").addEventListener("dblclick", this.boundNPROSwitchAction);
         this.$$("SelectStopSwitch").addEventListener("click", this.boundSelectStopSwitchClick);
-        this.stackerBar.addEventListener("click", this.boundStackerBarClick);
+        this.$$("StackerMenuIcon").addEventListener("click", this.boundMenuClick);
 
         this.setTransportReady(true);
 
-        // Resize the window to take into account the difference between
-        // inner and outer heights (WebKit quirk).
-        if (this.window.innerHeight < this.innerHeight) {        // Safari bug
-            this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
-        }
-
-        //setTimeout(() => {
-        //    this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        //}, 250);
+        // Recalculate scaling and offsets after initial window resize.
+        this.config.restoreWindowGeometry(this.window,
+                this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop);
 
         if (!this.config.getNode("persistentWindows")) {
             // Request the CardReader's screen geometry so we can position the punch's window.
@@ -559,9 +607,8 @@ class CardPunch {
         this.$$("NPROSwitch").removeEventListener("click", this.boundNPROSwitchAction);
         this.$$("NPROSwitch").removeEventListener("mousedown", this.boundNPROSwitchAction);
         this.$$("NPROSwitch").removeEventListener("mouseup", this.boundNPROSwitchAction);
-        this.$$("NPROSwitch").removeEventListener("dblclick", this.boundNPROSwitchAction);
         this.$$("SelectStopSwitch").removeEventListener("click", this.boundSelectStopSwitchClick);
-        this.stackerBar.removeEventListener("click", this.boundStackerBarClick);
+        this.$$("StackerMenuIcon").removeEventListener("click", this.boundMenuClick);
 
         this.config.putWindowGeometry(this.window, "CardPunch");
         this.window.removeEventListener("message", this.boundReceiveMessage);

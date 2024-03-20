@@ -53,7 +53,7 @@ class SystemConfig {
 
         Typewriter: {
             marginLeft: 0,
-            marginRight: 85,
+            marginRight: 80,
             tabs: "9,17,25,33,41,49,57,65,73,81"
         },
 
@@ -430,8 +430,8 @@ class SystemConfig {
                     const unit = wc.modes[mode][id];
                     geometry = `,left=${unit.screenX ?? 0}` +
                                `,top=${unit.screenY ?? 0}` +
-                               `,width=${unit.innerWidth ?? 250}` +
-                               `,height=${unit.innerHeight ?? 250}`;
+                               `,innerWidth=${unit.innerWidth ?? 150}` +
+                               `,innerHeight=${unit.innerHeight ?? 150}`;
                 }
             }
         }
@@ -440,16 +440,40 @@ class SystemConfig {
     }
 
     /**************************************/
+    getWindowGeometry(id) {
+        /* Returns an array of geometry properties for the specified window
+        under the specified window/unit id */
+        const prefix = `WindowConfig.modes.${this.configData.WindowConfig.mode}.${id}`;
+
+        return [this.getNode(`${prefix}.innerWidth`), this.getNode(`${prefix}.innerHeight`),
+                this.getNode(`${prefix}.screenX`), this.getNode(`${prefix}.screenY`)];
+    }
+
+    /**************************************/
     putWindowGeometry(win, id) {
         /* Stores the geometry for the specified window under the specified
         window/unit id */
-        const cd = this.configData;
-        const prefix = `WindowConfig.modes.${cd.WindowConfig.mode}.${id}`;
+        const prefix = `WindowConfig.modes.${this.configData.WindowConfig.mode}.${id}`;
 
         this.putNode(`${prefix}.screenX`, win.screenX);
         this.putNode(`${prefix}.screenY`, win.screenY);
         this.putNode(`${prefix}.innerWidth`, win.innerWidth);
         this.putNode(`${prefix}.innerHeight`, win.innerHeight);
+    }
+
+    /**************************************/
+    restoreWindowGeometry(win, width, height, left, top) {
+        /* Resize the window to its configured size, taking into account the
+        difference between inner and outer heights (WebKit quirk) */
+        const dh = height - win.innerHeight;
+        const dw = width  - win.innerWidth;
+        const dx = left   - win.screenX;
+        const dy = top    - win.screenY;
+
+        win.resizeBy(dw, dh);
+        setTimeout(() => {
+            win.moveBy(dx, dy);
+        }, 100);
     }
 
     /***********************************************************************

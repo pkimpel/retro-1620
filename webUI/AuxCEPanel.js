@@ -67,11 +67,15 @@ class AuxCEPanel {
         // Create the Aux CE Panel window
         let geometry = this.config.formatWindowGeometry("AuxCEPanel");
         if (geometry.length) {
-            this.innerHeight = this.config.getWindowProperty("AuxCEPanel", "innerHeight");
+            [this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop] =
+                    this.config.getWindowGeometry("AuxCEPanel");
         } else {
+            this.innerWidth  = AuxCEPanel.windowWidth;
             this.innerHeight = AuxCEPanel.windowHeight;
-            geometry = `,left=${(screen.availWidth-AuxCEPanel.windowWidth)/2},top=${screen.availHeight-AuxCEPanel.windowHeight}` +
-                       `,width=${AuxCEPanel.windowWidth},height=${AuxCEPanel.windowHeight}`;
+            this.windowLeft =  (screen.availWidth-AuxCEPanel.windowWidth)/2;
+            this.windowTop =   screen.availHeight-AuxCEPanel.windowHeight;
+            geometry = `,left=${this.windowLeft},top=${this.windowTop}` +
+                       `,innerWidth=${this.innerWidth},innerHeight=${this.innerHeight}`;
         }
 
         openPopup(window, "../webUI/AuxCEPanel.html", "retro-1620.AuxCEPanel",

@@ -85,11 +85,15 @@ class ControlPanel {
         // Create the Control Panel window
         let geometry = this.config.formatWindowGeometry("ControlPanel");
         if (geometry.length) {
-            this.innerHeight = this.config.getWindowProperty("ControlPanel", "innerHeight");
+            [this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop] =
+                    this.config.getWindowGeometry("ControlPanel");
         } else {
             this.innerHeight = ControlPanel.windowHeight;
-            geometry = `,left=${screen.availWidth-ControlPanel.windowWidth},top=0` +
-                       `,width=${ControlPanel.windowWidth},height=${ControlPanel.windowHeight}`;
+            this.innerWidth =  ControlPanel.windowWidth;
+            this.windowLeft =  screen.availWidth - ControlPanel.windowWidth;
+            this.windowTop =   0;
+            geometry = `,left=${this.windowLeft},top=${this.windowTop}` +
+                       `,innerWidth=${this.innerWidth},innerHeight=${this.innerHeight}`;
         }
 
         openPopup(window, "../webUI/ControlPanel.html", "retro-1620.ControlPanel",
@@ -397,28 +401,24 @@ class ControlPanel {
         this.$$("IBMLogo").addEventListener("dblclick", this.boundOpenDebugPanel);
 
         // Power up and initialize the system.
-        setTimeout(() => {
+        this.powerOnLamp.set(0);
+        this.powerReadyLamp.set(0);
+        this.window.setTimeout(() => {
             this.powerBtn.src = ControlPanel.powerBtnOnImage;
-            setTimeout(() => {
+            p.powerUp();
+            this.$$("PowerOnLampFX").classList.add("powerUp");
+            this.window.setTimeout(() => {      // wait for the DC power supplies...
+                p.gatePOWER_READY.value = 1;
+                this.$$("PowerOnLampFX").classList.remove("powerUp");
                 this.powerOnLamp.set(1);
-                p.powerUp();
-                setTimeout(() => {
-                    p.gatePOWER_READY.value = 1;
-                    this.powerReadyLamp.set(1);
-                    this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
-                }, 2000);
-            }, 1000);
-        }, 1000);
+                this.powerReadyLamp.set(1);
+                this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
+            }, 4000);
+        }, 500);
 
-        // Resize the window to take into account the difference between
-        // inner and outer heights (WebKit quirk).
-        if (this.window.innerHeight < this.innerHeight) {        // Safari bug
-            this.window.resizeBy(0, this.innerHeight - this.window.innerHeight);
-        }
-
-        //setTimeout(() => {
-        //    this.window.resizeBy(0, this.doc.body.scrollHeight - this.window.innerHeight);
-        //}, 250);
+        // Recalculate scaling and offsets after initial window resize.
+        this.config.restoreWindowGeometry(this.window,
+                this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop);
     }
 
     /**************************************/
@@ -1187,35 +1187,39 @@ class ControlPanel {
     shutDown() {
         /* Shuts down the panel */
 
-        this.powerBtn.src = ControlPanel.powerBtnOffImage;
-        this.powerReadyLamp.set(0);
-        this.powerOnLamp.set(0);
         if (this.intervalToken) {
             this.window.clearTimeout(this.intervalToken);
             this.intervalToken = 0;
         }
 
-        if (this.auxCEPanel) {
-            this.auxCEPanel.shutDown();
-            this.auxCEPanel = null;
-        }
-
-        this.$$("OperatorContainer").removeEventListener("click", this.boundControlSwitchClick);
-        this.$$("OperatorContainer").removeEventListener("mouseover", this.boundSimultaneousButtonDrag);
-        this.$$("OperatorContainer").removeEventListener("mouseout", this.boundSimultaneousButtonDrag);
-        this.$$("OperatorContainer").removeEventListener("mousedown", this.boundSimultaneousButtonDrag);
-        this.$$("OperatorContainer").removeEventListener("mouseup", this.boundSimultaneousButtonDrag);
-        this.powerBtn.removeEventListener("dblclick", this.boundControlSwitchClick);
-        this.marSelectorKnob.removeChangeListener(this.boundMARSelectorChange);
-        this.$$("EmergencyOffSwitch").removeEventListener("dblclick", this.boundEmergencyOffClick);
-        this.$$("AlarmSound").pause();
-        this.$$("IBMLogo").removeEventListener("dblClick", this.boundOpenDebugPanel);
-        this.config.putWindowGeometry(this.window, "ControlPanel");
-        this.window.removeEventListener("beforeunload", this.boundBeforeUnload);
-        this.window.removeEventListener("unload", this.boundPanelUnload);
-        this.context.systemShutDown();
+        this.powerBtn.src = ControlPanel.powerBtnOffImage;
+        this.powerReadyLamp.set(0);
+        this.powerOnLamp.set(0);
+        this.$$("PowerOnLampFX").classList.add("powerDown");
         this.window.setTimeout(() => {
-            this.window.close();
-        }, 1500);
+            this.$$("PowerOnLampFX").classList.remove("powerDown");
+            if (this.auxCEPanel) {
+                this.auxCEPanel.shutDown();
+                this.auxCEPanel = null;
+            }
+
+            this.$$("OperatorContainer").removeEventListener("click", this.boundControlSwitchClick);
+            this.$$("OperatorContainer").removeEventListener("mouseover", this.boundSimultaneousButtonDrag);
+            this.$$("OperatorContainer").removeEventListener("mouseout", this.boundSimultaneousButtonDrag);
+            this.$$("OperatorContainer").removeEventListener("mousedown", this.boundSimultaneousButtonDrag);
+            this.$$("OperatorContainer").removeEventListener("mouseup", this.boundSimultaneousButtonDrag);
+            this.powerBtn.removeEventListener("dblclick", this.boundControlSwitchClick);
+            this.marSelectorKnob.removeChangeListener(this.boundMARSelectorChange);
+            this.$$("EmergencyOffSwitch").removeEventListener("dblclick", this.boundEmergencyOffClick);
+            this.$$("AlarmSound").pause();
+            this.$$("IBMLogo").removeEventListener("dblClick", this.boundOpenDebugPanel);
+            this.config.putWindowGeometry(this.window, "ControlPanel");
+            this.window.removeEventListener("beforeunload", this.boundBeforeUnload);
+            this.window.removeEventListener("unload", this.boundPanelUnload);
+            this.context.systemShutDown();
+            this.window.setTimeout(() => {
+                this.window.close();
+            }, 500);
+        }, 3000);
     }
 } // class ControlPanel
