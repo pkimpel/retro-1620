@@ -1220,6 +1220,6 @@ class ControlPanel {
             this.window.setTimeout(() => {
                 this.window.close();
             }, 500);
-        }, 3000);
+        }, 2000);
     }
 } // class ControlPanel

@@ -284,7 +284,7 @@ DIV.evenOddCaption {
 
 .powerDown {
     animation-name:     powerUpAnimation;
-    animation-duration: 3s;
+    animation-duration: 2s;
     animation-timing-function: ease-in;
     animation-direction:reverse;
     animation-fill-mode:forwards}

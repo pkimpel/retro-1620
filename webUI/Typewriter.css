@@ -29,12 +29,9 @@
     position:           absolute;
     height:             100%;
     width:              calc(100% - 8px);
-    min-width:          600px;                  /* same as ControlPanelFrame */
-    max-width:          calc(133ch + 20px);     /* allow for scroll bar */
+    min-width:          200px;
     left:               50%;
-    transform:          translate(-50%, 0);
-    font-size:          12px;
-    font-family:        Courier New, Courier, Consolas, monospace}
+    transform:          translate(-50%, 0)}
 #PrinterPlaten {
     position:           absolute;
     left:               2px;
