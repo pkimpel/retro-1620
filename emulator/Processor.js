@@ -572,125 +572,134 @@ class Processor {
         this.ioDiskDriveCode = 0;                       // Module number for disk I/O
         this.ioReadCheckPending = false;                // Read Check condition has occurred but not yet been set
         this.ioWriteCheckPending = false;               // Write Check condition has occurred but not het been set
-        this.ioRMPrinterLatch = 0;                      // Latch for printer buffer management
 
         // Initialization
         const buildOpAtts = (opCode,
-                opValid, eState, rfe1, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4) => {
+                opValid, eState, pIA, qIA, pIX, qIX, immed, fp, index, binary, qa4) => {
             this.opAtts[opCode] = {
-                opValid, eState, rfe1, pIA, qIA, pIX, qIX, immed, branch, fp, index, binary, edit, qa4};
+                opValid,                // op code is valid (some are set from config)
+                eState,                 // initial execution state
+                pIA,                    // P address can be indirect
+                qIA,                    // Q address can be indirect
+                pIX,                    // P address can be indexed
+                qIX,                    // Q address can be indexed
+                immed,                  // immediate op code, Q field is data
+                fp,                     // floating-point op code
+                index,                  // index register op code
+                binary,                 // binary capabilities op code
+                qa4};                   // Q address is 4 digits (binary capabilities only)
         };
 
-        //          op  v es ?1 pi qi px qx im br fp ix bi ed q4
-        buildOpAtts( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 00
-        buildOpAtts( 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 01 FADD
-        buildOpAtts( 2, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 02 FSUB
-        buildOpAtts( 3, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 03 FMUL
-        buildOpAtts( 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 04
-        buildOpAtts( 5, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 05 FSL
-        buildOpAtts( 6, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 06 TFL
-        buildOpAtts( 7, 1, 2, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 07 BTFL
-        buildOpAtts( 8, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 08 FSR
-        buildOpAtts( 9, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0);      // 09 FDIV
+        //          op   v  es  pi  qi  px  qx  im  fp  ix  bi  q4
+        buildOpAtts( 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 00
+        buildOpAtts( 1,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0);    // 01 FADD
+        buildOpAtts( 2,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0);    // 02 FSUB
+        buildOpAtts( 3,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0);    // 03 FMUL
+        buildOpAtts( 4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 04
+        buildOpAtts( 5,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0);    // 05 FSL
+        buildOpAtts( 6,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 06 TFL
+        buildOpAtts( 7,  1,  2,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 07 BTFL
+        buildOpAtts( 8,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0);    // 08 FSR
+        buildOpAtts( 9,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0);    // 09 FDIV
 
-        buildOpAtts(10, 1, 2, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0);      // 10 BTAM
-        buildOpAtts(11, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 11 AM
-        buildOpAtts(12, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 12 SM
-        buildOpAtts(13, 1, 5, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 13 MM
-        buildOpAtts(14, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 14 CM
-        buildOpAtts(15, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 15 TDM
-        buildOpAtts(16, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 16 TFM
-        buildOpAtts(17, 1, 2, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0);      // 17 BTM
-        buildOpAtts(18, 1, 5, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 18 LDM
-        buildOpAtts(19, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0);      // 19 DM
+        buildOpAtts(10,  1,  2,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 10 BTAM
+        buildOpAtts(11,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 11 AM
+        buildOpAtts(12,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 12 SM
+        buildOpAtts(13,  1,  5,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 13 MM
+        buildOpAtts(14,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 14 CM
+        buildOpAtts(15,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 15 TDM
+        buildOpAtts(16,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 16 TFM
+        buildOpAtts(17,  1,  2,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 17 BTM
+        buildOpAtts(18,  1,  5,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 18 LDM
+        buildOpAtts(19,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 19 DM
 
-        buildOpAtts(20, 1, 2, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 20 BTA
-        buildOpAtts(21, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 21 A
-        buildOpAtts(22, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 22 S
-        buildOpAtts(23, 1, 5, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 23 M
-        buildOpAtts(24, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 24 C
-        buildOpAtts(25, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 25 TD
-        buildOpAtts(26, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 26 TF
-        buildOpAtts(27, 1, 2, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 27 BT
-        buildOpAtts(28, 1, 5, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 28 LD
-        buildOpAtts(29, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 29 D
+        buildOpAtts(20,  1,  2,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 20 BTA
+        buildOpAtts(21,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 21 A
+        buildOpAtts(22,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 22 S
+        buildOpAtts(23,  1,  5,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 23 M
+        buildOpAtts(24,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 24 C
+        buildOpAtts(25,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 25 TD
+        buildOpAtts(26,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 26 TF
+        buildOpAtts(27,  1,  2,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 27 BT
+        buildOpAtts(28,  1,  5,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 28 LD
+        buildOpAtts(29,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 29 D
 
-        buildOpAtts(30, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 30 TRNM
-        buildOpAtts(31, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 31 TR
-        buildOpAtts(32, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 32 SF
-        buildOpAtts(33, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 33 CF
-        buildOpAtts(34, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 34 K
-        buildOpAtts(35, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 35 DN
-        buildOpAtts(36, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 36 RN
-        buildOpAtts(37, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 37 RA
-        buildOpAtts(38, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 38 WN
-        buildOpAtts(39, 1, 2, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0);      // 39 WA
+        buildOpAtts(30,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 30 TRNM
+        buildOpAtts(31,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 31 TR
+        buildOpAtts(32,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 32 SF
+        buildOpAtts(33,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 33 CF
+        buildOpAtts(34,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 34 K
+        buildOpAtts(35,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 35 DN
+        buildOpAtts(36,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 36 RN
+        buildOpAtts(37,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 37 RA
+        buildOpAtts(38,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 38 WN
+        buildOpAtts(39,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 39 WA
 
-        buildOpAtts(40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 40
-        buildOpAtts(41, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 41 NOP
-        buildOpAtts(42, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0);      // 42 BB
-        buildOpAtts(43, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 43 BD
-        buildOpAtts(44, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 44 BNF
-        buildOpAtts(45, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 45 BNR
-        buildOpAtts(46, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0);      // 46 BI
-        buildOpAtts(47, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0);      // 47 BNI
-        buildOpAtts(48, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 48 H
-        buildOpAtts(49, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0);      // 49 B
+        buildOpAtts(40,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 40
+        buildOpAtts(41,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 41 NOP
+        buildOpAtts(42,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 42 BB
+        buildOpAtts(43,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 43 BD
+        buildOpAtts(44,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 44 BNF
+        buildOpAtts(45,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 45 BNR
+        buildOpAtts(46,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 46 BI
+        buildOpAtts(47,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 47 BNI
+        buildOpAtts(48,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 48 H
+        buildOpAtts(49,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 49 B
 
-        buildOpAtts(50, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 50
-        buildOpAtts(51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 51
-        buildOpAtts(52, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 52
-        buildOpAtts(53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 53
-        buildOpAtts(54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 54
-        buildOpAtts(55, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0);      // 55 BNG
-        buildOpAtts(56, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 56
-        buildOpAtts(57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 57
-        buildOpAtts(58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 58
-        buildOpAtts(59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 59
+        buildOpAtts(50,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 50
+        buildOpAtts(51,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 51
+        buildOpAtts(52,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 52
+        buildOpAtts(53,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 53
+        buildOpAtts(54,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 54
+        buildOpAtts(55,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 55 BNG
+        buildOpAtts(56,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 56
+        buildOpAtts(57,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 57
+        buildOpAtts(58,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 58
+        buildOpAtts(59,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 59
 
-        buildOpAtts(60, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0);      // 60 BS
-        buildOpAtts(61, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 61 BX
-        buildOpAtts(62, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0);      // 62 BXM
-        buildOpAtts(63, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 63 BCX
-        buildOpAtts(64, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0);      // 64 BCXM
-        buildOpAtts(65, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 65 BLX
-        buildOpAtts(66, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0);      // 66 BLXM
-        buildOpAtts(67, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0);      // 67 BSX
-        buildOpAtts(68, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 68
-        buildOpAtts(69, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 69
+        buildOpAtts(60,  1,  1,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 60 BS
+        buildOpAtts(61,  1,  1,  1,  0,  1,  0,  0,  0,  1,  0,  0);    // 61 BX
+        buildOpAtts(62,  1,  1,  1,  0,  1,  0,  1,  0,  1,  0,  0);    // 62 BXM
+        buildOpAtts(63,  1,  1,  1,  0,  1,  0,  0,  0,  1,  0,  0);    // 63 BCX
+        buildOpAtts(64,  1,  1,  1,  0,  1,  0,  1,  0,  1,  0,  0);    // 64 BCXM
+        buildOpAtts(65,  1,  1,  1,  0,  1,  0,  0,  0,  1,  0,  0);    // 65 BLX
+        buildOpAtts(66,  1,  1,  1,  0,  1,  0,  1,  0,  1,  0,  0);    // 66 BLXM
+        buildOpAtts(67,  1,  1,  1,  0,  1,  0,  0,  0,  1,  0,  0);    // 67 BSX
+        buildOpAtts(68,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 68
+        buildOpAtts(69,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 69
 
-        buildOpAtts(70, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0);      // 70 MA
-        buildOpAtts(71, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 71 MF
-        buildOpAtts(72, 1, 2, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 72 TNS
-        buildOpAtts(73, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0);      // 73 TNF
-        buildOpAtts(74, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 74
-        buildOpAtts(75, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 75
-        buildOpAtts(76, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 76
-        buildOpAtts(77, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 77
-        buildOpAtts(78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 78
-        buildOpAtts(79, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 79
+        buildOpAtts(70,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 70 MA
+        buildOpAtts(71,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 71 MF
+        buildOpAtts(72,  1,  2,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 72 TNS
+        buildOpAtts(73,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 73 TNF
+        buildOpAtts(74,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 74
+        buildOpAtts(75,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 75
+        buildOpAtts(76,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 76
+        buildOpAtts(77,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 77
+        buildOpAtts(78,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 78
+        buildOpAtts(79,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 79
 
-        buildOpAtts(80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 80
-        buildOpAtts(81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 81
-        buildOpAtts(82, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 82
-        buildOpAtts(83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 83
-        buildOpAtts(84, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 84
-        buildOpAtts(85, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 85
-        buildOpAtts(86, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 86
-        buildOpAtts(87, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 87
-        buildOpAtts(88, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 88
-        buildOpAtts(89, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 89
+        buildOpAtts(80,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 80
+        buildOpAtts(81,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 81
+        buildOpAtts(82,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 82
+        buildOpAtts(83,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 83
+        buildOpAtts(84,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 84
+        buildOpAtts(85,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 85
+        buildOpAtts(86,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 86
+        buildOpAtts(87,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 87
+        buildOpAtts(88,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 88
+        buildOpAtts(89,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 89
 
-        buildOpAtts(90, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1);      // 90 BBT
-        buildOpAtts(91, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1);      // 91 BMK
-        buildOpAtts(92, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1);      // 92 ORF
-        buildOpAtts(93, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1);      // 93 ANDF
-        buildOpAtts(94, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1);      // 94 CPFL
-        buildOpAtts(95, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1);      // 95 EORF
-        buildOpAtts(96, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1);      // 96 OTD
-        buildOpAtts(97, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1);      // 97 DTO
-        buildOpAtts(98, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 98
-        buildOpAtts(99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);      // 99
+        buildOpAtts(90,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  1);    // 90 BBT
+        buildOpAtts(91,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  1);    // 91 BMK
+        buildOpAtts(92,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0);    // 92 ORF
+        buildOpAtts(93,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0);    // 93 ANDF
+        buildOpAtts(94,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0);    // 94 CPFL
+        buildOpAtts(95,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0);    // 95 EORF
+        buildOpAtts(96,  1,  5,  1,  1,  1,  1,  0,  0,  0,  1,  0);    // 96 OTD
+        buildOpAtts(97,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0);    // 97 DTO
+        buildOpAtts(98,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 98
+        buildOpAtts(99,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 99
 
         // Configure op code attributes for special features.
         for (let att of this.opAtts) {
@@ -963,11 +972,30 @@ class Processor {
     }
 
     /**************************************/
+    traceState() {
+        /* Debugging routine to write selected Processor state to the JavaScript
+        console. There is no standard way to invoke this -- you have to insert a
+        call somewhere in the code (and take it back out when you're done!) */
+
+        console.debug("%2i %s %s %s %s %s %s %s %s %s | %i %i %i %i  %i %i %i %i  %i %i %i %i  %i %i %i %i  %i %i | %2s %2s",
+            this.procState, this.regOP.toBCDString(),
+            this.regIR1.toBCDString(), this.regOR1.toBCDString(), this.regOR2.toBCDString(),
+            this.regOR3.toBCDString(), this.regPR1.toBCDString(), this.regPR2.toBCDString(),
+            this.regMQ.toBCDString(), this.regDR.toBCDString(),
+            this.gateFL_1.value, this.gateFL_2.value, this.gateFIELD_MK_1.value, this.gateFIELD_MK_2.value,
+            this.gate1ST_CYC.value, this.gate1ST_CYC_DELAYD.value, this.gateDIV_1_CYC.value, this.gateDVD_L_CYC.value,
+            this.gateADD_ENT.value, this.gateADD_MODE.value, this.gate2_DIG_CNTRL.value, this.gateCOMP.value,
+            this.gateCARRY_IN.value, this.gateCARRY_OUT.value, this.gateDVD_SIGN.value, this.gateLAST_LD_CYC.value,
+            this.gateHP.value, this.gateEZ.value,
+            this.regMBR.even.toString(16).padStart(2, "0"), this.regMBR.odd.toString(16).padStart(2, "0"));
+    }
+
+    /**************************************/
     updateLampGlow(beta) {
         /* Updates the lamp glow for all registers and flip-flops in the
         system. Beta is a bias in the range (0,1). For normal update use 0;
         to freeze the current state in the lamps use 1 */
-        let gamma = (this.gateMANUAL.value ? 1 : beta || 0);
+        const gamma = (this.gateMANUAL.value ? 1 : beta || 0);
 
         // Control Gates
         this.gate$$$_OFLO.updateLampGlow(gamma);
@@ -1322,17 +1350,16 @@ class Processor {
             break;
         case 9:         // Line Printer
             if ((digit & Envir.numRecMark) == Envir.numRecMark) {
-                this.ioRMPrinterLatch = 1;
+                this.gateRM.value = 1;
             }
 
-            if (this.ioRMPrinterLatch) {
+            if (this.gateRM.value) {
                 eob = await this.ioDevice.writeNumeric(-1);     // dummy buffer fill
             } else {
                 eob = await this.ioDevice.writeNumeric(digit);
             }
 
             if (eob) {
-                this.ioRMPrinterLatch = 0;
                 this.ioExit();
             }
             break;
@@ -1373,17 +1400,16 @@ class Processor {
             break;
         case 9:         // Line Printer
             if ((digitPair & Envir.numRecMark) == Envir.numRecMark) {
-                this.ioRMPrinterLatch = 1;
+                this.gateRM.value = 1;
             }
 
-            if (this.ioRMPrinterLatch) {
+            if (this.gateRM.value) {
                 eob = await this.ioDevice.writeAlpha(-1);       // dummy buffer fill
             } else {
                 eob = await this.ioDevice.writeAlpha(digitPair);
             }
 
             if (eob) {
-                this.ioRMPrinterLatch = 0;
                 this.ioExit();
             }
             break;
@@ -2497,6 +2523,7 @@ class Processor {
         this.gateMC_2.value = 0;
         this.gateP_COMP.value = 0;
         this.gateRECOMP.value = 0;
+        this.gateRM.value = 0;
         this.gateX_SIG_DIGIT.value = 0;
         this.resetDREven();
         this.resetDROdd();
@@ -2701,13 +2728,12 @@ class Processor {
         this.regMAR.value = this.regIR1.value;
         this.fetch();
         let mbrEven = this.regMBR.even;
-        let mbrOdd = this.regMBR.odd;
 
         this.regOR2.setDigit(0, mbrEven);
         this.regOR3.setDigit(0, mbrEven);
         this.regXBR.setDigit(0, mbrEven);
         this.resetDREven();
-        this.setDREven(mbrOdd);
+        this.setDREven(this.regMBR.odd);
         this.resetDROdd();
         this.setDROdd(0);
         this.regPR1.clear();
@@ -2760,15 +2786,21 @@ class Processor {
         case 39:        // WA, Write Alphanumerically
         case 46:        // BI, Branch Indicator
         case 47:        // BNI, Branch No Indicator
-        case 90:        // BBT, Branch on Bit
-        case 91:        // BMK, Branch on Mask
             // Set up DR for S/B decode, don't load OR1 for S/B ops.
-            this.setDREven(this.regMBR.even);
-            this.setDROdd(this.regMBR.odd);
+            this.setDREven(mbrEven);
+            this.setDROdd(mbrOdd);
             break;
 
         case 60:        // BS, Branch and Select
             break;                              // do nothing in I-5
+
+        case 90:        // BBT, Branch on Bit
+        case 91:        // BMK, Branch on Mask
+            this.regOR1.setDigit(3, mbrEven);
+            this.regOR1.setDigit(2, mbrOdd);
+            this.regXBR.setDigit(3, mbrEven);
+            this.regXBR.setDigit(2, mbrOdd);
+            break;
 
         default:
             if (!this.opThisAtts.immed) {       // don't load OR1 for immediate ops in I-5
@@ -3285,6 +3317,7 @@ class Processor {
 
         case 13:        // MM - Multiply Immediate
         case 23:        // M - Multiply
+        case 96:        // OTD - Octal to Decimal
             this.gate1ST_CYC.value = 1;
             this.gateEZ.value = 1;
             this.gateHP.value = 1;
@@ -3301,6 +3334,7 @@ class Processor {
 
         case 19:        // DM - Divide Immediate
         case 29:        // D - Divide
+        case 97:        // DTO - Decimal to Octal
             this.gateDIV_1_CYC.value = 1;
             this.enterAdd();            // DO NOT set ADD_ENT for first cycle
             this.gateCOMP.value = 1;
@@ -3327,6 +3361,13 @@ class Processor {
             } else {
                 this.gateIX_EXEC.value = 1;
             }
+            break;
+
+        case 92:        // ORF - OR to Field
+        case 93:        // ANDF - AND to Field
+        case 94:        // CPLF - Complement Octal Field
+        case 95:        // EORF - Exclusive OR to Field
+            this.gateEZ.value = 1;
             break;
         }
 
@@ -3407,7 +3448,7 @@ class Processor {
         this.gateFRAC_ADD_ENTRY.value = 1;
         this.changeFPMode();
         this.gateADD_ENT.value = 1;
-        if (this.opBinary == 2 /* 02=FSUB */) {
+        if (this.opBinary == 2 /*FSUB*/) {
             this.gateCOMP.value = 1;
         }
 
@@ -3587,8 +3628,8 @@ class Processor {
         See ILD 10.0.00.93.1 */
 
         if (this.gateCARRY_OUT.value && !this.gateCOMP.value) {
-            if ((op == 3 /* 03=FMUL */ && this.gateHP.value) ||
-                    (op == 9 /* 09=FDIV */ && !this.gateHP.value)) {
+            if ((op == 3 /*FMUL*/ && this.gateHP.value) ||
+                    (op == 9 /*FDIV*/ && !this.gateHP.value)) {
                 if (this.gateEZ.value) {
                     this.gateEXP_OFLO_CORR.value = 1;
                 }
@@ -3892,7 +3933,7 @@ class Processor {
             this.regOR1.decr(2);
         }
 
-        if (this.gate1ST_CYC.value && op != 9 /* 09=FDIV */ && (this.regMBR.getDigit(dx) & Register.flagMask)) {
+        if (this.gate1ST_CYC.value && op != 9 /*FDIV*/ && (this.regMBR.getDigit(dx) & Register.flagMask)) {
             this.gateHP.flip();
         }
 
@@ -3918,7 +3959,7 @@ class Processor {
         this.regMAR.value = this.regOR2.value;
         this.fetch();
         if (this.gate1ST_CYC_DELAYD.value) {
-            if (op == 2 /* 02=FSUB */) {
+            if (op == 2 /*FSUB*/) {
                 this.gateHP.flip();
             }
 
@@ -4598,9 +4639,9 @@ class Processor {
                 // Check for end of add operation: COMP&CARRY | !COMP
                 if (this.gateCOMP.value ? this.gateCARRY_OUT.value : 1) {
                     nextState = 0;                      // so as not to override enterICycle()
-                    if (op == 3 /* 03=FMUL */) {
+                    if (op == 3 /*FMUL*/) {
                         this.enterFPMultiply();
-                    } else if (op == 9 /* 09=FDIV */) {
+                    } else if (op == 9 /*FDIV*/) {
                         this.enterFPFractionCompare();
                     } else {
                         this.panic("Invalid exit from Exponent Add");
@@ -4635,11 +4676,11 @@ class Processor {
         this.gate2_DIG_CNTRL.value = 1;
         this.gateCARRY_OUT.value = 0;
         this.gateCARRY_IN.value = 0;    // not in ILD (at least not obviously)
-        if (op == 9 /* 09=FDIV */) {
+        if (op == 9 /*FDIV*/) {
             this.gateCOMP.value = 0;
         }
 
-        if (op != 3 /* 03=FMUL */) {
+        if (op != 3 /*FMUL*/) {
             this.regMAR.value = this.regCR1.value;
         } else {
             this.regMAR.value = this.regPR1.value;
@@ -5216,9 +5257,12 @@ class Processor {
         /* Handles the E2 state for Multiply */
 
         if (this.gate1ST_MPLY_CYCLE.value) {    // ILD has this as 1ST_CYC, but that can't be right
-            this.gate1ST_MPLY_CYCLE.value = 0;
-            this.regMAR.value = this.regPR1.value;
-            this.regPR1.decr(1);
+            if (op == 96 /*OTD*/) {
+                this.regMAR.binaryValue = 99;   // reset product area addr on each OTD cycle
+            } else {
+                this.regMAR.value = this.regPR1.value;
+                this.regPR1.decr(1);
+            }
         } else {
             this.regMAR.value = this.regPR2.value;
         }
@@ -5241,12 +5285,13 @@ class Processor {
             this.gateEZ.value = 0;
         }
 
-        if (this.gate1ST_CYC_DELAYD.value && !this.gateHP.value) {
+        if (!this.gateHP.value &&
+                (this.gate1ST_CYC_DELAYD.value || (op == 96 /*OTD*/ && this.gate1ST_MPLY_CYCLE.value))) {
             digit |= Register.flagMask;         // set product sign in low-order digit
         }
 
         if (this.gate2_DIG_CNTRL.value) {       // first E-2 cycle
-            if (op == 3 /* 03=FMUL */ &&
+            if (op == 3 /*FMUL*/ &&
                     this.gateFIELD_MK_1.value && this.gateFIELD_MK_2.value &&
                     !this.gateCARRY_OUT.value && !this.gateMC_1.value &&
                     (this.regDR.even & Register.bcdMask) == 0) {
@@ -5267,6 +5312,7 @@ class Processor {
         this.store();
 
         // Now, figure out how to get outta here...
+        this.gate1ST_MPLY_CYCLE.value = 0;
         if (this.gate2_DIG_CNTRL.value) {
             this.gate2_DIG_CNTRL.value = 0;     // stay in E-2 for 2nd cycle
         } else {
@@ -5274,7 +5320,7 @@ class Processor {
                 if (this.gateMC_2.value) {      // stay in E-2 for 3rd cycle to add final carry
                     this.gateCARRY_OUT.value = this.gateMC_2.value;
                 } else if (this.gateFIELD_MK_1.value) {
-                    if (op == 3 /* 03=FMUL */) {
+                    if (op == 3 /*FMUL*/) {
                         this.enterFPExponentModify();
                     } else {
                         this.enterICycle();     // finito
@@ -5282,7 +5328,7 @@ class Processor {
                 } else {
                     this.setProcState(procStateE1); // advance to next multiplier digit
                 }
-            } else if (this.regMQ.isZero && !this.gateFIELD_MK_1.value) {
+            } else if (this.regMQ.isZero && !this.gateFIELD_MK_1.value && op != 96 /*OTD*/) {
                 this.setProcState(procStateE1); // zero multiplier - early exit to next multiplier digit
             } else {
                 this.setProcState(procStateE3); // advance to next multiplicand digit
@@ -5326,7 +5372,7 @@ class Processor {
             digit = this.regMBR.getDigit(dx);
             if (this.gateFIELD_MK_2.value) {
                 if (this.gateDVD_SIGN.value) {  // set sign in product field
-                    this.regMIR.setDigit(dx, digit |= Register.flagMask);
+                    this.regMIR.setDigit(dx, digit | Register.flagMask);
                 }
 
                 if (this.gateLD.value) {
@@ -5371,8 +5417,13 @@ class Processor {
     }
 
     /**************************************/
-    stepE1Divide() {
-        /* Handles the E1 step for Divide */
+    stepE1Divide(op) {
+        /* Handles the E1 step for Divide. For DTO, it's not clear what should
+        happen here. The ILD flowchart (10.00.17.1) says that during the add-
+        correction cycles (!COMP), we should step using OR1 rather than PR1 to
+        leave PR1 in place to advance to next power-of-8 table entry, but doesn't
+        say how OR1 then gets reset to that next entry. So we don't do anything
+        special for DTO here and step OR1 in E4 */
 
         if (this.gateADD_ENT.value) {           // not set initially
             this.gateADD_ENT.value = 0;
@@ -5380,7 +5431,9 @@ class Processor {
             this.gateADD_MODE.value = 1;
             this.gateFIELD_MK_1.value = 0;
             this.gateFIELD_MK_2.value = 0;
-            this.gateCOMP.value = this.gateCARRY_OUT.value;
+            if (!this.gateCARRY_OUT.value) {
+                this.gateCOMP.value = 0;
+            }
         }
 
         if (this.gate1ST_CYC.value) {
@@ -5406,16 +5459,25 @@ class Processor {
     }
 
     /**************************************/
-    stepE2Divide() {
+    stepE2Divide(op) {
         /* Handles the E2 state for Divide */
         let nextState = 0;
 
         if (this.gate1ST_CYC_DELAYD.value) {
-            this.regOR2.value = this.regOR3.value;      // reset the dividend digit address
             this.gateCARRY_IN.value = this.gateCOMP.value;  // preset carry on first cycle
+            if (op == 97 /*DTO*/) {
+                this.regMAR.binaryValue = 99;
+                this.regPR2.value = this.regMAR.value;
+            } else {
+                this.regMAR.value = this.regOR3.value;  // reset the dividend digit address
+                this.regOR2.value = this.regMAR.value;
+            }
+        } else if (op == 97 /*DTO*/) {
+            this.regMAR.value = this.regPR2.value;
+        } else {
+            this.regMAR.value = this.regOR2.value;
         }
 
-        this.regMAR.value = this.regOR2.value;
         this.fetch();                           // next dividend/remainder digit
         let dx = this.regMAR.isEven;
         let digit = this.regMBR.getDigit(dx);
@@ -5428,7 +5490,7 @@ class Processor {
         }
 
         digit = this.addDigits(digit);
-        if (this.gateDVD_L_CYC.value) {
+        if (this.gateDVD_L_CYC.value || op == 97 /*DTO*/) {
             if (this.gate1ST_CYC_DELAYD.value) {
                 digit |= this.regMBR.getDigit(dx) & Register.flagMask; // preserve remainder sign
             } else if (this.gateFL_1.value) {
@@ -5439,7 +5501,11 @@ class Processor {
         this.gateCARRY_IN.value = this.gateCARRY_OUT.value;
         this.regMIR.setDigit(dx, digit);
         this.store();
-        this.regOR2.decr(1);                    // update OR1 before chance of early exits
+        if (op == 97 /*DTO*/) {                 // update OR2/PR2 before chance of early exits
+            this.regPR2.decr(1);
+        } else {
+            this.regOR2.decr(1);
+        }
 
         if (this.gate1ST_CYC_DELAYD.value) {    // this was the first cycle of a divide cycle
             if (this.gateDVD_L_CYC.value && !this.gateCOMP.value) { // last divide cycle add mode
@@ -5452,26 +5518,30 @@ class Processor {
             }
         } else if (this.gateFIELD_MK_1.value) { // this was the third E2 cycle (see below)
             this.gateFIELD_MK_2.value = 1;
-            this.gateADD_ENT.value = 1;         // restart field processing in E1
-            if (this.gateCARRY_OUT.value) {     // result from this cycle is still positive, so...
-                if (this.regMQ.binaryValue < 9) {
-                    this.regMQ.incr(1);         // increment quotient digit
-                    nextState = procStateE1;    // and do another subtraction cycle
-                } else {                        // exceeded 9 subtractions, set overflow and quit
-                    this.regMQ.value = 0xA;     // MQ actually counted to binary 10 on overflow
-                    this.setIndicator(14, `DIV Arithmetic overflow: op=${this.opBinary}, IR1=${this.regIR1.binaryValue-12}`);
-                    nextState = 0;              // inhibit any other state change and exit
-                    this.enterICycle();
+            if (!this.gateCOMP.value && op == 97 /*DTO*/) { // was extra add-correction cycle for DTO
+                nextState = procStateE3;
+            } else {
+                this.gateADD_ENT.value = 1;     // restart field processing in E1
+                if (this.gateCARRY_OUT.value) { // result from this cycle is still positive, so...
+                    if (this.regMQ.binaryValue < (op==97 /*DTO*/ ? 7 : 9)) {
+                        this.regMQ.incr(1);     // increment quotient digit
+                        nextState = procStateE1;// and do another subtraction cycle
+                    } else {                    // exceeded max subtractions, set overflow and quit
+                        this.regMQ.value = (op==97 /*DTO*/ ? 0x8 : 0xA); // MQ counted to binary 10 or 8 on overflow
+                        this.setIndicator(14, `DIV Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue-12}`);
+                        nextState = 0;          // inhibit any other state change and exit
+                        this.enterICycle();
+                    }
+                } else {                            // result from this cycle is negative, so...
+                    nextState = procStateE1;        // start the add-correction cycle (COMP turned off in E1)
                 }
-            } else {                            // result from this cycle is negative, so...
-                nextState = procStateE1;        // start the add-correction cycle (COMP turned off in E1)
             }
         } else if (this.gateFL_1.value) {       // at the end of the divisor field
             this.gateFIELD_MK_1.value = 1;
-            if (this.gateCOMP.value) {          // we've been subtracting
-                this.resetDREven();
-                this.setDREven(0);              // addend will be zero for next cycle
-                nextState = 0;                  // do third E2 cycle to apply borrow to next quotient digit
+            if (this.gateCOMP.value || op == 97 /*DTO*/) { // we've been doing a third E2 cycle
+                this.resetDREven();             // addend will be zero for next single E2 cycle
+                this.setDREven(0);              // do one more E2 cycle to apply borrow/carry to next quotient digit
+                nextState = 0;
             } else {                            // otherwise, this was an add-correction cycle
                 this.gateFIELD_MK_2.value = 1;
                 nextState = procStateE3;        // finish this quotient digit in E3
@@ -5754,7 +5824,7 @@ class Processor {
             } else if (this.gateLD.value) {
                 this.stepE1LoadDividend();
             } else if (this.gateFDIV.value) {
-                this.stepE1Divide();
+                this.stepE1Divide(this.opBinary);
             } else if (this.gateEXP_MODIFY.value) {
                 this.stepE1FPExponentModify(this.opBinary);
             } else if (this.gateRESULT_XMIT.value) {
@@ -5831,6 +5901,7 @@ class Processor {
 
         case 13:        // MM - Multiply Immediate
         case 23:        // M - Multiply
+        case 96:        // OTD - Octal to Decimal
             this.stepE1Multiply(dx);
             break;
 
@@ -5841,7 +5912,8 @@ class Processor {
 
         case 19:        // DM - Divide Immediate
         case 29:        // D - Divide
-            this.stepE1Divide();
+        case 97:        // DTO - Decimal to Octal
+            this.stepE1Divide(this.opBinary);
             break;
 
         case 30:        // TRNM - Transmit Record No Record Mark
@@ -5877,6 +5949,7 @@ class Processor {
 
         case 45:        // BNR - Branch No Record Mark
             if ((this.regMBR.getDigit(dx) & Envir.numRecMark) != Envir.numRecMark) {
+                this.gateRM.value = 1;
                 this.gateBR_EXEC.value = 1;
             }
             this.enterICycle();
@@ -5961,6 +6034,38 @@ class Processor {
             this.setProcState(procStateE2);
             break;
 
+        case 90:        // BBT - Branch on Bit
+            digit = this.regMBR.getDigit(dx);
+            if (this.getDREven() & digit & Register.notParityMask) {
+                this.gateBR_EXEC.value = 1;
+            }
+            this.enterICycle();
+            break;
+
+        case 91:        // BMK - Branch on Mask
+            digit = this.regMBR.getDigit(dx);
+            if ((this.getDREven() & Register.bcdMask) == (digit & Register.bcdMask) &&
+                    (!this.gateFL_2.value || (digit & Register.flagMask))) {
+                this.gateBR_EXEC.value = 1;
+            }
+            this.enterICycle();
+            break;
+
+        case 92:        // ORF - OR to Field
+        case 93:        // ANDF - AND to Field
+        case 94:        // CPLF - Complement to Octal Field
+        case 95:        // EORF - Exclusive OR to Field
+            digit = this.regMBR.getDigit(dx);
+            this.setDREven(digit);
+            this.setDROdd(0);
+            if (digit & Register.flagMask) {
+                this.gateFIELD_MK_1.value = 1;
+            }
+
+            this.regOR1.decr(1);
+            this.setProcState(procStateE2);
+            break;
+
         default:
             this.panic(`E-1 op not implemented ${this.opBinary}`);
             break;
@@ -5996,6 +6101,8 @@ class Processor {
         case 65:        // BLX - Branch and Load Index Register
         case 66:        // BLXM - Branch and Load Index Register Immediate
         case 67:        // BSX - Branch and Store Index Register
+        case 96:        // OTD - Octal to Decimal
+        case 97:        // DTO - Decimal to Octal
             break;              // fetch done later, below
         default:
             this.regMAR.value = this.regOR2.value;
@@ -6168,6 +6275,7 @@ class Processor {
 
         case 13:        // MM - Multiply Immediate
         case 23:        // M - Multiply
+        case 96:        // OTD - Octal to Decimal
             this.stepE2Multiply(op);
             break;
 
@@ -6178,6 +6286,7 @@ class Processor {
 
         case 19:        // DM - Divide Immediate
         case 29:        // D - Divide
+        case 97:        // DTO - Decimal to Octal
             this.stepE2Divide(op);
             break;
 
@@ -6192,6 +6301,7 @@ class Processor {
             }
 
             if ((digit & Envir.numRecMark) == Envir.numRecMark) {
+                this.gateRM.value = 1;
                 if (op == 31) {         // only store the RM if it's TR
                     this.regMIR.setDigit(dx, digit);
                     this.store();
@@ -6341,6 +6451,46 @@ class Processor {
             }
             break;
 
+        case 92:        // ORF - OR to Field
+        case 93:        // ANDF - AND to Field
+        case 94:        // CPLF - Complement to Octal Field
+        case 95:        // EORF - Exclusive OR to Field
+            digit = this.regMBR.getDigit(dx);
+            switch (op) {
+            case 92:                    // ORF - OR to Field
+                digit = (digit | this.shiftDREvenOdd()) & 0x07;
+                this.regMIR.setDigitNoFlag(dx, digit);
+                break;
+            case 93:                    // ANDF - AND to Field
+                digit = (digit & this.shiftDREvenOdd()) & 0x07;
+                this.regMIR.setDigitNoFlag(dx, digit);
+                break;
+            case 94:                    // CPLF - Complement to Octal Field
+                digit = (~this.shiftDREvenOdd()) & 0x07;
+                if (this.gateFIELD_MK_1.value) {
+                    digit |= Register.flagMask;
+                }
+                this.regMIR.setDigit(dx, digit);
+                break;
+            case 95:                    // EORF - Exclusive OR to Field
+                digit = (digit ^ this.shiftDREvenOdd()) & 0x07;
+                this.regMIR.setDigitNoFlag(dx, digit);
+                break;
+            }
+
+            if (digit & Register.bcdMask) {
+                this.gateEZ.value = 0;
+            }
+
+            this.store();
+            this.regOR2.decr(1);
+            if (this.gateFIELD_MK_1.value) {
+                this.enterICycle();
+            } else {
+                this.setProcState(procStateE1);
+            }
+            break;
+
         default:
             this.panic(`E-2 op not implemented ${op}`);
             break;
@@ -6352,11 +6502,13 @@ class Processor {
         /* Executes E-Cycle 3 */
         let digit = 0;
         let dx = 0;                     // digit index: 0/1
+        const op = this.opBinary;
 
-        switch (this.opBinary) {
+        switch (op) {
         case  3:        // FMUL - Floating Multiply
         case 13:        // MM - Multiply Immediate
         case 23:        // M - Multiply
+        case 96:        // OTD - Octal to Decimal
             // Fetch Multiplicand digit to DR-odd, determine multiplicand sign.
             if (this.gate1ST_MPLY_CYCLE.value) {
                 this.regMAR.value = this.regOR2.value;
@@ -6380,12 +6532,16 @@ class Processor {
             this.setDROdd(digit);
             this.regMAR.decr(1);
             this.regOR3.value = this.regMAR.value;
+            if (op == 96 /*OTD*/) {
+                this.regOR2.value = this.regMAR.value;
+            }
             this.setProcState(procStateE4);
             break;
 
         case  9:        // FDIV - Floating Divide
         case 19:        // DM - Divide Immediate
         case 29:        // D - Divide
+        case 97:        // DTO - Decimal to Octal
             this.regMAR.value = this.regOR2.value;
             this.fetch();
             if (this.gateFDIV.value) {
@@ -6415,10 +6571,14 @@ class Processor {
 
             this.regMIR.setDigit(this.regMAR.isEven, digit);
             this.store();                               // store quotient digit in product area
+            if (op == 97 /*DTO*/) {
+                this.gate1ST_CYC.value = 1;
+                this.regOR2.incr(1);
+            }
             break;
 
         default:
-            this.panic(`E-3 op not implemented ${this.opBinary}`);
+            this.panic(`E-3 op not implemented ${op}`);
             break;
         }
     }
@@ -6427,11 +6587,13 @@ class Processor {
     stepECycle4() {
         /* Executes E-Cycle 4 */
         let q2 = 0;                     // multiply table address term
+        const op = this.opBinary;
 
-        switch (this.opBinary) {
+        switch (op) {
         case  3:        // FMUL - Floating Multiply
         case 13:        // MM - Multiply Immediate
         case 23:        // M - Multiply
+        case 96:        // OTD - Octal to Decimal
             // Fetch product digits based on multiplier (MQ) and multiplicand (DR-odd).
             // The table address caculation is adapted from Dave Babcock's CHM 1620 Jr. emulator.
             this.gate2_DIG_CNTRL.value = 1;
@@ -6449,17 +6611,15 @@ class Processor {
         case  9:        // FDIV - Floating Divide
         case 19:        // DM - Divide Immediate
         case 29:        // D - Divide
-            this.gateADD_ENT.value = 1;                 // initialize fields on next cycle
-            this.gateCOMP.value = 1;                    // stop adding and enable subtract cycles again
-            this.gateDIV_1_CYC.value = 0;               // not the first division cycle anymore
-            this.regMQ.clear();                         // zero the quotient digit counter
+            this.regMQ.clear();                     // zero the quotient digit counter
+            this.gateADD_ENT.value = 1;             // initialize fields on next cycle
+            this.gateCOMP.value = 1;                // stop adding and enable subtract cycles again
+            this.gateDIV_1_CYC.value = 0;           // not the first division cycle anymore
             this.regMAR.value = this.regOR3.value;
-            this.regOR3.incr(1);                        // step to next dividend digit
             if ((this.regMAR.value & 0b001111_000000_000000_001111_001111) == 0b001001_001000) { // MAR == 0XX98
-                this.gateDVD_L_CYC.value = 1;           // next cycle is the last one
+                this.gateDVD_L_CYC.value = 1;       // next cycle is the last one
             }
 
-            this.setProcState(procStateE1);
             if (this.gateDVD_L_CYC.value) {
                 if (this.gateFDIV.value &&
                         (this.regMAR.value & 0b001111_000000_000000_001111_001111) == 0b001001_001001) { // MAR == 0XX99
@@ -6470,10 +6630,52 @@ class Processor {
                     }
                 }
             }
+
+            this.regOR3.incr(1);                    // step to next dividend digit
+            this.setProcState(procStateE1);
+            break;
+
+        case 97:        // DTO - Decimal to Octal
+            /* It's not clear exactly how this should work. The ILD flowchart
+            (10.00.17.1) says that during the DTO add-correction cycles (!COMP),
+            we should step using OR1 rather than PR1 and leave PR1 at the
+            original value of OR1 to advance PR1 to next power-of-8 table entry
+            in E4, but doesn't say how OR1 then gets reset to that next entry.
+            Advancing OR1 is the only thing that makes sense, so we take the
+            liberty here of not using PR1 and simply advancing OR1, even though
+            that's not mentioned at all for E4 in ILD 10.01.02.1.
+             */
+
+            this.regMQ.clear();
+            this.regMAR.value = this.regOR1.value;  // current entry low-order digit
+            this.fetch();
+            if (this.gate1ST_CYC.value) {   // skip over this field FM
+                this.gate1ST_CYC.value = 0;
+                this.regMAR.incr(2);
+            } else {                        // search for following field FM or terminating RM/GM
+                const digit = this.regMBR.getDigit(this.regMAR.isEven);
+                const rmgmLatch = (digit & Envir.numRecMark) == Envir.numRecMark;
+                if (rmgmLatch) {            // it's a Record Mark-like character
+                    this.gateRM.value = 1;
+                    this.gateDVD_L_CYC.value = 1;
+                }
+
+                if (!((digit & Register.flagMask) || rmgmLatch)) {
+                    this.regMAR.incr(1);
+                } else {                    // found start of next divisor field
+                    this.gateADD_ENT.value = 1;
+                    this.gateCOMP.value = 1;
+                    this.gateDIV_1_CYC.value = 0;       // not the first division cycle anymore
+                    this.regMAR.decr(1);
+                    this.setProcState(procStateE1);
+                }
+            }
+
+            this.regOR1.value = this.regMAR.value;
             break;
 
         default:
-            this.panic(`E-4 op not implemented ${this.opBinary}`);
+            this.panic(`E-4 op not implemented ${op}`);
             break;
         }
     }
@@ -6489,6 +6691,7 @@ class Processor {
         case 18:        // LDM - Load Dividend Immediate
         case 23:        // M - Multiply
         case 28:        // LD - Load Dividend
+        case 96:        // OTD - Octal to Decimal
             // Clear the product area, 00081-00099
             if (this.gate1ST_CYC.value) {
                 this.gate1ST_CYC.value = 0;
