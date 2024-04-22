@@ -263,6 +263,9 @@ class DiskModule {
         let deltaHeight = 0;
         let deltaWidth = 0;
 
+        const initiateExtract = this.extractModule.bind(this);
+        const initiateSave = this.saveModule.bind(this);
+
         const initiateLoad = (ev) => {
             const reader = new FileReader();
             const f = ev.target.files[0];       // the selected file
@@ -272,7 +275,7 @@ class DiskModule {
                 of the file to the processsor for loading into memory */
                 const image = ev.target.result;
 
-                if (this.drive.window.confirm(`Are you sure you want to DESTROY THE CONTENTS of module ${this.moduleNr} and reload it from a disk pack image file?`)) {
+                if (this.drive.window.confirm(`Are you sure you want to OVERWRITE THE CONTENTS of module ${this.moduleNr} and load new data from a disk pack image file?`)) {
                     this.loadModule(image).then((result) => {
                         if (result) {
                             this.drive.window.alert("Error during disk pack image load");
@@ -282,7 +285,7 @@ class DiskModule {
                             config.imageName = f.name;
                             this.config.putNode("Disk.module", config, this.moduleNr);
                             setStatus();
-                            cancelDialog();
+                            closeDialog();
                         }
                     });
                 }
@@ -292,16 +295,12 @@ class DiskModule {
             reader.readAsText(f);
         };
 
-        const initiateDump = (ev) => {
-            this.dumpModule();          // no status change
-        };
-
         const initiateInitialize = (ev) => {
             if (this.drive.window.confirm(`Are you sure you want to COMPLETELY ERASE and reinitialize module ${this.moduleNr}?`)) {
                 this.initializeModule().then(() => {
                     this.started = true;
                     setStatus();
-                    cancelDialog();
+                    closeDialog();
                 });
             }
         };
@@ -314,10 +313,11 @@ class DiskModule {
             this.setModuleReadyStatus();
         };
 
-        const cancelDialog = (ev) => {
-            this.drive.$$("DiskPackCancelBtn").removeEventListener("click", cancelDialog);
+        const closeDialog = (ev) => {
+            this.drive.$$("DiskPackCloseBtn").removeEventListener("click", closeDialog);
             this.drive.$$("DiskPackInitializeBtn").removeEventListener("click", initiateInitialize);
-            this.drive.$$("DiskPackDumpBtn").removeEventListener("click", initiateDump);
+            this.drive.$$("DiskPackExtractBtn").removeEventListener("click", initiateExtract);
+            this.drive.$$("DiskPackSaveBtn").removeEventListener("click", initiateSave);
             this.drive.$$("DiskPackSelector").removeEventListener("change", initiateLoad);
             this.drive.$$("DiskPackSelector").value = null;       // reset the file-picker control
             this.drive.$$("DiskPackDiv").style.display = "none";
@@ -333,9 +333,10 @@ class DiskModule {
             this.setModuleReadyStatus();
             this.drive.$$("DiskPackDiv").style.display = "block";
             this.drive.$$("DiskPackSelector").addEventListener("change", initiateLoad);
-            this.drive.$$("DiskPackDumpBtn").addEventListener("click", initiateDump);
+            this.drive.$$("DiskPackExtractBtn").addEventListener("click", initiateExtract);
+            this.drive.$$("DiskPackSaveBtn").addEventListener("click", initiateSave);
             this.drive.$$("DiskPackInitializeBtn").addEventListener("click", initiateInitialize);
-            this.drive.$$("DiskPackCancelBtn").addEventListener("click", cancelDialog);
+            this.drive.$$("DiskPackCloseBtn").addEventListener("click", closeDialog);
 
             const rect = this.drive.$$("DiskPackDiv").getBoundingClientRect();
             deltaHeight = Math.max(rect.height + 64 - this.drive.window.innerHeight, 0);
@@ -480,14 +481,14 @@ class DiskModule {
     }
 
     /**************************************/
-    dumpModule() {
+    extractModule() {
         /* Extracts the contents of the module storage and converts it to text
         in a new temporary window so it can be copied, printed, or saved by the
         user. All characters are ASCII according to the convention used by the
         card punch for the 1620-Jr project */
-        const title = "retro-1620 Disk Dump";
+        const title = "retro-1620 Disk Image Extract";
 
-        const exportModule = (ev) => {
+        const extractDiskImage = (ev) => {
             const doc = ev.target;
             const win = doc.defaultView;
             const content = doc.getElementById("Paper");
@@ -500,11 +501,11 @@ class DiskModule {
             let text = "";
 
             txn.onerror = (ev) => {
-                this.processor.setIndicator(36, `Disk readTrack ${this.moduleName} error: addr=${this.sectorKey}, ${ev.target.error.name}`);
+                this.processor.setIndicator(36, `Disk extractModule ${this.moduleName} error: addr=${this.sectorKey}, ${ev.target.error.name}`);
             };
 
             txn.onabort = (ev) => {
-                this.processor.setIndicator(36, `Disk readTrack ${this.moduleName} abort: addr=${this.sectorKey}, ${ev.target.error.name}`);
+                this.processor.setIndicator(36, `Disk extractModule ${this.moduleName} abort: addr=${this.sectorKey}, ${ev.target.error.name}`);
             };
 
             txn.oncomplete = (ev) => {
@@ -516,12 +517,12 @@ class DiskModule {
                 if (cursor) {
                     const data = cursor.value;
                     const key = cursor.key;
-                    let line = key.toString().padStart(DiskModule.addressSize, " ") + ","
+                    let line = "";
                     for (let byte of data) {
                         line += DiskModule.numericGlyphs[byte & 0x1F];
                     }
 
-                    text += line + "\n";
+                    text += `${key.toString().padStart(DiskModule.addressSize, " ")},${line}\n`;
                     cursor.continue();  // advance to next sector
                 }
             };
@@ -529,9 +530,53 @@ class DiskModule {
 
         openPopup(this.drive.window, "./FramePaper.html", "",
                 "scrollbars,resizable,width=660,height=500",
-                this, exportModule);
+                this, extractDiskImage);
     }
 
+    /**************************************/
+    saveModule() {
+        /* Extracts the contents of the module storage, converts it to text,
+        and saves it in the local file system as directed by the user. All
+        characters are ASCII according to the convention used by the card punch
+        for the 1620-Jr project */
+        const title = "retro-1620-Disk-Image.pack";
+        let text = "";
+
+        const txn = this.db.transaction(this.moduleName, "readonly");
+        const store = txn.objectStore(this.moduleName);
+
+        txn.onerror = (ev) => {
+            this.processor.setIndicator(36, `Disk saveModule ${this.moduleName} error: addr=${this.sectorKey}, ${ev.target.error.name}`);
+        };
+
+        txn.onabort = (ev) => {
+            this.processor.setIndicator(36, `Disk saveModule ${this.moduleName} abort: addr=${this.sectorKey}, ${ev.target.error.name}`);
+        };
+
+        txn.oncomplete = (ev) => {
+            const url = `data:text/plain,${encodeURIComponent(text)}`;
+            const hiddenLink = this.doc.createElement("a");
+
+            hiddenLink.setAttribute("download", title);
+            hiddenLink.setAttribute("href", url);
+            hiddenLink.click();
+        };
+
+        store.openCursor().onsuccess = (ev) => {
+            const cursor = ev.target.result;
+            if (cursor) {
+                const data = cursor.value;
+                const key = cursor.key;
+                let line = "";
+                for (let byte of data) {
+                    line += DiskModule.numericGlyphs[byte & 0x1F];
+                }
+
+                text += `${key.toString().padStart(DiskModule.addressSize, " ")},${line}\n`;
+                cursor.continue();  // advance to next sector
+            }
+        };
+    }
 
     /**************************************/
     countSectors() {
