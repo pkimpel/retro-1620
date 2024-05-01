@@ -14,6 +14,7 @@
 *       1964-04-29. Also known as the "ILD".
 *   "Programming the IBM 1620," Second Edition, Clarence B. Germain,
 *       Prentice-Hall, 1965.
+* All are available at http://bitsavers.org/pdf/ibm/1620/.
 ************************************************************************
 * 2022-07-19  P.Kimpel
 *   Original version, from retro-g15 Processor.js.
@@ -572,6 +573,7 @@ class Processor {
         this.ioDiskDriveCode = 0;                       // Module number for disk I/O
         this.ioReadCheckPending = false;                // Read Check condition has occurred but not yet been set
         this.ioWriteCheckPending = false;               // Write Check condition has occurred but not het been set
+        this.ioMBRCheckPending = false;                 // MBR check condition due to even address on alpha I/O
 
         // Initialization
         const buildOpAtts = (opCode,
@@ -1272,7 +1274,7 @@ class Processor {
             this.ioDevice = this.devices.paperPunch;
             break;
         case 3:         // Paper Tape Reader
-            this.ioDevice = null;
+            this.ioDevice = this.devices.paperReader;
             break;
         case 4:         // Card Punch
             this.ioDevice = this.devices.cardPunch;
@@ -1290,7 +1292,13 @@ class Processor {
             this.ioVariant = variant & Register.bcdValueMask;
             break;
         case 33:        // Binary Paper Tape Reader
-            this.ioDevice = null;
+            if (!this.bcInstalled) {    // must be configured for Binary Capabilities option
+                this.ioDevice = null;
+            } else if (this.opBinary == 37 /*RA*/) {
+                this.ioDevice = this.devices.paperReader;
+            } else {
+                this.ioDevice = null;
+            }
             break;
         default:
             this.ioDevice = null;
@@ -1533,13 +1541,13 @@ class Processor {
                         // The input translator was sensitive to whether it was
                         // dealing with zone or numeric digits, so an even address
                         // could cause translation and parity errors. This
-                        // approach just sets Read Check Pending, which will set
+                        // approach just sets MBR Check Pending, which will set
                         // the check indicator in ioExit.
                         if (this.regMAR.isEven) {
                             [even, odd] = [odd | 8, even];
-                            if (!this.ioReadCheckPending) {
-                                this.ioReadCheckPending = true;
-                                this.ioReadCheck.value = 1;
+                            if (!this.ioMBRCheckPending) {
+                                this.parityMBREvenCheck.value = 1;
+                                this.ioMBRCheckPending = true;
                             }
                         }
 
@@ -1616,11 +1624,11 @@ class Processor {
                 // Simulate the problem with even starting addresses. The input
                 // translator was sensitive to whether it was dealing with zone
                 // or numeric digits, so an even address could cause translation
-                // and parity errors. This approach just sets Read Check Pending,
-                // which will set the check indicator in at lastCol below.
+                // and parity errors. This approach just sets MBR Check Pending,
+                // which will set the check indicator at lastCol below.
                 if (this.regMAR.isEven) {
                     [even, odd] = [odd | 8, even];
-                    this.ioReadCheckPending = true;
+                    this.ioMBRCheckPending = true;
                 }
 
                 // Preserve any flags already in memory.
@@ -1637,12 +1645,169 @@ class Processor {
                 if (this.ioReadCheckPending) {
                     this.ioReadCheckPending = false;
                     this.setIndicator(6, "CardReader read check");
-                    if (this.ioStopSwitch) {
-                        return;                 // don't restart the Processor
-                    }
+                }
+
+                if (this.ioMBRCheckPending) {
+                    this.ioMBRCheckPending = false;
+                    this.setIndicator(16, "CardReader even address for alphanumeric I/O");
                 }
 
                 this.ioExit();                  // exits Limbo state; will reset INSERT if it's set
+                if (!this.gateMANUAL.value) {
+                    this.run();
+                }
+            }
+        }
+    }
+
+    /**************************************/
+    receivePaperTapeFrame(char, eol) {
+        /* Called by the PaperTapeReader to transfer one character to core
+        memory. "char" is the ASCII 1-character string, "eol" is true if this
+        frame has the EOL punch (and char is not stored). If the PaperTapeReader
+        transfers invalid 1620 characters, the RD CHK indicator will be set */
+
+        if (this.ioSelectNr == 3 && this.gateRD.value) { // must be waiting for PaperTapeReader input
+            const readNumeric = (this.opBinary == 36);
+
+            this.gateRESP_GATE.value = 1;
+            if (readNumeric) {
+                let code = Processor.cardASCIInumeric1620[char];
+                if (eol) {
+                    code = Envir.numRecMark;
+                } else if (code === undefined) {
+                    code = 0;
+                    switch (char) {
+                    case "\x11":        // End Card 1 hole pattern
+                    case "\x0D":        // Carriage Return hole pattern
+                        this.parityMBREvenCheck.value = 1;
+                        this.ioMBRCheckPending = true;  // see Germain, p.32
+                        break;
+                    default:
+                        this.ioReadCheckPending = true;
+                        break;
+                    }
+                } else {
+                    this.gateIO_FLAG.value = code & Register.flagMask;
+                }
+
+                this.regMAR.value = this.regOR2.value;
+                this.fetch();
+                this.regMIR.setDigit(this.regMAR.isEven, Envir.oddParity5[code]);
+                this.store();
+                this.regOR2.incr(1);
+            } else {    // read alphanumeric
+                let code = Processor.stdASCIIalpha1620[char];
+                if (eol) {
+                    code = Envir.numRecMark;
+                } else if (code === undefined || char == "]") { // no flagged-0 for alpha paper tape
+                    this.ioReadCheckPending = true;
+                    code = 0;
+                }
+
+                let even = (code >> Register.digitBits) & Register.bcdMask;
+                let odd  = code & Register.bcdMask;
+                this.regMAR.value = this.regOR2.value;
+                this.fetch();
+
+                // Simulate the problem with even starting addresses. The input
+                // translator was sensitive to whether it was dealing with zone
+                // or numeric digits, so an even address could cause translation
+                // and parity errors. This approach just sets MBR Check Pending,
+                // which will set the check indicator at eol below.
+                if (this.regMAR.isEven) {
+                    [even, odd] = [odd | 8, even];
+                    if (!this.ioMBRCheckPending) {
+                        this.ioMBRCheckPending = true;
+                        this.parityMBREvenCheck.value = 1;
+                    }
+                }
+
+                // Preserve any flags already in memory.
+                this.regMIR.setDigitNoFlag(1, even);
+                this.regMIR.setDigitNoFlag(0, odd);
+                this.store();
+                this.regOR2.incr(2);
+            }
+
+            this.envir.tick();                  // advance the emulation clock
+            this.envir.tick();                  // by 2 memory cycles
+            this.gateRESP_GATE.value = 0;
+            if (eol) {
+                if (this.ioReadCheckPending) {
+                    this.ioReadCheckPending = false;
+                    this.setIndicator(6, "PaperTapeReader read check");
+                }
+
+                if (this.ioMBRCheckPending) {
+                    this.ioMBRCheckPending = false;
+                    this.setIndicator(16, "PaperTapeReader even address for alphanumeric I/O");
+                }
+
+                this.ioExit();                  // exits Limbo state;
+                if (!this.gateMANUAL.value) {
+                    this.run();
+                }
+            }
+        }
+    }
+
+    /**************************************/
+    receivePaperTapeBinary(code, eol) {
+        /* Called by the PaperTapeReader to transfer one binary frame to core
+        memory. "code" is the raw binary frame, "eol" is true if this frame
+        indicates EOL (and code is not stored) */
+
+        if (this.ioSelectNr == 33 && this.gateRD.value) {// must be waiting for PaperTapeReader input
+            let even = ((code >> 3) & 1) | ((code >> 4) & 0b110);       // X08 bits
+            let odd  = code & 0b111;                                    // 421 bits
+            if (eol) {
+                even = 0;
+                odd = Envir.numRecMark;
+            } else {
+                const parity = ((Envir.oddParity5[code & 0xF] ^ Envir.oddParity5[(code >> 4) & 0x7]) >> 5) & 1;
+                if (!parity) {
+                    this.ioReadCheckPending = true;
+                }
+            }
+
+            this.regMAR.value = this.regOR2.value;
+            this.fetch();
+
+            // Simulate the problem with even starting addresses. The input
+            // translator was sensitive to whether it was dealing with zone
+            // or numeric digits, so an even address could cause translation
+            // and parity errors. This approach just sets MBR Check Pending,
+            // which will set the check indicator at eol below.
+            if (this.regMAR.isEven) {
+                [even, odd] = [odd | 8, even];
+                if (!this.ioMBRCheckPending) {
+                    this.ioMBRCheckPending = true;
+                    this.parityMBREvenCheck.value = 1;
+                }
+            }
+
+            // Preserve any flags already in memory.
+            this.regMIR.setDigitNoFlag(1, even);
+            this.regMIR.setDigitNoFlag(0, odd);
+            this.store();
+            this.regOR2.incr(2);
+
+            this.envir.tick();                  // advance the emulation clock
+            this.envir.tick();                  // by 2 memory cycles
+            this.gateRESP_GATE.value = 0;
+            if (eol) {
+                if (this.ioReadCheckPending) {
+                    this.ioReadCheckPending = false;
+                    this.setIndicator(6, "PaperTapeReader read check");
+                }
+
+                if (this.ioMBRCheckPending) {
+                    this.ioMBRCheckPending = false;
+                    this.setIndicator(16, "PaperTapeReader even address for alphanumeric I/O");
+                }
+
+                this.ioExit();                  // exits Limbo state;
                 if (!this.gateMANUAL.value) {
                     this.run();
                 }
@@ -2333,6 +2498,11 @@ class Processor {
             } else if (this.ioWriteCheckPending) {
                 this.ioWriteCheckPending = false;
                 this.setIndicator(7, `I/O device ${this.ioSelectNr} Write Check`);
+            }
+
+            if (this.ioMBRCheckPending) {
+                this.ioMBRCheckPending = false;
+                this.setIndicator(16, `I/O device ${this.ioSelectNr} Even address on alphanumeric I/O`);
             }
 
             this.gateREL.value = 1;
@@ -3175,21 +3345,30 @@ class Processor {
                 } else {
                     switch (this.ioSelectNr) {
                     case 1:     // Typewriter
+                    case 3:     // Paper Tape Reader
                         this.enterLimbo(this.ioDevice, this.ioDevice.initiateRead);
                         break;
-                    case 3:     // Paper Tape Reader
                     case 5:     // Card Reader
                         this.gateREAD_INTERLOCK.value = 1;
                         this.enterLimbo(this.ioDevice, this.ioDevice.initiateRead);
                         break;
                     case 7:     // Disk Drive
-                        if (this.opBinary == 36) {      // disk reads only numerically
+                        if (this.opBinary == 36 /*RN*/) { // disk reads only numerically
                             this.enterLimbo(this, this.initiateDiskRead);
                         } else {
                             this.gateREAD_INTERLOCK.value = 1;
                             this.enterLimbo();          // just hang if not Read Numerically
                         }
                         break;
+                    case 33:    // Binary Paper Tape Reader
+                        if (this.opBinary == 37 /*RA*/) { // reads alphanumerically only
+                            this.enterLimbo(this.ioDevice, this.ioDevice.initiateReadBinary);
+                        } else {
+                            this.gateREAD_INTERLOCK.value = 1;
+                            this.enterLimbo();          // just hang if not Read Alphanumerically
+                        }
+                        break;
+
                     default:
                         this.gateREAD_INTERLOCK.value = 1;
                         this.enterLimbo();              // just hang on an undefined device
@@ -6345,20 +6524,20 @@ class Processor {
 
         case 39:        // WA - Write Alphanumerically
             this.regOR2.incr(2);
-            if (this.regMAR.isEven) {
+            if (this.regMAR.isOdd) {
+                await this.writeAlphanumerically(this.regMBR.value);
+            } else {
                 // Simulate the problem with even starting addresses. The output
                 // translator was sensitive to whether it was dealing with zone
                 // or numeric digits, so an even address could cause translation
-                // and parity errors. This approach just sets Write Check Pending
+                // and parity errors. This approach just sets MBR Check Pending
                 // and sets the check indicator in ioExit.
                 await this.writeAlphanumerically(
                         ((this.regMBR.odd << Register.digitBits) | 8) | this.regMBR.even);
-                if (!this.ioWriteCheckPending) {
-                    this.ioWriteCheckPending = true;
-                    this.ioWriteCheck.value = 1;
+                if (!this.ioMBRCheckPending) {
+                    this.ioMBRCheckPending = true;
+                    this.parityMBREvenCheck.value = 1;
                 }
-            } else {
-                await this.writeAlphanumerically(this.regMBR.value);
             }
             break;
 
@@ -6754,7 +6933,7 @@ class Processor {
         input I/O. To get out of Limbo, you'll need to call run(), or do RELEASE
         and RESET then manually restart the system.
         "entryFcn" is a function to call upon entering Limbo state. "entryContext"
-        is the object context (this value) to apply to that call */
+        is the object context ("this" value) to apply to that call */
 
         this.limboEntryFcn = entryFcn;
         this.limboEntryContext = entryContext;
@@ -7114,8 +7293,8 @@ class Processor {
         /* Resets the internal processor state after power-on or the MANUAL key.
         It can only be performed in manual mode */
 
-        if (!(this.gatePOWER_ON.value && this.gateMANUAL.value)) {
-            return;
+        if (!(this.gatePOWER_ON.value && this.gateMANUAL.value)) { // allow if in dual MANUAL/
+            return;                                                // AUTOMATIC mode during STOP/SCE
         }
 
         this.gate$$$_OFLO.value = 0;
@@ -7278,7 +7457,7 @@ class Processor {
         START, click CHECK RESET twice, or click any other key except START
         (well, maybe not POWER, either) */
 
-        if (this.gatePOWER_ON.value && this.gateMANUAL.value) {
+        if (this.gatePOWER_ON.value && this.gateMANUAL.value && !this.gateAUTOMATIC.value) {
             this.gateCLR_MEM.value = 1;
         }
     }

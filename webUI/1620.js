@@ -18,14 +18,15 @@ import {CardReader} from "./CardReader.js";
 import {CardPunch} from "./CardPunch.js";
 import {DiskDrive} from "./DiskDrive.js";
 import {LinePrinter} from "./LinePrinter.js";
+import {PaperTapeReader} from "./PaperTapeReader.js";
 import {Plotter} from "./Plotter.js";
 import {ControlPanel} from "./ControlPanel.js";
 import {SystemConfig} from "./SystemConfig.js";
 import {Typewriter} from "./Typewriter.js";
 
 
-let globalLoad = (ev) => {
-    let config = new SystemConfig();    // system configuration object
+const globalLoad = (ev) => {
+    const config = new SystemConfig();  // system configuration object
     let statusMsgTimer = 0;             // status message timer control cookie
 
     const context = {
@@ -123,6 +124,10 @@ let globalLoad = (ev) => {
             context.devices.paperPunch = new Plotter(context);
         }
 
+        if (config.getNode("PaperTapeReader.hasPaperTapeReader")) {
+            context.devices.paperReader = new PaperTapeReader(context);
+        }
+
         context.devices.typewriter = new Typewriter(context);
         context.controlPanel = new ControlPanel(context);
     }
@@ -130,7 +135,7 @@ let globalLoad = (ev) => {
     /**************************************/
     function systemShutDown() {
         /* Powers down the Processor and shuts down all of the panels and I/O devices */
-        let processor = context.processor;
+        const processor = context.processor;
 
         if (!processor.gateMANUAL.value) {
             processor.enterManual();
@@ -139,11 +144,10 @@ let globalLoad = (ev) => {
             return;
         }
 
-        let devices = context.devices;
-        for (const e in devices) {
-            if (devices[e]) {
-                devices[e].shutDown();
-                devices[e] = null;
+        for (const e in context.devices) {
+            if (context.devices[e]) {
+                context.devices[e].shutDown();
+                context.devices[e] = null;
             }
         }
 

@@ -28,6 +28,8 @@ Germain p.27 indicates invalid op codes cause a MAR check stop.
 4. How should "undigits" (hex A-F) be handled? Germain p.27 indicates that
 arithmetic on such digits results in a MAR check stop, or on the Mod2, sometimes
 an MBR (MIR?) check.
+[RESOLVED 2023-07-30, v0.14: add now uses table lookup generated from logic
+diagrams in ILD.
 
 5. What happens when a BB (42) is executed with no prior BT* (07/17/27) or SAVE
 key to set the return address? Mod 2 Ref p.38 indicates that causes a MAR check
@@ -36,7 +38,7 @@ and can be used again.
 
 6. Should XBR be cleared in I-5? Intermediate Diagrams don't indicate this, but
 it's done in I-1 in preparation for indexing the P address, so why wouldn't it
-be don in preparation for indexing the Q address?
+be done in preparation for indexing the Q address?
 
 7. How are the Q10/Q11 digits handled in I-6 for I/O ops?
 [RESOLVED 2022-12-10: they remain in MBR and are examined in I/O selection
@@ -47,7 +49,8 @@ appear to indicate that, but Mod2 Ref p.75 says so. I'm currently requiring
 MANUAL mode, since doing a START while the processor is already running could
 initiate a second run() and cause havoc.
 [RESOLVED 2023-01-10: the Model 2 CPU Reference Manual (page 75) indicates the
-START key is effective only in MANUAL mode]
+START key is effective only in MANUAL mode, although it's also effective during
+STOP/SCE when both MANUAL and AUTOMATIC lamps are on]
 
 9. Gate DISPLAY_MAR is turned on by the DISPLAY MAR key, but what turns it off,
 other than the RESET key?
@@ -80,3 +83,43 @@ subsequent operation, though.
 16. Need to implement the Emergency Off switch on the Control Panel, if only as
 a static image.
 [COMPLETED 2023-01-18]
+
+
+retro-1620 IBM 1621 Paper Tape Reader Questions.
+
+Standard tapes:
+
+1. If a frame has an EOL punch, and there are other punches in the frame, is it
+treated as end-of-record? Currently assume EOR is EOL only.
+
+2. How does a Read Numerically (RNPT, op 32, Q8/Q9=03) interpret non-numeric
+characters? The same way the card punch does, or does it ignore the 0-punch
+except for the zero, Record Mark, and Group Mark characters? Currently using
+card-punch translation.
+
+3. Presumably tape-feed (X0C8421) frames are ignored during numeric or
+alphanumeric read and not stored in memory. What about frames with no punches at
+all -- are they ignored like tape-feed or treated as a parity error? Currently
+treating empty frames as tape-feed.
+
+4. Is X0C82 (hex 7A) a valid alternate for flagged Record Mark (X82)? These were
+found in CU01.PT and SP021E.PT in the DaveW_paper_tapes folder of
+http://bitsavers.org/bits/IBM/1620/1620.zip.
+
+Binary tapes:
+
+1. Is odd-parity checked on binary read (RBPT, op 37 Q8/Q9=33)?
+
+2. The 1620 Model 2 CPU Reference Manual (A26-5781-2, page 70) states that
+during binary read, a tape-feed code is read as octal 77, and a frame with all
+eight punches (including EOL) is read as a tape-feed code. What happens when a
+frame with an EOL punch plus other punches is read? Is it treated as end-of-
+record, or is the EOL ignored and the X08421 punches interpreted as two octal
+digits?
+
+3. If binary tape read works in a manner similar to an alphanumeric read, does
+it preserve existing flags in memory or overwrite them?
+
+
+
+

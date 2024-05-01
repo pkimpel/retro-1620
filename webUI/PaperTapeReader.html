@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>IBM 1621 Paper Tape Reader Unit</title>
+<!--
+/***********************************************************************
+* retro-1620/webUI PaperTapeReader.html
+************************************************************************
+* Copyright (c) 2024, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1621 Paper Tape Reader Unit device page.
+*
+* Implements the IBM 1621 paper tape reader peripheral.
+*
+************************************************************************
+* 2024-04-25  P.Kimpel
+*   Original version, from CardReader.html.
+***********************************************************************/
+-->
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link id=defaultStyleSheet rel=stylesheet type="text/css" href="Common.css">
+<link id=readerStyleSheet rel=stylesheet type="text/css" href="PaperTapeReader.css">
+</head>
+
+<body id=ReaderBody class=deviceBody>
+
+<div id=ReaderDiv class="ibmGray">
+    <div id=ControlsDiv class="ibmBlue">
+        <input id=FileSelector type=file size=60 multiple>
+        <meter id=TapeSupplyBar min=0 max=100 value=0 title="Reader input tape remaining"></meter>
+        <div id=ReadAsTextDiv>
+            <input id=ReadAsTextCheck type=checkbox value=1>
+            <br><label for=ReadAsTextCheck>Read As Text</label>
+        </div>
+        <div id=NPROSwitch>
+            <div id=NPROSwitchCaption>NON<br>PROC<br>RNOUT</div>
+        </div>
+        <input id=TapeView type=text READONLY>
+    </div>
+</div>
+
+</body>
+</html>

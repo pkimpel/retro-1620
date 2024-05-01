@@ -18,6 +18,12 @@ DT0032/
 XR01/
     Diagnostic written by Paul Kimpel for index register operations.
 
+CU01-Mod2_General_Op_Codes.pt
+    Standard CU01 diagnostic program paper-tape image file modified by
+    Paul Kimpel for the Model 2 as for CU01-Mod2_General_Op_Codes.cmem
+    above. The original file came from the DaveW_paper_tapes folder in
+    http://bitsavers.org/bits/IBM/1620/1620.zip.
+
 FP1620Math.card
     FORTRAN II-D compile deck to run under Monitor I to generate
     floating point test results from 64 selected FP values. This program
@@ -29,4 +35,3 @@ FP1620Math.card
 Printer-Overstrike-Test.sps
     SPS assemble deck to run under Monitor I for a simple program to
     test overstrike printing on the 1443 line printer.
-

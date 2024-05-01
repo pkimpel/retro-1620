@@ -48,9 +48,17 @@ Lamp-Color-Test.html
     HTML/CSS page to explore progression of control panel lamp colors
     from full brightness to off.
 
+Paper-Tape-Decoder.html
+    Script to convert binary paper tape image files to the ASCII image
+    file format used by retro-1620.
+
 Parity-Gen.html
     Script to generate a table of correct 6-bit odd parity for all
     possible 6-bit input combinations.
+
+Plotter-Decode-Gen.html
+    Script to generate a table that translates the paper tape codes used
+    by the 1620 for the plotter into pen motion commands.
 
 retro-1620-Original-Memory-Preload.cmem
     Core memory image file to debug the original instruction decode,
@@ -78,3 +86,4 @@ True-Complement-Gen.html
     10.01.32.1 of the Model 2 ILD manual. See
     http://bitsavers.org/pdf/ibm/1620/fe/227-5857-0_1620_Model_2_Custome
     r_Engineering_Intermediate_Level_Diagrams_Apr64.pdf.
+

@@ -73,6 +73,14 @@ class SystemConfig {
             carriageControl: {formLength: 0, channelSpecs: {"1": 0b111111111111}}
         },
 
+        PaperTapeReader: {
+            hasPaperTapeReader: 0
+        },
+
+        PaperTapePunch: {
+            hasPaperTapePunch: 0
+        },
+
         Plotter: {
             hasPlotter: 0,
             scale: 1,
@@ -202,7 +210,7 @@ class SystemConfig {
         try {
             this.configData = JSON.parse(jsonConfig);
         } catch (e) {
-            alert("Could not parse system configuration data:\n" +
+            this.alertWin.alert("Could not parse system configuration data:\n" +
                   e.message + "\nReinitializing configuration");
             this.createConfigData();
         }
@@ -353,7 +361,7 @@ class SystemConfig {
 
     /**************************************/
     putNode(nodeName, data, index) {
-        /* Creates or replace a specified node of the configuration data object tree.
+        /* Creates or replaces a specified node of the configuration data object tree.
         "nodeName" specifies the node using dotted.path format. A blank name
         results in nothing being set. If a node does not exist, it and any necessary
         parent nodes are created. If the "index" parameter is specified, the final
@@ -361,7 +369,7 @@ class SystemConfig {
         that element of the array. Setting the value of a node starts a timer  (if it
         is not already started). When that timer expires, the configuration data will
         be flushed to the localStorage object. This delayed storage is done so that
-        several configuration changes into short order can be grouped in one flush */
+        several configuration changes in short order can be grouped in one flush */
         let node = this.configData;
 
         const name = nodeName.trim();
@@ -532,7 +540,19 @@ class SystemConfig {
         this.$$("CarriageControlText").textContent = JSON.stringify(cd.Printer.carriageControl).replace(/,/g, ", ");
         this.$$("CarriageControlText").style.display = (cd.Printer.hasPrinter ? "inline" : "none");
 
+        // Paper Tape Reader
+        this.setListValue("PaperTapeReaderModel", cd.PaperTapeReader.hasPaperTapeReader);
+
+        // Paper Tape Punch
+        this.setListValue("PaperTapePunchModel", cd.PaperTapePunch.hasPaperTapePunch);
+        this.$$("PlotterModel").disabled = (cd.PaperTapePunch.hasPaperTapePunch > 0);
+
         // Plotter
+        if (cd.PaperTapePunch.hasPaperTapePunch) {
+            cd.Plotter.hasPlotter = 0;  // can't have both PT Punch and Plotter at same time
+        }
+
+        this.$$("PaperTapePunchModel").disabled = (cd.Plotter.hasPlotter);
         this.setListValue("PlotterModel", cd.Plotter.hasPlotter);
         this.setListValue("PlotterScale", cd.Plotter.scale);
         this.setListValue("PlotterMaxHeight", cd.Plotter.maxHeight);
@@ -573,6 +593,20 @@ class SystemConfig {
             this.$$("PrinterColumns").disabled = ev.target.selectedIndex <= 0;
             this.$$("CarriageControlText").style.display = (ev.target.selectedIndex <= 0 ? "none" : "inline");
             break;
+        case "PaperTapePunchModel":
+            if (ev.target.selectedIndex > 0 && this.$$("PlotterModel").selectedIndex > 0) {
+                this.alertWin.alert("Cannot enable Paper Tape Punch and Plotter at same time");
+            } else {
+                this.$$("PlotterModel").disabled = (ev.target.selectedIndex > 0);
+            }
+            break;
+        case "PlotterModel":
+            if (ev.target.selectedIndex > 0 && this.$$("PaperTapePunchModel").selectedIndex > 0) {
+                this.alertWin.alert("Cannot enable Plotter and Paper Tape Punch at same time");
+            } else {
+                this.$$("PaperTapePunchModel").disabled = (ev.target.selectedIndex > 0);
+            }
+            break;
         case "Disk0Exists":
             for (let x=0; x<4; ++x) {
                 if (x > 0) {
@@ -599,9 +633,9 @@ class SystemConfig {
             let n = parseInt(text, 10);
 
             if (isNaN(n)) {
-                alert(caption + " must be numeric");
+                this.alertWin.alert(caption + " must be numeric");
             } else if (n < min || n > max) {
-                alert(caption + " must be in the range (" + min + ", " + max + ")");
+                this.alertWin.alert(caption + " must be in the range (" + min + ", " + max + ")");
                 n = Number.NaN;
             }
 
@@ -661,9 +695,30 @@ class SystemConfig {
         x = parseInt(e.options[e.selectedIndex].value, 10);
         cd.Printer.columns = (isNaN(x) ? 120 : x);
 
+        // PaperTapeReader
+        e = this.$$("PaperTapeReaderModel");
+        cd.PaperTapeReader.hasPaperTapeReader = (e.selectedIndex > 0 ? 1 : 0);
+
+        // PaperTapePunch
+        e = this.$$("PaperTapePunchModel");
+        if (e.selectedIndex > 0 && this.$$("PlotterModel").selectedIndex > 0 && cd.Plotter.hasPlotter) {
+            e.selectedIndex = 0;
+            this.alertWin.alert("Cannot enable Paper Tape Punch when Plotter is enabled.");
+        } else {
+            cd.PaperTapePunch.hasPaperTapePunch = (e.selectedIndex > 0 ? 1 : 0);
+            this.$$("PlotterModel").disabled = (e.selectedIndex > 0);
+        }
+
         // Plotter
         e = this.$$("PlotterModel");
-        cd.Plotter.hasPlotter = (e.selectedIndex > 0 ? 1 : 0);
+        if (e.selectedIndex > 0 && this.$$("PaperTapePunchModel").selectedIndex > 0 && cd.PaperTapePunch.hasPaperTapePunch) {
+            e.selectedIndex = 0;
+            this.alertWin.alert("Cannot enable  Plotter when Paper Tape Punch is enabled.");
+        } else {
+            cd.Plotter.hasPlotter = (e.selectedIndex > 0 ? 1 : 0);
+            this.$$("PaperTapePunchModel").disabled = (e.selectedIndex > 0);
+        }
+
         e = this.$$("PlotterScale");
         cd.Plotter.scale = (e.selectedIndex > 0 ? 2 : 1);
         e = this.$$("PlotterMaxHeight");
@@ -683,7 +738,7 @@ class SystemConfig {
         this.determineWindowConfigMode().then((msg) => {
             this.flushHandler();        // store the configuration
             this.$$("MessageArea").textContent = msg;
-            this?.configReporter(msg);
+            this.configReporter?.(msg);
             this.window.close();
         });
     }

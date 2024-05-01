@@ -159,7 +159,7 @@ class Plotter {
         "G": {bits: 0b01100111, dx: -1, dy:  0, penUp: 0, penDown: 0},
         "H": {bits: 0b01101000, dx: -1, dy:  1, penUp: 0, penDown: 0},
         "I": {bits: 0b01111001, dx:  0, dy:  0, penUp: 0, penDown: 0},
-        "]": {bits: 0b01000000, dx:  0, dy:  0, penUp: 0, penDown: 0},
+        "]": {bits: 0b01000000, dx:  0, dy:  0, penUp: 0, penDown: 0},  // -0 (flagged 0)
         "J": {bits: 0b01010001, dx:  0, dy:  1, penUp: 0, penDown: 0},
         "K": {bits: 0b01010010, dx:  1, dy:  1, penUp: 0, penDown: 0},
         "L": {bits: 0b01000011, dx:  1, dy:  0, penUp: 0, penDown: 0},
@@ -184,7 +184,7 @@ class Plotter {
         "(": {bits: 0b00101100, dx:  0, dy:  0, penUp: 0, penDown: 1},
         ",": {bits: 0b00111011, dx:  1, dy:  0, penUp: 0, penDown: 0},
         "|": {bits: 0b00101010, dx:  0, dy:  1, penUp: 0, penDown: 0},  // Record Mark
-        "!": {bits: 0b01001010, dx:  0, dy:  1, penUp: 0, penDown: 0},  // Group Mark
+        "}": {bits: 0b01001010, dx:  0, dy:  1, penUp: 0, penDown: 0},  // Group Mark
         "=": {bits: 0b00001011, dx:  1, dy:  0, penUp: 0, penDown: 0},
         "@": {bits: 0b00011100, dx:  0, dy:  0, penUp: 0, penDown: 0},
         "+": {bits: 0b01110000, dx:  0, dy:  0, penUp: 0, penDown: 1},
@@ -192,7 +192,7 @@ class Plotter {
         " ": {bits: 0b00010000, dx:  0, dy:  0, penUp: 0, penDown: 0},
         "/": {bits: 0b00110001, dx:  0, dy:  1, penUp: 0, penDown: 0},
         "^": {bits: 0b00111110, dx: -1, dy:  0, penUp: 0, penDown: 0},  // "special" char
-        "\\":{bits: 0b00101111, dx: -1, dy:  0, penUp: 0, penDown: 0},  // flagged Record Mark
+        "!": {bits: 0b00101111, dx: -1, dy:  0, penUp: 0, penDown: 0},  // flagged Record Mark
         "\"":{bits: 0b01001111, dx: -1, dy:  0, penUp: 0, penDown: 0},  // flagged Group Mark
         "<": {bits: 0b10000000, dx:  0, dy:  0, penUp: 0, penDown: 0}   // EOL
     };
@@ -244,9 +244,8 @@ class Plotter {
 
 
     constructor(context) {
-        /* Initializes and wires up events for the plotter device.
-        "context" is an object passing other objects and callback functions from
-        the global script:
+        /* Initializes andthe plotter device. "context" is an object passing
+        other objects and callback functions from the global script:
             config is the SystemConfig object
             processor is the Processor object
         Additional properties are created in the plotterOnLoad method */
@@ -790,6 +789,8 @@ class Plotter {
         if (delay > Plotter.minWait) {
             await this.timer.delayFor(delay);
         }
+
+        return 1;                       // EOB
     }
 
     /**************************************/
@@ -806,6 +807,8 @@ class Plotter {
         if (delay > Plotter.minWait) {
             await this.timer.delayFor(delay);
         }
+
+        return 1;                       // EOB
     }
 
     /**************************************/
@@ -830,7 +833,7 @@ class Plotter {
         this.stepCacheToken = 0;
         this.positionCursor(this.stepXLast, this.stepYLast);
 
-        // Update average frames/second.
+        // Update average frames/second (debug only).
         // const elapsed = timestamp - this.frameLastStamp;                                // frame time, ms
         // this.frameLastStamp = timestamp;
         // this.fps = this.fps*(1-Plotter.fpsAlpha) + Plotter.fpsAlpha*1000/elapsed;       // avg frame/sec
@@ -843,7 +846,8 @@ class Plotter {
         until the next animation frame time, when it will then be drawn. If the
         pen is down, caches the coordinates of a new point to be drawn;
         otherwise just caches the last pen position. Throttles I/O timing to
-        the actual speed of the plotter after each animation frame event */
+        the actual speed of the plotter after each animation frame event.
+        Returns a Promise that resolves to value 1 for EOB */
         const now = performance.now();
 
         let x = this.x;
@@ -911,7 +915,7 @@ class Plotter {
             }
         }
 
-        return Promise.resolve();
+        return Promise.resolve(1);
     }
 
     /**************************************/
@@ -928,13 +932,13 @@ class Plotter {
     plotCommand(char) {
         /* Decodes one paper-tape character code into the appropriate plotting
         command. Returns a Promise that resolves once any pending delay has
-        taken place */
+        taken place. The resolved value is always 1 for EOB */
         const command = Plotter.plotXlate[char];
 
         //console.debug("Plotter: '%s' %5i %5i %i", char, this.x, this.y, this.penDown);
 
         if (!command ) {
-            return Promise.resolve();           // no action
+            return Promise.resolve(1);          // no action
         } else if (command.penUp) {
             return this.raisePen();
         } else if (command.penDown) {
@@ -947,7 +951,7 @@ class Plotter {
                 this.emptyCanvas();
             }
 
-            return Promise.resolve();           // no action
+            return Promise.resolve(1);          // no action
         }
 
     }
@@ -957,7 +961,7 @@ class Plotter {
         /* Writes one digit to the plotter. This should be used directly by
         Dump Numerically. Returns a Promise for completion */
 
-        return this.dumpNumeric(digit);
+        return this.plotCommand(Plotter.numericGlyphs[digit & Register.bcdMask]);
     }
 
     /**************************************/
@@ -1025,4 +1029,5 @@ class Plotter {
             this.window.close();
         }
     }
+
 } // class Plotter

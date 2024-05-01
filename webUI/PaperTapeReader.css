@@ -1,0 +1,110 @@
+/***********************************************************************
+* retro-1620/webUI PaperReader.css
+************************************************************************
+* Copyright (c) 2024, Paul Kimpel.
+* Licensed under the MIT License,
+*       see http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1621 Paper Tape Reader Unit web interface style sheet.
+************************************************************************
+* 2024-04-25  P.Kimpel
+*   Original version, from CardReader.css
+***********************************************************************/
+
+#ReaderBody {
+    height:             100%;
+    min-height:         100%;
+    overflow:           hidden;
+    padding:            0}
+
+#ReaderDiv {
+    position:           absolute;
+    top:                0;
+    bottom:             0;
+    left:               0;
+    right:              0}
+
+#ControlsDiv {
+    position:           absolute;
+    top:                4px;
+    left:               4px;
+    right:              4px;
+    height:             72px;
+    }
+
+#NPROSwitch {
+    position:           absolute;
+    top:                26px;
+    right:              4px;
+    width:              56px;
+    height:             38px;
+    transform:          translate(0, -50%);
+    background-image:   linear-gradient(to right, #E0E0E0 0%, #E0E0E0 50%, #F7F7E9 50%, #F7F7E9 85%, #666 100%);
+    border:             1px solid black;
+    box-shadow:         3px 0px 3px #333}
+#NPROSwitch.clicked {
+    background-image:   linear-gradient(to right, #CCC 0%, #F7F7E9 15%, #D0D0D0 15%, #D0D0D0 50%,
+                                        #E0E0E0 50%, #E0E0E0 100%);
+    box-shadow:         none}
+#NPROSwitchCaption {
+    position:           absolute;
+    top:                50%;
+    left:               calc(75% - 15%/2);
+    width:              calc(50% - 15%);
+    transform:          translate(-50%, -50%);
+    text-align:         center;
+    color:              black;
+    font-size:          5px;
+    line-height:        100%}
+#NPROSwitch.clicked #NPROSwitchCaption {
+    left:               75%;
+    width:              50%;
+    font-size:          6px}
+
+#FileSelector {
+    position:           absolute;
+    top:                4px;
+    left:               4px;
+    width:              calc(100% - 120px);
+    color:              white;
+    border:             1px solid white}
+
+#TapeSupplyBar {
+    position:           absolute;
+    top:                30px;
+    left:               4px;
+    width:              calc(100% - 120px);
+    height:             16px;
+    border:             1px solid white}
+#TapeSupplyCaption {
+    position:           absolute;
+    display:            none;           /* for now... */
+    top:                28px;
+    right:              4px;
+    z-index:            1;
+    height:             12px;
+    color:              black;
+    font-weight:        bold}
+
+#ReadAsTextDiv {
+    position:           absolute;
+    top:                26px;
+    right:              64px;
+    width:              48px;
+    transform:          translate(0, -50%);
+    line-height:        1.0;
+    text-align:         center}
+#ReadAsTextCheck {
+    outline:            1px solid white}
+
+#TapeView {
+    position:           absolute;
+    left:               4px;
+    width:              calc(100% - 10px);
+    bottom:             4px;
+    text-align:         right;
+    font-size:          12px;
+    padding-left:       0;
+    background-color:   #FFE;
+    border:             none;
+    }

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<head>
+<title>retro-1620 Paper Tape Decoder</title>
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+
+<script>
+/***********************************************************************
+* retro-1620/software/retro-1620-Utilities Paper-Tape-Decoder.html
+************************************************************************
+* Copyright (c) 2024, Paul Kimpel.
+* Licensed under the MIT License,
+*       see http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* Script to convert IBM 1620 binary paper tape images in the "Dave W"
+* format to the ASCII format used by retro-1620.
+*
+* Each 8-bit byte in the tape image represents one frame from the paper
+* tape with the following channel orientation from high order to low
+* order bits:
+*
+*       E X 0 C 8 4 2 1
+*
+* where "E" is the EOL punch. The sprocket holes go between the 4 and 8
+* channel punches.
+*
+* This script decodes the bits in each byte and translates them to the
+* ASCII encoding used by the Computer History Museum's 1620 Jr. project.
+* Invalid bit combinations are translated to "?".
+*
+* To use, select the .PT file using the file selection control on the
+* page. Selecting a file automatically starts the conversion.
+*
+* This version outputs the converted data by opening a browser window for
+* the file and inserting the converted text into a <pre> element in
+* that window. From there you can copy the text and paste into another
+* program that can save the data to a local filesystem.
+************************************************************************
+* 2024-03-23  P.Kimpel
+*   Original version, from retro-g15 software/tools/Pierce-Paper-Tape-Decoder.html.
+***********************************************************************/
+"use strict";
+
+window.onload = function() {
+    const panel = document.getElementById("TextPanel");
+    let codex = new Array(256);
+
+    const ptCode = {                    // IBM 1620 Paper Tape Codes
+        //     EX0C8421
+        "A": 0b01100001,        //  X0    1
+        "B": 0b01100010,        //  X0   2
+        "C": 0b01110011,        //  X0C  21
+        "D": 0b01100100,        //  X0  4
+        "E": 0b01110101,        //  X0C 4 1
+        "F": 0b01110110,        //  X0C 42
+        "G": 0b01100111,        //  X0  421
+        "H": 0b01101000,        //  X0 8
+        "I": 0b01111001,        //  X0C8  1
+        "]": 0b01000000,        //  X          // flagged zero (-0)
+        "J": 0b01010001,        //  X C   1
+        "K": 0b01010010,        //  X C  2
+        "L": 0b01000011,        //  X    21
+        "M": 0b01010100,        //  X C 4
+        "N": 0b01000101,        //  X   4 1
+        "O": 0b01000110,        //  X   42
+        "P": 0b01010111,        //  X C 421
+        "Q": 0b01011000,        //  X C8
+        "R": 0b01001001,        //  X  8  1
+        "S": 0b00110010,        //   0C  2
+        "T": 0b00100011,        //   0   21
+        "U": 0b00110100,        //   0C 4
+        "V": 0b00100101,        //   0  4 1
+        "W": 0b00100110,        //   0  42
+        "X": 0b00110111,        //   0C 421
+        "Y": 0b00111000,        //   0C8
+        "Z": 0b00101001,        //   0 8  1
+        "1": 0b00000001,        //        1
+        "2": 0b00000010,        //       2
+        "3": 0b00010011,        //    C  21
+        "4": 0b00000100,        //      4
+        "5": 0b00010101,        //    C 4 1
+        "6": 0b00010110,        //    C 42
+        "7": 0b00000111,        //      421
+        "8": 0b00001000,        //     8
+        "9": 0b00011001,        //    C8  1
+        "0": 0b00100000,        //   0
+        ".": 0b01101011,        //  X0 8 21
+        ")": 0b01111100,        //  X0C84
+        "*": 0b01001100,        //  X  84
+        "$": 0b01011011,        //  X C8 21
+        "(": 0b00101100,        //   0 84
+        ",": 0b00111011,        //   0C8 21
+        "|": 0b00101010,        //   0 8 2     // Record Mark
+        "!": 0b01001010,        //  X  8 2     // flagged Record Mark
+        "=": 0b00001011,        //     8 21
+        "@": 0b00011100,        //    C84
+        "+": 0b01110000,        //  X0C
+        "-": 0b01000000,        //  X
+        " ": 0b00010000,        //    C        // space
+        "/": 0b00110001,        //   0C   1
+        "^": 0b00111110,        //   0C842     // "special" character
+        "<": 0b10000000,        // <           // EOL
+        "\\":0b00101111,        //   0 8421    // Group Mark
+        "\"":0b01001111,        //  X  8421    // flagged Group Mark
+        "_": 0b01111111         //  X0C8421    // tape-feed code
+    };
+
+
+    function confirmDialog(msg) {
+        /* Wrap the JavaScript confirm() intrinsic in a Promise. The Promise
+        resolves to true if the OK button is clicked and false if the Cancel
+        button is clicked on the confirm dialog. Adapted from:
+        https://vancelucas.com/blog/using-window-confirm-as-a-promise/ */
+
+        return new Promise(function (resolve) {
+            const confirmed = window.confirm(msg);
+
+            return resolve(confirmed);
+        });
+    }
+
+    function spout(text) {
+        /* Appends "text"+NL as a new text node to the panel DOM element */
+        let e = document.createTextNode(text + "\n");
+
+        panel.appendChild(e);
+    }
+
+    function clearPanel() {
+        /* Clears the text panel */
+        let kid;
+
+        while (kid = panel.firstChild) {
+            panel.removeChild(kid);
+        }
+    }
+
+    function fileLoader(tapeBlob, fileNr, fileName) {
+        /* Convert one file and open a file-save dialog to store it */
+        const tapeData = new DataView(tapeBlob);        // use DataView() to avoid problems with little-endians.
+        const len = tapeData.byteLength;
+        let line = "";
+        let text = "";
+
+        for (let x=0; x<len; ++x) {
+            const frame = tapeData.getUint8(x);
+            if (frame & 0x80) {         // EOL punch
+                text += line + "\n";
+                line = "";
+            } else {
+                line += codex[frame];
+            }
+        }
+
+        const url = `data:text/plain,${encodeURIComponent(text)}`;
+        const hiddenLink = document.createElement("a");
+
+        hiddenLink.setAttribute("download", fileName + ".txt");
+        hiddenLink.setAttribute("href", url);
+        hiddenLink.click();
+    }
+
+    async function fileSelector_onChange(ev) {
+        /* Handle the <input type=file> onchange event when a file is selected */
+        const files = ev.target.files;
+        const fileCount = files.length;
+        let fileNr = 0;
+
+        clearPanel();
+        for (const f of files) {
+            //alert("File selected: " + f.name +
+            //        "\nModified " + f.lastModifiedDate +
+            //        "\nType=" + f.type + ", Size=" + f.size + " octets");
+            if (++fileNr > 1) {
+                if (!await confirmDialog("After saving the text, click OK to continue or Cancel to abort")) {
+                    break;
+                }
+            }
+
+            const blob = await f.arrayBuffer();
+            fileLoader(blob, fileNr, f.name);
+        }
+    }
+
+    function checkBrowser() {
+        /* Checks whether this browser can support the necessary stuff */
+        let missing = "";
+
+        if (!window.File) {missing += ", File"}
+        if (!window.FileReader) {missing += ", FileReader"}
+        if (!window.FileList) {missing += ", FileList"}
+        if (!window.Blob) {missing += ", Blob"}
+        if (!window.ArrayBuffer) {missing += ", ArrayBuffer"}
+        if (!window.DataView) {missing += ", DataView"}
+        if (!window.Promise) {missing += ", Promise"}
+
+        if (missing.length == 0) {
+            return false;
+        } else {
+            alert("No can do... your browser does not support the following features:\n" +
+                    missing.substring(2));
+            return true;
+        }
+    }
+
+    /* Start of window.onload() */
+    if (checkBrowser()) {
+        return;
+    }
+
+    // Build an index to characters based on binary code.
+    codex.fill("?");
+    for (let char in ptCode) {
+        codex[ptCode[char]] = char;
+    }
+
+    // Weirdos...
+    codex[0b01111010] = "!";            // alternate for flagged Record Mark
+    codex[0b00000000] = "_";            // alternate for tape-feed code
+
+    document.getElementById("FileSelector").value = null;
+    document.getElementById("FileSelector").addEventListener("change", fileSelector_onChange, false);
+}
+</script>
+</head>
+
+<body>
+
+<div style="position:relative; width:100%; height:3em">
+    <div style="position:absolute; left:0; top:0; width:auto">
+        retro-1620 Paper Tape Tape Decoder Utility
+    </div>
+    <div style="position:absolute; top:0; right:0; width:auto">
+        <input id=FileSelector type=file size=60 multiple>
+    </div>
+
+</div>
+
+<pre id=TextPanel>
+</pre>
+
+</body>
+</html>
