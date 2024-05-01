@@ -18,6 +18,15 @@ DT0032/
 XR01/
     Diagnostic written by Paul Kimpel for index register operations.
 
+CU01-Mod2_General_Op_Codes.cmem
+    Standard CU01 diagnostic program CMEM file from the Computer History
+    Museum 1620 Jr. project, modified for the 1620 Model 2 CPU. This
+    changes the branch at 09012 from 4909036 to 4909936, which bypasses
+    test routines 051-055. Those routines test for correct lookup in the
+    add tables, but cause false errors on the Model 2, because the Model
+    2 doesn't use add tables. The original file was the one Dave Babcock
+    recovered as part of the Computer History Museum 1620 Jr. project.
+
 CU01-Mod2_General_Op_Codes.pt
     Standard CU01 diagnostic program paper-tape image file modified by
     Paul Kimpel for the Model 2 as for CU01-Mod2_General_Op_Codes.cmem
@@ -35,3 +44,4 @@ FP1620Math.card
 Printer-Overstrike-Test.sps
     SPS assemble deck to run under Monitor I for a simple program to
     test overstrike printing on the 1443 line printer.
+
