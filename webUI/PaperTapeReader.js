@@ -53,13 +53,17 @@ class PaperTapeReader {
     // Static properties
 
     static charPeriod = 1000/150;       // ms per tape frame (character)
+    static windowBottomOffset = 208;    // offset from bottom of window to bottom of screen
     static windowHeight = 80;           // window innerHeight, pixels
     static windowWidth = 575;           // window innerWidth, pixels
 
     static eolBits = 0b10000000;        // EOL hole pattern
+    static eolGlyph = "<";              // EOL glyph in TapeView
+    static invalidGlyph = "\xB7";       // invalid hole pattern glyph, B7 = mid-dot
     static tapeFeedBits = 0b01111111;   // tape-feed hole pattern
+    static tapeFeedGlyph = "_";         // ASCII character for tape-feed
 
-    static xlateASCII = {               // ASCII to 1620 paper-tape punch bits
+    static xlateASCIIToPTCode = {       // ASCII to 1620 paper-tape punch bits
            //  EX0C8421 tape channels
         "0": 0b00100000,
         "1": 0b00000001,
@@ -105,7 +109,7 @@ class PaperTapeReader {
         "(": 0b00101100,
         ",": 0b00111011,
         "|": 0b00101010,        // Record Mark
-        "}": 0b01001010,        // Group Mark
+        "!": 0b01001010,        // flagged Record Mark
         "=": 0b00001011,
         "@": 0b00011100,
         "+": 0b01110000,
@@ -113,7 +117,7 @@ class PaperTapeReader {
         " ": 0b00010000,
         "/": 0b00110001,
         "^": 0b00111110,        // "special" char
-        "!": 0b00101111,        // flagged Record Mark
+        "}": 0b00101111,        // Group Mark
         "\"":0b01001111,        // flagged Group Mark
      // Codes requiring special handling
      // "!": 0b01111010,        // alternate for flagged Record Mark
@@ -136,7 +140,7 @@ class PaperTapeReader {
     tapeViewLength = 75;                // chars that will fit in the TapeView box
     timer = new Timer();                // delay management timer
     window = null;                      // window object
-    xlateBinary = Array(256);           // translate binary hole patterns to ASCII
+    xlatePTCodeToASCII = Array(256);    // translate binary hole patterns to ASCII
 
 
     constructor(context) {
@@ -164,8 +168,8 @@ class PaperTapeReader {
         } else {
             this.innerWidth  = PaperTapeReader.windowWidth;
             this.innerHeight = PaperTapeReader.windowHeight;
-            this.windowLeft =  (screen.availWidth - PaperTapeReader.windowWidth)/2;
-            this.windowTop =   screen.availHeight - PaperTapeReader.windowHeight;
+            this.windowLeft =  (screen.availWidth - PaperTapeReader.windowWidth)/2 - 8;
+            this.windowTop =   screen.availHeight - PaperTapeReader.windowHeight - PaperTapeReader.windowBottomOffset;
             geometry = `,left=${this.windowLeft},top=${this.windowTop}` +
                        `,innerWidth=${this.innerWidth},innerHeight=${this.innerHeight}`;
         }
@@ -176,19 +180,19 @@ class PaperTapeReader {
 
         this.clear();
 
-        // Build the xlateBinary table from xlateASCII.
-        this.xlateBinary.fill(null);
-        for (let char in PaperTapeReader.xlateASCII) {
-            this.xlateBinary[PaperTapeReader.xlateASCII[char]] = char;
+        // Build the xlatePTCodeToASCII table from xlateASCIIToPTCode.
+        this.xlatePTCodeToASCII.fill(null);
+        for (let char in PaperTapeReader.xlateASCIIToPTCode) {
+            this.xlatePTCodeToASCII[PaperTapeReader.xlateASCIIToPTCode[char]] = char;
         }
 
         // Alternate hole patterns.
-        this.xlateBinary[0b01111010] = "!";     // alternate for flagged Record Mark
+        this.xlatePTCodeToASCII[0b01111010] = "!";      // alternate for flagged Record Mark
 
         // Codes requiring special handling in the Processor. These cause a
         // MBR parity error when read, per Germain, page 32.
-        this.xlateBinary[0b00001110] = "\x11";  // DC1 => 842 punch, End Card 1
-        this.xlateBinary[0b01011110] = "\x0D";  // CR  => XC842 punch, Carriage Return
+        this.xlatePTCodeToASCII[0b00001110] = "\x11";  // DC1 => 842 punch, End Card 1
+        this.xlatePTCodeToASCII[0b01011110] = "\x0D";  // CR  => XC842 punch, Carriage Return
     }
 
     /**************************************/
@@ -290,18 +294,18 @@ class PaperTapeReader {
         const textSpecs = dc.measureText(sample);
         const sampleWidth = textSpecs.width;
         this.tapeViewLength = Math.floor(sample.length/sampleWidth*this.tapeView.clientWidth);
-        console.debug("PPR Resize: font specs %s, sample length %i / width %f * TV width %i = TVLength %i",
-                  fontSpecs, sample.length, sampleWidth, this.tapeView.clientWidth, this.tapeViewLength);
+        //console.debug("PTR Resize: font specs %s, sample length %i / width %f * TV width %i = TVLength %i",
+        //          fontSpecs, sample.length, sampleWidth, this.tapeView.clientWidth, this.tapeViewLength);
         if (this.tapeView.value.length > this.tapeViewLength) {
             this.tapeView.value = this.tapeView.value.slice(-this.tapeViewLength);
         }
     }
 
     /**************************************/
-    NPROSwitchAction(ev) {
+    async NPROSwitchAction(ev) {
         /* Handle the click event for the NPROSwitch. The reader must not be
-        ready and the input hopper must be empty. The mousedown and mouse up
-        events simply animate the button's appearance during a click */
+        busy. The mousedown and mouse up events simply animate the button's
+        appearance during a click */
 
         switch (ev.type) {
         case "mousedown":
@@ -312,9 +316,24 @@ class PaperTapeReader {
             break;
         case "click":
             if (!this.busy) {
-                if (this.bufIndex >= this.bufLength || this.window.confirm(
+                let clearable = this.bufIndex >= this.bufLength;
+                if (!clearable) {
+                    const deltaHeight = Math.max(200 - this.window.innerHeight, 0);
+                    const deltaWidth = Math.max(500 - this.window.innerWidth, 0);
+                    const deltaTop = Math.min(screen.availHeight -
+                            (this.window.screenY + this.window.outerHeight + deltaHeight), 0);
+                    this.window.moveBy(0, deltaTop);
+                    await this.timer.delayFor(100);     // give the window time to move
+                    this.window.resizeBy(deltaWidth, deltaHeight);
+                    clearable = this.window.confirm(
                              `${this.bufLength-this.bufIndex} of ${this.bufLength}` +
-                             " characters remaining to read.\nDo you want to clear the input buffer?")) {
+                             " characters remaining to read.\nDo you want to clear the input buffer?");
+                    this.window.resizeBy(-deltaWidth, -deltaHeight);
+                    await this.timer.delayFor(100);     // give the window time to resize
+                    this.window.moveBy(0, -deltaTop);
+                }
+
+                if (clearable) {
                     this.buffer = null;
                     this.bufIndex = this.bufLength = 0;
                     this.fileSelector.value = null;     // reset the control
@@ -343,26 +362,28 @@ class PaperTapeReader {
             let bufLength = this.bufLength;
 
             if (bufIndex >= bufLength) {
-                bufIndex = bufLength = 0;
+                this.buffer = null;             // reallocate the now-empty buffer
             }
 
             if (!this.buffer) {
                 this.buffer = new Uint8Array(imageLength);
-                bufLength = bufIndex = 0;
+                bufLength = 0;
             } else if (this.buffer.length - bufLength + bufIndex < imageLength) {
                 // Not enough room in the current buffer, so resize it
-                const newLength = bufLength - bufIndex + imageLength;
                 const oldBuf = this.buffer;
-                this.buffer = new Uint8Array(newLength);
-                for (let x=bufIndex; x<bufLength; ++x) {
-                    this.buffer[x-bufIndex] = oldBuf[x];
+                const oldLength = bufLength;
+                bufLength -= bufIndex;
+                this.buffer = new Uint8Array(bufLength + imageLength);
+                for (let x=bufIndex; x<oldLength; ++x) {
+                    this.buffer[bufLength++] = oldBuf[x];
                 }
             } else if (bufIndex > 0) {
                 // Slide any remaining buffer down to make room for new image
                 this.buffer.copyWithin(0, bufIndex, bufLength);
+                bufLength -= bufIndex;
             }
 
-            this.bufLength = bufLength - bufIndex;
+            this.bufLength = bufLength;
             this.bufIndex = 0;
         };
 
@@ -382,10 +403,8 @@ class PaperTapeReader {
                 prepareBuffer(imageLength);
                 bufLength = this.bufLength;
                 for (let x=0; x<imageLength; ++x) {
-                    this.buffer[bufLength+x] = image[x];
+                    this.buffer[bufLength++] = image[x];
                 }
-
-                bufLength += imageLength;
             }
 
             this.bufLength = bufLength;
@@ -403,14 +422,14 @@ class PaperTapeReader {
             let bufLength = this.bufLength;
             let crFlag = false;
             for (const char of image) {
-                const bits = PaperTapeReader.xlateASCII[char];
+                const bits = PaperTapeReader.xlateASCIIToPTCode[char];
                 if (bits !== undefined) {
                     this.buffer[bufLength++] = bits;
                 } else {
                     switch (char) {
                     case "\n":          // new-line possibly preceded by a carriage return
                         if (crFlag) {
-                            crFlag = false;
+                            crFlag = false;     // EOL already handled
                         } else {
                             this.buffer[bufLength++] = PaperTapeReader.eolBits;
                         }
@@ -423,10 +442,12 @@ class PaperTapeReader {
                         crFlag = false;
                         break;
                     case Envir.glyphRecMark:        // \u2021
-                        this.buffer[bufLength++] = PaperTapeReader.xlateASCII["|"];
+                        crFlag = false;
+                        this.buffer[bufLength++] = PaperTapeReader.xlateASCIIToPTCode["|"];
                         break;
                     case Envir.glyphGroupMark:      // \u2262
-                        this.buffer[bufLength++] = PaperTapeReader.xlateASCII["}"];
+                        crFlag = false;
+                        this.buffer[bufLength++] = PaperTapeReader.xlateASCIIToPTCode["}"];
                         break;
                     default:            // unknown character -- store as a space with bad parity
                         crFlag = false;
@@ -442,10 +463,10 @@ class PaperTapeReader {
         };
 
         // Outer block of FileSelectorChange.
-        const readAsText = this.$$("ReadAsTextCheck").checked;
+        const loadAsText = this.$$("LoadAsTextCheck").checked;
         const fileList = ev.target.files;
         for (const file of fileList) {
-            if (readAsText) {
+            if (loadAsText) {
                 textLoader(await file.text());
             } else {
                 binaryLoader(await file.arrayBuffer());
@@ -496,28 +517,23 @@ class PaperTapeReader {
                 eol = true;             // just quit and leave the I/O hanging
             } else {
                 let code = this.buffer[x];
-                let char = this.xlateBinary[code];
+                let char = this.xlatePTCodeToASCII[code];
                 if (char) {
                     this.processor.receivePaperTapeFrame(char, false);
                 } else if (code == PaperTapeReader.eolBits) {
                     eol = true;
-                    char = "<";
+                    char = PaperTapeReader.eolGlyph;
                     this.processor.receivePaperTapeFrame("", true);
                 } else if (code == 0 || code == PaperTapeReader.tapeFeedBits) {
-                    char = Envir.glyphPillow;   // tape-feed: ignore this frame
+                    char = PaperTapeReader.tapeFeedGlyph;       // tape-feed: ignore this frame
                 } else {
-                    char = "\xB7";      // invalid hole pattern, B7 = mid-dot
+                    char = PaperTapeReader.invalidGlyph;        // invalid hole pattern
                     this.processor.receivePaperTapeFrame(char, false);
                 }
 
                 ++x;
                 this.tapeSupplyBar.value = bufLength-x;
-                if (this.tapeView.value.length < this.tapeViewLength) {
-                    this.tapeView.value += char;
-                } else {
-                    this.tapeView.value =
-                        this.tapeView.value.slice(-this.tapeViewLength+1) + char;
-                }
+                this.tapeView.value = this.tapeView.value.slice(-this.tapeViewLength+1) + char;
             }
         } while (!eol);
 
@@ -562,14 +578,16 @@ class PaperTapeReader {
                 eol = true;             // just quit and leave the I/O hanging
             } else {
                 let code = this.buffer[x];
-                let char = this.xlateBinary[code] ?? "\xB7";    // B7 = mid-dot
+                let char = this.xlatePTCodeToASCII[code] ?? PaperTapeReader.invalidGlyph;
                 if (code == PaperTapeReader.eolBits) {
                     eol = true;
-                    char = "<";
+                    char = PaperTapeReader.eolGlyph;
                     this.processor.receivePaperTapeBinary(0, true);
+                } else if (code == 0) {
+                    char = "";          // ignore and don't send to Processor
                 } else {
-                    if (code == 0 || code == PaperTapeReader.tapeFeedBits) {
-                        char = Envir.glyphPillow;
+                    if (code == PaperTapeReader.tapeFeedBits) {
+                        char = PaperTapeReader.tapeFeedGlyph;
                     }
                     this.processor.receivePaperTapeBinary(code, false);
                 }

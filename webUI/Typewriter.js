@@ -42,7 +42,7 @@ class Typewriter {
     static idleStartupTime = 500;       // typewriter idle startup time, ms
     static lockoutFlashTime = 150;      // keyboard lock flash time, ms
     static windowHeight = 240;          // window innerHeight, pixels
-    static windowWidth = 660;           // window innerWidth, pixels
+    static windowWidth = 656;           // window innerWidth, pixels
 
     static numericGlyphs = [
             "0", "1",  "2",  "3", "4", "5", "6", "7", "8", "9",
@@ -160,9 +160,8 @@ class Typewriter {
 
 
     constructor(context) {
-        /* Initializes and wires up events for the console typewriter device.
-        "context" is an object passing other objects and callback functions from
-        the global script:
+        /* Initializes the console Typewriter device. "context" is an object
+        passing other objects and callback functions from the global script:
             config is the SystemConfig object
             processor is the Processor object
         */
@@ -240,7 +239,8 @@ class Typewriter {
 
     /**************************************/
     resizeWindow(ev) {
-        /* Handles the window onresize event by scrolling the "paper" so it remains at the end */
+        /* Handles the window onresize event by scrolling the "paper" so it
+        remains at the bottom */
 
         this.paper.scrollIntoView(false);
     }
@@ -473,7 +473,7 @@ class Typewriter {
     }
 
     /**************************************/
-    async initiateRead() {
+    initiateRead() {
         /* Called by Processor to prepare the device for input. this.lastUseStamp
         is set to current time so that a 500ms wait for motor startup will take
         place if necessary */
@@ -494,6 +494,7 @@ class Typewriter {
     release() {
         /* Called by Processor to indicate the device has been released */
 
+        this.busy = false;              // no I/O is in progress
         this.platen.classList.remove("inputEnabled");
     }
 
@@ -501,7 +502,7 @@ class Typewriter {
     manualRelease() {
         /* Called by Processor to indicate the device has been released manually */
 
-        this.busy = false;              // no I/O is in progress
+        this.release();
         this.inputReady = true;         // typewriter is ready for input
     }
 
@@ -682,7 +683,7 @@ class Typewriter {
         ++this.scrollLines;
         paper.scrollIntoView(false);
         this.busy = false;
-        return 1;                       // always returns end-of-block
+        return 0;                       // never returns end-of-block
     }
 
     /**************************************/
@@ -755,7 +756,7 @@ class Typewriter {
 
         ++this.printerCol;
         this.busy = false;
-        return 1;                       // always returns end-of-block
+        return 0;                       // never returns end-of-block
     }
 
     /**************************************/
@@ -822,7 +823,7 @@ class Typewriter {
 
         await this.timer.delayFor(Typewriter.defaultInterlock);
         this.busy = false;
-        return 1;                       // always returns end-of-block
+        return 0;                       // never returns end-of-block
     }
 
     /**************************************/
@@ -848,7 +849,7 @@ class Typewriter {
         await this.timer.delayFor(Typewriter.indexInterlock);
         paper.scrollIntoView(false);
         this.busy = false;
-        return 1;                       // always returns end-of-block
+        return 0;                       // never returns end-of-block
     }
 
     /**************************************/
@@ -880,7 +881,7 @@ class Typewriter {
                 Typewriter.defaultInterlock + Typewriter.travelPeriod*positions;
         await this.timer.delayFor(Typewriter.defaultInterlock);
         this.busy = false;
-        return 1;                       // always returns end-of-block
+        return 0;                       // never returns end-of-block
     }
 
     /**************************************/
@@ -889,8 +890,9 @@ class Typewriter {
         Dump Numerically. Returns a Promise for completion */
         const digit = code & Register.digitMask;
 
-        return this.printChar(Typewriter.numericGlyphs[digit & Register.bcdMask],
+        this.printChar(Typewriter.numericGlyphs[digit & Register.bcdMask],
                 (digit & Register.flagMask), (Envir.oddParity5[digit] != digit));
+        return 1;                       // always returns end-of-block
     }
 
     /**************************************/
@@ -906,22 +908,24 @@ class Typewriter {
     }
 
     /**************************************/
-    writeNumeric(digit) {
+    writeNumeric(code) {
         /* Writes one digit to the typewriter, suppressing some undigit codes.
         This should be used directly by Write Numerically. Returns a Promise
         for completion */
+        const digit = code & Register.digitMask;
 
         if (digit & Register.flagMask) {
             switch (digit & Register.bcdMask) {
             case Envir.numRecMark:
             case Envir.numBlank:
             case Envir.numGroupMark:
-                return;     // don't output these chars at all unless DN op
+                return 0;       // don't output these chars at all unless DN op
                 break;
             }
         }
 
-        return this.dumpNumeric(digit);
+        return this.printChar(Typewriter.numericGlyphs[digit & Register.bcdMask],
+                (digit & Register.flagMask), (Envir.oddParity5[digit] != digit));
     }
 
     /**************************************/
@@ -948,7 +952,7 @@ class Typewriter {
             return this.printTab();
             break;
         default:
-            return Promise.resolve(0);
+            return Promise.resolve(1);
             break;
         }
     }

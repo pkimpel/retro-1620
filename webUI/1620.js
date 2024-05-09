@@ -19,6 +19,7 @@ import {CardPunch} from "./CardPunch.js";
 import {DiskDrive} from "./DiskDrive.js";
 import {LinePrinter} from "./LinePrinter.js";
 import {PaperTapeReader} from "./PaperTapeReader.js";
+import {PaperTapePunch} from "./PaperTapePunch.js";
 import {Plotter} from "./Plotter.js";
 import {ControlPanel} from "./ControlPanel.js";
 import {SystemConfig} from "./SystemConfig.js";
@@ -120,7 +121,9 @@ const globalLoad = (ev) => {
             context.devices.linePrinter = new LinePrinter(context);
         }
 
-        if (config.getNode("Plotter.hasPlotter")) {
+        if (config.getNode("PaperTapePunch.hasPaperTapePunch")) {
+            context.devices.paperPunch = new PaperTapePunch(context);
+        } else if (config.getNode("Plotter.hasPlotter")) {
             context.devices.paperPunch = new Plotter(context);
         }
 

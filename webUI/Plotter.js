@@ -184,7 +184,7 @@ class Plotter {
         "(": {bits: 0b00101100, dx:  0, dy:  0, penUp: 0, penDown: 1},
         ",": {bits: 0b00111011, dx:  1, dy:  0, penUp: 0, penDown: 0},
         "|": {bits: 0b00101010, dx:  0, dy:  1, penUp: 0, penDown: 0},  // Record Mark
-        "}": {bits: 0b01001010, dx:  0, dy:  1, penUp: 0, penDown: 0},  // Group Mark
+        "!": {bits: 0b01001010, dx:  0, dy:  1, penUp: 0, penDown: 0},  // flagged Record Mark
         "=": {bits: 0b00001011, dx:  1, dy:  0, penUp: 0, penDown: 0},
         "@": {bits: 0b00011100, dx:  0, dy:  0, penUp: 0, penDown: 0},
         "+": {bits: 0b01110000, dx:  0, dy:  0, penUp: 0, penDown: 1},
@@ -192,7 +192,7 @@ class Plotter {
         " ": {bits: 0b00010000, dx:  0, dy:  0, penUp: 0, penDown: 0},
         "/": {bits: 0b00110001, dx:  0, dy:  1, penUp: 0, penDown: 0},
         "^": {bits: 0b00111110, dx: -1, dy:  0, penUp: 0, penDown: 0},  // "special" char
-        "!": {bits: 0b00101111, dx: -1, dy:  0, penUp: 0, penDown: 0},  // flagged Record Mark
+        "}": {bits: 0b00101111, dx: -1, dy:  0, penUp: 0, penDown: 0},  // Group Mark
         "\"":{bits: 0b01001111, dx: -1, dy:  0, penUp: 0, penDown: 0},  // flagged Group Mark
         "<": {bits: 0b10000000, dx:  0, dy:  0, penUp: 0, penDown: 0}   // EOL
     };
@@ -785,12 +785,16 @@ class Plotter {
         this.penCursor.classList.remove("penDown");
         this.penDownLamp.style.display = "none";
         this.penUpLamp.style.display = "block";
-        this.outputReadyStamp += Plotter.penPeriod;
-        if (delay > Plotter.minWait) {
-            await this.timer.delayFor(delay);
+        if (delay < 0) {
+            this.outputReadyStamp = now + Plotter.penPeriod;
+        } else {
+            this.outputReadyStamp += Plotter.penPeriod;
+            if (delay > Plotter.minWait) {
+                return this.timer.delayFor(delay);
+            }
         }
 
-        return 1;                       // EOB
+        return 0;                       // never returns end-of-block
     }
 
     /**************************************/
@@ -801,14 +805,18 @@ class Plotter {
 
         this.penDown = true;
         this.penCursor.classList.add("penDown");
-        this.penDownLamp.style.display = "block";
         this.penUpLamp.style.display = "none";
-        this.outputReadyStamp += Plotter.penPeriod;
-        if (delay > Plotter.minWait) {
-            await this.timer.delayFor(delay);
+        this.penDownLamp.style.display = "block";
+        if (delay < 0) {
+            this.outputReadyStamp = now + Plotter.penPeriod;
+        } else {
+            this.outputReadyStamp += Plotter.penPeriod;
+            if (delay > Plotter.minWait) {
+                return this.timer.delayFor(delay);
+            }
         }
 
-        return 1;                       // EOB
+        return 0;                       // never returns end-of-block
     }
 
     /**************************************/
@@ -915,7 +923,7 @@ class Plotter {
             }
         }
 
-        return Promise.resolve(1);
+        return Promise.resolve(0);      // never returns end-of-block
     }
 
     /**************************************/
@@ -938,7 +946,7 @@ class Plotter {
         //console.debug("Plotter: '%s' %5i %5i %i", char, this.x, this.y, this.penDown);
 
         if (!command ) {
-            return Promise.resolve(1);          // no action
+            return Promise.resolve(0);          // no action
         } else if (command.penUp) {
             return this.raisePen();
         } else if (command.penDown) {
@@ -951,7 +959,7 @@ class Plotter {
                 this.emptyCanvas();
             }
 
-            return Promise.resolve(1);          // no action
+            return Promise.resolve(0);          // no other action
         }
 
     }
@@ -961,18 +969,11 @@ class Plotter {
         /* Writes one digit to the plotter. This should be used directly by
         Dump Numerically. Returns a Promise for completion */
 
-        return this.plotCommand(Plotter.numericGlyphs[digit & Register.bcdMask]);
-    }
-
-    /**************************************/
-    writeAlpha(digitPair) {
-        /* Writes one even/odd digit pair to the typewriter. This should be used
-        directly by Write Alphanumerically. Returns a Promise for completion */
-        const even = (digitPair >> Register.digitBits) & Register.bcdMask;
-        const odd = digitPair & Register.bcdMask;
-        const code = even*16 + odd;
-
-        return this.plotCommand(Plotter.alphaGlyphs[code]);
+        if (digit < 0) {
+            return Promise.resolve(0);  // ignore the EOL signal for PaperTapePunch
+        } else {
+            return this.plotCommand(Plotter.numericGlyphs[digit & Register.bcdMask]);
+        }
     }
 
     /**************************************/
@@ -981,7 +982,25 @@ class Plotter {
         This should be used directly by Write Numerically. Returns a Promise
         for completion */
 
-        return this.plotCommand(Plotter.numericGlyphs[digit & Register.bcdMask]);
+        if (digit < 0) {
+            return Promise.resolve(0);  // ignore the EOL signal for PaperTapePunch
+        } else {
+            return this.plotCommand(Plotter.numericGlyphs[digit & Register.bcdMask]);
+        }
+    }
+
+    /**************************************/
+    writeAlpha(digitPair) {
+        /* Writes one even/odd digit pair to the typewriter. This should be used
+        directly by Write Alphanumerically. Returns a Promise for completion */
+
+        if (digitPair < 0) {
+            return Promise.resolve(0);  // ignore the EOL signal for PaperTapePunch
+        } else {
+            const even = (digitPair >> Register.digitBits) & Register.bcdMask;
+            const odd = digitPair & Register.bcdMask;
+            return this.plotCommand(Plotter.alphaGlyphs[even*16 + odd]);
+        }
     }
 
     /**************************************/
@@ -1002,7 +1021,7 @@ class Plotter {
     manualRelease() {
         /* Called by Processor to indicate the device has been released manually */
 
-        this.busy = false;              // no I/O is in progress
+        this.release();
     }
 
     /**************************************/

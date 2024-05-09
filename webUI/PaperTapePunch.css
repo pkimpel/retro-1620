@@ -1,23 +1,23 @@
 /***********************************************************************
-* retro-1620/webUI PaperReader.css
+* retro-1620/webUI PaperPunch.css
 ************************************************************************
 * Copyright (c) 2024, Paul Kimpel.
 * Licensed under the MIT License,
 *       see http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* IBM 1621 Paper Tape Reader Unit web interface style sheet.
+* IBM 1624 Paper Tape Punch Unit web interface style sheet.
 ************************************************************************
-* 2024-04-25  P.Kimpel
-*   Original version, from CardReader.css
+* 2024-05-03  P.Kimpel
+*   Original version, from PaperTapeReader.css
 ***********************************************************************/
 
-#ReaderBody {
+#PunchBody {
     height:             100%;
     min-height:         100%;
     overflow:           hidden;
     padding:            0}
 
-#ReaderDiv {
+#PunchDiv {
     position:           absolute;
     top:                0;
     bottom:             0;
@@ -29,24 +29,24 @@
     top:                4px;
     left:               4px;
     right:              4px;
-    height:             72px;
+    height:             46px;
     }
 
-#NPROSwitch {
+#PunchFeedSwitch {
     position:           absolute;
-    top:                26px;
-    right:              4px;
+    top:                50%;
+    left:               4px;
     width:              56px;
     height:             38px;
     transform:          translate(0, -50%);
     background-image:   linear-gradient(to right, #E0E0E0 0%, #E0E0E0 50%, #F7F7E9 50%, #F7F7E9 85%, #666 100%);
     border:             1px solid black;
     box-shadow:         3px 0px 3px #333}
-#NPROSwitch.clicked {
+#PunchFeedSwitch.clicked {
     background-image:   linear-gradient(to right, #CCC 0%, #F7F7E9 15%, #D0D0D0 15%, #D0D0D0 50%,
                                         #E0E0E0 50%, #E0E0E0 100%);
     box-shadow:         none}
-#NPROSwitchCaption {
+#PunchFeedSwitchCaption {
     position:           absolute;
     top:                50%;
     left:               calc(75% - 15%/2);
@@ -56,24 +56,32 @@
     color:              black;
     font-size:          5px;
     line-height:        100%}
-#NPROSwitch.clicked #NPROSwitchCaption {
+#PunchFeedSwitch.clicked #PunchFeedSwitchCaption {
     left:               75%;
     width:              50%;
     font-size:          6px}
 
-#FileSelector {
+#PunchMenuIconDiv {
     position:           absolute;
-    top:                4px;
-    left:               4px;
-    width:              calc(100% - 120px);
-    color:              white;
-    border:             1px solid white}
+    top:                50%;
+    right:              4px;
+    width:              28px;
+    height:             28px;
+    transform:          translate(0, -50%);
+    background-color:   white;
+    border-radius:      4px}
+
+#PunchMenuIcon {
+    position:           absolute;
+    top:                50%;
+    left:               50%;
+    transform:          translate(-50%, -50%)}
 
 #TapeSupplyBar {
     position:           absolute;
-    top:                30px;
-    left:               4px;
-    width:              calc(100% - 120px);
+    top:                4px;
+    right:              38px;
+    width:              calc(100% - 108px);
     height:             16px;
     border:             1px solid white}
 #TapeSupplyCaption {
@@ -86,21 +94,10 @@
     color:              black;
     font-weight:        bold}
 
-#LoadAsTextDiv {
-    position:           absolute;
-    top:                26px;
-    right:              64px;
-    width:              48px;
-    transform:          translate(0, -50%);
-    line-height:        1.0;
-    text-align:         center}
-#LoadAsTextCheck {
-    outline:            1px solid white}
-
 #TapeView {
     position:           absolute;
-    left:               4px;
-    width:              calc(100% - 10px);
+    right:              38px;
+    width:              calc(100% - 108px);
     bottom:             4px;
     text-align:         right;
     font-size:          12px;
@@ -108,3 +105,25 @@
     background-color:   #FFE;
     border:             none;
     }
+
+#PunchMenu {
+    position:           absolute;
+    display:            none;
+    top:                4px;
+    right:              4px;
+    width:              380px;
+    height:             40px;
+    z-index:            12;
+    text-align:         center;
+    background-color:   #FFC;
+    border:             1px solid #666;
+    box-shadow:         3px 3px 3px #999}
+#PunchMenu BUTTON {
+    position:           relative;
+    top:                50%;
+    height:             24px;
+    line-height:        100%;
+    background-color:   white;
+    border-radius:      8px;
+    border:             2px solid #666;
+    transform:          translate(0, -50%)}

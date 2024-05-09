@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>IBM 1621 Paper Tape Punch Unit</title>
+<!--
+/***********************************************************************
+* retro-1620/webUI PaperTapePunch.html
+************************************************************************
+* Copyright (c) 2024, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1624 Paper Tape Punch Unit device page.
+*
+* Implements the IBM 1624 paper tape punch peripheral.
+*
+************************************************************************
+* 2024-05-03  P.Kimpel
+*   Original version, from PaperTapeReader.html.
+***********************************************************************/
+-->
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<link id=defaultStyleSheet rel=stylesheet type="text/css" href="Common.css">
+<link id=PunchStyleSheet rel=stylesheet type="text/css" href="PaperTapePunch.css">
+</head>
+
+<body id=PunchBody class=deviceBody>
+
+<div id=PunchDiv class="ibmGray">
+    <div id=ControlsDiv class="ibmBlue">
+        <div id=PunchFeedSwitch>
+            <div id=PunchFeedSwitchCaption>PUNCH<br>FEED</div>
+        </div>
+        <meter id=TapeSupplyBar min=0 max=100 value=0 title="Punch supply tape remaining"></meter>
+        <input id=TapeView type=text READONLY>
+        <div id=PunchMenuIconDiv>
+            <img id=PunchMenuIcon src="./resources/icons8-menu-24.png"
+                 alt="Menu icon" title="Click to open menu">
+        </div>
+        <div id=PunchMenu>
+            <button id=PunchExtractBtn type=button>Extract</button>&nbsp;
+            <button id=PunchSaveASCIIBtn type=button>Save ASCII</button>&nbsp;
+            <button id=PunchSaveBinaryBtn type=button>Save Binary</button>&nbsp;
+            <button id=PunchClearBtn type=button>Clear</button>&nbsp;
+            <button id=PunchCloseBtn type=button>Close</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

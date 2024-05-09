@@ -1291,6 +1291,15 @@ class Processor {
             this.ioDevice = this.devices.linePrinter;
             this.ioVariant = variant & Register.bcdValueMask;
             break;
+        case 32:        // Binary Paper Tape Punch
+            if (!this.bcInstalled) {    // must be configured for Binary Capabilities option
+                this.ioDevice = null;
+            } else if (this.opBinary == 39 /*WA*/) {
+                this.ioDevice = this.devices.paperPunch;
+            } else {
+                this.ioDevice = null;
+            }
+            break;
         case 33:        // Binary Paper Tape Reader
             if (!this.bcInstalled) {    // must be configured for Binary Capabilities option
                 this.ioDevice = null;
@@ -1307,10 +1316,39 @@ class Processor {
     }
 
     /**************************************/
+    paperTapeErrorHalt(halt) {
+        /* Handles special halt and restart behavior for invalid punches on the
+        paper-tape reader. If "halt" is true, halts the Processor in both manual
+        and automatic modes and sets Write Check. If false, resets Write Check
+        and automatic mode, leaving the Processor in manual, ready to be
+        restarted by the START button. Returns true if the operation is Write
+        Binary */
+
+        if (halt) {
+            this.stopSCE();
+            this.gateWRITE_INTERLOCK.value = 1;
+            this.ioWriteCheck.value = 1;
+        } else {
+            this.gateWRITE_INTERLOCK.value = 0;
+            this.ioWriteCheck.value = 0;
+            this.gateAUTOMATIC.value = 0;
+            this.gateSCE.value = 0;
+            this.setProcState(procStateE2);     // to continue the I/O
+            if (this.opBinary == 38 /*WN*/) {
+                this.regOR2.decr(1);    // back up to the bad digit
+            } else if (this.opBinary == 39 /*WA*/) {
+                this.regOR2.decr(2);    // back up to the bad character
+            }
+        }
+
+        return this.opBinary == 39 /*WA*/ && this.ioSelectNr == 32 /*RBPT*/;
+    }
+
+    /**************************************/
     async dumpNumerically(digit) {
         /* Executes one digit cycle of Dump Numerically (DN, 35). If the device
         returns an end-of-block indication and we're at END OF MODULE, or
-        RELEASE occurs, terminate the I/O (note that OR2 gets incremented before
+        RELEASE occurs, terminate the I/O. Note that OR2 gets incremented before
         this routine is called */
 
         this.gateRESP_GATE.value = 0;
@@ -1325,13 +1363,38 @@ class Processor {
                 this.gateEND_OF_MODULE.value = 1;
             }
 
-            if (eob) {
-                if (this.gateEND_OF_MODULE.value || this.ioSelectNr == 9 /* Printer */) {
+            switch (this.ioSelectNr) {
+            case 2:     // Paper Tape Punch
+                if (eob) {                              // punch error occurred
+                    this.enterLimbo();                  // just hang on device error
+                } else if (this.gateEND_OF_MODULE.value) {
+                    await this.ioDevice.dumpNumeric(-1);// punch the EOL
                     this.ioExit();
                 } else {
-                    // Update emulation clock after each non-final block
-                    this.envir.restartTiming();
+                    this.envir.restartTiming();         // update emulation clock
                 }
+                break;
+            case 4:     // Card Punch
+                if (eob) {
+                    if (this.gateEND_OF_MODULE.value) {
+                        this.ioExit();
+                    } else {
+                        this.envir.restartTiming();     // update emulation clock
+                    }
+                }
+                break;
+            case 9:     // Line Printer
+                if (eob) {
+                    this.ioExit();
+                }
+                break;
+            default:    // all others
+                if (this.gateEND_OF_MODULE.value) {
+                    this.ioExit();
+                } else {
+                    this.envir.restartTiming();         // update emulation clock
+                }
+                break;
             }
         }
     }
@@ -1344,12 +1407,24 @@ class Processor {
             * For Line Printer, if it returns eob=true (=> buffer full)
             * For all others (not used by Disk Drive), if the digit matches a record mark
             * If a RELEASE occurs
-        */
+        Note that OR2 gets incremented before this routine is called */
         let eob = 0;                    // end-of-buffer indication (meaning varies)
 
         this.gateRESP_GATE.value = 0;
         this.gateCHAR_GATE.value = 1;
         switch (this.ioSelectNr) {
+        case 2:         // Paper Tape Punch
+            if ((digit & Envir.numRecMark) == Envir.numRecMark) {
+                this.gateRM.value = 1;
+                eob = await this.ioDevice.writeNumeric(-1);     // punch the EOL
+                this.ioExit();
+            } else {
+                eob = await this.ioDevice.writeNumeric(digit);
+                if (eob) {                                      // bad character punched
+                    this.enterLimbo();                          // just hang on device error
+                }
+            }
+            break;
         case 4:         // Card Punch
             eob = await this.ioDevice.writeNumeric(digit);
             if (eob) {
@@ -1375,7 +1450,7 @@ class Processor {
             if ((digit & Envir.numRecMark) == Envir.numRecMark) {
                 this.ioExit();
             } else {
-                await this.ioDevice.writeNumeric(digit);
+                eob = await this.ioDevice.writeNumeric(digit);
             }
             break;
         }
@@ -1394,12 +1469,24 @@ class Processor {
             * For Line Printer, if it returns eob=true (=> buffer full)
             * For all others (not used by Disk Drive), if the odd digit matches a record mark
             * If a RELEASE occurs
-        */
+        Note that OR2 gets incremented before this routine is called */
         let eob = 0;
 
         this.gateRESP_GATE.value = 0;
         this.gateCHAR_GATE.value = 1;
         switch (this.ioSelectNr) {
+        case 2:         // Paper Tape Punch
+            if ((digitPair & Envir.numRecMark) == Envir.numRecMark) {
+                this.gateRM.value = 1;
+                eob = await this.ioDevice.writeAlpha(-1);       // punch the EOL
+                this.ioExit();
+            } else {
+                eob = await this.ioDevice.writeAlpha(digitPair);
+                if (eob) {
+                    this.enterLimbo();                          // just hang on device error
+                }
+            }
+            break;
         case 4:         // Card Punch
             eob = await this.ioDevice.writeAlpha(digitPair);
             if (eob) {
@@ -1421,11 +1508,24 @@ class Processor {
                 this.ioExit();
             }
             break;
-        default:
+        case 32:        // Binary Paper Tape
             if ((digitPair & Envir.numRecMark) == Envir.numRecMark) {
+                this.gateRM.value = 1;
+                eob = await this.ioDevice.writeBinary(-1);      // EOL
                 this.ioExit();
             } else {
-                await this.ioDevice.writeAlpha(digitPair);
+                eob = await this.ioDevice.writeBinary(digitPair);
+                if (eob) {
+                    this.enterLimbo();                          // just hang on device error
+                }
+            }
+            break;
+        default:
+            if ((digitPair & Envir.numRecMark) == Envir.numRecMark) {
+                this.gateRM.value = 1;
+                this.ioExit();
+            } else {
+                eob = await this.ioDevice.writeAlpha(digitPair);
             }
             break;
         }
@@ -1475,7 +1575,7 @@ class Processor {
         let reply = 0;                  // ignore keystrokes by default
 
         if (this.ioSelectNr == 1 && this.gateRD.value) { // must be waiting for Typewriter input
-            const readNumeric = (this.opBinary == 36);
+            const readNumeric = (this.opBinary == 36 /*RN*/);
 
             switch (code) {
             case -1:    // R/S key
@@ -1588,7 +1688,7 @@ class Processor {
         characters, the RD CHK indicator will be set */
 
         if (this.ioSelectNr == 5 && this.gateRD.value) { // must be waiting for CardReader input
-            const readNumeric = (this.opBinary == 36);
+            const readNumeric = (this.opBinary == 36 /*RN*/);
 
             this.gateRESP_GATE.value = 1;
             if (readNumeric) {
@@ -1668,7 +1768,7 @@ class Processor {
         transfers invalid 1620 characters, the RD CHK indicator will be set */
 
         if (this.ioSelectNr == 3 && this.gateRD.value) { // must be waiting for PaperTapeReader input
-            const readNumeric = (this.opBinary == 36);
+            const readNumeric = (this.opBinary == 36 /*RN*/);
 
             this.gateRESP_GATE.value = 1;
             if (readNumeric) {
@@ -1684,6 +1784,7 @@ class Processor {
                         this.ioMBRCheckPending = true;  // see Germain, p.32
                         break;
                     default:
+                        this.ioReadCheck.value = 1;
                         this.ioReadCheckPending = true;
                         break;
                     }
@@ -1701,6 +1802,7 @@ class Processor {
                 if (eol) {
                     code = Envir.numRecMark;
                 } else if (code === undefined || char == "]") { // no flagged-0 for alpha paper tape
+                    this.ioReadCheck.value = 1;
                     this.ioReadCheckPending = true;
                     code = 0;
                 }
@@ -1765,8 +1867,10 @@ class Processor {
                 even = 0;
                 odd = Envir.numRecMark;
             } else {
-                const parity = ((Envir.oddParity5[code & 0xF] ^ Envir.oddParity5[(code >> 4) & 0x7]) >> 5) & 1;
-                if (!parity) {
+                const check = (code >> 4) & 1;
+                const parity = ((~(Envir.oddParity5[even] ^ Envir.oddParity5[odd])) >> 5) & 1;
+                if (parity != check) {
+                    this.ioReadCheck.value = 1;
                     this.ioReadCheckPending = true;
                 }
             }
@@ -3368,7 +3472,6 @@ class Processor {
                             this.enterLimbo();          // just hang if not Read Alphanumerically
                         }
                         break;
-
                     default:
                         this.gateREAD_INTERLOCK.value = 1;
                         this.enterLimbo();              // just hang on an undefined device
@@ -3388,7 +3491,6 @@ class Processor {
                         this.ioDevice.initiateWrite();
                         break;
                     case 2:     // Paper Tape Punch / Plotter
-                        this.gateWRITE_INTERLOCK.value = 1;
                         this.ioDevice.initiateWrite();
                         break;
                     case 4:     // Card Punch
@@ -3397,11 +3499,19 @@ class Processor {
                         this.ioDevice.initiateWrite(this.ioVariant);
                         break;
                     case 7:     // Disk Drive
-                        if (this.opBinary == 38) {
+                        if (this.opBinary == 38 /*WN*/) {
                             this.enterLimbo(this, this.initiateDiskWrite);
                         } else {
                             this.gateWRITE_INTERLOCK.value = 1;
                             this.enterLimbo();          // just hang if not Write Numerically
+                        }
+                        break;
+                    case 32:    // Binary Paper Tape Punch
+                        if (this.opBinary == 39 /*WA*/) { // writes alphanumerically only
+                            this.ioDevice.initiateWrite();
+                        } else {
+                            this.gateWRITE_INTERLOCK.value = 1;
+                            this.enterLimbo();          // just hang if not Write Alphanumerically
                         }
                         break;
                     default:
@@ -5838,7 +5948,7 @@ class Processor {
 
             // Check for end of add operation: COMP&CARRY | !COMP.
             if (this.gateCOMP.value ? this.gateCARRY_OUT.value : 1) {
-                if (op == 61 || op == 62 ||
+                if (op == 61 || op == 62 ||     // BX or BXM
                         !(this.gateEZ.value ||
                             (this.gateCARRY_OUT.value && !this.gateCOMP.value) ||
                             (this.gateX_SIG_DIGIT.value && this.gateRECOMP.value))) {
@@ -5861,7 +5971,7 @@ class Processor {
         let digit = 0;
         let nextState = 0;
 
-        if (op == 67) {
+        if (op == 67 /*BSX*/) {
             this.regMAR.value = this.regOR1.value;
             this.regOR1.decr(1);
         } else {
@@ -6426,8 +6536,8 @@ class Processor {
             this.store();
             this.regOR2.decr(1);
 
-            if (((op == 6 || op == 7) && this.regMQ.binaryValue < 3) ||         // 3+ digit FP field
-                    ((op == 10 || op == 20) && this.regMQ.binaryValue < 4)) {   // 5+ digit address field
+            if (((op == 6 || op == 7) && this.regMQ.binaryValue < 3) ||         // TFL or BTFL: 3+ digit FP field
+                    ((op == 10 || op == 20) && this.regMQ.binaryValue < 4)) {   // BTA or BTAM: 5+ digit address field
                 this.regMQ.incr(1);
                 if (nextState) {
                     this.setProcState(nextState);
@@ -7583,7 +7693,8 @@ class Processor {
         if (this.gatePOWER_ON.value && !this.gateCHECK_STOP.value &&
                 // Not sure about this next part, but it's mentioned in Germain p.25:
                 // Don't allow SCE during I/O unless it's Typewriter or Paper Tape output.
-                !(this.gateRD.value || (this.gateWR.value && !(this.ioSelectNr==1 || this.ioSelectNr==3)))) {
+                !(this.gateRD.value || (this.gateWR.value &&
+                        !(this.ioSelectNr==1 || this.ioSelectNr==2 || this.ioSelectNr==32)))) {
             this.gateSCE.value = 1;     // single memory-cycle latch
             this.gateRUN.value = 1;
             if (this.gateMANUAL.value) {
