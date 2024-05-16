@@ -64,7 +64,7 @@
 #FileSelector {
     position:           absolute;
     top:                4px;
-    left:               4px;
+    right:              66px;
     width:              calc(100% - 120px);
     color:              white;
     border:             1px solid white}
@@ -72,7 +72,7 @@
 #TapeSupplyBar {
     position:           absolute;
     top:                30px;
-    left:               4px;
+    right:              66px;
     width:              calc(100% - 120px);
     height:             16px;
     border:             1px solid white}
@@ -89,7 +89,7 @@
 #LoadAsTextDiv {
     position:           absolute;
     top:                26px;
-    right:              64px;
+    left:               2px;
     width:              48px;
     transform:          translate(0, -50%);
     line-height:        1.0;

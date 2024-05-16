@@ -1327,11 +1327,10 @@ class Processor {
         if (halt) {
             this.stopSCE();
             this.gateWRITE_INTERLOCK.value = 1;
-            this.ioWriteCheck.value = 1;
         } else {
             this.gateWRITE_INTERLOCK.value = 0;
             this.ioWriteCheck.value = 0;
-            this.gateAUTOMATIC.value = 0;
+            this.exitAutomatic();
             this.gateSCE.value = 0;
             this.setProcState(procStateE2);     // to continue the I/O
             if (this.opBinary == 38 /*WN*/) {
@@ -7664,6 +7663,7 @@ class Processor {
             if (this.gateCLR_MEM.value) {
                 this.clearMemory();     // async -- returns immediately
             } else {
+                this.enterAutomatic();  // necessary when resuming an I/O (e.g., after PT punch error)
                 this.run();             // async
             }
         }

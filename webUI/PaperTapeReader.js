@@ -245,7 +245,7 @@ class PaperTapeReader {
         /* Initializes (and if necessary, creates) the reader unit state */
 
         this.busy = false;              // an I/O is in progress
-        this.inputReadyStamp = 0;       // timestamp when ready for input
+        this.inputReadyStamp = 0;       // timestamp when ready for next frame
     }
 
     /**************************************/
@@ -362,22 +362,23 @@ class PaperTapeReader {
             let bufLength = this.bufLength;
 
             if (bufIndex >= bufLength) {
-                this.buffer = null;             // reallocate the now-empty buffer
+                bufIndex = bufLength = 0;
             }
 
+            const bufUsed = bufLength - bufIndex;
             if (!this.buffer) {
                 this.buffer = new Uint8Array(imageLength);
                 bufLength = 0;
-            } else if (this.buffer.length - bufLength + bufIndex < imageLength) {
+            } else if (this.buffer.length - bufUsed < imageLength) {
                 // Not enough room in the current buffer, so resize it
                 const oldBuf = this.buffer;
                 const oldLength = bufLength;
-                bufLength -= bufIndex;
-                this.buffer = new Uint8Array(bufLength + imageLength);
+                bufLength = 0;
+                this.buffer = new Uint8Array(bufUsed + imageLength);
                 for (let x=bufIndex; x<oldLength; ++x) {
                     this.buffer[bufLength++] = oldBuf[x];
                 }
-            } else if (bufIndex > 0) {
+            } else if (bufUsed > 0) {
                 // Slide any remaining buffer down to make room for new image
                 this.buffer.copyWithin(0, bufIndex, bufLength);
                 bufLength -= bufIndex;
@@ -394,17 +395,10 @@ class PaperTapeReader {
             const imageLength = image.length;
             let bufLength = this.bufLength;
 
-            if (this.bufIndex >= bufLength) {   // discard any old buffer
-                this.buffer = image;
-                this.bufIndex = 0;
-                bufLength = imageLength;
-            } else {
-                // Copy the new image bytes into the buffer
-                prepareBuffer(imageLength);
-                bufLength = this.bufLength;
-                for (let x=0; x<imageLength; ++x) {
-                    this.buffer[bufLength++] = image[x];
-                }
+            prepareBuffer(imageLength);
+            bufLength = this.bufLength;
+            for (let x=0; x<imageLength; ++x) {
+                this.buffer[bufLength++] = image[x];
             }
 
             this.bufLength = bufLength;
@@ -478,7 +472,7 @@ class PaperTapeReader {
             this.processor.gateREAD_INTERLOCK.value = 0;
             this.readFcn();                     // so restart the read
         }
-}
+    }
 
     /**************************************/
     async read() {
@@ -509,10 +503,6 @@ class PaperTapeReader {
             }
 
             if (x >= bufLength) {       // end of buffer
-                this.buffer = null;     // deallocate the buffer storage
-                this.bufIndex = this.bufLength = 0;
-                this.fileSelector.disabled = false;
-                this.fileSelector.value = null;         // reset the control
                 this.processor.gateREAD_INTERLOCK.value = 1;
                 eol = true;             // just quit and leave the I/O hanging
             } else {
@@ -538,6 +528,11 @@ class PaperTapeReader {
         } while (!eol);
 
         this.bufIndex = x;
+        if (x >= bufLength) {                   // end of buffer
+            this.buffer = null;                 // deallocate the buffer
+            this.fileSelector.disabled = false;
+            this.fileSelector.value = null;     // reset the control so onChange will work
+        }
     }
 
     /**************************************/
@@ -570,10 +565,6 @@ class PaperTapeReader {
             }
 
             if (x >= bufLength) {       // end of buffer
-                this.buffer = null;     // deallocate the buffer storage
-                this.bufIndex = this.bufLength = 0;
-                this.fileSelector.disabled = false;
-                this.fileSelector.value = null;         // reset the control
                 this.processor.gateREAD_INTERLOCK.value = 1;
                 eol = true;             // just quit and leave the I/O hanging
             } else {
@@ -604,6 +595,11 @@ class PaperTapeReader {
         } while (!eol);
 
         this.bufIndex = x;
+        if (x >= bufLength) {                   // end of buffer
+            this.buffer = null;                 // deallocate the buffer
+            this.fileSelector.disabled = false;
+            this.fileSelector.value = null;     // reset the control so onChage will work
+        }
     }
 
     /**************************************/

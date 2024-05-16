@@ -392,7 +392,7 @@ class PaperTapePunch {
         } else {
             punchFeedSwitch.classList.add("clicked");
             if (this.busy) {
-                if (this.punchCheck && !switchOn) {
+                if (this.punchCheck) {
                     this.punchCheck = false;
                     if (this.bufIndex > 0) {
                         --this.bufIndex;                // overwrite the bad char with tape-feed
@@ -675,14 +675,16 @@ class PaperTapePunch {
             this.buffer[this.bufIndex++] = PaperTapePunch.eolBits;
             char = PaperTapePunch.eolGlyph;
         } else if (badCode) {
-            this.punchCheck = true;
             char = "?";
+            this.punchCheck = true;     // parity error or invalid code
+            this.processor.ioWriteCheck.value = 1;
             this.processor.paperTapeErrorHalt(true);
-            result = 1;                 // parity error or invalid code
-        } else if (this.bufIndex >= PaperTapePunch.bufferLimit) {   // end of buffer
+            result = 1;                 // just quit and leave the I/O hanging
+        } else if (this.bufIndex >= PaperTapePunch.bufferLimit) {
+            this.punchCheck = true;     // end of buffer
             this.processor.paperTapeErrorHalt(true);
             result = -1;                // just quit and leave the I/O hanging
-        } else {                        // valid hole pattern
+        } else {                        // it's a valid hole pattern
             this.buffer[this.bufIndex++] = ptCode;
             char = this.xlatePTCodeToASCII[ptCode] ?? PaperTapePunch.invalidGlyph;
         }

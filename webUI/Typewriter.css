@@ -28,7 +28,7 @@
 #TypewriterPaperDiv {
     position:           absolute;
     height:             100%;
-    width:              calc(100% - 8px);
+    width:              calc(100% - 2px);
     min-width:          200px;
     left:               50%;
     transform:          translate(-50%, 0)}
