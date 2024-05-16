@@ -15,6 +15,7 @@
 export {ControlPanel};
 
 import * as Version from "../emulator/Version.js";
+import {Envir} from "../emulator/Envir.js";
 import {FlipFlop} from "../emulator/FlipFlop.js";
 import {Register} from "../emulator/Register.js";
 import {Timer} from "../emulator/Timer.js";
@@ -422,50 +423,27 @@ class ControlPanel {
     }
 
     /**************************************/
-    dumpCMEMFile(ev) {
-        /* Formats the contents of core memory to a popup window, from which the
-        user can copy/save/print it as they desire */
-        const title = "retro-1620 CMEM Memory Dump";
+    openDebugPanel(ev) {
+        /* Opens the DebugPanelDiv and wires up its events */
         const p = this.context.processor;
         const MM = p.MM;
         const memSize = p.envir.memorySize;
-        const config = p.context.config.configData;
-        const dpl = 20;                 // digits per line
 
-        const formatCMEM = (ev) => {
-            const doc = ev.target;
-            const win = doc.defaultView;
-            const text = doc.getElementById("Paper");
-
-            let addr = 0;               // current memory address
-            let digit = 0;              // current memory digit
-            let digits = 20;            // digits on current line
-            let line = "";              // line assembly buffer
-            let lineAddr = 0;           // address of start of line
-            let pair = MM[0];           // current memory cell digit pair
-            let state = 0;              // FSA state variable
-            let zeroes = 0;             // count of contiguous zero digits
-
-            const startLine = (addr) => {
-                line = addr.toString().padStart(5, "0") + ":";
-                lineAddr = addr;
-                digits = 0;
-            };
+        //----------------------------
+        const formatDumpHeader = (dumpType) => {
+            /* Formats the current state of the system as a string and returns
+            the string */
+            const config = p.context.config.configData;
+            let line = "";
+            let text = "";
 
             const putLine = (line) => {
-                text.appendChild(doc.createTextNode(line + "\n"));
+                text += line + "\n";
             };
 
-            const putDigit = (digit) => {
-                line += digit.toString(16).toUpperCase().padStart((digits == 10 ? 4 : 3), " ");
-                ++digits;
-            };
-
-            doc.title = title;
-            win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
-            //doc.getElementById("Paper").textContent = text;
-            putLine(`// retro-1620 CMEM Dump - ${(new Date()).toString()}`);
+            putLine(`// retro-1620 ${dumpType} Dump - ${(new Date()).toString()}`);
             putLine("");
+
             putLine(`// OR1=${p.regOR1.binaryValue.toString().padStart(5, "0")}` +
                      `  OR2=${p.regOR2.binaryValue.toString().padStart(5, "0")}` +
                      `  OR3=${p.regOR3.binaryValue.toString().padStart(5, "0")}` +
@@ -486,6 +464,7 @@ class ControlPanel {
                        `MQ=${p.regMQ.binaryValue}  IA=${p.gateIA_SEL.value}  ` +
                        `XR=${p.regXR.binaryValue}  BAND=${p.gateIX_BAND_2.value*2 + p.gateIX_BAND_1.value}`);
             putLine("//");
+
             line = "// Annunciators: ";
             if (p.gateTHERMAL.value)            {line += "THERMAL "}
             if (p.gateWRITE_INTERLOCK.value)    {line += "WRITE-INTERLOCK "}
@@ -496,6 +475,7 @@ class ControlPanel {
             if (p.gateMANUAL.value)             {line += "MANUAL "}
             if (p.gateCHECK_STOP.value)         {line += "CHECK-STOP "}
             putLine(line);
+
             line = "// Checks: ";
             if (p.diskAddrCheck.value)          {line += "DISK-ADDR "}
             if (p.diskCylOflowCheck.value)      {line += "CYL-OFLOW "}
@@ -509,14 +489,17 @@ class ControlPanel {
             if (p.parityMBREvenCheck.value)     {line += "MBR-E-PARITY "}
             if (p.parityMBROddCheck.value)      {line += "MBR-O-PARITY "}
             putLine(line);
+
             putLine(`// PS1=${p.program1Switch}, PS2=${p.program2Switch}, PS3=${p.program3Switch}, PS4=${p.program4Switch}, ` +
                     `Stop: Disk=${p.diskStopSwitch}, Parity=${p.parityStopSwitch}, I/O=${p.ioStopSwitch}, Oflow=${p.oflowStopSwitch}, ` +
                     `MARS: ${p.marSelectorKnob}`);
+
             line = `// Config: ${config.configName}, Memory ${memSize}`;
             if (p.xrInstalled) {line += ", Index Registers"}
             if (p.fpInstalled) {line += ", Floating Point"}
             if (p.bcInstalled) {line += ", Binary Capabilities"}
             putLine(line);
+
             line = "// Devices:";
             if (config.Card.hasCard) {line += ` Card ${config.Card.cpmRead}/${config.Card.cpmPunch} CPM,`}
             if (config.Printer.hasPrinter) {line += ` Printer ${config.Printer.lpm} LPM,`}
@@ -528,8 +511,49 @@ class ControlPanel {
                 }
             }
             putLine(line.slice(0, -1));
+            return text;
+        };
 
-            line = "";
+        //----------------------------
+        const formatCMEMDump = (putLine) => {
+            /* Formats the contents of memory in CMEM format and outputs it
+            through the putLine() function parameter */
+            const dpl = 20;             // digits per line
+            let addr = 0;               // current memory address
+            let alpha = "";             // alpha interpretation of digit pairs
+            let digit = 0;              // current memory digit
+            let digits = dpl;           // digits on current line
+            let lastDigit = 0;          // prior digit output
+            let line = "";              // line assembly buffer
+            let lineAddr = 0;           // address of start of line
+            let pair = MM[0];           // current memory cell digit pair
+            let state = 0;              // FSA state variable
+            let zeroes = 0;             // count of contiguous zero digits
+
+            const startLine = (addr) => {
+                line = addr.toString().padStart(5, "0") + ":";
+                lineAddr = addr;
+                digits = 0;
+                alpha = "";
+            };
+
+            const endLine = () => {
+                if (alpha.length) {
+                    putLine(line.padEnd(dpl*3+10, " ") + "// " + alpha);
+                } else {
+                    putLine(line);
+                }
+            };
+
+            const putDigit = (digit) => {
+                line += digit.toString(16).toUpperCase().padStart((digits == 10 ? 4 : 3), " ");
+                if (digits & 1) {
+                    alpha += Envir.alphaGlyphs[(lastDigit & Register.bcdMask)*16 + (digit & Register.bcdMask)];
+                }
+
+                ++digits;
+                lastDigit = digit;
+            };
 
             while (addr < memSize) {
                 if (addr & 1) {                 // get next even/odd digit
@@ -550,7 +574,7 @@ class ControlPanel {
 
                     // If there are remaining zeroes, skip to the line with the current address.
                     if (zeroes) {
-                        putLine(line);
+                        endLine();
                         if (zeroes >= dpl) {    // at least one line of zeroes
                             putLine("");
                         }
@@ -564,7 +588,7 @@ class ControlPanel {
 
                     // Output the current non-zero digit, starting a new line as needed.
                     if (digits >= dpl) {
-                        putLine(line);
+                        endLine();
                         startLine(addr);
                     }
 
@@ -576,34 +600,66 @@ class ControlPanel {
             }
 
             if (digits) {
-                putLine(line);
+                endLine();
             }
 
             putLine("");
             putLine("// End CMEM Dump");
         };
 
+        //----------------------------
+        const buildCMEMView = (ev) => {
+            /* Handles the onLoad event for the CMEM view pop-up window and
+            populates the window with the CMEM dump */
+            const doc = ev.target;
+            const win = doc.defaultView;
+            const text = doc.getElementById("Paper");
+            const title = "retro-1620 CMEM Memory Dump";
 
-        openPopup(this.window, "./FramePaper.html", "",
-                "scrollbars,resizable,width=600,height=500", this, formatCMEM);
-    }
+            const putLine = (line) => {
+                text.appendChild(doc.createTextNode(line.trimEnd() + "\n"));
+            };
 
-    /**************************************/
-    openDebugPanel(ev) {
-        /* Opens the DebugPanelDiv and wires up its events */
-
-        const closeDebugPanel = (ev) => {
-            /* Unwires the local events and closes the load panel */
-
-            this.$$("DebugCloseBtn").removeEventListener("click", closeDebugPanel);
-            this.$$("RegisterViewCheck").removeEventListener("click", toggleRegisterView);
-            this.$$("AuxCEPanelViewCheck").removeEventListener("click", toggleAuxCEPanelView);
-            this.$$("CMEMDumpBtn").removeEventListener("click", initiateCMEMDump);
-            this.$$("CMEMSelector").removeEventListener("change", initiateCMEMLoad);
-            this.$$("CMEMSelector").value = null;       // reset the file-picker control
-            this.$$("DebugPanelDiv").style.display = "none";
+            doc.title = title;
+            win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
+            putLine(formatDumpHeader("CMEM"));
+            formatCMEMDump(putLine);
         };
 
+        //----------------------------
+        const initiateCMEMView = (ev) => {
+            /* Formats the contents of core memory to a pop-up window, from which the
+            user can copy/save/print it as they desire */
+            const title = "retro-1620 CMEM Memory Dump";
+
+            openPopup(this.window, "./FramePaper.html", "",
+                    "scrollbars,resizable,width=640,height=500", this, buildCMEMView);
+            closeDebugPanel(ev);
+        };
+
+        //----------------------------
+        const saveCMEMFile = (ev) => {
+            /* Formats the contents of core memory to a text file in CMEM format */
+            let text = "";
+            const title = "retro-1620 CMEM Memory Dump.cmem";
+
+            const putLine = (line) => {
+                text += line.trimEnd() + "\n";
+            };
+
+            putLine(formatDumpHeader("CMEM"));
+            formatCMEMDump(putLine);
+
+            const url = `data:text/plain,${encodeURIComponent(text)}`;
+            const hiddenLink = this.doc.createElement("a");
+
+            hiddenLink.setAttribute("download", title);
+            hiddenLink.setAttribute("href", url);
+            hiddenLink.click();
+            closeDebugPanel(ev);
+        };
+
+        //----------------------------
         const initiateCMEMLoad = (ev) => {
             /* Handle the <input type=file> onchange event when a file is selected
             to initiate a CMEM load */
@@ -625,19 +681,139 @@ class ControlPanel {
             reader.readAsText(ev.target.files[0]);
         };
 
-        const initiateCMEMDump = (ev) => {
-            /* Handle the click event on the dump button to initiate a CMEM dump */
+        //----------------------------
+        const formatMemDump = (putLine) => {
+            /* Formats the contents of memory in MemDump format and outputs it
+            through the putLine() function parameter */
+            const dpl = 50;             // digits per line
+            let addr = 0;               // current memory address
+            let alpha = "";             // alpha interpretation of digit pairs
+            let digit = 0;              // current memory digit
+            let digits = dpl;           // digits on current line
+            let flagLine = "";          // formatting line for digit flags
+            let lastDigit = 0;          // prior digit output
+            let line = "";              // line assembly buffer
+            let lineAddr = 0;           // address of start of line
+            let pair = MM[0];           // current memory cell digit pair
+            let state = 0;              // FSA state variable
+            let zeroes = 0;             // count of contiguous zero digits
 
-            this.dumpCMEMFile(ev);
+            const pairMask = ((Register.notParityMask << Register.digitBits) | Register.notParityMask);
+
+            const startLine = (addr) => {
+                line = addr.toString().padStart(5, "0") + ": ";
+                lineAddr = addr;
+                digits = 0;
+                alpha = "";
+                flagLine = (" ").repeat(line.length);
+            };
+
+            const endLine = () => {
+                putLine(flagLine);
+                if (alpha.length) {
+                    putLine(line.padEnd(dpl+10, " ") + "// " + alpha);
+                } else {
+                    putLine(line);
+                }
+            };
+
+            const putDigit = (digit) => {
+                line += (digit & Register.bcdMask).toString(16).toUpperCase();
+                flagLine += (digit & Register.flagMask) ? "_" : " ";
+                if (digits & 1) {
+                    alpha += Envir.alphaGlyphs[(lastDigit & Register.bcdMask)*16 + (digit & Register.bcdMask)];
+                }
+
+                ++digits;
+                lastDigit = digit;
+            };
+
+            while (addr < memSize) {
+                pair = MM[addr >> 1];
+                if ((pair & pairMask) == 0) {
+                    zeroes += 2;                // count contiguous unflagged zeroes
+                } else {
+                    // Fill in any unflagged zeros that will fit on the line.
+                    while (zeroes && digits < dpl) {
+                        putDigit(0);
+                        --zeroes;
+                    }
+
+                    // If there are remaining zeroes, skip to the line with the current address.
+                    if (zeroes) {
+                        endLine();
+                        if (zeroes >= dpl) {    // at least one line of zeroes
+                            putLine("");
+                            putLine("");
+                        }
+
+                        zeroes = 0;
+                        startLine(Math.floor(addr/dpl)*dpl);
+                        while (lineAddr+digits < addr) {// output any leading zeroes
+                            putDigit(0);
+                        }
+                    }
+
+                    // Output the current non-zero digit pair, starting a new line as needed.
+                    if (digits >= dpl) {
+                        endLine();
+                        startLine(addr);
+                    }
+
+                    putDigit((pair >> Register.digitBits) & Register.notParityMask);
+                    putDigit(pair & Register.notParityMask);
+                }
+
+                // Increment memory address.
+                addr += 2;
+            }
+
+            if (digits) {
+                endLine();
+            }
+
+            putLine("");
+            putLine("// End Memory Dump");
+        };
+
+        //----------------------------
+        const buildMemDumpView = (ev) => {
+            /* Handles the onLoad event for the MemDump view pop-up window and
+            populates the window with the MemDump */
+            const doc = ev.target;
+            const win = doc.defaultView;
+            const text = doc.getElementById("Paper");
+            const title = "retro-1620 Memory Dump";
+
+            const putLine = (line) => {
+                text.appendChild(doc.createTextNode(line.trimEnd() + "\n"));
+            };
+
+            doc.title = title;
+            win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
+            putLine(formatDumpHeader("Memory Dump"));
+            formatMemDump(putLine);
+        };
+
+        //----------------------------
+        const initiateMemDumpView = (ev) => {
+            /* Formats the contents of core memory to a pop-up window, from which the
+            user can copy/save/print it as they desire */
+            const title = "retro-1620 Memory Dump";
+
+            openPopup(this.window, "./FramePaper.html", "",
+                    "scrollbars,resizable,width=680,height=500", this, buildMemDumpView);
             closeDebugPanel(ev);
         };
 
+        //----------------------------
         const toggleRegisterView = (ev) => {
             /* Handle the click event on the RegisterView check box */
 
             this.toggleRegisterView();
         };
 
+        //----------------------------
         const toggleAuxCEPanelView = (ev) => {
             /* Handle the click event on the AuxCEPanelView check box */
 
@@ -648,6 +824,22 @@ class ControlPanel {
             }
         };
 
+        //----------------------------
+        const closeDebugPanel = (ev) => {
+            /* Unwires the local events and closes the load panel */
+
+            this.$$("DebugCloseBtn").removeEventListener("click", closeDebugPanel);
+            this.$$("RegisterViewCheck").removeEventListener("click", toggleRegisterView);
+            this.$$("AuxCEPanelViewCheck").removeEventListener("click", toggleAuxCEPanelView);
+            this.$$("MemoryDumpBtn").removeEventListener("click", initiateMemDumpView);
+            this.$$("CMEMSaveBtn").removeEventListener("click", saveCMEMFile);
+            this.$$("CMEMDumpBtn").removeEventListener("click", initiateCMEMView);
+            this.$$("CMEMSelector").removeEventListener("change", initiateCMEMLoad);
+            this.$$("CMEMSelector").value = null;       // reset the file-picker control
+            this.$$("DebugPanelDiv").style.display = "none";
+        };
+
+        //----------------------------
         this.$$("RegisterViewCheck").checked = this.registerView;
         this.$$("AuxCEPanelViewCheck").checked = this.auxCEPanel !== null;
 
@@ -655,7 +847,9 @@ class ControlPanel {
         this.$$("RegisterViewCheck").addEventListener("click", toggleRegisterView);
         this.$$("AuxCEPanelViewCheck").addEventListener("click", toggleAuxCEPanelView);
         this.$$("CMEMSelector").addEventListener("change", initiateCMEMLoad);
-        this.$$("CMEMDumpBtn").addEventListener("click", initiateCMEMDump);
+        this.$$("CMEMDumpBtn").addEventListener("click", initiateCMEMView);
+        this.$$("CMEMSaveBtn").addEventListener("click", saveCMEMFile);
+        this.$$("MemoryDumpBtn").addEventListener("click", initiateMemDumpView);
         this.$$("DebugCloseBtn").addEventListener("click", closeDebugPanel);
     }
 

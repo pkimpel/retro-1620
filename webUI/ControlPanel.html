@@ -205,15 +205,23 @@
         <input id=CMEMSelector type=file size=60 accept=".cmem">
     </p>
 
-    <p class=bold>Dump Memory to a CMEM file:</p>
+    <p class=bold>Generate CMEM Dump:</p>
     <table class=normal>
     <tbody><tr>
         <td>
-            <button id=CMEMDumpBtn>Dump</button>
+            <button id=CMEMDumpBtn title="View memory in CMEM format">View CMEM Dump</button>
         <td class=rj>
-            <button id=DebugCloseBtn>Close</button>
+            <button id=CMEMSaveBtn title="Save memory contents as a CMEM file">Save CMEM File</button>
     </table>
-    </div>
+
+    <p class=bold>Generate Memory Dump:</p>
+    <table class=normal>
+    <tbody><tr>
+        <td>
+            <button id=MemoryDumpBtn title="View memory in digit+alpha format">View MemDump</button>
+        <td class=rj>
+            <button id=DebugCloseBtn>Close Panel</button>
+    </table>
 </div>
 
 </body>
