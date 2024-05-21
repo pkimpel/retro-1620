@@ -979,11 +979,11 @@ class Processor {
         console. There is no standard way to invoke this -- you have to insert a
         call somewhere in the code (and take it back out when you're done!) */
 
-        console.debug("%2i %s %s %s %s %s %s %s %s %s | %i %i %i %i  %i %i %i %i  %i %i %i %i  %i %i %i %i  %i %i | %2s %2s",
+        console.debug("%2i %s %s %s %s %s %s %s %s %s %s | %i %i %i %i|%i %i %i %i|%i %i %i %i|%i %i %i %i|%i %i | %2s %2s",
             this.procState, this.regOP.toBCDString(),
             this.regIR1.toBCDString(), this.regOR1.toBCDString(), this.regOR2.toBCDString(),
-            this.regOR3.toBCDString(), this.regPR1.toBCDString(), this.regPR2.toBCDString(),
-            this.regMQ.toBCDString(), this.regDR.toBCDString(),
+            this.regOR3.toBCDString(), this.regOR4.toBCDString(), this.regPR1.toBCDString(),
+            this.regPR2.toBCDString(), this.regMQ.toBCDString(), this.regDR.toBCDString(),
             this.gateFL_1.value, this.gateFL_2.value, this.gateFIELD_MK_1.value, this.gateFIELD_MK_2.value,
             this.gate1ST_CYC.value, this.gate1ST_CYC_DELAYD.value, this.gateDIV_1_CYC.value, this.gateDVD_L_CYC.value,
             this.gateADD_ENT.value, this.gateADD_MODE.value, this.gate2_DIG_CNTRL.value, this.gateCOMP.value,
@@ -5655,11 +5655,11 @@ class Processor {
 
         if (this.gateLAST_LD_CYC.value) {       // final LD/LDM cycle
             this.regMAR.value = this.regPR1.value;
-            this.fetch();                       // fetch product digit at 00099
+            this.fetch();                       // fetch product area at 00099
             dx = this.regMAR.isEven;
             digit = this.regMBR.getDigit(dx);
             if (this.gateFIELD_MK_2.value) {
-                if (this.gateDVD_SIGN.value) {  // set sign in product field
+                if (this.gateDVD_SIGN.value) {  // set sign in quotient field
                     this.regMIR.setDigit(dx, digit | Register.flagMask);
                 }
 
@@ -5670,7 +5670,7 @@ class Processor {
                 }
             }
             this.store();
-        } else {                                // transfer P digit to product field
+        } else {                                // transfer P digit to product area
             this.regMAR.value = this.regOR2.value;
             this.fetch();
             if (this.gate2_DIG_CNTRL.value) {
@@ -5691,6 +5691,7 @@ class Processor {
                 this.gateLAST_LD_CYC.value = 1;
                 this.gateEXMIT_MODE.value = 0;
                 this.gateFIELD_MK_2.value = 1;
+                nextState = 0;                  // stay in E2 for last load cycle - don't do another E1
             }
 
             dx = this.regMAR.isEven;
@@ -6489,7 +6490,7 @@ class Processor {
             } else if (this.gateDIG_FORCE_MODE.value) {
                 this.stepE2FPDigitForce();
             } else {
-                this.panic("03=FMUL invalid E2 mode");
+                this.panic("09=FDIV invalid E2 mode");
             }
             break;
 
@@ -7294,6 +7295,8 @@ class Processor {
         this.envir.startTiming();
 
         do {
+            // this.traceState();          // >>>>> DEBUG ONLY <<<<<
+
             switch (this.procState) {
             case procStateI1:
                 this.stepICycle1()
