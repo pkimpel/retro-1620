@@ -519,6 +519,7 @@ class ControlPanel {
             /* Formats the contents of memory in CMEM format and outputs it
             through the putLine() function parameter */
             const dpl = 20;             // digits per line
+            const xtra = Math.floor((dpl-1)/10) + 8;    // overhead chars on digit line
             let addr = 0;               // current memory address
             let alpha = "";             // alpha interpretation of digit pairs
             let digit = 0;              // current memory digit
@@ -530,6 +531,8 @@ class ControlPanel {
             let state = 0;              // FSA state variable
             let zeroes = 0;             // count of contiguous zero digits
 
+            const pairMask = ((Register.notParityMask << Register.digitBits) | Register.notParityMask);
+
             const startLine = (addr) => {
                 line = addr.toString().padStart(5, "0") + ":";
                 lineAddr = addr;
@@ -539,32 +542,26 @@ class ControlPanel {
 
             const endLine = () => {
                 if (alpha.length) {
-                    putLine(line.padEnd(dpl*3+10, " ") + "// " + alpha);
+                    putLine(line.padEnd(dpl*3+xtra, " ") + "// " + alpha);
                 } else {
                     putLine(line);
                 }
             };
 
             const putDigit = (digit) => {
-                line += digit.toString(16).toUpperCase().padStart((digits == 10 ? 4 : 3), " ");
+                line += digit.toString(16).toUpperCase().padStart((digits > 0 && digits%10 == 0 ? 4 : 3), " ");
                 if (digits & 1) {
                     alpha += Envir.alphaGlyphs[(lastDigit & Register.bcdMask)*16 + (digit & Register.bcdMask)];
                 }
 
-                ++digits;
                 lastDigit = digit;
+                ++digits;
             };
 
             while (addr < memSize) {
-                if (addr & 1) {                 // get next even/odd digit
-                    digit = pair & Register.notParityMask;
-                } else {
-                    pair = MM[addr >> 1];
-                    digit = (pair >> Register.digitBits) & Register.notParityMask;
-                }
-
-                if (digit == 0) {
-                    ++zeroes;                   // count contiguous unflagged zeroes
+                pair = MM[addr >> 1];
+                if ((pair & pairMask) == 0) {
+                    zeroes += 2;                // count contiguous unflagged zeroes
                 } else {
                     // Fill in any unflagged zeros that will fit on the line.
                     while (zeroes && digits < dpl) {
@@ -586,17 +583,18 @@ class ControlPanel {
                         }
                     }
 
-                    // Output the current non-zero digit, starting a new line as needed.
+                    // Output the current non-zero pair, starting a new line as needed.
                     if (digits >= dpl) {
                         endLine();
                         startLine(addr);
                     }
 
-                    putDigit(digit);
+                    putDigit((pair >> Register.digitBits) & Register.notParityMask);
+                    putDigit(pair & Register.notParityMask);
                 }
 
                 // Increment memory address.
-                ++addr;
+                addr += 2;
             }
 
             if (digits) {
@@ -686,6 +684,7 @@ class ControlPanel {
             /* Formats the contents of memory in MemDump format and outputs it
             through the putLine() function parameter */
             const dpl = 50;             // digits per line
+            const xtra = Math.floor((dpl-1)/10) + 9;    // overhead chars on digit line
             let addr = 0;               // current memory address
             let alpha = "";             // alpha interpretation of digit pairs
             let digit = 0;              // current memory digit
@@ -711,7 +710,7 @@ class ControlPanel {
             const endLine = () => {
                 putLine(flagLine);
                 if (alpha.length) {
-                    putLine(line.padEnd(dpl+10, " ") + "// " + alpha);
+                    putLine(line.padEnd(dpl+xtra, " ") + "// " + alpha);
                 } else {
                     putLine(line);
                 }
@@ -724,8 +723,12 @@ class ControlPanel {
                     alpha += Envir.alphaGlyphs[(lastDigit & Register.bcdMask)*16 + (digit & Register.bcdMask)];
                 }
 
-                ++digits;
                 lastDigit = digit;
+                ++digits;
+                if (digits%10 == 0) {
+                    flagLine += " ";
+                    line += " ";
+                }
             };
 
             while (addr < memSize) {
@@ -802,7 +805,7 @@ class ControlPanel {
             const title = "retro-1620 Memory Dump";
 
             openPopup(this.window, "./FramePaper.html", "",
-                    "scrollbars,resizable,width=680,height=500", this, buildMemDumpView);
+                    "scrollbars,resizable,width=700,height=500", this, buildMemDumpView);
             closeDebugPanel(ev);
         };
 

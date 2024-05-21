@@ -123,7 +123,6 @@ class PaperTapeReader {
      // "!": 0b01111010,        // alternate for flagged Record Mark
      // "<": 0b10000000,        // EOL (never read into memory)
      // "_": 0b01111111,        // tape-feed (ignored during non-binary read)
-     // " ": 0b00000000,        // blank tape (alternate for tape-feed)
     };
 
 
@@ -416,7 +415,7 @@ class PaperTapeReader {
             let bufLength = this.bufLength;
             let crFlag = false;
             for (const char of image) {
-                const bits = PaperTapeReader.xlateASCIIToPTCode[char];
+                const bits = PaperTapeReader.xlateASCIIToPTCode[char.toUpperCase()];
                 if (bits !== undefined) {
                     this.buffer[bufLength++] = bits;
                 } else {
@@ -514,7 +513,7 @@ class PaperTapeReader {
                     eol = true;
                     char = PaperTapeReader.eolGlyph;
                     this.processor.receivePaperTapeFrame("", true);
-                } else if (code == 0 || code == PaperTapeReader.tapeFeedBits) {
+                } else if (code == PaperTapeReader.tapeFeedBits) {
                     char = PaperTapeReader.tapeFeedGlyph;       // tape-feed: ignore this frame
                 } else {
                     char = PaperTapeReader.invalidGlyph;        // invalid hole pattern
@@ -574,8 +573,6 @@ class PaperTapeReader {
                     eol = true;
                     char = PaperTapeReader.eolGlyph;
                     this.processor.receivePaperTapeBinary(0, true);
-                } else if (code == 0) {
-                    char = "";          // ignore and don't send to Processor
                 } else {
                     if (code == PaperTapeReader.tapeFeedBits) {
                         char = PaperTapeReader.tapeFeedGlyph;

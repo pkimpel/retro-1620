@@ -890,9 +890,8 @@ class Typewriter {
         Dump Numerically. Returns a Promise for completion */
         const digit = code & Register.digitMask;
 
-        this.printChar(Typewriter.numericGlyphs[digit & Register.bcdMask],
+        return this.printChar(Typewriter.numericGlyphs[digit & Register.bcdMask],
                 (digit & Register.flagMask), (Envir.oddParity5[digit] != digit));
-        return 1;                       // always returns end-of-block
     }
 
     /**************************************/
