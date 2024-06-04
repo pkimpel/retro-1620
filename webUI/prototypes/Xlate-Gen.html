@@ -49,179 +49,9 @@ TABLE {
 
 <script>
 
+
 window.addEventListener("load", (ev) => {
     const bcdMask  = 0b0001111;
-    const carryBit = 0b1000000;
-    const checkBit = 0b0100000;
-
-    function xlateIn(code, selector, op) {
-        /* Translates the paper-tape-like "code" to 1620 internal memory code
-        for the I/O device indicated by "selector" and input mode indicated by
-        opcode "op" */
-        const alpha = (op == 37 ? 1 : 0);               // read alpha op
-        const numeric = (op == 36 ? 1 : 0);             // read numeric op
-        const binary = (selector == 33 ? 1 : 0) & alpha;// read binary mode
-
-        const bz1 = binary & b8;
-        const bz2 = binary & b0;
-        const bz4 = binary & bx;
-
-        const b1 = code & 0b00000001;                   // 1-bit channel
-        const b2 = code & 0b00000010;                   // 2-bit channel
-        const b4 = code & 0b00000100;                   // 4-bit channel
-        const b8 = code & 0b00001000;                   // 8-bit channel    (also binary zone 1)
-        const bc = code & 0b00010000;                   // check-bit channel
-        const b0 = code & 0b00100000;                   // zero-bit channel (also binary zone 2)
-        const bx = code & 0b01000000;                   // X-bit channel    (also binary zone 4)
-        const be = code & 0b10000000;                   // EOL channel
-
-        const bz1 = bc;                                 // binary zone bit equivalents
-        const bz2 = b0;
-        const bz4 = bx;
-
-        const rb1 = b1;                                 // read bus numeric bits
-        const rb2 = b1 | be;
-        const rb4 = b4;
-        const rb8 = b8 | be;
-
-        const tRMGM = (~rb4 & rb1 & rb2 & rb8) & rb2 & rb8;
-        const tNot841 = tRMGM & rb1 & rb4 & rb8 & ~binary;
-        const tNum0 = b1 | b2 | b4 | b8;
-        const tEndLinePT = be;
-        const t1622Bit0NotFlgGM = (selector == 5 ? (code == 0b01111111 ? 0 : b0) : b0);
-        const t1622Blank = (selector == 5 ? bc : 0);
-
-        const n1 = rb1 & tNot841;
-        const n2 = rb2;
-        const n4 = rb4 & tNot841;
-        const n8 = ((rb8 & ~rb4 & ~rb2) | tRMGM | (rb8 & tNot841 & numeric)) & ~binary;
-
-        const rb0 = t1622Bit0NotFlgGM | tEndLinePT; // read bus zone bits
-        const rbx = bx;
-
-        const tZ2a = (~rbx & tNum0 & ~b0) & ~rbx & ~tRMGM & ~binary;
-        const t84Not1 = ~rb1 & rb4 & rb8;
-        const tSpecChar = (rb1 & rb2 & rb8) | t84Not1;
-        const tCorrCBit = (~rb0 & rbx) | (rb0 & rbx);
-
-        const z1 = ((b0 & ~tNum0) & (tNum0 & ~b0) & ~binary & ~tRMGM)) | bz1;
-        const z2 = tZ2a | bz2 | (~binary & tNum0 & ~b0 & bx);
-        const z4 = ((tNum0 & tZ2a) & [NOT RD BUS 0 RM] & ~binary & ~b1 & ~tSpecChar) | bz4;
-        const zc = (~((~tSpecChar & tCorrCBit) |(tSpecChar & ~tCorrCBit)) & ~rb1 & ~tNum0) |
-                        t1622Blank | [RD BUS 0 RM] [RD BI ZONE C];
-
-        const ioFlag = rbx & (!tRMGM & !tNum0) & numeric;
-
-
-
-    }
-
-    function adder(p, q) {
-        /* Compute 1620 adder results from two 5-bit digits for P and Q.
-        High-order bit is the check bit. Returns a 6-bit result, yc08421, where
-        "y" is the carry bit, "c" is the check (odd-parity) bit, and "0" is the
-        flag bit, which is always zero */
-        const pc = (p & 0b10000) >> 4;
-        const p8 = (p & 0b01000) >> 3;
-        const p4 = (p & 0b00100) >> 2;
-        const p2 = (p & 0b00010) >> 1;
-        const p1 = (p & 0b00001);
-        const qc = (q & 0b10000) >> 4;
-        const q8 = (q & 0b01000) >> 3;
-        const q4 = (q & 0b00100) >> 2;
-        const q2 = (q & 0b00010) >> 1;
-        const q1 = (q & 0b00001);
-
-        let dc = (~p1 & p8          & ~qc & ~q4          ) |
-                 (~pc & ~p1 & p2    & ~qc & ~q2          ) |
-                 (~p2 & p4          & q1 & ~q2 & ~q8     ) |
-                 (pc & p1 & ~p2     & ~qc & ~q2 & ~q8    ) |
-                 (pc & p4           & ~q1 & ~q2 & ~q8    ) |
-                 (p1 & p8           & ~qc & q4           ) |
-                 (~p1 & p8          & q1 & q4            ) |
-                 (~p1 & p4          & qc & q8            ) |
-                 (~pc & p1          & q8                 ) |
-                 (~pc & p1 & ~p2    & ~q2 & q4           ) |
-                 (~pc & p1 & ~p2    & ~qc & ~q1          ) |
-                 (p1 & p2           & q2 & ~q4           ) |
-                 (pc & p2           & q1 & q2            ) |
-                 (p2 & ~p4          & q1 & q2            ) |
-                 (pc & ~p4          & qc & ~q1           ) |
-                 (pc & ~p1 & ~p2    & qc                 ) |
-                 (~pc & p4          & ~q1 & q2           ) |
-                 (p1 & p4           & ~q1 & q8           );
-
-        let d8 = (~p1 & p8          & ~q2 & ~q4 & ~q8    ) |
-                 (p1 & p8           & qc & ~q2 & ~q4     ) |
-                 (~p2 & ~p4 & ~p8   & ~q1 & q8           ) |
-                 (~pc & ~p4 & ~p8   & q1 & q2 & q4       ) |
-                 (~pc & ~p1 & p4    & ~q2 & q4           ) |
-                 (~p2 & p4          & ~qc & ~q1 & q4     ) |
-                 (pc & p4           & qc & q2 & ~q4      ) |
-                 (~p1 & p2 & p4     & q2 & ~q4           ) |
-                 (p1 & p2 & p4      & ~qc & ~q4 & ~q8    ) |
-                 (pc & p1 & p2      & qc & q4            ) |
-                 (p2 & ~p4          & qc & ~q1 & q4      ) |
-                 (pc & ~p1 & ~p2    & q8                 );
-
-        let d4 = (p8                & ~qc & q8           ) |
-                 (~p1 & p8          & q8                 ) |
-                 (p1 & p8           & qc & q4            ) |
-                 (p8                & q2 & q4            ) |
-                 (p2 & p4           & q8                 ) |
-                 (p2 & ~p4          & ~qc & ~q1 & q4     ) |
-                 (p1 & p2 & p4      & ~qc & q2 & q4      ) |
-                 (~pc & ~p1 & p4    & ~q4 & ~q8          ) |
-                 (pc & p4           & ~q2 & ~q4 & ~q8    ) |
-                 (pc & p1 & ~p8     & ~qc & ~q4 & ~q8    ) |
-                 (~pc & ~p4 & ~p8   & ~q2 & q4           ) |
-                 (pc & ~p1 & ~p2    & q4                 ) |
-                 (p2 & ~p4          & q2 & ~q4           ) |
-                 (~pc & p1 & ~p2    & qc & q2            ) |
-                 (p1 &  p4          & qc & ~q2 & ~q4     );     // was: (p1 & ~p4 & ...)
-
-        let d2 = (p1 & p8           & ~qc & q4           ) |
-                 (p8                & ~qc & q8           ) |
-                 (~pc & ~p1 & ~p4   & ~q2 & q4           ) |
-                 (pc & ~p1          & q2 & q4            ) |
-                 (p1 & p2           & qc & ~q2 & ~q4     ) |
-                 (pc & p1 & p2      & qc & ~q4           ) |
-                 (pc & p4           & ~qc & q1           ) |
-                 (pc & p1 & p4      & ~qc & ~q4          ) |
-                 (~p1 & ~p2 & ~p8   & q2 & ~q4           ) |
-                 (p1 & ~p2 & ~p8    & ~qc & ~q4 & ~q8    ) |
-                 (p1 & p8           & q1 & q2            ) |
-                 (~pc & p1          & qc & q4            ) |
-                 (~pc & ~p1 & ~p2   & q8                 ) |
-                 (~p1 & p2          & ~q2 & ~q4 & ~q8    ) |
-                 (p2 & ~p4          & ~qc & ~q1 & q4     );
-
-        let d1 = (p1                & ~q1                ) |
-                 (~p1               & q1                 );
-
-        let dy = (p1 & p2 & p4      & qc & q2            ) |    // carry bit
-                 (p4                & q4 & q2            ) |
-                 (p4 & p2           & q4                 ) |
-                 (pc & p1           & ~qc & q2 & q4      ) |
-                 (p1                & qc & q8            ) |
-                 (p4                & q8                 ) |
-                 (p2                & q8                 ) |
-                 (p8                & q8                 ) |
-                 (pc & p4           & qc & q4            ) |
-                 (p8                & q4                 ) |
-                 (p1 & p8           & q1                 ) |
-                 (p8                & q2                 );
-
-        return (((((((((dy << 1) | dc) << 2) | d8) << 1) | d4) << 1) | d2) << 1) | d1;
-    }
-
-    const body = document.getElementById("AdderBody");
-    const sumTable = [
-        new Array(32), new Array(32), new Array(32), new Array(32), new Array(32), new Array(32), new Array(32), new Array(32),
-        new Array(32), new Array(32), new Array(32), new Array(32), new Array(32), new Array(32), new Array(32), new Array(32),
-        new Array(32), new Array(32), new Array(32), new Array(32), new Array(32), new Array(32), new Array(32), new Array(32),
-        new Array(32), new Array(32), new Array(32), new Array(32), new Array(32), new Array(32), new Array(32), new Array(32)
-    ];
 
     const oddParity5 = [
         0b100000, 0b000001, 0b000010, 0b100011, 0b000100, 0b100101, 0b100110, 0b000111,     // 0-7
@@ -233,38 +63,116 @@ window.addEventListener("load", (ev) => {
         0b010000, 0b110001, 0b110010, 0b010011, 0b110100, 0b010101, 0b010110, 0b110111,     // 48-55
         0b111000, 0b011001, 0b011010, 0b111011, 0b011100, 0b111101, 0b111110, 0b011111];    // 56-63
 
-    for (let p=0; p<32; ++p) {
+    // Translate memory digit pairs to 1620 character glyphs
+    const alphaGlyphs = [       // indexed as (even digit BCD)*16 + (odd digit BCD)
+        " ", "_", "_", ".", ")", "_", "_", "_", "_", "_", "|", "_", "_", "_", "_", "}",         // 00-0F
+        "+", "_", "_", "$", "*", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 10-1F
+        "-", "/", "_", ",", "(", "_", "^", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 20-2F
+        "_", "_", "_", "=", "@", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 30-3F
+        "_", "A", "B", "C", "D", "E", "F", "G", "H", "I", "_", "_", "_", "_", "_", "_",         // 40-4F
+        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "_", "_", "_", "_", "\"",        // 50-5F
+        "_", "_", "S", "T", "U", "V", "W", "X", "Y", "Z", "_", "_", "_", "_", "_", "_",         // 60-6F
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "_", "_", "_", "_", "_", "_",         // 70-7F
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 80-8F
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 90-9F
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // A0-AF
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // B0-BF
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // C0-CF
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // D0-DF
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // E0-EF
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_"];        // F0-FF
+
+    function xlateIn(code, selector, op) {
+        /* Translates the paper-tape-like "code" to 1620 internal memory code
+        for the I/O device indicated by "selector" and input mode indicated by
+        opcode "op" */
+        const alpha = (op == 37 ? 1 : 0);               // read alpha op
+        const numeric = (op == 36 ? 1 : 0);             // read numeric op
+        const binary = (selector == 33 ? 1 : 0) & alpha;// read binary mode
+
+        // Input code bit numbers.
+        const b1 = (code & 0b00000001);                 // 1-bit channel
+        const b2 = (code & 0b00000010) >> 1;            // 2-bit channel
+        const b4 = (code & 0b00000100) >> 2;            // 4-bit channel
+        const b8 = (code & 0b00001000) >> 3;            // 8-bit channel    (also binary zone 1)
+        const bc = (code & 0b00010000) >> 4;            // check-bit channel
+        const b0 = (code & 0b00100000) >> 5;            // zero-bit channel (also binary zone 2)
+        const bx = (code & 0b01000000) >> 6;            // X-bit channel    (also binary zone 4)
+        const be = (code & 0b10000000) >> 7;            // EOL channel
+
+        // Binary zone bit equivalents.
+        const bz1 = binary & bc;
+        const bz2 = binary & b0;
+        const bz4 = binary & bx;
+
+        const tEndLinePT = (selector == 3 ? be : 0);    // ??
+
+        // Read bus numeric bits.
+        const rb1 = b1;
+        const rb2 = b1 | tEndLinePT;
+        const rb4 = b4;
+        const rb8 = b8 | tEndLinePT;
+
+        const t83Not4 = rb8 & rb2 & rb1 & ~rb4;
+        const t841 = rb8 & rb4 & rb1;
+        const t84Not1 = rb8 & rb4 & ~rb1;
+        const tRMGM = t83Not4 & rb2 & rb8;
+        const tNot841 = tRMGM & rb1 & rb4 & rb8 & ~binary;
+        const tNum0 = b1 | b2 | b4 | b8;
+        const t1622Bit0NotFlgGM = (code == 0b01111111 ? 0 : b0);
+        const t1622Blank = (selector == 5 ? (code == 0b00010000 ? 1 : 0) : 0);
+        const tInOutPlusSign = 0;                       // ?? 1711 ??
+
+        // Read bus zone bits.
+        const rb0 = (selector == 5 ? t1622Bit0NotFlgGM : b0) | tEndLinePT;
+        const rbx = bx;
+        const rbc = bc | t1622Blank | tInOutPlusSign;
+
+        const tNCa = ((rbc & tCorrCBit) | (~rbc & ~tCorrCBit)) & ~t1622Blank;
+        const tZ2a = (~rbx & tNum0 & ~rb0) & ~rbx & ~tRMGM & ~binary;
+        const tSpecChar = (rb1 & rb2 & rb8) | t84Not1;
+        const tCorrCBit = (~rb0 & rbx) | (rb0 & ~rbx);
+        const tRdBus0RM = rb0 & tRMGM;                  // ??
+
+        // Output numeric bits.
+        const n1 = rb1 & tNot841;
+        const n2 = rb2;
+        const n4 = rb4 & tNot841;
+        const n8 = ((rb8 & ~rb4 & ~rb2) | tRMGM | (rb8 & tNot841 & numeric)) & ~binary;
+        const nc = ((tNCa & t84Not1 & alpha) | (tNCa numeric) | t841 | (alpha & t83Not4)) &
+                        ~binary & (selector != 7);
+
+        const ioFlag = rbx & (!tRMGM & !tNum0) & numeric;
+
+        // Output zone bits.
+        const z1 = ((rb0 & ~tNum0) & (tNum0 & ~rb0) & ~binary & ~tRMGM)) | bz1;
+        const z2 = tZ2a | bz2 | (~binary & tNum0 & ~rb0 & rbx);
+        const z4 = ((tNum0 & tZ2a) & ~tRdBus0RM & ~binary & ~b1 & ~tSpecChar & ~tRMGM) | bz4;
+        const zc = (~((~tSpecChar & tCorrCBit) | (tSpecChar & ~tCorrCBit)) & ~b1 & ~tNum0) |
+                        t1622Blank | tRdBus0RM | bz1;
+
+        return [(((((((((nc << 1) | ioFlag) << 1) | n8) << 1) | n4) << 1) | n2) << 1) | n1,
+                (((((((((zc << 1) |      0) << 1) | z8) << 1) | z4) << 1) | z2) << 1) | z1];
+    }
+
+    function formatXlate(row, zone, num) {
+        /*  */
+        let cell = document.createElement("td");
+        cell.textContent = zone.toString(2).padStart(6, "0") + " " + num.toString(2).padStart(6, "0");
+        cell.appendChild(cell);
+
+        cell = document.createElement("td");
+        cell.textContent = alphaGlyphs[(zone & bcdMask)*16 + (num & bcdMask)];
+    }
+
+
+    const body = document.getElementById("XlateBody");
+
+    for (let code=0; code<256; ++code) {
         const row = document.createElement("tr");
         const rowNr = document.createElement("td");
-        rowNr.classList.add("rowNrCell");
-        rowNr.textContent = (p > 15 ? "c" : " ") + (p & bcdMask).toString(16).toUpperCase();
-        row.appendChild(rowNr);
-        if (oddParity5[p] != p) {
-            row.classList.add("parityIn");
-        }
 
-        for (let q=0; q<32; ++q) {
-            const sum = adder(p, q);
-            const cell = document.createElement("td");
-            const digit = (sum & carryBit ? "+" : " ") +
-                          (sum & checkBit ? "c" : " ") +
-                          (sum & bcdMask).toString(16).toUpperCase();
-            cell.textContent = digit;
-            if (oddParity5[q] != q) {
-                cell.classList.add("parityIn");
-            } else if (oddParity5[p] == p && (p & bcdMask) >= 0 && (p & bcdMask) <= 9 &&
-                                             (q & bcdMask) >= 0 && (q & bcdMask) <= 9) {
-                cell.classList.add("base10");
-            }
-
-            const sum5 = sum & (checkBit | bcdMask);
-            if (oddParity5[sum5] != sum5) {
-                cell.classList.add("parityOut");
-            }
-
-            row.appendChild(cell);
-            sumTable[p][q] = sum;
-        }
+       let [zone, num] = xlateIn(code, 3, 36);
 
         body.appendChild(row);
     }
@@ -287,45 +195,23 @@ window.addEventListener("load", (ev) => {
 </head>
 
 <body>
-<h2>Build Full Adder Table</h2>
+<h2>Build Full Xlate Table</h2>
 <table border=1 cellspacing=0 cellpadding=2>
     <thead>
-        <tr><th rowspan=2>P<br>digit<th colspan=32>Q digit
-        <tr><th class=parityIn>0
-            <th>1
-            <th>2
-            <th class=parityIn>3
-            <th>4
-            <th class=parityIn>5
-            <th class=parityIn>6
-            <th>7
-            <th>8
-            <th class=parityIn>9
-            <th class=parityIn>A
-            <th>B
-            <th class=parityIn>C
-            <th>D
-            <th>E
-            <th class=parityIn>F
-            <th>c0
-            <th class=parityIn>c1
-            <th class=parityIn>c2
-            <th>c3
-            <th class=parityIn>c4
-            <th>c5
-            <th>c6
-            <th class=parityIn>c7
-            <th class=parityIn>c8
-            <th>c9
-            <th>cA
-            <th class=parityIn>cB
-            <th>cC
-            <th class=parityIn>cD
-            <th class=parityIn>cE
-            <th>cF
-    <tbody id=AdderBody>
+        <tr>
+            <th rowspan=2>Code
+            <th colspan=5>PaperTape
+            <th colspan=4>Card
+        <tr>
+            <th colspan=2>Numeric
+            <th colspan=2>Alpha
+            <th>Binary
+            <th colspan=2>Numeric
+            <th colspan=2>Alpha
+    <tbody id=XlateBody>
 </table>
-<h2>Add Table Results</h2>
-<pre id=AddResults></pre>
+<h2>Tranalator Table Results</h2>
+<pre id=XlateResults></pre>
+
 </body>
 </html>
