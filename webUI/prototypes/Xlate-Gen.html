@@ -43,7 +43,7 @@ TABLE {
     border:             2px solid black}
 .parityIn {
     background-color:   #CCC}
-.parityOut {
+.parityErr {
     color:              red}
 </style>
 
@@ -64,7 +64,7 @@ window.addEventListener("load", (ev) => {
         0b111000, 0b011001, 0b011010, 0b111011, 0b011100, 0b111101, 0b111110, 0b011111];    // 56-63
 
     // Translate memory digit pairs to 1620 character glyphs
-    const alphaGlyphs = [       // indexed as (even digit BCD)*16 + (odd digit BCD)
+    const readAlphaGlyphs = [       // indexed as (even digit BCD)*16 + (odd digit BCD)
         " ", "_", "_", ".", ")", "_", "_", "_", "_", "_", "|", "_", "_", "_", "_", "}",         // 00-0F
         "+", "_", "_", "$", "*", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 10-1F
         "-", "/", "_", ",", "(", "_", "^", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 20-2F
@@ -82,28 +82,91 @@ window.addEventListener("load", (ev) => {
         "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // E0-EF
         "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_"];        // F0-FF
 
+    const xlateASCIIToPTCode = {        // ASCII to 1620 paper-tape punch bits
+           //  EX0C8421 tape channels
+        "0": 0b00100000,
+        "1": 0b00000001,
+        "2": 0b00000010,
+        "3": 0b00010011,
+        "4": 0b00000100,
+        "5": 0b00010101,
+        "6": 0b00010110,
+        "7": 0b00000111,
+        "8": 0b00001000,
+        "9": 0b00011001,
+        "A": 0b01100001,
+        "B": 0b01100010,
+        "C": 0b01110011,
+        "D": 0b01100100,
+        "E": 0b01110101,
+        "F": 0b01110110,
+        "G": 0b01100111,
+        "H": 0b01101000,
+        "I": 0b01111001,
+        "]": 0b01000000,        // -0 (flagged 0)
+        "J": 0b01010001,
+        "K": 0b01010010,
+        "L": 0b01000011,
+        "M": 0b01010100,
+        "N": 0b01000101,
+        "O": 0b01000110,
+        "P": 0b01010111,
+        "Q": 0b01011000,
+        "R": 0b01001001,
+        "S": 0b00110010,
+        "T": 0b00100011,
+        "U": 0b00110100,
+        "V": 0b00100101,
+        "W": 0b00100110,
+        "X": 0b00110111,
+        "Y": 0b00111000,
+        "Z": 0b00101001,
+        ".": 0b01101011,
+        ")": 0b01111100,
+        "*": 0b01001100,
+        "$": 0b01011011,
+        "(": 0b00101100,
+        ",": 0b00111011,
+        "|": 0b00101010,        // Record Mark
+        "!": 0b01001010,        // flagged Record Mark
+        "=": 0b00001011,
+        "@": 0b00011100,
+        "+": 0b01110000,
+        "-": 0b01000000,
+        " ": 0b00010000,
+        "/": 0b00110001,
+        "^": 0b00111110,        // "special" char
+        "}": 0b00101111,        // Group Mark
+        "\"":0b01001111,        // flagged Group Mark
+     // Codes requiring special handling
+     // "!": 0b01111010,        // alternate for flagged Record Mark
+     // "<": 0b10000000,        // EOL (never read into memory)
+     // "_": 0b01111111,        // tape-feed (ignored during non-binary read)
+    };
+
+
     function xlateIn(code, selector, op) {
         /* Translates the paper-tape-like "code" to 1620 internal memory code
         for the I/O device indicated by "selector" and input mode indicated by
         opcode "op" */
-        const alpha = (op == 37 ? 1 : 0);               // read alpha op
-        const numeric = (op == 36 ? 1 : 0);             // read numeric op
-        const binary = (selector == 33 ? 1 : 0) & alpha;// read binary mode
+        const readAlpha = (op == 37 ? 1 : 0);           // read alphanumeric op
+        const readNumeric = (op == 36 ? 1 : 0);         // read numeric op
+        const readBinary = (selector == 33 ? 1 : 0) & readAlpha; // read binary mode
 
-        // Input code bit numbers.
+        // Input paper-tape code bit numbers.
         const b1 = (code & 0b00000001);                 // 1-bit channel
         const b2 = (code & 0b00000010) >> 1;            // 2-bit channel
         const b4 = (code & 0b00000100) >> 2;            // 4-bit channel
-        const b8 = (code & 0b00001000) >> 3;            // 8-bit channel    (also binary zone 1)
+        const b8 = (code & 0b00001000) >> 3;            // 8-bit channel    (also readBinary zone 1)
         const bc = (code & 0b00010000) >> 4;            // check-bit channel
-        const b0 = (code & 0b00100000) >> 5;            // zero-bit channel (also binary zone 2)
-        const bx = (code & 0b01000000) >> 6;            // X-bit channel    (also binary zone 4)
+        const b0 = (code & 0b00100000) >> 5;            // zero-bit channel (also readBinary zone 2)
+        const bx = (code & 0b01000000) >> 6;            // X-bit channel    (also readBinary zone 4)
         const be = (code & 0b10000000) >> 7;            // EOL channel
 
-        // Binary zone bit equivalents.
-        const bz1 = binary & bc;
-        const bz2 = binary & b0;
-        const bz4 = binary & bx;
+        // readBinary zone bit equivalents.
+        const bz1 = readBinary & bc;
+        const bz2 = readBinary & b0;
+        const bz4 = readBinary & bx;
 
         const tEndLinePT = (selector == 3 ? be : 0);    // ??
 
@@ -117,7 +180,7 @@ window.addEventListener("load", (ev) => {
         const t841 = rb8 & rb4 & rb1;
         const t84Not1 = rb8 & rb4 & ~rb1;
         const tRMGM = t83Not4 & rb2 & rb8;
-        const tNot841 = tRMGM & rb1 & rb4 & rb8 & ~binary;
+        const tNot841 = tRMGM & rb1 & rb4 & rb8 & ~readBinary;
         const tNum0 = b1 | b2 | b4 | b8;
         const t1622Bit0NotFlgGM = (code == 0b01111111 ? 0 : b0);
         const t1622Blank = (selector == 5 ? (code == 0b00010000 ? 1 : 0) : 0);
@@ -128,41 +191,65 @@ window.addEventListener("load", (ev) => {
         const rbx = bx;
         const rbc = bc | t1622Blank | tInOutPlusSign;
 
-        const tNCa = ((rbc & tCorrCBit) | (~rbc & ~tCorrCBit)) & ~t1622Blank;
-        const tZ2a = (~rbx & tNum0 & ~rb0) & ~rbx & ~tRMGM & ~binary;
         const tSpecChar = (rb1 & rb2 & rb8) | t84Not1;
         const tCorrCBit = (~rb0 & rbx) | (rb0 & ~rbx);
         const tRdBus0RM = rb0 & tRMGM;                  // ??
+        const tNCa = ((rbc & tCorrCBit) | (~rbc & ~tCorrCBit)) & ~t1622Blank;
+        const tZ2a = (~rbx & tNum0 & ~rb0) & ~rbx & ~tRMGM & ~readBinary;
 
-        // Output numeric bits.
+        // Output readNumeric bits.
         const n1 = rb1 & tNot841;
         const n2 = rb2;
         const n4 = rb4 & tNot841;
-        const n8 = ((rb8 & ~rb4 & ~rb2) | tRMGM | (rb8 & tNot841 & numeric)) & ~binary;
-        const nc = ((tNCa & t84Not1 & alpha) | (tNCa numeric) | t841 | (alpha & t83Not4)) &
-                        ~binary & (selector != 7);
+        const n8 = ((rb8 & ~rb4 & ~rb2) | tRMGM | (rb8 & tNot841 & readNumeric)) & ~readBinary;
+        const nc = ((tNCa & t84Not1 & readAlpha) | (tNCa & readNumeric) | t841 | (readAlpha & t83Not4)) &
+                        ~readBinary & (selector != 7);
 
-        const ioFlag = rbx & (!tRMGM & !tNum0) & numeric;
+        const ioFlag = rbx & (!tRMGM & !tNum0) & readNumeric;
 
         // Output zone bits.
-        const z1 = ((rb0 & ~tNum0) & (tNum0 & ~rb0) & ~binary & ~tRMGM)) | bz1;
-        const z2 = tZ2a | bz2 | (~binary & tNum0 & ~rb0 & rbx);
-        const z4 = ((tNum0 & tZ2a) & ~tRdBus0RM & ~binary & ~b1 & ~tSpecChar & ~tRMGM) | bz4;
+        const z1 = ((rb0 & ~tNum0) & (tNum0 & ~rb0) & ~readBinary & ~tRMGM) | bz1;
+        const z2 = tZ2a | bz2 | (~readBinary & tNum0 & ~rb0 & rbx);
+        const z4 = ((tNum0 & tZ2a) & ~tRdBus0RM & ~readBinary & ~b1 & ~tSpecChar & ~tRMGM) | bz4;
         const zc = (~((~tSpecChar & tCorrCBit) | (tSpecChar & ~tCorrCBit)) & ~b1 & ~tNum0) |
                         t1622Blank | tRdBus0RM | bz1;
 
         return [(((((((((nc << 1) | ioFlag) << 1) | n8) << 1) | n4) << 1) | n2) << 1) | n1,
-                (((((((((zc << 1) |      0) << 1) | z8) << 1) | z4) << 1) | z2) << 1) | z1];
+                (((((((((zc << 1) |      0) << 1) |  0) << 1) | z4) << 1) | z2) << 1) | z1];
+    }
+
+    function formatOddParity5(n) {
+        const e = document.createElement("span");
+        e.textContent = n.toString(2).padStart(6, "0");
+        if (oddParity5[n] != n) {
+            e.classList.add("parityErr");
+        }
+
+        return e;
+    }
+
+    function formatOddParity8(n) {
+        const e = document.createElement("span");
+        e.textContent = n.toString(2).padStart(8, "0");
+        const p = ~(oddParity5[(n >> 4) & 0xF] ^ oddParity5[n & 0xF]);
+        if (((p & 0b100000) >> 5) != ((n & 0b00010000) >> 4)) {
+            e.classList.add("parityErr");
+        }
+
+        return e;
     }
 
     function formatXlate(row, zone, num) {
         /*  */
         let cell = document.createElement("td");
-        cell.textContent = zone.toString(2).padStart(6, "0") + " " + num.toString(2).padStart(6, "0");
-        cell.appendChild(cell);
+        cell.appendChild(formatOddParity5(zone));
+        cell.appendChild(document.createTextNode(" "));
+        cell.appendChild(formatOddParity5(zone));
+        row.appendChild(cell);
 
         cell = document.createElement("td");
-        cell.textContent = alphaGlyphs[(zone & bcdMask)*16 + (num & bcdMask)];
+        cell.textContent = readAlphaGlyphs[(zone & bcdMask)*16 + (num & bcdMask)];
+        row.appendChild(cell);
     }
 
 
@@ -170,13 +257,38 @@ window.addEventListener("load", (ev) => {
 
     for (let code=0; code<256; ++code) {
         const row = document.createElement("tr");
-        const rowNr = document.createElement("td");
+
+        let cell = document.createElement("td");
+        cell.appendChild(formatOddParity8(code));
+        row.appendChild(cell);
 
        let [zone, num] = xlateIn(code, 3, 36);
+       formatXlate(row, zone, num);
+
+       [zone, num] = xlateIn(code, 3, 37);
+       formatXlate(row, zone, num);
+
+       [zone, num] = xlateIn(code, 33, 37);
+        cell = document.createElement("td");
+        cell.appendChild(formatOddParity5(zone));
+        cell.appendChild(document.createTextNode(" "));
+        cell.appendChild(formatOddParity5(zone));
+        row.appendChild(cell);
+
+        cell = document.createElement("td");
+        cell.textContent = (zone & bcdMask).toString(16) + (num & bcdMask).toString(16);
+        row.appendChild(cell);
+
+       [zone, num] = xlateIn(code, 5, 36);
+       formatXlate(row, zone, num);
+
+       [zone, num] = xlateIn(code, 5, 37);
+       formatXlate(row, zone, num);
 
         body.appendChild(row);
     }
 
+    /***********************************
     // Dump the add table results.
     const resultsPre = document.getElementById("AddResults");
     resultsPre.appendChild(document.createTextNode("const addTable = [\n"));
@@ -190,6 +302,7 @@ window.addEventListener("load", (ev) => {
     }
 
     resultsPre.appendChild(document.createTextNode("];\n"));
+    ***********************************/
 }, {once: true});
 </script>
 </head>
@@ -200,17 +313,17 @@ window.addEventListener("load", (ev) => {
     <thead>
         <tr>
             <th rowspan=2>Code
-            <th colspan=5>PaperTape
+            <th colspan=6>PaperTape
             <th colspan=4>Card
         <tr>
-            <th colspan=2>Numeric
-            <th colspan=2>Alpha
-            <th>Binary
-            <th colspan=2>Numeric
-            <th colspan=2>Alpha
+            <th colspan=2>readNumeric
+            <th colspan=2>readAlpha
+            <th colspan=2>readBinary
+            <th colspan=2>readNumeric
+            <th colspan=2>readAlpha
     <tbody id=XlateBody>
 </table>
-<h2>Tranalator Table Results</h2>
+<h2>Translator Table Results</h2>
 <pre id=XlateResults></pre>
 
 </body>
