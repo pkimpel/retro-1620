@@ -25,26 +25,24 @@
 <style>
 BODY {
     font-family:        Arial, Helvetica, sans serif;
-    font-size:          8pt}
+    font-size:          9pt}
 TABLE {
     border-collapse:    collapse;
     border-spacing:     0}
 #XlateBody TD {
     font-family:        DejaVu Sans Mono, Consolas, monospace;
-    font-size:          8pt;
+    font-size:          9pt;
     text-align:         right}
-#XlateBody TR TD.rowNrCell {
-    font-family:        Arial, Helvetica, sans serif;
-    font-size:          8pt;
+.glyph {
     font-weight:        bold;
+    color:              #008;
     text-align:         center}
-.base10 {
-    background-color:   #CFC;
-    border:             2px solid black}
 .parityIn {
     background-color:   #CCC}
 .parityErr {
     color:              red}
+.center {
+    text-align:         center}
 </style>
 
 <script>
@@ -64,7 +62,7 @@ window.addEventListener("load", (ev) => {
         0b111000, 0b011001, 0b011010, 0b111011, 0b011100, 0b111101, 0b111110, 0b011111];    // 56-63
 
     // Translate memory digit pairs to 1620 character glyphs
-    const readAlphaGlyphs = [       // indexed as (even digit BCD)*16 + (odd digit BCD)
+    const alphaGlyphs = [       // indexed as (even digit BCD)*16 + (odd digit BCD)
         " ", "_", "_", ".", ")", "_", "_", "_", "_", "_", "|", "_", "_", "_", "_", "}",         // 00-0F
         "+", "_", "_", "$", "*", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 10-1F
         "-", "/", "_", ",", "(", "_", "^", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 20-2F
@@ -138,11 +136,9 @@ window.addEventListener("load", (ev) => {
         "^": 0b00111110,        // "special" char
         "}": 0b00101111,        // Group Mark
         "\"":0b01001111,        // flagged Group Mark
-     // Codes requiring special handling
-     // "!": 0b01111010,        // alternate for flagged Record Mark
-     // "<": 0b10000000,        // EOL (never read into memory)
-     // "_": 0b01111111,        // tape-feed (ignored during non-binary read)
     };
+
+    const ptCodeGlyphs = Array(256);
 
 
     function xlateIn(code, selector, op) {
@@ -172,7 +168,7 @@ window.addEventListener("load", (ev) => {
 
         // Read bus numeric bits.
         const rb1 = b1;
-        const rb2 = b1 | tEndLinePT;
+        const rb2 = b2 | tEndLinePT;
         const rb4 = b4;
         const rb8 = b8 | tEndLinePT;
 
@@ -180,10 +176,10 @@ window.addEventListener("load", (ev) => {
         const t841 = rb8 & rb4 & rb1;
         const t84Not1 = rb8 & rb4 & ~rb1;
         const tRMGM = t83Not4 & rb2 & rb8;
-        const tNot841 = tRMGM & rb1 & rb4 & rb8 & ~readBinary;
+        const tNot841 = ~(tRMGM & rb1 & rb4 & rb8 & ~readBinary);
         const tNum0 = b1 | b2 | b4 | b8;
         const t1622Bit0NotFlgGM = (code == 0b01111111 ? 0 : b0);
-        const t1622Blank = (selector == 5 ? (code == 0b00010000 ? 1 : 0) : 0);
+        const t1622Blank = (selector == 5  && code == 0b00010000 ? 1 : 0);
         const tInOutPlusSign = 0;                       // ?? 1711 ??
 
         // Read bus zone bits.
@@ -198,24 +194,24 @@ window.addEventListener("load", (ev) => {
         const tZ2a = (~rbx & tNum0 & ~rb0) & ~rbx & ~tRMGM & ~readBinary;
 
         // Output readNumeric bits.
-        const n1 = rb1 & tNot841;
-        const n2 = rb2;
-        const n4 = rb4 & tNot841;
-        const n8 = ((rb8 & ~rb4 & ~rb2) | tRMGM | (rb8 & tNot841 & readNumeric)) & ~readBinary;
-        const nc = ((tNCa & t84Not1 & readAlpha) | (tNCa & readNumeric) | t841 | (readAlpha & t83Not4)) &
-                        ~readBinary & (selector != 7);
+        const n1 = (rb1 & tNot841) & 1;
+        const n2 = (rb2) & 1;
+        const n4 = (rb4 & tNot841) & 1;
+        const n8 = (((rb8 & ~rb4 & ~rb2) | tRMGM | (rb8 & tNot841 & readNumeric)) & ~readBinary) & 1;
+        const nc = ((tNCa | (tNCa & t84Not1 & readAlpha) | (tNCa & readNumeric) | t841 | (readAlpha & t83Not4)) &
+                        ~readBinary & (selector == 7 ? 0 : 1)) & 1;
 
-        const ioFlag = rbx & (!tRMGM & !tNum0) & readNumeric;
+        const ioFlag = (rbx & (!tRMGM & !tNum0) & readNumeric);
 
         // Output zone bits.
-        const z1 = ((rb0 & ~tNum0) & (tNum0 & ~rb0) & ~readBinary & ~tRMGM) | bz1;
-        const z2 = tZ2a | bz2 | (~readBinary & tNum0 & ~rb0 & rbx);
-        const z4 = ((tNum0 & tZ2a) & ~tRdBus0RM & ~readBinary & ~b1 & ~tSpecChar & ~tRMGM) | bz4;
-        const zc = (~((~tSpecChar & tCorrCBit) | (tSpecChar & ~tCorrCBit)) & ~b1 & ~tNum0) |
-                        t1622Blank | tRdBus0RM | bz1;
+        const z1 = (((rb0 & ~tNum0) & (tNum0 & ~rb0) & ~readBinary & ~tRMGM) | bz1) & 1;
+        const z2 = (tZ2a | bz2 | (~readBinary & tNum0 & ~rb0 & rbx)) & 1;
+        const z4 = (((tNum0 & tZ2a) & ~tRdBus0RM & ~readBinary & ~b1 & ~tSpecChar & ~tRMGM) | bz4) & 1;
+        const zc = ((~((~tSpecChar & tCorrCBit) | (tSpecChar & ~tCorrCBit)) & ~rb1 & ~tNum0) |
+                        t1622Blank | tRdBus0RM | bz1) & 1;
 
-        return [(((((((((nc << 1) | ioFlag) << 1) | n8) << 1) | n4) << 1) | n2) << 1) | n1,
-                (((((((((zc << 1) |      0) << 1) |  0) << 1) | z4) << 1) | z2) << 1) | z1];
+        return [(((((((((zc << 1) |      0) << 1) |  0) << 1) | z4) << 1) | z2) << 1) | z1,
+                (((((((((nc << 1) | ioFlag) << 1) | n8) << 1) | n4) << 1) | n2) << 1) | n1];
     }
 
     function formatOddParity5(n) {
@@ -244,22 +240,34 @@ window.addEventListener("load", (ev) => {
         let cell = document.createElement("td");
         cell.appendChild(formatOddParity5(zone));
         cell.appendChild(document.createTextNode(" "));
-        cell.appendChild(formatOddParity5(zone));
+        cell.appendChild(formatOddParity5(num));
         row.appendChild(cell);
 
         cell = document.createElement("td");
-        cell.textContent = readAlphaGlyphs[(zone & bcdMask)*16 + (num & bcdMask)];
+        cell.classList.add("glyph");
+        cell.textContent = alphaGlyphs[(zone & bcdMask)*16 + (num & bcdMask)];
         row.appendChild(cell);
     }
 
-
+    /**********************************/
     const body = document.getElementById("XlateBody");
 
+    // Build the ptCodeGlyphs array;
+    ptCodeGlyphs.fill("_");
+    for (let glyph in xlateASCIIToPTCode) {
+        ptCodeGlyphs[xlateASCIIToPTCode[glyph]] = glyph;
+    }
+
+    // Generate input translation.
     for (let code=0; code<256; ++code) {
         const row = document.createElement("tr");
 
         let cell = document.createElement("td");
         cell.appendChild(formatOddParity8(code));
+        row.appendChild(cell);
+        cell = document.createElement("td");
+        cell.classList.add("glyph");
+        cell.appendChild(document.createTextNode(ptCodeGlyphs[code].replace(" ", "\xA0")));
         row.appendChild(cell);
 
        let [zone, num] = xlateIn(code, 3, 36);
@@ -272,10 +280,11 @@ window.addEventListener("load", (ev) => {
         cell = document.createElement("td");
         cell.appendChild(formatOddParity5(zone));
         cell.appendChild(document.createTextNode(" "));
-        cell.appendChild(formatOddParity5(zone));
+        cell.appendChild(formatOddParity5(num));
         row.appendChild(cell);
 
         cell = document.createElement("td");
+        cell.classList.add("glyph");
         cell.textContent = (zone & bcdMask).toString(16) + (num & bcdMask).toString(16);
         row.appendChild(cell);
 
@@ -312,15 +321,15 @@ window.addEventListener("load", (ev) => {
 <table border=1 cellspacing=0 cellpadding=2>
     <thead>
         <tr>
-            <th rowspan=2>Code
+            <th rowspan=2 colspan=2>Code
             <th colspan=6>PaperTape
             <th colspan=4>Card
         <tr>
-            <th colspan=2>readNumeric
-            <th colspan=2>readAlpha
-            <th colspan=2>readBinary
-            <th colspan=2>readNumeric
-            <th colspan=2>readAlpha
+            <th colspan=2>Numeric
+            <th colspan=2>Alpha
+            <th colspan=2>Binary
+            <th colspan=2>Numeric
+            <th colspan=2>Alpha
     <tbody id=XlateBody>
 </table>
 <h2>Translator Table Results</h2>
