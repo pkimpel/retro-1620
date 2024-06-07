@@ -43,6 +43,8 @@ TABLE {
     color:              red}
 .center {
     text-align:         center}
+.gray {
+    background-color:   gray}
 </style>
 
 <script>
@@ -160,11 +162,14 @@ window.addEventListener("load", (ev) => {
         const be = (code & 0b10000000) >> 7;            // EOL channel
 
         // readBinary zone bit equivalents.
-        const bz1 = readBinary & bc;
+        const bz1 = readBinary & b8;
         const bz2 = readBinary & b0;
         const bz4 = readBinary & bx;
 
         const tEndLinePT = (selector == 3 ? be : 0);    // ??
+        const tBlank = (code == 0b00010000 ? 1 : 0);
+        const t1622Bit0NotFlgGM = (code == 0b01111111 ? 0 : b0);
+        const tInOutPlusSign = 0;                       // ?? 1711 ??
 
         // Read bus numeric bits.
         const rb1 = b1;
@@ -172,34 +177,38 @@ window.addEventListener("load", (ev) => {
         const rb4 = b4;
         const rb8 = b8 | tEndLinePT;
 
-        const t83Not4 = rb8 & rb2 & rb1 & ~rb4;
-        const t841 = rb8 & rb4 & rb1;
-        const t84Not1 = rb8 & rb4 & ~rb1;
-        const tRMGM = t83Not4 & rb2 & rb8;
-        const tNot841 = ~(tRMGM & rb1 & rb4 & rb8 & ~readBinary);
-        const tNum0 = b1 | b2 | b4 | b8;
-        const t1622Bit0NotFlgGM = (code == 0b01111111 ? 0 : b0);
-        const t1622Blank = (selector == 5  && code == 0b00010000 ? 1 : 0);
-        const tInOutPlusSign = 0;                       // ?? 1711 ??
-
         // Read bus zone bits.
         const rb0 = (selector == 5 ? t1622Bit0NotFlgGM : b0) | tEndLinePT;
         const rbx = bx;
-        const rbc = bc | t1622Blank | tInOutPlusSign;
-
-        const tSpecChar = (rb1 & rb2 & rb8) | t84Not1;
-        const tCorrCBit = (~rb0 & rbx) | (rb0 & ~rbx);
-        const tRdBus0RM = rb0 & tRMGM;                  // ??
-        const tNCa = ((rbc & tCorrCBit) | (~rbc & ~tCorrCBit)) & ~t1622Blank;
-        const tZ2a = (~rbx & tNum0 & ~rb0) & ~rbx & ~tRMGM & ~readBinary;
+        const rbc = tBlank | bc | tInOutPlusSign;
 
         // Output readNumeric bits.
+        const t83Not4 = rb8 & rb2 & rb1 & ~rb4;
+        const tRMGM = t83Not4 & rb2 & rb8;
+        const tNot841 = ~(tRMGM & rb1 & rb4 & rb8 & ~readBinary);       // added negation
+
         const n1 = (rb1 & tNot841) & 1;
+
         const n2 = (rb2) & 1;
+
         const n4 = (rb4 & tNot841) & 1;
+
         const n8 = (((rb8 & ~rb4 & ~rb2) | tRMGM | (rb8 & tNot841 & readNumeric)) & ~readBinary) & 1;
-        const nc = ((tNCa | (tNCa & t84Not1 & readAlpha) | (tNCa & readNumeric) | t841 | (readAlpha & t83Not4)) &
+
+        const t841 = rb8 & rb4 & rb1;
+        const t84Not1 = rb8 & rb4 & ~rb1;
+        const tCorrCBit = (~rb0 & rbx) | (rb0 & ~rbx);
+        const tNCa = ((rbc & tCorrCBit) | (~rbc & ~tCorrCBit)) & ~tBlank;
+
+        const nc = ((tNCa | (tNCa & t84Not1 & readAlpha) | (tNCa & readNumeric) | t841 |
+                                (readAlpha & t83Not4)) &
                         ~readBinary & (selector == 7 ? 0 : 1)) & 1;
+
+
+        const tNum0 = b1 | b2 | b4 | b8;
+        const tSpecChar = (rb1 & rb2 & rb8) | t84Not1;
+        const tRdBus0RM = rb0 & tRMGM;                  // ??
+        const tZ2a = (~rbx & tNum0 & ~rb0) & ~rbx & ~tRMGM & ~readBinary;
 
         const ioFlag = (rbx & (!tRMGM & !tNum0) & readNumeric);
 
@@ -208,7 +217,7 @@ window.addEventListener("load", (ev) => {
         const z2 = (tZ2a | bz2 | (~readBinary & tNum0 & ~rb0 & rbx)) & 1;
         const z4 = (((tNum0 & tZ2a) & ~tRdBus0RM & ~readBinary & ~b1 & ~tSpecChar & ~tRMGM) | bz4) & 1;
         const zc = ((~((~tSpecChar & tCorrCBit) | (tSpecChar & ~tCorrCBit)) & ~rb1 & ~tNum0) |
-                        t1622Blank | tRdBus0RM | bz1) & 1;
+                        tBlank | tRdBus0RM | bz1) & 1;
 
         return [(((((((((zc << 1) |      0) << 1) |  0) << 1) | z4) << 1) | z2) << 1) | z1,
                 (((((((((nc << 1) | ioFlag) << 1) | n8) << 1) | n4) << 1) | n2) << 1) | n1];
@@ -227,7 +236,7 @@ window.addEventListener("load", (ev) => {
     function formatOddParity8(n) {
         const e = document.createElement("span");
         e.textContent = n.toString(2).padStart(8, "0");
-        const p = ~(oddParity5[(n >> 4) & 0xF] ^ oddParity5[n & 0xF]);
+        const p = ~(oddParity5[(n >> 5) & 0x7] ^ oddParity5[n & 0xF]);
         if (((p & 0b100000) >> 5) != ((n & 0b00010000) >> 4)) {
             e.classList.add("parityErr");
         }
@@ -263,8 +272,13 @@ window.addEventListener("load", (ev) => {
         const row = document.createElement("tr");
 
         let cell = document.createElement("td");
-        cell.appendChild(formatOddParity8(code));
+        let e = formatOddParity8(code);
+        cell.appendChild(e);
         row.appendChild(cell);
+        if (e.classList.contains("parityErr")) {
+            row.classList.add("gray");
+        }
+
         cell = document.createElement("td");
         cell.classList.add("glyph");
         cell.appendChild(document.createTextNode(ptCodeGlyphs[code].replace(" ", "\xA0")));
