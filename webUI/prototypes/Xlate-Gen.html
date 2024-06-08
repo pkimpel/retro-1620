@@ -53,6 +53,13 @@ TABLE {
 window.addEventListener("load", (ev) => {
     const bcdMask  = 0b0001111;
 
+    // I/O device selector codes
+    const twpr = 1;                     // typewriter
+    const pt = 3;                       // 1621 paper tape
+    const binaryPt = 33;                // 1621 binary paper tape
+    const card = 5;                     // 1622 card reader
+    const disk = 7;                     // 1311 disk drive
+
     const oddParity5 = [
         0b100000, 0b000001, 0b000010, 0b100011, 0b000100, 0b100101, 0b100110, 0b000111,     // 0-7
         0b001000, 0b101001, 0b101010, 0b001011, 0b101100, 0b001101, 0b001110, 0b101111,     // 8-15
@@ -161,32 +168,35 @@ window.addEventListener("load", (ev) => {
         const bx = (code & 0b01000000) >> 6;            // X-bit channel    (also readBinary zone 4)
         const be = (code & 0b10000000) >> 7;            // EOL channel
 
-        // readBinary zone bit equivalents.
+        // Read-binary zone bit equivalents.
         const bz1 = readBinary & b8;
         const bz2 = readBinary & b0;
         const bz4 = readBinary & bx;
 
-        const tEndLinePT = (selector == 3 ? be : 0);    // ??
-        const tBlank = (code == 0b00010000 ? 1 : 0);
-        const t1622Bit0NotFlgGM = (code == 0b01111111 ? 0 : b0);
+        // Terms for read-bus bits.
+        const tEndLinePT = (selector == pt ? be : 0);   // ??
+        const tXFlag = rbx;
+        const tBlank = tNum0 & ~tXFlag;
+        const t1622Bit0NotFlgGM = (selector == 5 ? (code != 0b01111111 ? b0 : 0) : 0);
         const tInOutPlusSign = 0;                       // ?? 1711 ??
 
         // Read bus numeric bits.
-        const rb1 = b1;
-        const rb2 = b2 | tEndLinePT;
-        const rb4 = b4;
-        const rb8 = b8 | tEndLinePT;
+        const rb1 = (selector == pt ? b1 : 0) | (selector == card ? b1 : 0);
+        const rb2 = (selector == pt ? b2 : 0) | (selector == card ? b2 : 0) | tEndLinePT;
+        const rb4 = (selector == pt ? b4 : 0) | (selector == card ? b4 : 0);
+        const rb8 = (selector == pt ? b8 : 0) | (selector == card ? b8 : 0) | tEndLinePT;
 
         // Read bus zone bits.
-        const rb0 = (selector == 5 ? t1622Bit0NotFlgGM : b0) | tEndLinePT;
-        const rbx = bx;
+        const rb0 = (selector == pt ? b0 : 0) | t1622Bit0NotFlgGM | tEndLinePT;
+        const rbx = (selector == pt ? bx : 0) | (selector == card ? bx : 0);
         const rbc = tBlank | bc | tInOutPlusSign;
 
-        // Output readNumeric bits.
+        // Terms for output numeric bits.
         const t83Not4 = rb8 & rb2 & rb1 & ~rb4;
         const tRMGM = t83Not4 & rb2 & rb8;
         const tNot841 = ~(tRMGM & rb1 & rb4 & rb8 & ~readBinary);       // added negation
 
+        // Output readNumeric bits.
         const n1 = (rb1 & tNot841) & 1;
 
         const n2 = (rb2) & 1;
@@ -195,26 +205,28 @@ window.addEventListener("load", (ev) => {
 
         const n8 = (((rb8 & ~rb4 & ~rb2) | tRMGM | (rb8 & tNot841 & readNumeric)) & ~readBinary) & 1;
 
+        // Terms for numeric parity bit.
         const t841 = rb8 & rb4 & rb1;
         const t84Not1 = rb8 & rb4 & ~rb1;
         const tCorrCBit = (~rb0 & rbx) | (rb0 & ~rbx);
-        const tNCa = ((rbc & tCorrCBit) | (~rbc & ~tCorrCBit)) & ~tBlank;
+        const tNCa = ~((rbc & tCorrCBit) | (~rbc & ~tCorrCBit)) & ~tBlank;      // added negation
 
         const nc = ((tNCa | (tNCa & t84Not1 & readAlpha) | (tNCa & readNumeric) | t841 |
                                 (readAlpha & t83Not4)) &
                         ~readBinary & (selector == 7 ? 0 : 1)) & 1;
 
 
-        const tNum0 = b1 | b2 | b4 | b8;
+        // Terms for I/O Flag gate.
+        const tNum0 = ~rb1 & ~rb2 & ~rb4 & ~b8;
         const tSpecChar = (rb1 & rb2 & rb8) | t84Not1;
-        const tRdBus0RM = rb0 & tRMGM;                  // ??
-        const tZ2a = (~rbx & tNum0 & ~rb0) & ~rbx & ~tRMGM & ~readBinary;
+        const tRdBus0RM = rb0 &tNum0 & tRMGM;                  // ??
+        const tZ2a = (~tXFlag & tNum0 & ~rb0) & ~tXFlag & ~tRMGM & ~readBinary;
 
-        const ioFlag = (rbx & (!tRMGM & !tNum0) & readNumeric);
+        const ioFlag = (rbx & (~tRMGM & ~tNum0) & readNumeric);
 
         // Output zone bits.
         const z1 = (((rb0 & ~tNum0) & (tNum0 & ~rb0) & ~readBinary & ~tRMGM) | bz1) & 1;
-        const z2 = (tZ2a | bz2 | (~readBinary & tNum0 & ~rb0 & rbx)) & 1;
+        const z2 = (tZ2a | bz2 | (~readBinary & tNum0 & ~rb0 & tXFlag)) & 1;
         const z4 = (((tNum0 & tZ2a) & ~tRdBus0RM & ~readBinary & ~b1 & ~tSpecChar & ~tRMGM) | bz4) & 1;
         const zc = ((~((~tSpecChar & tCorrCBit) | (tSpecChar & ~tCorrCBit)) & ~rb1 & ~tNum0) |
                         tBlank | tRdBus0RM | bz1) & 1;
@@ -224,6 +236,8 @@ window.addEventListener("load", (ev) => {
     }
 
     function formatOddParity5(n) {
+        /* Formats a 5-bit number plus parity, highlighting it if it does not
+        have odd parity */
         const e = document.createElement("span");
         e.textContent = n.toString(2).padStart(6, "0");
         if (oddParity5[n] != n) {
@@ -234,6 +248,8 @@ window.addEventListener("load", (ev) => {
     }
 
     function formatOddParity8(n) {
+        /* Formats an 8-bit number with parity, highlighting it if it does not
+        have odd parity */
         const e = document.createElement("span");
         e.textContent = n.toString(2).padStart(8, "0");
         const p = ~(oddParity5[(n >> 5) & 0x7] ^ oddParity5[n & 0xF]);
@@ -245,7 +261,8 @@ window.addEventListener("load", (ev) => {
     }
 
     function formatXlate(row, zone, num) {
-        /*  */
+        /* Formats the zone and numeric digits of a memory character and the
+        alphanumeric glyph for those codes */
         let cell = document.createElement("td");
         cell.appendChild(formatOddParity5(zone));
         cell.appendChild(document.createTextNode(" "));
