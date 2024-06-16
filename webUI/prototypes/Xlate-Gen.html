@@ -32,6 +32,7 @@ TABLE {
 #XlateBody TD {
     font-family:        DejaVu Sans Mono, Consolas, monospace;
     font-size:          9pt;
+    padding:            4px;
     text-align:         right}
 .glyph {
     font-weight:        bold;
@@ -44,11 +45,11 @@ TABLE {
 .center {
     text-align:         center}
 .gray {
-    background-color:   gray}
+    background-color:   #CCC}
 </style>
 
 <script>
-
+"use strict";
 
 window.addEventListener("load", (ev) => {
     const bcdMask  = 0b0001111;
@@ -69,6 +70,40 @@ window.addEventListener("load", (ev) => {
         0b001000, 0b101001, 0b101010, 0b001011, 0b101100, 0b001101, 0b001110, 0b101111,     // 40-47
         0b010000, 0b110001, 0b110010, 0b010011, 0b110100, 0b010101, 0b010110, 0b110111,     // 48-55
         0b111000, 0b011001, 0b011010, 0b111011, 0b011100, 0b111101, 0b111110, 0b011111];    // 56-63
+
+    const oddParity7 = [
+        0b10000000, 0b00000001, 0b00000010, 0b10000011, 0b00000100, 0b10000101, 0b10000110, 0b00000111, // 0-7
+        0b00001000, 0b10001001, 0b10001010, 0b00001011, 0b10001100, 0b00001101, 0b00001110, 0b10001111, // 8-15
+        0b00010000, 0b10010001, 0b10010010, 0b00010011, 0b10010100, 0b00010101, 0b00010110, 0b10010111, // 16-23
+        0b10011000, 0b00011001, 0b00011010, 0b10011011, 0b00011100, 0b10011101, 0b10011110, 0b00011111, // 24-31
+        0b00100000, 0b10100001, 0b10100010, 0b00100011, 0b10100100, 0b00100101, 0b00100110, 0b10100111, // 32-39
+        0b10101000, 0b00101001, 0b00101010, 0b10101011, 0b00101100, 0b10101101, 0b10101110, 0b00101111, // 40-47
+        0b10110000, 0b00110001, 0b00110010, 0b10110011, 0b00110100, 0b10110101, 0b10110110, 0b00110111, // 48-55
+        0b00111000, 0b10111001, 0b10111010, 0b00111011, 0b10111100, 0b00111101, 0b00111110, 0b10111111, // 56-63
+        0b01000000, 0b11000001, 0b11000010, 0b01000011, 0b11000100, 0b01000101, 0b01000110, 0b11000111, // 64-71
+        0b11001000, 0b01001001, 0b01001010, 0b11001011, 0b01001100, 0b11001101, 0b11001110, 0b01001111, // 72-79
+        0b11010000, 0b01010001, 0b01010010, 0b11010011, 0b01010100, 0b11010101, 0b11010110, 0b01010111, // 80-87
+        0b01011000, 0b11011001, 0b11011010, 0b01011011, 0b11011100, 0b01011101, 0b01011110, 0b11011111, // 88-95
+        0b11100000, 0b01100001, 0b01100010, 0b11100011, 0b01100100, 0b11100101, 0b11100110, 0b01100111, // 96-103
+        0b01101000, 0b11101001, 0b11101010, 0b01101011, 0b11101100, 0b01101101, 0b01101110, 0b11101111, // 104-111
+        0b01110000, 0b11110001, 0b11110010, 0b01110011, 0b11110100, 0b01110101, 0b01110110, 0b11110111, // 112-119
+        0b11111000, 0b01111001, 0b01111010, 0b11111011, 0b01111100, 0b11111101, 0b11111110, 0b01111111, // 120-127
+        0b10000000, 0b00000001, 0b00000010, 0b10000011, 0b00000100, 0b10000101, 0b10000110, 0b00000111, // 128-135
+        0b00001000, 0b10001001, 0b10001010, 0b00001011, 0b10001100, 0b00001101, 0b00001110, 0b10001111, // 136-143
+        0b00010000, 0b10010001, 0b10010010, 0b00010011, 0b10010100, 0b00010101, 0b00010110, 0b10010111, // 144-151
+        0b10011000, 0b00011001, 0b00011010, 0b10011011, 0b00011100, 0b10011101, 0b10011110, 0b00011111, // 152-159
+        0b00100000, 0b10100001, 0b10100010, 0b00100011, 0b10100100, 0b00100101, 0b00100110, 0b10100111, // 160-167
+        0b10101000, 0b00101001, 0b00101010, 0b10101011, 0b00101100, 0b10101101, 0b10101110, 0b00101111, // 168-175
+        0b10110000, 0b00110001, 0b00110010, 0b10110011, 0b00110100, 0b10110101, 0b10110110, 0b00110111, // 176-183
+        0b00111000, 0b10111001, 0b10111010, 0b00111011, 0b10111100, 0b00111101, 0b00111110, 0b10111111, // 184-191
+        0b01000000, 0b11000001, 0b11000010, 0b01000011, 0b11000100, 0b01000101, 0b01000110, 0b11000111, // 192-199
+        0b11001000, 0b01001001, 0b01001010, 0b11001011, 0b01001100, 0b11001101, 0b11001110, 0b01001111, // 200-207
+        0b11010000, 0b01010001, 0b01010010, 0b11010011, 0b01010100, 0b11010101, 0b11010110, 0b01010111, // 208-215
+        0b01011000, 0b11011001, 0b11011010, 0b01011011, 0b11011100, 0b01011101, 0b01011110, 0b11011111, // 216-223
+        0b11100000, 0b01100001, 0b01100010, 0b11100011, 0b01100100, 0b11100101, 0b11100110, 0b01100111, // 224-231
+        0b01101000, 0b11101001, 0b11101010, 0b01101011, 0b11101100, 0b01101101, 0b01101110, 0b11101111, // 232-239
+        0b01110000, 0b11110001, 0b11110010, 0b01110011, 0b11110100, 0b01110101, 0b01110110, 0b11110111, // 240-247
+        0b11111000, 0b01111001, 0b01111010, 0b11111011, 0b01111100, 0b11111101, 0b11111110, 0b01111111];// 248-255
 
     // Translate memory digit pairs to 1620 character glyphs
     const alphaGlyphs = [       // indexed as (even digit BCD)*16 + (odd digit BCD)
@@ -153,10 +188,11 @@ window.addEventListener("load", (ev) => {
     function xlateIn(code, selector, op) {
         /* Translates the paper-tape-like "code" to 1620 internal memory code
         for the I/O device indicated by "selector" and input mode indicated by
-        opcode "op" */
+        opcode "op". Returns the memory digits as [zone, numeric] */
+        const readBinary = (selector == binaryPt && op == 37 ? 1 : 0); // read binary mode
         const readAlpha = (op == 37 ? 1 : 0);           // read alphanumeric op
         const readNumeric = (op == 36 ? 1 : 0);         // read numeric op
-        const readBinary = (selector == 33 ? 1 : 0) & readAlpha; // read binary mode
+        const fileOp = (selector == disk ? 1 : 0);
 
         // Input paper-tape code bit numbers.
         const b1 = (code & 0b00000001);                 // 1-bit channel
@@ -168,68 +204,67 @@ window.addEventListener("load", (ev) => {
         const bx = (code & 0b01000000) >> 6;            // X-bit channel    (also readBinary zone 4)
         const be = (code & 0b10000000) >> 7;            // EOL channel
 
-        // Read-binary zone bit equivalents.
-        const bz1 = readBinary & b8;
-        const bz2 = readBinary & b0;
-        const bz4 = readBinary & bx;
-
         // Terms for read-bus bits.
-        const tEndLinePT = (selector == pt ? be : 0);   // ??
-        const tXFlag = rbx;
-        const tBlank = tNum0 & ~tXFlag;
-        const t1622Bit0NotFlgGM = (selector == 5 ? (code != 0b01111111 ? b0 : 0) : 0);
-        const tInOutPlusSign = 0;                       // ?? 1711 ??
+        const tEndLinePT = (selector == pt || selector == binaryPt ? be : 0);   // ??
+        const t1622Bit0NotFlgGM = (selector == 5 && code != 0b01111111 ? b0 : 0);
 
-        // Read bus numeric bits.
+        // Read-bus numeric bits.
         const rb1 = (selector == pt ? b1 : 0) | (selector == card ? b1 : 0);
         const rb2 = (selector == pt ? b2 : 0) | (selector == card ? b2 : 0) | tEndLinePT;
         const rb4 = (selector == pt ? b4 : 0) | (selector == card ? b4 : 0);
         const rb8 = (selector == pt ? b8 : 0) | (selector == card ? b8 : 0) | tEndLinePT;
 
-        // Read bus zone bits.
+        // Read-bus zone bits.
         const rb0 = (selector == pt ? b0 : 0) | t1622Bit0NotFlgGM | tEndLinePT;
         const rbx = (selector == pt ? bx : 0) | (selector == card ? bx : 0);
-        const rbc = tBlank | bc | tInOutPlusSign;
 
-        // Terms for output numeric bits.
+        // Terms for output bits.
+        const tInOutPlusSign = 0;                       // ?? 1711 ?? for numeric check-bit
+        const tNum0 = ~rb1 & ~rb2 & ~rb4 & ~rb8;        // from Model 1 ILD p.36 and common sense
         const t83Not4 = rb8 & rb2 & rb1 & ~rb4;
-        const tRMGM = t83Not4 & rb2 & rb8;
-        const tNot841 = ~(tRMGM & rb1 & rb4 & rb8 & ~readBinary);       // added negation
+        const tRMGM = rb2 & rb8 & ~t83Not4;             // added negation
+        const t841 = rb1 & rb4 & rb8 & ~tRMGM & ~readBinary; // added negation
+        const tBlank = tNum0 & ~rbx & ~rb0;             // partially from Model 1 ILD p.36
+        const t01 = rb0 & rb1 & ~rb2 & ~rb4 & ~rb8 & ~rbx;      // from Model 1 ILD p.36
+
+        const rbc = (selector == pt ? bc : 0) | (selector == card ? bc : 0) | tBlank | tInOutPlusSign;
 
         // Output readNumeric bits.
-        const n1 = (rb1 & tNot841) & 1;
+        const n1 = (rb1 & ~t841) & 1;
 
         const n2 = (rb2) & 1;
 
-        const n4 = (rb4 & tNot841) & 1;
+        const n4 = (rb4 & ~t841) & 1;
 
-        const n8 = (((rb8 & ~rb4 & ~rb2) | tRMGM | (rb8 & tNot841 & readNumeric)) & ~readBinary) & 1;
+        const n8 = (((rb8 & ~rb4 & ~rb2) | tRMGM | (rb8 & ~t841 & readNumeric)) & ~readBinary) & 1;
 
-        // Terms for numeric parity bit.
-        const t841 = rb8 & rb4 & rb1;
+        // Terms for numeric check bit.
         const t84Not1 = rb8 & rb4 & ~rb1;
         const tCorrCBit = (~rb0 & rbx) | (rb0 & ~rbx);
-        const tNCa = ~((rbc & tCorrCBit) | (~rbc & ~tCorrCBit)) & ~tBlank;      // added negation
+        const tNCa = ((rbc & tCorrCBit) | (~rbc & ~tCorrCBit)) & ~tBlank;
 
-        const nc = ((tNCa | (tNCa & t84Not1 & readAlpha) | (tNCa & readNumeric) | t841 |
-                                (readAlpha & t83Not4)) &
-                        ~readBinary & (selector == 7 ? 0 : 1)) & 1;
-
+        const nc = ((tNCa | (~tNCa & ~t84Not1 & readAlpha) | (~tNCa & readNumeric) | t841 | // added negation
+                        (readAlpha & t83Not4)) & ~readBinary & ~fileOp) & 1;
 
         // Terms for I/O Flag gate.
-        const tNum0 = ~rb1 & ~rb2 & ~rb4 & ~b8;
         const tSpecChar = (rb1 & rb2 & rb8) | t84Not1;
-        const tRdBus0RM = rb0 &tNum0 & tRMGM;                  // ??
-        const tZ2a = (~tXFlag & tNum0 & ~rb0) & ~tXFlag & ~tRMGM & ~readBinary;
+        const tRdBus0RM = rb0 & tRMGM;                                  // ??
+        const tZ2a = ~(~rbx & tNum0 & ~rb0) & ~rbx & ~tRMGM & ~readBinary;                      // added negation
 
-        const ioFlag = (rbx & (~tRMGM & ~tNum0) & readNumeric);
+        const ioFlag = (~(rb0 & ~tRMGM & ~tNum0) & rbx & readNumeric);
+
+        // Read-binary zone-bit equivalents.
+        const bz1 = readBinary & b8;
+        const bz2 = readBinary & b0;
+        const bz4 = readBinary & bx;
+        const bzc = (readBinary & rbc);
 
         // Output zone bits.
-        const z1 = (((rb0 & ~tNum0) & (tNum0 & ~rb0) & ~readBinary & ~tRMGM) | bz1) & 1;
-        const z2 = (tZ2a | bz2 | (~readBinary & tNum0 & ~rb0 & tXFlag)) & 1;
-        const z4 = (((tNum0 & tZ2a) & ~tRdBus0RM & ~readBinary & ~b1 & ~tSpecChar & ~tRMGM) | bz4) & 1;
-        const zc = ((~((~tSpecChar & tCorrCBit) | (tSpecChar & ~tCorrCBit)) & ~rb1 & ~tNum0) |
-                        tBlank | tRdBus0RM | bz1) & 1;
+        const z1 = ((~(rb0 & ~tNum0) & ~(tNum0 & ~rb0) & ~tRMGM & ~readBinary) | bz1) & 1;      // added negation
+        const z2 = (tZ2a | (tNum0 & ~rb0 & rbx & ~readBinary) | bz2) & 1;
+        const z4 = ((~(tNum0 & ~tZ2a) & ~tRdBus0RM & ~readBinary & ~t01 & ~tSpecChar & ~tRMGM) | bz4) & 1;
+        const zc = ((~((~tSpecChar & tCorrCBit) | (tSpecChar & ~tCorrCBit)) & ~t01 & ~tNum0) |
+                        tBlank | tRdBus0RM | bzc) & 1;
 
         return [(((((((((zc << 1) |      0) << 1) |  0) << 1) | z4) << 1) | z2) << 1) | z1,
                 (((((((((nc << 1) | ioFlag) << 1) | n8) << 1) | n4) << 1) | n2) << 1) | n1];
@@ -252,8 +287,7 @@ window.addEventListener("load", (ev) => {
         have odd parity */
         const e = document.createElement("span");
         e.textContent = n.toString(2).padStart(8, "0");
-        const p = ~(oddParity5[(n >> 5) & 0x7] ^ oddParity5[n & 0xF]);
-        if (((p & 0b100000) >> 5) != ((n & 0b00010000) >> 4)) {
+        if (oddParity7[n] != n) {
             e.classList.add("parityErr");
         }
 
@@ -285,9 +319,10 @@ window.addEventListener("load", (ev) => {
     }
 
     // Generate input translation.
-    for (let code=0; code<256; ++code) {
+    for (let code=0; code<128; ++code) {        // **TEMP** for testing
         const row = document.createElement("tr");
 
+        // Paper-tape input code.
         let cell = document.createElement("td");
         let e = formatOddParity8(code);
         cell.appendChild(e);
@@ -301,12 +336,15 @@ window.addEventListener("load", (ev) => {
         cell.appendChild(document.createTextNode(ptCodeGlyphs[code].replace(" ", "\xA0")));
         row.appendChild(cell);
 
+       // Read numeric paper tape.
        let [zone, num] = xlateIn(code, 3, 36);
        formatXlate(row, zone, num);
 
+       // Read alphanumeric paper tape.
        [zone, num] = xlateIn(code, 3, 37);
        formatXlate(row, zone, num);
 
+       // Read binary paper tape.
        [zone, num] = xlateIn(code, 33, 37);
         cell = document.createElement("td");
         cell.appendChild(formatOddParity5(zone));
@@ -319,36 +357,24 @@ window.addEventListener("load", (ev) => {
         cell.textContent = (zone & bcdMask).toString(16) + (num & bcdMask).toString(16);
         row.appendChild(cell);
 
+       // Read numeric punched card.
        [zone, num] = xlateIn(code, 5, 36);
        formatXlate(row, zone, num);
 
+       // Read alphanumeric punched card.
        [zone, num] = xlateIn(code, 5, 37);
        formatXlate(row, zone, num);
 
-        body.appendChild(row);
-    }
-
-    /***********************************
-    // Dump the add table results.
-    const resultsPre = document.getElementById("AddResults");
-    resultsPre.appendChild(document.createTextNode("const addTable = [\n"));
-    for (let p=0; p<32; ++p) {
-        let line = "    [";
-        for (let q=0; q<32; ++q) {
-            line += "0x" + sumTable[p][q].toString(16).padStart(2, "0") + ",";
+        if (oddParity7[code] == code) {         // **TEMP** for testing
+            body.appendChild(row);
         }
-
-        resultsPre.appendChild(document.createTextNode(line.slice(0, -1) + "],\n"));
     }
-
-    resultsPre.appendChild(document.createTextNode("];\n"));
-    ***********************************/
 }, {once: true});
 </script>
 </head>
 
 <body>
-<h2>Build Full Xlate Table</h2>
+<h2>Build Input Xlate Table</h2>
 <table border=1 cellspacing=0 cellpadding=2>
     <thead>
         <tr>
@@ -363,8 +389,11 @@ window.addEventListener("load", (ev) => {
             <th colspan=2>Alpha
     <tbody id=XlateBody>
 </table>
+
+<!--
 <h2>Translator Table Results</h2>
 <pre id=XlateResults></pre>
+-->
 
 </body>
 </html>
