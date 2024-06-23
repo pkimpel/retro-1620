@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Build 1620-1 I/O Translator Tables</title>
+<!--
+/***********************************************************************
+* retro-1620/software Xlate-Model1-Gen.html
+************************************************************************
+* Copyright (c) 2024, Paul Kimpel.
+* Licensed under the MIT License, see
+*       http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* IBM 1620 test page to generate complete Model-1 Input/Output Translator
+* results from the logic in Drawings on pages 36, 37, 40, and 41 of the
+* Model 1 CE Instructional System Diagrams manual.
+* See http://bitsavers.org/pdf/ibm/1620/fe/
+*   227-5631-0_IBM_1620_Customer_Engineering_Instructional_System_Diagrams_1962.pdf
+************************************************************************
+* 2024-06-21  P.Kimpel
+*   Original version, from Model-2 version.
+***********************************************************************/
+-->
+    <meta name="Author" content="Paul Kimpel">
+
+<style>
+BODY {
+    font-family:        Arial, Helvetica, sans serif;
+    font-size:          9pt}
+TABLE {
+    border-collapse:    collapse;
+    border-spacing:     0}
+#XlateBody TD {
+    font-family:        DejaVu Sans Mono, Consolas, monospace;
+    font-size:          9pt;
+    padding:            4px;
+    text-align:         right}
+.glyph {
+    font-weight:        bold;
+    color:              #008;
+    text-align:         center}
+.parityIn {
+    background-color:   #CCC}
+.parityErr {
+    color:              red}
+.center {
+    text-align:         center}
+.badParityCode {
+    background-color:   #CCC}
+.invalidCode {
+    background-color:   #CCF}
+</style>
+
+<script>
+"use strict";
+
+window.addEventListener("load", (ev) => {
+    const bcdMask  = 0b0001111;
+
+    // I/O device selector codes
+    const twpr = 1;                     // typewriter
+    const pt = 3;                       // 1621 paper tape
+    const card = 5;                     // 1622 card reader
+
+    const oddParity5 = [
+        0b100000, 0b000001, 0b000010, 0b100011, 0b000100, 0b100101, 0b100110, 0b000111,     // 0-7
+        0b001000, 0b101001, 0b101010, 0b001011, 0b101100, 0b001101, 0b001110, 0b101111,     // 8-15
+        0b010000, 0b110001, 0b110010, 0b010011, 0b110100, 0b010101, 0b010110, 0b110111,     // 16-23
+        0b111000, 0b011001, 0b011010, 0b111011, 0b011100, 0b111101, 0b111110, 0b011111,     // 24-31
+        0b100000, 0b000001, 0b000010, 0b100011, 0b000100, 0b100101, 0b100110, 0b000111,     // 32-30
+        0b001000, 0b101001, 0b101010, 0b001011, 0b101100, 0b001101, 0b001110, 0b101111,     // 40-47
+        0b010000, 0b110001, 0b110010, 0b010011, 0b110100, 0b010101, 0b010110, 0b110111,     // 48-55
+        0b111000, 0b011001, 0b011010, 0b111011, 0b011100, 0b111101, 0b111110, 0b011111];    // 56-63
+
+    const oddParity7 = [
+        0b10000000, 0b00000001, 0b00000010, 0b10000011, 0b00000100, 0b10000101, 0b10000110, 0b00000111, // 0-7
+        0b00001000, 0b10001001, 0b10001010, 0b00001011, 0b10001100, 0b00001101, 0b00001110, 0b10001111, // 8-15
+        0b00010000, 0b10010001, 0b10010010, 0b00010011, 0b10010100, 0b00010101, 0b00010110, 0b10010111, // 16-23
+        0b10011000, 0b00011001, 0b00011010, 0b10011011, 0b00011100, 0b10011101, 0b10011110, 0b00011111, // 24-31
+        0b00100000, 0b10100001, 0b10100010, 0b00100011, 0b10100100, 0b00100101, 0b00100110, 0b10100111, // 32-39
+        0b10101000, 0b00101001, 0b00101010, 0b10101011, 0b00101100, 0b10101101, 0b10101110, 0b00101111, // 40-47
+        0b10110000, 0b00110001, 0b00110010, 0b10110011, 0b00110100, 0b10110101, 0b10110110, 0b00110111, // 48-55
+        0b00111000, 0b10111001, 0b10111010, 0b00111011, 0b10111100, 0b00111101, 0b00111110, 0b10111111, // 56-63
+        0b01000000, 0b11000001, 0b11000010, 0b01000011, 0b11000100, 0b01000101, 0b01000110, 0b11000111, // 64-71
+        0b11001000, 0b01001001, 0b01001010, 0b11001011, 0b01001100, 0b11001101, 0b11001110, 0b01001111, // 72-79
+        0b11010000, 0b01010001, 0b01010010, 0b11010011, 0b01010100, 0b11010101, 0b11010110, 0b01010111, // 80-87
+        0b01011000, 0b11011001, 0b11011010, 0b01011011, 0b11011100, 0b01011101, 0b01011110, 0b11011111, // 88-95
+        0b11100000, 0b01100001, 0b01100010, 0b11100011, 0b01100100, 0b11100101, 0b11100110, 0b01100111, // 96-103
+        0b01101000, 0b11101001, 0b11101010, 0b01101011, 0b11101100, 0b01101101, 0b01101110, 0b11101111, // 104-111
+        0b01110000, 0b11110001, 0b11110010, 0b01110011, 0b11110100, 0b01110101, 0b01110110, 0b11110111, // 112-119
+        0b11111000, 0b01111001, 0b01111010, 0b11111011, 0b01111100, 0b11111101, 0b11111110, 0b01111111, // 120-127
+        0b10000000, 0b00000001, 0b00000010, 0b10000011, 0b00000100, 0b10000101, 0b10000110, 0b00000111, // 128-135
+        0b00001000, 0b10001001, 0b10001010, 0b00001011, 0b10001100, 0b00001101, 0b00001110, 0b10001111, // 136-143
+        0b00010000, 0b10010001, 0b10010010, 0b00010011, 0b10010100, 0b00010101, 0b00010110, 0b10010111, // 144-151
+        0b10011000, 0b00011001, 0b00011010, 0b10011011, 0b00011100, 0b10011101, 0b10011110, 0b00011111, // 152-159
+        0b00100000, 0b10100001, 0b10100010, 0b00100011, 0b10100100, 0b00100101, 0b00100110, 0b10100111, // 160-167
+        0b10101000, 0b00101001, 0b00101010, 0b10101011, 0b00101100, 0b10101101, 0b10101110, 0b00101111, // 168-175
+        0b10110000, 0b00110001, 0b00110010, 0b10110011, 0b00110100, 0b10110101, 0b10110110, 0b00110111, // 176-183
+        0b00111000, 0b10111001, 0b10111010, 0b00111011, 0b10111100, 0b00111101, 0b00111110, 0b10111111, // 184-191
+        0b01000000, 0b11000001, 0b11000010, 0b01000011, 0b11000100, 0b01000101, 0b01000110, 0b11000111, // 192-199
+        0b11001000, 0b01001001, 0b01001010, 0b11001011, 0b01001100, 0b11001101, 0b11001110, 0b01001111, // 200-207
+        0b11010000, 0b01010001, 0b01010010, 0b11010011, 0b01010100, 0b11010101, 0b11010110, 0b01010111, // 208-215
+        0b01011000, 0b11011001, 0b11011010, 0b01011011, 0b11011100, 0b01011101, 0b01011110, 0b11011111, // 216-223
+        0b11100000, 0b01100001, 0b01100010, 0b11100011, 0b01100100, 0b11100101, 0b11100110, 0b01100111, // 224-231
+        0b01101000, 0b11101001, 0b11101010, 0b01101011, 0b11101100, 0b01101101, 0b01101110, 0b11101111, // 232-239
+        0b01110000, 0b11110001, 0b11110010, 0b01110011, 0b11110100, 0b01110101, 0b01110110, 0b11110111, // 240-247
+        0b11111000, 0b01111001, 0b01111010, 0b11111011, 0b01111100, 0b11111101, 0b11111110, 0b01111111];// 248-255
+
+    const numericGlyphs = [     // indexed as BCD code prefixed with flag bit: F8421
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", " ", "_", "_", "}",         // 00-0F
+        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "$", "-", "_", "_", "\""];       // 10-1F
+
+    // Translate memory digit pairs to 1620 character glyphs
+    const alphaGlyphs = [       // indexed as (even digit BCD)*16 + (odd digit BCD)
+        " ", "_", "_", ".", ")", "_", "_", "_", "_", "_", "|", "_", "_", "_", "_", "}",         // 00-0F
+        "+", "_", "_", "$", "*", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 10-1F
+        "-", "/", "_", ",", "(", "_", "^", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 20-2F
+        "_", "_", "_", "=", "@", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 30-3F
+        "_", "A", "B", "C", "D", "E", "F", "G", "H", "I", "_", "_", "_", "_", "_", "_",         // 40-4F
+        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "_", "_", "_", "_", "\"",        // 50-5F
+        "_", "_", "S", "T", "U", "V", "W", "X", "Y", "Z", "_", "_", "_", "_", "_", "_",         // 60-6F
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "_", "_", "_", "_", "_", "_",         // 70-7F
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 80-8F
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // 90-9F
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // A0-AF
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // B0-BF
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // C0-CF
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // D0-DF
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_",         // E0-EF
+        "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_"];        // F0-FF
+
+    const xlateASCIIToPTCode = {        // ASCII to 1620 paper-tape punch bits
+           //  EX0C8421 tape channels
+        "0": 0b00100000,
+        "1": 0b00000001,
+        "2": 0b00000010,
+        "3": 0b00010011,
+        "4": 0b00000100,
+        "5": 0b00010101,
+        "6": 0b00010110,
+        "7": 0b00000111,
+        "8": 0b00001000,
+        "9": 0b00011001,
+        "A": 0b01100001,
+        "B": 0b01100010,
+        "C": 0b01110011,
+        "D": 0b01100100,
+        "E": 0b01110101,
+        "F": 0b01110110,
+        "G": 0b01100111,
+        "H": 0b01101000,
+        "I": 0b01111001,
+        "]": 0b01000000,        // -0 (flagged 0)
+        "J": 0b01010001,
+        "K": 0b01010010,
+        "L": 0b01000011,
+        "M": 0b01010100,
+        "N": 0b01000101,
+        "O": 0b01000110,
+        "P": 0b01010111,
+        "Q": 0b01011000,
+        "R": 0b01001001,
+        "S": 0b00110010,
+        "T": 0b00100011,
+        "U": 0b00110100,
+        "V": 0b00100101,
+        "W": 0b00100110,
+        "X": 0b00110111,
+        "Y": 0b00111000,
+        "Z": 0b00101001,
+        ".": 0b01101011,
+        ")": 0b01111100,
+        "*": 0b01001100,
+        "$": 0b01011011,
+        "(": 0b00101100,
+        ",": 0b00111011,
+        "|": 0b00101010,        // Record Mark
+        "!": 0b01001010,        // flagged Record Mark
+        "=": 0b00001011,
+        "@": 0b00011100,
+        "+": 0b01110000,
+        "-": 0b01000000,
+        " ": 0b00010000,
+        "/": 0b00110001,
+        "^": 0b00111110,        // "special" char
+        "}": 0b00101111,        // Group Mark
+        "\"":0b01001111,        // flagged Group Mark
+    };
+
+    const ptCodeGlyphs = Array(256);
+
+
+    function xlateIn(code, selector, op) {
+        /* Translates the paper-tape-like "code" to 1620 internal memory code
+        for the I/O device indicated by "selector" and input mode indicated by
+        opcode "op". Returns the memory digits as [zone, numeric] */
+        const readAlpha = (op == 37 ? 1 : 0);           // read alphanumeric op
+        const readNumeric = (op == 36 ? 1 : 0);         // read numeric op
+
+        // Input paper-tape code bit numbers.
+        const b1 = (code & 0b00000001);                 // 1-bit channel
+        const b2 = (code & 0b00000010) >> 1;            // 2-bit channel
+        const b4 = (code & 0b00000100) >> 2;            // 4-bit channel
+        const b8 = (code & 0b00001000) >> 3;            // 8-bit channel
+        const bc = (code & 0b00010000) >> 4;            // check-bit channel
+        const b0 = (code & 0b00100000) >> 5;            // zero-bit channel
+        const bx = (code & 0b01000000) >> 6;            // X-bit channel
+        const be = (code & 0b10000000) >> 7;            // EOL channel
+
+        // Terms for read-bus bits.
+        const tEndLinePT = (selector == pt ? be : 0);   // ??
+
+        // Read-bus numeric bits.
+        const rb1 = (selector == pt ? b1 : 0) | (selector == card ? b1 : 0);
+        const rb2 = (selector == pt ? b2 : 0) | (selector == card ? b2 : 0) | tEndLinePT;
+        const rb4 = (selector == pt ? b4 : 0) | (selector == card ? b4 : 0);
+        const rb8 = (selector == pt ? b8 : 0) | (selector == card ? b8 : 0) | tEndLinePT;
+
+        // Read-bus zone bits.
+        const rbc = (selector == pt ? bc : 0) | (selector == card ? bc : 0);
+        const rb0 = (selector == pt ? b0 : 0) | (selector == card ? b0 : 0) | tEndLinePT;
+        const rbx = (selector == pt ? bx : 0) | (selector == card ? bx : 0);    // also Rd Bus X/Flag
+
+        // Terms.
+        const tNum0 = ~rb1 & ~rb2 & ~rb4 & ~rb8;
+        const tRM = ~rb1 & rb2 & rb8;
+        const tBlank = ~rbx & ~tRM & ~tNum0;
+        const t0RM = ~(rb0 & ~tRM & ~tNum0) & rb0 & ~tNum0;     // removed 2nd negation of tNum0
+        const t84Not1 = rb8 & rb4 & ~rb1;
+        const t83 = rb8 & rb2 & rb1;
+        const tSpecChar = t83 | t84Not1;
+        const t01 = rb0 & rb1 & ~rb2 & ~rb4 & ~rb8 & ~rbx;
+        const t841 = rb1 & rb4 & rb8;
+        const tNCa = ((rb0 ^ rbx) ^ ~rbc);
+
+        // Output numeric bits.
+        const n1 = (rb1 & ~t841) & 1;
+
+        const n2 = (rb2 & ~t841) & 1;
+
+        const n4 = (rb4 & ~t841) & 1;
+
+        const n8 = ((rb8 & ~t841 & readNumeric) | (rb8 & ~rb4 & ~rb2) | tRM) & 1;
+
+        const nc = ((~tNCa & readAlpha & ~t84Not1) | (t83 & readAlpha) | (~tNCa & readNumeric) | t841) & 1;
+
+        const nf = (~(~tRM & ~tNum0 & rb0) & rbx & readNumeric) & 1;
+
+        // Output zone bits.
+        const z1 = ~(rb0 ^ tNum0) & 1;
+
+        const z2 = ~((~tRM & /*~*/rbx & ~tBlank) | (~rb0 & /*add ~*/~rbx & tNum0)) & 1;
+
+        const z4 = (~(~(~rbx & ~tBlank & ~tRM) & tNum0) & ~tSpecChar & ~t01 & ~t0RM) & 1;
+
+        const zc = (((~((~rb0 ^ ~rbx) ^ tSpecChar) & ~tNum0 & ~t01) | (~rb0 & tNum0 & ~rbx) | t0RM) ^ ~nf) & 1;
+
+        console.log("%s %s %s %s: %i %i %i %i %i %i %i %i   %i %i %i %i %i %i %i %i   %i %i %i %i00%i%i%i   %i %i%i%i%i%i%i",
+            ptCodeGlyphs[code], code.toString(2).padStart(8, "0"),
+            selector.toString().padStart(2, " "), op.toString().padStart(2, "0"),
+            tEndLinePT & 1, rbx & 1, rb0 & 1, rbc & 1, rb8 & 1, rb4 & 1, rb2 & 1, rb1 & 1,
+            tNum0 & 1, t83 & 1, tRM & 1, t841 & 1, tBlank & 1, t01 & 1, t84Not1 & 1, 9,
+            tSpecChar & 1, t0RM & 1, 9, zc, z4, z2, z1,
+            tNCa & 1, nc & 1, nf, n8 , n4, n2, n1);
+
+        return [(((((((((zc << 1) |  0) << 1) |  0) << 1) | z4) << 1) | z2) << 1) | z1,
+                (((((((((nc << 1) | nf) << 1) | n8) << 1) | n4) << 1) | n2) << 1) | n1];
+    }
+
+    function formatOddParity5(n) {
+        /* Formats a 5-bit number plus parity, highlighting it if it does not
+        have odd parity */
+        const e = document.createElement("span");
+
+        e.textContent = (n & 0b100000 ? "C" : ".") +
+                        (n & 0b010000 ? "F" : ".") +
+                        (n & 0b001000 ? "8" : ".") +
+                        (n & 0b000100 ? "4" : ".") +
+                        (n & 0b000010 ? "2" : ".") +
+                        (n & 0b000001 ? "1" : ".");
+        if (oddParity5[n] != n) {
+            e.classList.add("parityErr");
+        }
+
+        return e;
+    }
+
+    function formatOddParity8(n) {
+        /* Formats an 8-bit number with parity, highlighting it if it does not
+        have odd parity */
+        const e = document.createElement("span");
+
+        e.textContent = (n & 0b10000000 ? "E" : ".") +
+                        (n & 0b01000000 ? "X" : ".") +
+                        (n & 0b00100000 ? "0" : ".") +
+                        (n & 0b00010000 ? "C" : ".") +
+                        (n & 0b00001000 ? "8" : ".") +
+                        (n & 0b00000100 ? "4" : ".") +
+                        (n & 0b00000010 ? "2" : ".") +
+                        (n & 0b00000001 ? "1" : ".");
+        if (oddParity7[n] != n) {
+            e.classList.add("parityErr");
+        }
+
+        return e;
+    }
+
+    function formatNumericGlyph(row, num) {
+        /* Formats a numeric digit glyph from a numeric code */
+        const cell = document.createElement("td");
+
+        cell.classList.add("glyph");
+        cell.textContent = numericGlyphs[num & 0b011111];
+        row.appendChild(cell);
+    }
+
+    function formatAlphaGlyph(row, zone, num) {
+        /* Formats an alphanumeric character glyph from zone and numeric codes */
+        const cell = document.createElement("td");
+
+        cell.classList.add("glyph");
+        cell.textContent = alphaGlyphs[(zone & bcdMask)*16 + (num & bcdMask)];
+        row.appendChild(cell);
+    }
+
+    function formatXlate(row, zone, num) {
+        /* Formats the zone and numeric digits of a memory character and the
+        alphanumeric glyph for those codes */
+        let cell = document.createElement("td");
+        cell.appendChild(formatOddParity5(zone));
+        cell.appendChild(document.createTextNode(" "));
+        cell.appendChild(formatOddParity5(num));
+        row.appendChild(cell);
+    }
+
+    /**********************************/
+    const body = document.getElementById("XlateBody");
+
+    // Build the ptCodeGlyphs array;
+    ptCodeGlyphs.fill("_");
+    for (let glyph in xlateASCIIToPTCode) {
+        ptCodeGlyphs[xlateASCIIToPTCode[glyph]] = glyph;
+    }
+
+    // Generate input translation.
+    for (let code=0; code<129; ++code) {        // **TEMP** for testing, should be 256
+        const row = document.createElement("tr");
+
+        // Paper-tape input code.
+        let cell = document.createElement("td");
+        let e = formatOddParity8(code);
+        cell.appendChild(e);
+        row.appendChild(cell);
+        if (oddParity7[code] != code) {
+            row.classList.add("badParityCode");
+        } else if (ptCodeGlyphs[code] == "_") {
+            row.classList.add("invalidCode");
+        }
+
+        cell = document.createElement("td");
+        cell.classList.add("glyph");
+        cell.appendChild(document.createTextNode(ptCodeGlyphs[code].replace(" ", "\xA0")));
+        row.appendChild(cell);
+
+       // Read numeric paper tape.
+       let [zone, num] = xlateIn(code, 3, 36);
+       formatXlate(row, zone, num);
+       formatNumericGlyph(row, num);
+
+       // Read alphanumeric paper tape.
+       [zone, num] = xlateIn(code, 3, 37);
+       formatXlate(row, zone, num);
+       formatAlphaGlyph(row, zone, num);
+
+       // Read binary paper tape [n/a for the Model 1].
+        cell = document.createElement("td");
+        cell.colSpan = 2;
+        cell.appendChild(document.createTextNode("[n/a]"));
+        row.appendChild(cell);
+
+       // Read numeric punched card.
+       [zone, num] = xlateIn(code, 5, 36);
+       formatXlate(row, zone, num);
+       formatNumericGlyph(row, num);
+
+       // Read alphanumeric punched card.
+       [zone, num] = xlateIn(code, 5, 37);
+       formatXlate(row, zone, num);
+       formatAlphaGlyph(row, zone, num);
+
+        if (oddParity7[code] == code) {         // **TEMP** for testing
+            body.appendChild(row);
+        }
+    }
+}, {once: true});
+</script>
+</head>
+
+<body>
+<h2>Build 1620 Model 1 Input Xlate Table</h2>
+<table border=1 cellspacing=0 cellpadding=2>
+    <thead>
+        <tr>
+            <th rowspan=2 colspan=2>Code
+            <th colspan=6>PaperTape
+            <th colspan=4>Card
+        <tr>
+            <th colspan=2>Numeric
+            <th colspan=2>Alpha
+            <th colspan=2>Binary
+            <th colspan=2>Numeric
+            <th colspan=2>Alpha
+    <tbody id=XlateBody>
+</table>
+
+<!--
+<h2>Model 1 Translator Table Results</h2>
+<pre id=XlateResults></pre>
+-->
+
+</body>
+</html>

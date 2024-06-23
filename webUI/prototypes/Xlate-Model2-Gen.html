@@ -2,19 +2,20 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>Build I/O Translator Tables</title>
+    <title>Build 1620-2 I/O Translator Tables</title>
 <!--
 /***********************************************************************
-* retro-1620/software Xlate-Gen.html
+* retro-1620/software Xlate-Model2-Gen.html
 ************************************************************************
 * Copyright (c) 2024, Paul Kimpel.
 * Licensed under the MIT License, see
 *       http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* IBM 1620 test page to generate complete Input/Output Translator results
-* from the logic in Drawings 10.01.90.1, 10.01.91.1, 10.01.95.1, and
-* 10.01.96.1 of the Model 2 ILD manual.
-* See http://bitsavers.org/pdf/ibm/1620/fe/227-5857-0_1620_Model_2_Customer_Engineering_Intermediate_Level_Diagrams_Apr64.pdf.
+* IBM 1620 test page to generate complete Model 2 Input/Output Translator
+* results from the logic in Drawings 10.01.90.1, 10.01.91.1, 10.01.95.1,
+* and 10.01.96.1 of the Model 2 ILD manual.
+* See http://bitsavers.org/pdf/ibm/1620/fe/
+*   227-5857-0_1620_Model_2_Customer_Engineering_Intermediate_Level_Diagrams_Apr64.pdf.
 ************************************************************************
 * 2024-05-30  P.Kimpel
 *   Original version.
@@ -44,8 +45,10 @@ TABLE {
     color:              red}
 .center {
     text-align:         center}
-.gray {
+.badParityCode {
     background-color:   #CCC}
+.invalidCode {
+    background-color:   #CCF}
 </style>
 
 <script>
@@ -57,7 +60,7 @@ window.addEventListener("load", (ev) => {
     // I/O device selector codes
     const twpr = 1;                     // typewriter
     const pt = 3;                       // 1621 paper tape
-    const binaryPt = 33;                // 1621 binary paper tape
+    const binaryPT = 33;                // 1621 binary paper tape
     const card = 5;                     // 1622 card reader
     const disk = 7;                     // 1311 disk drive
 
@@ -104,6 +107,10 @@ window.addEventListener("load", (ev) => {
         0b01101000, 0b11101001, 0b11101010, 0b01101011, 0b11101100, 0b01101101, 0b01101110, 0b11101111, // 232-239
         0b01110000, 0b11110001, 0b11110010, 0b01110011, 0b11110100, 0b01110101, 0b01110110, 0b11110111, // 240-247
         0b11111000, 0b01111001, 0b01111010, 0b11111011, 0b01111100, 0b11111101, 0b11111110, 0b01111111];// 248-255
+
+    const numericGlyphs = [     // indexed as BCD code prefixed with flag bit: F8421
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", " ", "_", "_", "}",         // 00-0F
+        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "$", "-", "_", "_", "\""];       // 10-1F
 
     // Translate memory digit pairs to 1620 character glyphs
     const alphaGlyphs = [       // indexed as (even digit BCD)*16 + (odd digit BCD)
@@ -189,7 +196,7 @@ window.addEventListener("load", (ev) => {
         /* Translates the paper-tape-like "code" to 1620 internal memory code
         for the I/O device indicated by "selector" and input mode indicated by
         opcode "op". Returns the memory digits as [zone, numeric] */
-        const readBinary = (selector == binaryPt && op == 37 ? 1 : 0); // read binary mode
+        const readBinary = (selector == binaryPT && op == 37 ? 1 : 0); // read binary mode
         const readAlpha = (op == 37 ? 1 : 0);           // read alphanumeric op
         const readNumeric = (op == 36 ? 1 : 0);         // read numeric op
         const fileOp = (selector == disk ? 1 : 0);
@@ -205,31 +212,31 @@ window.addEventListener("load", (ev) => {
         const be = (code & 0b10000000) >> 7;            // EOL channel
 
         // Terms for read-bus bits.
-        const tEndLinePT = (selector == pt || selector == binaryPt ? be : 0);   // ??
-        const t1622Bit0NotFlgGM = (selector == 5 && code != 0b01111111 ? b0 : 0);
+        const tEndLinePT = (selector == pt || readBinary ? be : 0);   // ??
+        const t1622Bit0NotFlgGM = (selector == card && code != 0b01111111 ? b0 : 0);
 
         // Read-bus numeric bits.
-        const rb1 = (selector == pt ? b1 : 0) | (selector == card ? b1 : 0);
-        const rb2 = (selector == pt ? b2 : 0) | (selector == card ? b2 : 0) | tEndLinePT;
-        const rb4 = (selector == pt ? b4 : 0) | (selector == card ? b4 : 0);
-        const rb8 = (selector == pt ? b8 : 0) | (selector == card ? b8 : 0) | tEndLinePT;
+        const rb1 = (selector == pt || readBinary ? b1 : 0) | (selector == card ? b1 : 0);
+        const rb2 = (selector == pt || readBinary ? b2 : 0) | (selector == card ? b2 : 0) | tEndLinePT;
+        const rb4 = (selector == pt || readBinary ? b4 : 0) | (selector == card ? b4 : 0);
+        const rb8 = (selector == pt || readBinary ? b8 : 0) | (selector == card ? b8 : 0) | tEndLinePT;
 
         // Read-bus zone bits.
-        const rb0 = (selector == pt ? b0 : 0) | t1622Bit0NotFlgGM | tEndLinePT;
-        const rbx = (selector == pt ? bx : 0) | (selector == card ? bx : 0);
+        const rb0 = (selector == pt || readBinary ? b0 : 0) | t1622Bit0NotFlgGM | tEndLinePT;
+        const rbx = (selector == pt || readBinary ? bx : 0) | (selector == card ? bx : 0);      // also Rd Bus X/Flag
 
         // Terms for output bits.
         const tInOutPlusSign = 0;                       // ?? 1711 ?? for numeric check-bit
         const tNum0 = ~rb1 & ~rb2 & ~rb4 & ~rb8;        // from Model 1 ILD p.36 and common sense
         const t83Not4 = rb8 & rb2 & rb1 & ~rb4;
         const tRMGM = rb2 & rb8 & ~t83Not4;             // added negation
-        const t841 = rb1 & rb4 & rb8 & ~tRMGM & ~readBinary; // added negation
+        const t841 = rb1 & rb4 & rb8 & ~tRMGM & ~readBinary;    // added negation
         const tBlank = tNum0 & ~rbx & ~rb0;             // partially from Model 1 ILD p.36
         const t01 = rb0 & rb1 & ~rb2 & ~rb4 & ~rb8 & ~rbx;      // from Model 1 ILD p.36
 
-        const rbc = (selector == pt ? bc : 0) | (selector == card ? bc : 0) | tBlank | tInOutPlusSign;
+        const rbc = (selector == pt || readBinary ? bc : 0) | (selector == card ? bc : 0) | tBlank | tInOutPlusSign;
 
-        // Output readNumeric bits.
+        // Output numeric bits.
         const n1 = (rb1 & ~t841) & 1;
 
         const n2 = (rb2) & 1;
@@ -243,28 +250,36 @@ window.addEventListener("load", (ev) => {
         const tCorrCBit = (~rb0 & rbx) | (rb0 & ~rbx);
         const tNCa = ((rbc & tCorrCBit) | (~rbc & ~tCorrCBit)) & ~tBlank;
 
-        const nc = ((tNCa | (~tNCa & ~t84Not1 & readAlpha) | (~tNCa & readNumeric) | t841 | // added negation
+        const nc = ((/**tNCa |**/ (~tNCa & ~t84Not1 & readAlpha) | (~tNCa & readNumeric) | t841 | // added negation
                         (readAlpha & t83Not4)) & ~readBinary & ~fileOp) & 1;
 
-        // Terms for I/O Flag gate.
-        const tSpecChar = (rb1 & rb2 & rb8) | t84Not1;
-        const tRdBus0RM = rb0 & tRMGM;                                  // ??
-        const tZ2a = ~(~rbx & tNum0 & ~rb0) & ~rbx & ~tRMGM & ~readBinary;                      // added negation
-
-        const ioFlag = (~(rb0 & ~tRMGM & ~tNum0) & rbx & readNumeric);
+        const ioFlag = (~(rb0 & ~tRMGM & ~tNum0) & rbx & readNumeric) & 1;
 
         // Read-binary zone-bit equivalents.
         const bz1 = readBinary & b8;
         const bz2 = readBinary & b0;
         const bz4 = readBinary & bx;
-        const bzc = (readBinary & rbc);
+        const bzc = readBinary & rbc;
+
+        // Terms for output zone bits.
+        const tSpecChar = (rb1 & rb2 & rb8) | t84Not1;
+        const t0RM = rb0 & tRMGM;                                  // ??
+        const tZ2a =  ~(~rbx & tNum0 & ~rb0) & ~rbx & ~tRMGM & ~readBinary;                      // added negation
 
         // Output zone bits.
         const z1 = ((~(rb0 & ~tNum0) & ~(tNum0 & ~rb0) & ~tRMGM & ~readBinary) | bz1) & 1;      // added negation
         const z2 = (tZ2a | (tNum0 & ~rb0 & rbx & ~readBinary) | bz2) & 1;
-        const z4 = ((~(tNum0 & ~tZ2a) & ~tRdBus0RM & ~readBinary & ~t01 & ~tSpecChar & ~tRMGM) | bz4) & 1;
-        const zc = ((~((~tSpecChar & tCorrCBit) | (tSpecChar & ~tCorrCBit)) & ~t01 & ~tNum0) |
-                        tBlank | tRdBus0RM | bzc) & 1;
+        const z4 = ((~(tNum0 & ~tZ2a) & ~t0RM & ~readBinary & ~t01 & ~tSpecChar & ~tRMGM) | bz4) & 1;
+        const zc = (( ((~tSpecChar & tCorrCBit) | (tSpecChar & ~tCorrCBit)) & ~t01 & ~tNum0) |
+                        tBlank | t0RM | bzc) & 1;
+
+        console.log("%s %s %s %s: %i %i %i %i %i %i %i %i   %i %i %i %i %i %i %i %i   %i %i %i %i00%i%i%i   %i %i%i%i%i%i%i",
+            ptCodeGlyphs[code], code.toString(2).padStart(8, "0"),
+            selector.toString().padStart(2, " "), op.toString().padStart(2, "0"),
+            tEndLinePT & 1, rbx & 1, rb0 & 1, rbc & 1, rb8 & 1, rb4 & 1, rb2 & 1, rb1 & 1,
+            tNum0 & 1, t83Not4 & 1, tRMGM & 1, t841 & 1, tBlank & 1, t01 & 1, t84Not1 & 1, tCorrCBit & 1,
+            tSpecChar & 1, t0RM & 1, tZ2a & 1, zc, z4, z2, z1,
+            tNCa & 1, nc & 1, ioFlag, n8 , n4, n2, n1);
 
         return [(((((((((zc << 1) |      0) << 1) |  0) << 1) | z4) << 1) | z2) << 1) | z1,
                 (((((((((nc << 1) | ioFlag) << 1) | n8) << 1) | n4) << 1) | n2) << 1) | n1];
@@ -274,7 +289,13 @@ window.addEventListener("load", (ev) => {
         /* Formats a 5-bit number plus parity, highlighting it if it does not
         have odd parity */
         const e = document.createElement("span");
-        e.textContent = n.toString(2).padStart(6, "0");
+
+        e.textContent = (n & 0b100000 ? "C" : ".") +
+                        (n & 0b010000 ? "F" : ".") +
+                        (n & 0b001000 ? "8" : ".") +
+                        (n & 0b000100 ? "4" : ".") +
+                        (n & 0b000010 ? "2" : ".") +
+                        (n & 0b000001 ? "1" : ".");
         if (oddParity5[n] != n) {
             e.classList.add("parityErr");
         }
@@ -286,12 +307,38 @@ window.addEventListener("load", (ev) => {
         /* Formats an 8-bit number with parity, highlighting it if it does not
         have odd parity */
         const e = document.createElement("span");
-        e.textContent = n.toString(2).padStart(8, "0");
+
+        e.textContent = (n & 0b10000000 ? "E" : ".") +
+                        (n & 0b01000000 ? "X" : ".") +
+                        (n & 0b00100000 ? "0" : ".") +
+                        (n & 0b00010000 ? "C" : ".") +
+                        (n & 0b00001000 ? "8" : ".") +
+                        (n & 0b00000100 ? "4" : ".") +
+                        (n & 0b00000010 ? "2" : ".") +
+                        (n & 0b00000001 ? "1" : ".");
         if (oddParity7[n] != n) {
             e.classList.add("parityErr");
         }
 
         return e;
+    }
+
+    function formatNumericGlyph(row, num) {
+        /* Formats a numeric digit glyph from a numeric code */
+        const cell = document.createElement("td");
+
+        cell.classList.add("glyph");
+        cell.textContent = numericGlyphs[num & 0b011111];
+        row.appendChild(cell);
+    }
+
+    function formatAlphaGlyph(row, zone, num) {
+        /* Formats an alphanumeric character glyph from zone and numeric codes */
+        const cell = document.createElement("td");
+
+        cell.classList.add("glyph");
+        cell.textContent = alphaGlyphs[(zone & bcdMask)*16 + (num & bcdMask)];
+        row.appendChild(cell);
     }
 
     function formatXlate(row, zone, num) {
@@ -301,11 +348,6 @@ window.addEventListener("load", (ev) => {
         cell.appendChild(formatOddParity5(zone));
         cell.appendChild(document.createTextNode(" "));
         cell.appendChild(formatOddParity5(num));
-        row.appendChild(cell);
-
-        cell = document.createElement("td");
-        cell.classList.add("glyph");
-        cell.textContent = alphaGlyphs[(zone & bcdMask)*16 + (num & bcdMask)];
         row.appendChild(cell);
     }
 
@@ -319,7 +361,7 @@ window.addEventListener("load", (ev) => {
     }
 
     // Generate input translation.
-    for (let code=0; code<128; ++code) {        // **TEMP** for testing
+    for (let code=0; code<129; ++code) {        // **TEMP** for testing, should be 256
         const row = document.createElement("tr");
 
         // Paper-tape input code.
@@ -327,8 +369,10 @@ window.addEventListener("load", (ev) => {
         let e = formatOddParity8(code);
         cell.appendChild(e);
         row.appendChild(cell);
-        if (e.classList.contains("parityErr")) {
-            row.classList.add("gray");
+        if (oddParity7[code] != code) {
+            row.classList.add("badParityCode");
+        } else if (ptCodeGlyphs[code] == "_") {
+            row.classList.add("invalidCode");
         }
 
         cell = document.createElement("td");
@@ -339,11 +383,12 @@ window.addEventListener("load", (ev) => {
        // Read numeric paper tape.
        let [zone, num] = xlateIn(code, 3, 36);
        formatXlate(row, zone, num);
+       formatNumericGlyph(row, num);
 
        // Read alphanumeric paper tape.
        [zone, num] = xlateIn(code, 3, 37);
        formatXlate(row, zone, num);
-
+       formatAlphaGlyph(row, zone, num);
        // Read binary paper tape.
        [zone, num] = xlateIn(code, 33, 37);
         cell = document.createElement("td");
@@ -360,10 +405,12 @@ window.addEventListener("load", (ev) => {
        // Read numeric punched card.
        [zone, num] = xlateIn(code, 5, 36);
        formatXlate(row, zone, num);
+       formatNumericGlyph(row, num);
 
        // Read alphanumeric punched card.
        [zone, num] = xlateIn(code, 5, 37);
        formatXlate(row, zone, num);
+       formatAlphaGlyph(row, zone, num);
 
         if (oddParity7[code] == code) {         // **TEMP** for testing
             body.appendChild(row);
@@ -374,7 +421,7 @@ window.addEventListener("load", (ev) => {
 </head>
 
 <body>
-<h2>Build Input Xlate Table</h2>
+<h2>Build 1620 Model 2 Input Xlate Table</h2>
 <table border=1 cellspacing=0 cellpadding=2>
     <thead>
         <tr>
@@ -391,7 +438,7 @@ window.addEventListener("load", (ev) => {
 </table>
 
 <!--
-<h2>Translator Table Results</h2>
+<h2>Model 2 Translator Table Results</h2>
 <pre id=XlateResults></pre>
 -->
 
