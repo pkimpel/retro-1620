@@ -256,19 +256,19 @@ DIV.gateLamp {
     font-size:          4px;
     border-radius:      50%;
     border:             2px solid #222;
-    background-color:   #666666}        /* was 777777 */
+    background-image:   radial-gradient(#666666 33%, #333333)}  /* was 666666, 777777 */
 DIV.gateLit1 {
-    background-color:   #807866}        /* was 807D75, A09388 try 8C8878 ?? */
+    background-image:   radial-gradient(#807866 20%, #333333)}  /* was 807866, 807D75, A09388 try 8C8878 ?? */
 DIV.gateLit2 {
-    background-color:   #9A8966}        /* was 999484, B3A696 try A39981 ?? */
+    background-image:   radial-gradient(#9A8966 20%, #333333)}  /* was 9A8966, 999484, B3A696 try A39981 ?? */
 DIV.gateLit3 {
-    background-color:   #B3A273}        /* was B3AB93, C6B9A4 try BAAA87 ?? */
+    background-image:   radial-gradient(#B3A273 20%, #444444)}  /* was B3A273, B3AB93, C6B9A4 try BAAA87 ?? */
 DIV.gateLit4 {
-    background-color:   #CCBB80}        /* was CCC2A2, D9CCB2 try D1BB8D ?? */
+    background-image:   radial-gradient(#CCBB80 20%, #666666)}  /* was CCBB80, CCC2A2, D9CCB2 try D1BB8D ?? */
 DIV.gateLit5 {
-    background-color:   #E6D58C}        /* was E6D9B1, ECDFC0 try E8CC93 ?? */
+    background-image:   radial-gradient(#E6D58C 33%, #807866)}  /* was E6D58C, E6D9B1, ECDFC0 try E8CC93 ?? */
 DIV.gateLit {
-    background-color:   #FFEE99}        /* was FFF0C0, FFF2CE try FFDD99 as a base ?? */
+    background-image:   radial-gradient(#FFEE99 33%, #9A8966)}  /* was FFEE99, FFF0C0, FFF2CE try FFDD99 as a base ?? */
 
 DIV.gateLampTopCaption {
     position:           absolute;

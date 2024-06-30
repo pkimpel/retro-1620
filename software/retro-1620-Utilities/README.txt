@@ -50,11 +50,20 @@ Lamp-Color-Test.html
 
 Paper-Tape-Decoder.html
     Script to convert binary paper tape image files to the ASCII image
-    file format used by retro-1620.
+    file format used by retro-1620. It can process multiple files from
+    the same directory in one run.
 
-Parity-Gen.html
+Paper-Tape-Validater.html
+    Script to validate the frame codes in binary paper tape image files.
+    It can process multiple files from the same directory in one run.
+
+Parity-6-Gen.html
     Script to generate a table of correct 6-bit odd parity for all
     possible 6-bit input combinations.
+
+Parity-8-Gen.html
+    Script to generate a table of correct 8-bit odd parity for all
+    possible 8-bit input combinations.
 
 Plotter-Decode-Gen.html
     Script to generate a table that translates the paper tape codes used

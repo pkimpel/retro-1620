@@ -185,6 +185,8 @@ window.addEventListener("load", (ev) => {
         "^": 0b00111110,        // "special" char
         "}": 0b00101111,        // Group Mark
         "\"":0b01001111,        // flagged Group Mark
+    //  "-": 0b01011101,        // alternate for flagged zero (-0)
+    //  "!": 0b01111010,        // alternate for flagged Record Mark
     };
 
     const ptCodeGlyphs = Array(256);
@@ -338,6 +340,8 @@ window.addEventListener("load", (ev) => {
 
     // Build the ptCodeGlyphs array;
     ptCodeGlyphs.fill("_");
+    ptCodeGlyphs[0b01011101] = "-";             // alternate flagged zero (-0)
+    ptCodeGlyphs[0b01111010] = "!";             // alternate for flagged Record Mark
     for (let glyph in xlateASCIIToPTCode) {
         ptCodeGlyphs[xlateASCIIToPTCode[glyph]] = glyph;
     }

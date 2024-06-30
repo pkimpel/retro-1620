@@ -63,68 +63,6 @@ class PaperTapeReader {
     static tapeFeedBits = 0b01111111;   // tape-feed hole pattern
     static tapeFeedGlyph = "_";         // ASCII character for tape-feed
 
-    static xlateASCIIToPTCode = {       // ASCII to 1620 paper-tape punch bits
-           //  EX0C8421 tape channels
-        "0": 0b00100000,
-        "1": 0b00000001,
-        "2": 0b00000010,
-        "3": 0b00010011,
-        "4": 0b00000100,
-        "5": 0b00010101,
-        "6": 0b00010110,
-        "7": 0b00000111,
-        "8": 0b00001000,
-        "9": 0b00011001,
-        "A": 0b01100001,
-        "B": 0b01100010,
-        "C": 0b01110011,
-        "D": 0b01100100,
-        "E": 0b01110101,
-        "F": 0b01110110,
-        "G": 0b01100111,
-        "H": 0b01101000,
-        "I": 0b01111001,
-        "]": 0b01000000,        // -0 (flagged 0)
-        "J": 0b01010001,
-        "K": 0b01010010,
-        "L": 0b01000011,
-        "M": 0b01010100,
-        "N": 0b01000101,
-        "O": 0b01000110,
-        "P": 0b01010111,
-        "Q": 0b01011000,
-        "R": 0b01001001,
-        "S": 0b00110010,
-        "T": 0b00100011,
-        "U": 0b00110100,
-        "V": 0b00100101,
-        "W": 0b00100110,
-        "X": 0b00110111,
-        "Y": 0b00111000,
-        "Z": 0b00101001,
-        ".": 0b01101011,
-        ")": 0b01111100,
-        "*": 0b01001100,
-        "$": 0b01011011,
-        "(": 0b00101100,
-        ",": 0b00111011,
-        "|": 0b00101010,        // Record Mark
-        "!": 0b01001010,        // flagged Record Mark
-        "=": 0b00001011,
-        "@": 0b00011100,
-        "+": 0b01110000,
-        "-": 0b01000000,
-        " ": 0b00010000,
-        "/": 0b00110001,
-        "^": 0b00111110,        // "special" char
-        "}": 0b00101111,        // Group Mark
-        "\"":0b01001111,        // flagged Group Mark
-     // Codes requiring special handling
-     // "!": 0b01111010,        // alternate for flagged Record Mark
-     // "<": 0b10000000,        // EOL (never read into memory)
-     // "_": 0b01111111,        // tape-feed (ignored during non-binary read)
-    };
-
 
     // Public Instance Properties
 
@@ -139,7 +77,6 @@ class PaperTapeReader {
     tapeViewLength = 75;                // chars that will fit in the TapeView box
     timer = new Timer();                // delay management timer
     window = null;                      // window object
-    xlatePTCodeToASCII = Array(256);    // translate binary hole patterns to ASCII
 
 
     constructor(context) {
@@ -178,20 +115,6 @@ class PaperTapeReader {
                 this, this.readerOnLoad);
 
         this.clear();
-
-        // Build the xlatePTCodeToASCII table from xlateASCIIToPTCode.
-        this.xlatePTCodeToASCII.fill(null);
-        for (let char in PaperTapeReader.xlateASCIIToPTCode) {
-            this.xlatePTCodeToASCII[PaperTapeReader.xlateASCIIToPTCode[char]] = char;
-        }
-
-        // Alternate hole patterns.
-        this.xlatePTCodeToASCII[0b01111010] = "!";      // alternate for flagged Record Mark
-
-        // Codes requiring special handling in the Processor. These cause a
-        // MBR parity error when read, per Germain, page 32.
-        this.xlatePTCodeToASCII[0b00001110] = "\x11";  // DC1 => 842 punch, End Card 1
-        this.xlatePTCodeToASCII[0b01011110] = "\x0D";  // CR  => XC842 punch, Carriage Return
     }
 
     /**************************************/
@@ -415,7 +338,7 @@ class PaperTapeReader {
             let bufLength = this.bufLength;
             let crFlag = false;
             for (const char of image) {
-                const bits = PaperTapeReader.xlateASCIIToPTCode[char.toUpperCase()];
+                const bits = Envir.xlateASCIIToPTCode[char.toUpperCase()];
                 if (bits !== undefined) {
                     this.buffer[bufLength++] = bits;
                 } else {
@@ -436,11 +359,11 @@ class PaperTapeReader {
                         break;
                     case Envir.glyphRecMark:        // \u2021
                         crFlag = false;
-                        this.buffer[bufLength++] = PaperTapeReader.xlateASCIIToPTCode["|"];
+                        this.buffer[bufLength++] = Envir.xlateASCIIToPTCode["|"];
                         break;
                     case Envir.glyphGroupMark:      // \u2262
                         crFlag = false;
-                        this.buffer[bufLength++] = PaperTapeReader.xlateASCIIToPTCode["}"];
+                        this.buffer[bufLength++] = Envir.xlateASCIIToPTCode["}"];
                         break;
                     default:            // unknown character -- store as a space with bad parity
                         crFlag = false;
@@ -476,10 +399,9 @@ class PaperTapeReader {
     /**************************************/
     async read() {
         /* Reads one record from the buffer in numeric/alphanumeric mode,
-        converting the hole patterns to ASCII characters and sending them to
-        Processor. Reads until an EOL frame or the end of the tape buffer is
-        encountered. If an attempt is made to read past the end of the buffer,
-        the I/O is left hanging */
+        sending the raw hole patterns to the Processor. Reads until an EOL
+        frame or the end of the tape buffer is encountered. If an attempt is
+        made to read past the end of the buffer, the I/O is left hanging */
         let bufLength = this.bufLength; // current buffer length
         let eol = false;                // end-of-record flag
         let nextFrameStamp = 0;         // timestamp when next frame can be read
@@ -505,19 +427,16 @@ class PaperTapeReader {
                 this.processor.gateREAD_INTERLOCK.value = 1;
                 eol = true;             // just quit and leave the I/O hanging
             } else {
-                let code = this.buffer[x];
-                let char = this.xlatePTCodeToASCII[code];
-                if (char) {
-                    this.processor.receivePaperTapeFrame(char, false);
-                } else if (code == PaperTapeReader.eolBits) {
+                let ptCode = this.buffer[x];
+                let char = Envir.xlatePTCodeToASCII[ptCode] ?? PaperTapeReader.invalidGlyph;
+                if (ptCode == PaperTapeReader.tapeFeedBits) {
+                    char = PaperTapeReader.tapeFeedGlyph;       // tape-feed: ignore this frame
+                } else if (ptCode & PaperTapeReader.eolBits) {
                     eol = true;
                     char = PaperTapeReader.eolGlyph;
-                    this.processor.receivePaperTapeFrame("", true);
-                } else if (code == PaperTapeReader.tapeFeedBits) {
-                    char = PaperTapeReader.tapeFeedGlyph;       // tape-feed: ignore this frame
+                    this.processor.receivePaperTapeFrame(ptCode, true);
                 } else {
-                    char = PaperTapeReader.invalidGlyph;        // invalid hole pattern
-                    this.processor.receivePaperTapeFrame(char, false);
+                    this.processor.receivePaperTapeFrame(ptCode, false);
                 }
 
                 ++x;
@@ -536,12 +455,11 @@ class PaperTapeReader {
 
     /**************************************/
     async readBinary() {
-        /* Reads one record from the buffer in binary mode, storing the X08 bits
-        as the first digit of a character and the 421 bits as the second digit,
-        and sending the character to the Processor. Reads until an EOL frame or
-        the end of the tape buffer is encountered. A frame with the EOL bit but
-        with any of the X0C8421 bits is not treated as an EOL frame. If an attempt
-        is made to read past the end of the buffer, the I/O is left hanging */
+        /* Reads one record from the buffer in binary mode, passing the raw hole
+        patterns to the Processor. Reads until an EOL frame or the end of the
+        tape buffer is encountered. A frame with the EOL bit but with any of
+        the X0C8421 bits is not treated as an EOL frame. If an attempt is made
+        to read past the end of the buffer, the I/O is left hanging */
         let bufLength = this.bufLength; // current buffer length
         let eol = false;                // end-of-record flag
         let nextFrameStamp = 0;         // timestamp when next frame can be read
@@ -567,17 +485,17 @@ class PaperTapeReader {
                 this.processor.gateREAD_INTERLOCK.value = 1;
                 eol = true;             // just quit and leave the I/O hanging
             } else {
-                let code = this.buffer[x];
-                let char = this.xlatePTCodeToASCII[code] ?? PaperTapeReader.invalidGlyph;
-                if (code == PaperTapeReader.eolBits) {
+                let ptCode = this.buffer[x];
+                let char = Envir.xlatePTCodeToASCII[ptCode] ?? PaperTapeReader.invalidGlyph;
+                if (ptCode == PaperTapeReader.eolBits) {
                     eol = true;
                     char = PaperTapeReader.eolGlyph;
-                    this.processor.receivePaperTapeBinary(0, true);
+                    this.processor.receivePaperTapeBinary(ptCode, true);
                 } else {
-                    if (code == PaperTapeReader.tapeFeedBits) {
+                    if (ptCode == PaperTapeReader.tapeFeedBits) {
                         char = PaperTapeReader.tapeFeedGlyph;
                     }
-                    this.processor.receivePaperTapeBinary(code, false);
+                    this.processor.receivePaperTapeBinary(ptCode, false);
                 }
 
                 ++x;

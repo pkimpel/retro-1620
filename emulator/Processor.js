@@ -130,7 +130,7 @@ class Processor {
         "\"":Envir.numGroupMark | Register.flagMask,
         "~": Envir.numBlank | Register.flagMask};
 
-    // Standard alphanumeric input keystroke character codes for most devices.
+    // Standard alphanumeric input character codes for most devices.
     static stdASCIIalpha1620 = {
         " ": 0o00_00,
         "$": 0o01_03,
@@ -1349,11 +1349,19 @@ class Processor {
         returns an end-of-block indication and we're at END OF MODULE, or
         RELEASE occurs, terminate the I/O. Note that OR2 gets incremented before
         this routine is called */
+        const ptCode = Envir.xlateOutNumeric[digit & Register.notParityMask];
 
         this.gateRESP_GATE.value = 0;
         this.gateCHAR_GATE.value = 1;
 
-        let eob = await this.ioDevice.dumpNumeric(digit);       // end-of-buffer indication
+        let eob = 0;
+        switch (this.ioSelectNr) {
+        case 2: // Paper Tape Punch
+            eob = await this.ioDevice.dumpNumeric(ptCode);      // end-of-buffer indication
+        default:
+            eob = await this.ioDevice.dumpNumeric(digit);       // end-of-buffer indication
+        }
+
         this.gateCHAR_GATE.value = 0;
         if (this.gateWR.value) {        // we haven't been released...
             this.gateRESP_GATE.value = 1;
@@ -1407,6 +1415,7 @@ class Processor {
             * For all others (not used by Disk Drive), if the digit matches a record mark
             * If a RELEASE occurs
         Note that OR2 gets incremented before this routine is called */
+        const ptCode = Envir.xlateOutNumeric[digit & Register.notParityMask];
         let eob = 0;                    // end-of-buffer indication (meaning varies)
 
         this.gateRESP_GATE.value = 0;
@@ -1418,7 +1427,7 @@ class Processor {
                 eob = await this.ioDevice.writeNumeric(-1);     // punch the EOL
                 this.ioExit();
             } else {
-                eob = await this.ioDevice.writeNumeric(digit);
+                eob = await this.ioDevice.writeNumeric(ptCode);
                 if (eob) {                                      // bad character punched
                     this.enterLimbo();                          // just hang on device error
                 }
@@ -1469,6 +1478,9 @@ class Processor {
             * For all others (not used by Disk Drive), if the odd digit matches a record mark
             * If a RELEASE occurs
         Note that OR2 gets incremented before this routine is called */
+        const even = (digitPair >> 6) & Register.bcdMask;
+        const odd =  digitPair & Register.bcdMask;
+        let ptCode = Envir.xlateOutAlpha[even*16 + odd];
         let eob = 0;
 
         this.gateRESP_GATE.value = 0;
@@ -1480,7 +1492,7 @@ class Processor {
                 eob = await this.ioDevice.writeAlpha(-1);       // punch the EOL
                 this.ioExit();
             } else {
-                eob = await this.ioDevice.writeAlpha(digitPair);
+                eob = await this.ioDevice.writeAlpha(ptCode);
                 if (eob) {
                     this.enterLimbo();                          // just hang on device error
                 }
@@ -1508,12 +1520,16 @@ class Processor {
             }
             break;
         case 32:        // Binary Paper Tape
+            // Construct the binary tape code.
+            ptCode = ((even & 0b110) << 4) | ((even & 1) << 3) | (odd & 0b111);
+            ptCode |= (Envir.oddParity7[ptCode] >> 3) & 0b10000;        // insert check bit
+
             if ((digitPair & Envir.numRecMark) == Envir.numRecMark) {
                 this.gateRM.value = 1;
                 eob = await this.ioDevice.writeBinary(-1);      // EOL
                 this.ioExit();
             } else {
-                eob = await this.ioDevice.writeBinary(digitPair);
+                eob = await this.ioDevice.writeBinary(ptCode);
                 if (eob) {
                     this.enterLimbo();                          // just hang on device error
                 }
@@ -1760,10 +1776,10 @@ class Processor {
     }
 
     /**************************************/
-    receivePaperTapeFrame(char, eol) {
+    receivePaperTapeFrame(ptCode, eol) {
         /* Called by the PaperTapeReader to transfer one character to core
-        memory. "char" is the ASCII 1-character string, "eol" is true if this
-        frame has the EOL punch (and char is not stored). If the PaperTapeReader
+        memory. "ptCode" is the ASCII 1-character string, "eol" is true if this
+        frame has the EOL punch (and ptCode is not stored). If the PaperTapeReader
         transfers invalid 1620 characters, the RD CHK indicator will be set */
 
         if (this.ioSelectNr == 3 && this.gateRD.value) { // must be waiting for PaperTapeReader input
@@ -1771,43 +1787,41 @@ class Processor {
 
             this.gateRESP_GATE.value = 1;
             if (readNumeric) {
-                let code = Processor.cardASCIInumeric1620[char];
+                // Check for DC1 (842 punch, End Card 1) or CR  (XC842 punch, Carriage Return)
+                // frames that cause MBRE errors. See Germain, p.32.
+                if (ptCode == 0b00001110 || ptCode == 0b01011110) {
+                    this.parityMBREvenCheck.value = 1;
+                    this.ioMBRCheckPending = true;
+                }
+
+                let digit = Envir.xlateInNumeric[ptCode];
                 if (eol) {
-                    code = Envir.numRecMark;
-                } else if (code === undefined) {
-                    code = 0;
-                    switch (char) {
-                    case "\x11":        // End Card 1 hole pattern
-                    case "\x0D":        // Carriage Return hole pattern
-                        this.parityMBREvenCheck.value = 1;
-                        this.ioMBRCheckPending = true;  // see Germain, p.32
-                        break;
-                    default:
-                        this.ioReadCheck.value = 1;
-                        this.ioReadCheckPending = true;
-                        break;
-                    }
+                    digit = Envir.numRecMark;
+                } else if (!digit) {
+                    digit = 0;
+                    this.ioReadCheck.value = 1;
+                    this.ioReadCheckPending = true;
                 } else {
-                    this.gateIO_FLAG.value = code & Register.flagMask;
+                    this.gateIO_FLAG.value = digit & Register.flagMask;
                 }
 
                 this.regMAR.value = this.regOR2.value;
                 this.fetch();
-                this.regMIR.setDigit(this.regMAR.isEven, Envir.oddParity5[code]);
+                this.regMIR.setDigit(this.regMAR.isEven, digit);
                 this.store();
                 this.regOR2.incr(1);
             } else {    // read alphanumeric
-                let code = Processor.stdASCIIalpha1620[char];
+                let digitPair = Envir.xlateInAlpha[ptCode];
                 if (eol) {
-                    code = Envir.numRecMark;
-                } else if (code === undefined || char == "]") { // no flagged-0 for alpha paper tape
+                    digitPair = Envir.numRecMark;
+                } else if (!digitPair) {
+                    digitPair = 0;
                     this.ioReadCheck.value = 1;
                     this.ioReadCheckPending = true;
-                    code = 0;
                 }
 
-                let even = (code >> Register.digitBits) & Register.bcdMask;
-                let odd  = code & Register.bcdMask;
+                let even = (digitPair >> Register.digitBits) & Register.bcdMask;
+                let odd  = digitPair & Register.bcdMask;
                 this.regMAR.value = this.regOR2.value;
                 this.fetch();
 
@@ -1854,21 +1868,19 @@ class Processor {
     }
 
     /**************************************/
-    receivePaperTapeBinary(code, eol) {
+    receivePaperTapeBinary(ptCode, eol) {
         /* Called by the PaperTapeReader to transfer one binary frame to core
-        memory. "code" is the raw binary frame, "eol" is true if this frame
+        memory. "ptCode" is the raw binary frame, "eol" is true if this frame
         indicates EOL (and code is not stored) */
 
         if (this.ioSelectNr == 33 && this.gateRD.value) {// must be waiting for PaperTapeReader input
-            let even = ((code >> 3) & 1) | ((code >> 4) & 0b110);       // X08 bits
-            let odd  = code & 0b111;                                    // 421 bits
+            let even = ((ptCode >> 3) & 1) | ((ptCode >> 4) & 0b110);   // X08 bits
+            let odd  = ptCode & 0b111;                                  // 421 bits
             if (eol) {
                 even = 0;
                 odd = Envir.numRecMark;
             } else {
-                const check = (code >> 4) & 1;
-                const parity = ((~(Envir.oddParity5[even] ^ Envir.oddParity5[odd])) >> 5) & 1;
-                if (parity != check) {
+                if (Envir.oddParity7[ptCode] != ptCode) {
                     this.ioReadCheck.value = 1;
                     this.ioReadCheckPending = true;
                 }

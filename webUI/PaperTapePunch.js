@@ -60,145 +60,6 @@ class PaperTapePunch {
     static tapeFeedBits = 0b01111111;   // tape-feed hole pattern
     static tapeFeedGlyph = "_";         // ASCII character for tape-feed
 
-    static xlateASCIIToPTCode = {       // ASCII to 1620 paper-tape punch bits
-           //  EX0C8421 tape channels
-        "0": 0b00100000,
-        "1": 0b00000001,
-        "2": 0b00000010,
-        "3": 0b00010011,
-        "4": 0b00000100,
-        "5": 0b00010101,
-        "6": 0b00010110,
-        "7": 0b00000111,
-        "8": 0b00001000,
-        "9": 0b00011001,
-        "A": 0b01100001,
-        "B": 0b01100010,
-        "C": 0b01110011,
-        "D": 0b01100100,
-        "E": 0b01110101,
-        "F": 0b01110110,
-        "G": 0b01100111,
-        "H": 0b01101000,
-        "I": 0b01111001,
-        "]": 0b01000000,        // -0 (flagged 0)
-        "J": 0b01010001,
-        "K": 0b01010010,
-        "L": 0b01000011,
-        "M": 0b01010100,
-        "N": 0b01000101,
-        "O": 0b01000110,
-        "P": 0b01010111,
-        "Q": 0b01011000,
-        "R": 0b01001001,
-        "S": 0b00110010,
-        "T": 0b00100011,
-        "U": 0b00110100,
-        "V": 0b00100101,
-        "W": 0b00100110,
-        "X": 0b00110111,
-        "Y": 0b00111000,
-        "Z": 0b00101001,
-        ".": 0b01101011,
-        ")": 0b01111100,
-        "*": 0b01001100,
-        "$": 0b01011011,
-        "(": 0b00101100,
-        ",": 0b00111011,
-        "|": 0b00101010,        // Record Mark
-        "!": 0b01001010,        // flagged Record Mark
-        "=": 0b00001011,
-        "@": 0b00011100,
-        "+": 0b01110000,
-        "-": 0b01000000,
-        " ": 0b00010000,
-        "/": 0b00110001,
-        "^": 0b00111110,        // "special" char
-        "}": 0b00101111,        // Group Mark
-        "\"":0b01001111,        // flagged Group Mark
-     // Codes requiring special handling
-     // "!": 0b01111010,        // alternate for flagged Record Mark
-     // "<": 0b10000000,        // EOL (never read into memory)
-     // "_": 0b01111111,        // tape-feed (ignored during non-binary read)
-     // " ": 0b00000000,        // blank tape (alternate for tape-feed)
-    };
-
-    static xlateNumericToPTCode = [     // numeric BCD to paper-tape code
-        0b00100000,     0b00000001,     0b00000010,     0b00010011,     // 0-3
-        0b00000100,     0b00010101,     0b00010110,     0b00000111,     // 4-7
-        0b00001000,     0b00011001,     0b00101010,     -1,             // 8-9, RM, ?
-        0b00011100,     -1,             -1,             0b00101111,     // NB, ?, ?, GM
-        0b01000000,     0b01010001,     0b01010010,     0b01000011,     // 0-3 (flagged)
-        0b01010100,     0b01000101,     0b01000110,     0b01010111,     // 4-7 (flagged)
-        0b01011000,     0b01001001,     0b00001011,     -1,             // 8-9, RM, ? (flagged)
-        -1,             -1,             -1,             0b01001111];    // NB, ?, ?, GM (flagged)
-
-    static xlateAlphaToPTCode = [       // alpha as (even-BCD*16 + odd-BCD) to paper-tape code
-        0b00010000,     -1,             -1,             0b01101011,     // 00
-        0b01111100,     -1,             -1,             -1,             // 04
-        -1,             -1,             0b00101010,     -1,             // 08
-        -1,             -1,             -1,             0b00101111,     // 0C
-        0b01110000,     -1,             -1,             0b01011011,     // 10
-        0b01001100,     -1,             -1,             -1,             // 14
-        -1,             -1,             -1,             -1,             // 18
-        -1,             -1,             -1,             -1,             // 1C
-        0b01000000,     0b00110001,     -1,             0b00111011,     // 20
-        0b00101100,     -1,             0b00111110,     -1,             // 24
-        -1,             -1,             -1,             -1,             // 28
-        -1,             -1,             -1,             -1,             // 2C
-        -1,             -1,             -1,             0b00001011,     // 30
-        0b00011100,     -1,             -1,             -1,             // 34
-        -1,             -1,             -1,             -1,             // 38
-        -1,             -1,             -1,             -1,             // 3C
-        -1,             0b01100001,     0b01100010,     0b01110011,     // 40
-        0b01100100,     0b01110101,     0b01110110,     0b01100111,     // 44
-        0b01101000,     0b01111001,     -1,             -1,             // 48
-        -1,             -1,             -1,             -1,             // 4C
-        0b01000000,     0b01010001,     0b01010010,     0b01000011,     // 50
-        0b01010100,     0b01000101,     0b01000110,     0b01010111,     // 54
-        0b01011000,     0b01001001,     -1,             -1,             // 58
-        -1,             -1,             -1,             -1,             // 5C
-        -1,             -1,             0b00110010,     0b00100011,     // 60
-        0b00110100,     0b00100101,     0b00100110,     0b00110111,     // 64
-        0b00111000,     0b00101001,     -1,             -1,             // 68
-        -1,             -1,             -1,             -1,             // 6C
-        0b00100000,     0b00000001,     0b00000010,     0b00010011,     // 70
-        0b00000100,     0b00010101,     0b00010110,     0b00000111,     // 74
-        0b00001000,     0b00011001,     -1,             -1,             // 78
-        -1,             -1,             -1,             -1,             // 7C
-        -1,             -1,             -1,             -1,             // 80
-        -1,             -1,             -1,             -1,             // 84
-        -1,             -1,             -1,             -1,             // 88
-        -1,             -1,             -1,             -1,             // 8C
-        -1,             -1,             -1,             -1,             // 90
-        -1,             -1,             -1,             -1,             // 94
-        -1,             -1,             -1,             -1,             // 98
-        -1,             -1,             -1,             -1,             // 9C
-        -1,             -1,             -1,             -1,             // A0
-        -1,             -1,             -1,             -1,             // A4
-        -1,             -1,             -1,             -1,             // A8
-        -1,             -1,             -1,             -1,             // AC
-        -1,             -1,             -1,             -1,             // B0
-        -1,             -1,             -1,             -1,             // B4
-        -1,             -1,             -1,             -1,             // B8
-        -1,             -1,             -1,             -1,             // BC
-        -1,             -1,             -1,             -1,             // C0
-        -1,             -1,             -1,             -1,             // C4
-        -1,             -1,             -1,             -1,             // C8
-        -1,             -1,             -1,             -1,             // CC
-        -1,             -1,             -1,             -1,             // D0
-        -1,             -1,             -1,             -1,             // D4
-        -1,             -1,             -1,             -1,             // D8
-        -1,             -1,             -1,             -1,             // DC
-        -1,             -1,             -1,             -1,             // E0
-        -1,             -1,             -1,             -1,             // E4
-        -1,             -1,             -1,             -1,             // E8
-        -1,             -1,             -1,             -1,             // EC
-        -1,             -1,             -1,             -1,             // F0
-        -1,             -1,             -1,             -1,             // F4
-        -1,             -1,             -1,             -1,             // F8
-        -1,             -1,             -1,             -1];            // FC
-
 
     // Public Instance Properties
 
@@ -215,7 +76,6 @@ class PaperTapePunch {
     timer = new Timer();                // delay management timer
     waitForBuffer = new WaitSignal();   // signal for manual tape-feed completion
     window = null;                      // window object
-    xlatePTCodeToASCII = Array(256);    // translate binary hole patterns to ASCII
 
 
     constructor(context) {
@@ -255,18 +115,6 @@ class PaperTapePunch {
                 this, this.punchOnLoad);
 
         this.clear();
-
-        // Build the xlatePTCodeToASCII table from xlateASCIIToPTCode.
-        this.xlatePTCodeToASCII.fill(null);
-        for (let char in PaperTapePunch.xlateASCIIToPTCode) {
-            this.xlatePTCodeToASCII[PaperTapePunch.xlateASCIIToPTCode[char]] = char;
-        }
-
-        // Special/alternate hole patterns.
-        this.xlatePTCodeToASCII[0b00000000] = " ";      // alternate for tape-feed (blank tape)
-        this.xlatePTCodeToASCII[0b01111010] = "!";      // alternate for flagged Record Mark
-        this.xlatePTCodeToASCII[0b01111111] = "_";      // tape-feed (ignored during non-binary read)
-        this.xlatePTCodeToASCII[0b10000000] = "<";      // EOL (never read into memory)
     }
 
     /**************************************/
@@ -503,7 +351,7 @@ class PaperTapePunch {
                     text += rec + "\n";
                     rec = "";
                 } else {
-                    rec += this.xlatePTCodeToASCII[code] ?? "?";
+                    rec += Envir.xlatePTCodeToASCII[code] ?? "?";
                 }
             }
 
@@ -534,7 +382,7 @@ class PaperTapePunch {
                     text += rec + "\n";
                     rec = "";
                 } else {
-                    rec += this.xlatePTCodeToASCII[code] ?? "?";
+                    rec += Envir.xlatePTCodeToASCII[code] ?? "?";
                 }
             }
 
@@ -686,7 +534,7 @@ class PaperTapePunch {
             result = -1;                // just quit and leave the I/O hanging
         } else {                        // it's a valid hole pattern
             this.buffer[this.bufIndex++] = ptCode;
-            char = this.xlatePTCodeToASCII[ptCode] ?? PaperTapePunch.invalidGlyph;
+            char = Envir.xlatePTCodeToASCII[ptCode] ?? PaperTapePunch.invalidGlyph;
         }
 
         this.tapeSupplyBar.value = PaperTapePunch.bufferLimit - this.bufIndex;
@@ -695,66 +543,52 @@ class PaperTapePunch {
     }
 
     /**************************************/
-    dumpNumeric(code) {
+    dumpNumeric(ptCode) {
         /* Writes one digit to the punch. This should be used directly by
         Dump Numerically. Returns a Promise for completion */
 
-        if (code < 0) {
+        if (ptCode < 0) {
             return this.punchFrame(-1, false);
         } else {
-            const digit = code & Register.notParityMask;
-            const ptCode = PaperTapePunch.xlateNumericToPTCode[digit];
-            const badCode = !((ptCode ?? false) && Envir.oddParity5[code] == code);
-            return this.punchFrame(ptCode, badCode);
+            return this.punchFrame(ptCode, Envir.oddParity7[ptCode] != ptCode);
         }
     }
 
     /**************************************/
-    writeNumeric(code) {
+    writeNumeric(ptCode) {
         /* Writes one digit to the punch. This should be used directly by
-        Write Numerically. Returns a Promise for completion */
+        Write Numerically. Writes until a negative parameter is received
+        Returns a Promise for completion */
 
-        if (code < 0) {
+        if (ptCode < 0) {
             return this.punchFrame(-1, false);
         } else {
-            const digit = code & Register.notParityMask;
-            const ptCode = PaperTapePunch.xlateNumericToPTCode[digit];
-            const badCode = !((ptCode ?? false) && Envir.oddParity5[code] == code);
-            return this.punchFrame(ptCode, badCode);
+            return this.punchFrame(ptCode, Envir.oddParity7[ptCode] != ptCode);
         }
     }
 
     /**************************************/
-    writeAlpha(digitPair) {
-        /* Writes one even/odd digit pair to the punch. This should be used
-        directly by Write Alphanumerically. Returns a Promise for completion */
+    writeAlpha(ptCode) {
+        /* Writes one character to the punch. This should be used directly by
+        Write Alphanumerically. Writes until a negative parameter is received
+        Returns a Promise for completion */
 
-        if (digitPair < 0) {
+        if (ptCode < 0) {
             return this.punchFrame(-1, false);
         } else {
-            const even = (digitPair >> Register.digitBits) & Register.digitMask;
-            const odd = digitPair & Register.digitMask;
-            const ptCode = PaperTapePunch.xlateAlphaToPTCode[even*16 + odd];
-            const badCode = !((ptCode ?? false) &&
-                    Envir.oddParity5[even] == even && Envir.oddParity5[odd] == odd);
-            return this.punchFrame(ptCode, badCode);
+            return this.punchFrame(ptCode, Envir.oddParity7[ptCode] != ptCode);
         }
     }
 
     /**************************************/
-    async writeBinary(digitPair) {
-        /* Writes one even/odd pair to the punch in binary mode, combining the
-        X08 bits from the first digit of a character with the the 421 bits of
-        the second digit. Writes until a negative parameter is received */
+    async writeBinary(ptCode) {
+        /* Writes one character to the punch in binary mode. Writes until a
+        negative parameter is received. Returns a Promise for completion */
 
-        if (digitPair < 0) {
+        if (ptCode < 0) {
             return this.punchFrame(-1, false);
         } else {
-            const even = (digitPair >> Register.digitBits) & 0x07;
-            const odd = digitPair & 0x07;
-            const check = ((~(Envir.oddParity5[even] ^ Envir.oddParity5[odd])) >> 5) & 1;
-            const ptCode = (((even & 0b110) | check) << 4) | ((even & 1) << 3) | odd;
-            return this.punchFrame(ptCode, false);
+            return this.punchFrame(ptCode, Envir.oddParity7[ptCode] != ptCode);
         }
     }
 

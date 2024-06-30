@@ -2,20 +2,20 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>Build Odd Parity Tables</title>
+    <title>Build Odd Parity-8 Tables</title>
 <!--
 /***********************************************************************
-* retro-1620/software Parity-Gen.html
+* retro-1620/software Parity-8-Gen.html
 ************************************************************************
 * Copyright (c) 2023, Paul Kimpel.
 * Licensed under the MIT License, see
 *       http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* IBM 1620 generate a table of 6-bit binary codes where the high-order
+* IBM 1620 generate a table of 8-bit binary codes where the high-order
 * bit is forced to odd parity.
 ************************************************************************
-* 2022-11-05  P.Kimpel
-*   Original version.
+* 2024-06-15  P.Kimpel
+*   Original version, from Parity-6-Gen.
 ***********************************************************************/
 -->
     <meta name="Author" content="Paul Kimpel">
@@ -23,14 +23,15 @@
 </head>
 <body>
 <script>
+"use strict";
 
-function parity(c) {
-    /* Compute odd parity over six bits. Returns the original code
-    with the parity bit inserted in the 6th bit */
+function parity8(c) {
+    /* Compute odd parity over 8 bits. Returns the original code
+    with the parity bit inserted in the 8th (high-order) bit */
 
-    let p = (c & 1) ^ ((c >>> 1) & 1) ^ ((c >>> 2) & 1) ^
-            ((c >>> 3) & 1) ^ ((c >>> 4) & 1) ^ 1;
-    return (c & 0b011111) | (p << 5);
+    let p = (c & 1) ^ ((c >>> 1) & 1) ^ ((c >>> 2) & 1) ^ ((c >>> 3) & 1) ^
+            ((c >>> 4) & 1) ^ ((c >>> 5) & 1) ^ ((c >>> 6) & 1) ^ 1;
+    return (c & 0b01111111) | (p << 7);
 }
 
 function pic9n(v, n) {
@@ -46,12 +47,12 @@ function pic9n(v, n) {
 }
 
 
-document.write("<h3>Build Odd Parity Table</h3>");
+document.write("<h3>Build Odd Parity-8 Table</h3>");
 
-// Build the odd parity codes
+// Build the odd-parity codes
 document.write("<pre>");
-for (let c=0; c<64; ++c) {
-    document.write("0b" + pic9n(parity(c).toString(2), 6) + ",\n");
+for (let c=0; c<256; ++c) {
+    document.write("0b" + pic9n(parity8(c).toString(2), 8) + ",\n");
 }
 document.write("</pre>");
 

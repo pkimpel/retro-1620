@@ -187,9 +187,15 @@ window.addEventListener("load", (ev) => {
         "^": 0b00111110,        // "special" char
         "}": 0b00101111,        // Group Mark
         "\"":0b01001111,        // flagged Group Mark
+    //  "-": 0b01011101,        // alternate for flagged zero (-0)
+    //  "!": 0b01111010,        // alternate for flagged Record Mark
     };
 
     const ptCodeGlyphs = Array(256);
+    const numericMem = Array(256);
+    const alphaMem = Array(256);
+
+    const xlateText = document.getElementById("XlateResults");
 
 
     function xlateIn(code, selector, op) {
@@ -268,9 +274,12 @@ window.addEventListener("load", (ev) => {
 
         // Output zone bits.
         const z1 = ((~(rb0 & ~tNum0) & ~(tNum0 & ~rb0) & ~tRMGM & ~readBinary) | bz1) & 1;      // added negation
+
         const z2 = (tZ2a | (tNum0 & ~rb0 & rbx & ~readBinary) | bz2) & 1;
+
         const z4 = ((~(tNum0 & ~tZ2a) & ~t0RM & ~readBinary & ~t01 & ~tSpecChar & ~tRMGM) | bz4) & 1;
-        const zc = (( ((~tSpecChar & tCorrCBit) | (tSpecChar & ~tCorrCBit)) & ~t01 & ~tNum0) |
+
+        const zc = ((/**~**/((~tSpecChar & tCorrCBit) | (tSpecChar & ~tCorrCBit)) & ~t01 & ~tNum0) |
                         tBlank | t0RM | bzc) & 1;
 
         console.log("%s %s %s %s: %i %i %i %i %i %i %i %i   %i %i %i %i %i %i %i %i   %i %i %i %i00%i%i%i   %i %i%i%i%i%i%i",
@@ -351,11 +360,19 @@ window.addEventListener("load", (ev) => {
         row.appendChild(cell);
     }
 
+    function spout(s) {
+        /* Appends one line to the XlateResults (xlateText) element */
+
+        xlateText.appendChild(document.createTextNode(s + "\n"));
+    }
+
     /**********************************/
     const body = document.getElementById("XlateBody");
 
     // Build the ptCodeGlyphs array;
     ptCodeGlyphs.fill("_");
+    ptCodeGlyphs[0b01011101] = "-";             // alternate flagged zero (-0)
+    ptCodeGlyphs[0b01111010] = "!";             // alternate for flagged Record Mark
     for (let glyph in xlateASCIIToPTCode) {
         ptCodeGlyphs[xlateASCIIToPTCode[glyph]] = glyph;
     }
@@ -384,11 +401,14 @@ window.addEventListener("load", (ev) => {
        let [zone, num] = xlateIn(code, 3, 36);
        formatXlate(row, zone, num);
        formatNumericGlyph(row, num);
+       numericMem[code] = num;
 
        // Read alphanumeric paper tape.
        [zone, num] = xlateIn(code, 3, 37);
        formatXlate(row, zone, num);
        formatAlphaGlyph(row, zone, num);
+       alphaMem[code] = (zone << 6) | num;
+
        // Read binary paper tape.
        [zone, num] = xlateIn(code, 33, 37);
         cell = document.createElement("td");
@@ -416,6 +436,76 @@ window.addEventListener("load", (ev) => {
             body.appendChild(row);
         }
     }
+
+    // Patch the known problems with the translation logic.
+    for (let x=0b01000000; x<0b01011111; ++x) {
+        if (oddParity7[x] == x) {                       // select only PT codes with valid parity
+            numericMem[x] = oddParity5[numericMem[x]];  // correct check bits for flagged numerics
+        }
+    }
+
+    numericMem[0b01011101] = 0b010000;          // alternate -0 code for card reader
+    numericMem[0b01110000] = 0b010000;          // + sign when read numerically
+    numericMem[0b01111111] = 0b011111;          // alternate flagged GM for card reader
+
+    alphaMem[0b00111110] = 0b000010_100110;     // ^ "special" character
+    alphaMem[0b01001010] = 0b100101_101010;     // ! flagged Record Mark
+    alphaMem[0b01001111] = 0b100101_101111;     // " flagged Group Mark
+
+    // Format the input translation tables.
+    spout("    static xlateInNumeric = [");
+    for (let x=0; x<128; ++x) {
+        const num = (oddParity7[x] == x ? numericMem[x] : 0);
+        const text = (oddParity7[x] == x ? `0b${num.toString(2).padStart(6, "0")}` : "0".padStart(8, " "));
+        spout(`        ${text},   // ${formatOddParity8(x).textContent}   '${ptCodeGlyphs[x]}' -> '${numericGlyphs[num & 0b011111]}'`);
+    }
+    spout("    ];");
+
+    spout("");
+    spout("    static xlateInAlpha = [");
+    for (let x=0; x<128; ++x) {
+        const zone = (oddParity7[x] == x ? (alphaMem[x] >> 6) & 0x3F : 0);
+        const num  = (oddParity7[x] == x ? alphaMem[x] & 0x3F : 0);
+        const text = (oddParity7[x] == x ? `0b${zone.toString(2).padStart(6, "0")}_${num.toString(2).padStart(6, "0")}` : "0".padStart(15, " "));
+        spout(`        ${text},   // ${formatOddParity8(x).textContent}   '${ptCodeGlyphs[x]}' -> '${alphaGlyphs[(zone & 0xF)*16 + (num & 0xF)]}'`);
+    }
+    spout("    ];");
+
+    // Format output translation tables.
+    spout("");
+    spout("    static xlateOutNumeric = [");
+    const numericPT = new Array(64);
+    numericPT.fill(-1);
+    for (let x=0; x<128; ++x) {
+        const mem = numericMem[x];
+        if (mem >= 0) {
+            numericPT[mem] = x;
+        }
+    }
+
+    for (let x=0; x<64; ++x) {
+        const code = numericPT[x];
+        spout(`        0b${code.toString(2).padStart(8, "0")},   // '${numericGlyphs[x & 0b011111]}' -> '${ptCodeGlyphs[code]}'   ${formatOddParity8(code).textContent}`);
+    }
+    spout("    ];");
+
+    spout("");
+    spout("    static xlateOutAlpha = [");
+    const alphaPT = new Array(256);
+    alphaPT.fill(-1);
+    for (let x=0; x<128; ++x) {
+        const mem = alphaMem[x];
+        if (mem >= 0) {
+            alphaPT[((mem >> 6) & 0xF)*16 + (mem & 0xF)] = x;
+        }
+    }
+
+    for (let x=0; x<256; ++x) {
+        const code = alphaPT[x];
+        spout(`        0b${code.toString(2).padStart(8, "0")},   // '${alphaGlyphs[x]}' -> '${ptCodeGlyphs[code]}'   ${formatOddParity8(code).textContent}`);
+    }
+    spout("    ];");
+
 }, {once: true});
 </script>
 </head>
@@ -437,10 +527,8 @@ window.addEventListener("load", (ev) => {
     <tbody id=XlateBody>
 </table>
 
-<!--
 <h2>Model 2 Translator Table Results</h2>
 <pre id=XlateResults></pre>
--->
 
 </body>
 </html>

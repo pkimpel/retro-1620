@@ -48,7 +48,7 @@ window.addEventListener("load", (ev) => {
         "G": 0b01100111,        //  X0  421
         "H": 0b01101000,        //  X0 8
         "I": 0b01111001,        //  X0C8  1
-        "]": 0b01000000,        //  X          // flagged zero (-0)
+        "]": 0b01000000,        //  X           // flagged zero (-0)
         "J": 0b01010001,        //  X C   1
         "K": 0b01010010,        //  X C  2
         "L": 0b01000011,        //  X    21
@@ -82,18 +82,20 @@ window.addEventListener("load", (ev) => {
         "$": 0b01011011,        //  X C8 21
         "(": 0b00101100,        //   0 84
         ",": 0b00111011,        //   0C8 21
-        "|": 0b00101010,        //   0 8 2     // Record Mark
-        "!": 0b01001010,        //  X  8 2     // flagged Record Mark
+        "|": 0b00101010,        //   0 8 2      // Record Mark
+        "!": 0b01001010,        //  X  8 2      // flagged Record Mark
         "=": 0b00001011,        //     8 21
         "@": 0b00011100,        //    C84
         "+": 0b01110000,        //  X0C
         "-": 0b01000000,        //  X
-        " ": 0b00010000,        //    C        // space
+        " ": 0b00010000,        //    C         // space
         "/": 0b00110001,        //   0C   1
-        "^": 0b00111110,        //   0C842     // "special" character
-        "<": 0b10000000,        // <           // EOL
-        "}": 0b00101111,        //   0 8421    // Group Mark
-        "\"":0b01001111         //  X  8421    // flagged Group Mark
+        "^": 0b00111110,        //   0C842      // "special" character
+        "<": 0b10000000,        // <            // EOL
+        "}": 0b00101111,        //   0 8421     // Group Mark
+        "%": 0b01111010,        //  X0C8 2      // alternate flagged Record Mark
+    //  "-": 0b01011101,        //  X C84 1     // alternate flagged zero (-0)
+        "\"":0b01001111         //  X  8421     // flagged Group Mark
     };
 
     function decodePT(code) {
