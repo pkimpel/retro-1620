@@ -34,27 +34,28 @@ class CardPunch {
     static windowHeight = 140;          // window innerHeight, pixels
     static windowWidth = 575;           // window innerWidth, pixels
 
-    static numericGlyphs = [    // indexed as BCD code prefixed with flag bit: F8421
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", " ", "?", "?", "}",         // 00-0F
-        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "$", "-", "?", "?", "\""];       // 10-1F
+    // Translate paper-tape code to ASCII.
+    static xlatePTCodeToAlpha = Array(128);
+    static xlatePTCodeToNumeric = Array(128);
 
-    static alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit BCD)
-        " ", "?", "?", ".", ")", "?", "?", "?", "?", "?", "|", "?", "?", "?", "?", "}",         // 00-0F
-        "+", "?", "?", "$", "*", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // 10-1F
-        "-", "/", "?", ",", "(", "?", "^", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // 20-2F
-        "?", "?", "?", "=", "@", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // 30-3F
-        "?", "A", "B", "C", "D", "E", "F", "G", "H", "I", "?", "?", "?", "?", "?", "?",         // 40-4F
-        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "?", "?", "?", "?", "\"",        // 50-5F
-        "?", "?", "S", "T", "U", "V", "W", "X", "Y", "Z", "?", "?", "?", "?", "?", "?",         // 60-6F
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "?", "?", "?", "?", "?", "?",         // 70-7F
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // 80-8F
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // 90-9F
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // A0-AF
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // B0-BF
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // C0-CF
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // D0-DF
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?",         // E0-EF
-        "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"];        // F0-FF
+    static {
+        // Build the xlatePTCodeToAlpha table from Envir.xlatePTCodeToASCII.
+        CardPunch.xlatePTCodeToAlpha.fill(null);
+        for (let char in Envir.xlateASCIIToPTCode) {
+            const code = Envir.xlateASCIIToPTCode[char];
+            CardPunch.xlatePTCodeToAlpha[code] = char;
+            CardPunch.xlatePTCodeToNumeric[code] = char;
+        }
+
+        // Special/alternate codes.
+        CardPunch.xlatePTCodeToAlpha[0b01011101] = "]";         // alternate for flagged zero (-0, 1622 only)
+        CardPunch.xlatePTCodeToAlpha[0b01111010] = "!";         // alternate for flagged Record Mark
+
+        CardPunch.xlatePTCodeToNumeric[0b00011100] = " ";       // numeric blank
+        CardPunch.xlatePTCodeToNumeric[0b01000000] = "]";       // flagged zero (-0)
+        CardPunch.xlatePTCodeToNumeric[0b01011101] = "]";       // alternate for flagged zero (-0, 1622 only)
+        CardPunch.xlatePTCodeToNumeric[0b01111010] = "!";       // alternate for flagged Record Mark
+    }
 
 
     // Public Instance Properties
@@ -73,10 +74,9 @@ class CardPunch {
 
 
     constructor(context) {
-        /* Initializes and wires up events for the card punch component of the
-        1622 Card Reader/Punch device.
-        "context" is an object passing other objects and callback functions from
-        the global script:
+        /* Initializes the card punch component of the 1622 Card Reader/Punch
+        device. "context" is an object passing other objects and callback
+        functions from the global script:
             config is the SystemConfig object
             processor is the Processor object
         */
@@ -136,7 +136,6 @@ class CardPunch {
                 "location=no,scrollbars,resizable" + geometry,
                 this, this.punchOnLoad);
     }
-
 
     /**************************************/
     clear() {
@@ -485,10 +484,10 @@ class CardPunch {
 
         // Punch the card image.
         this.stacker.appendChild(this.doc.createTextNode(this.cardBuffer.trimEnd() + "\n"));
-        this.stacker.scrollIntoView(false); // keep last line in view
+        this.stacker.scrollIntoView(false);     // keep last line in view
         this.stackerBar.value = ++this.stackerCount;
         if (this.punchCheckPending) {
-            this.setPunchCheck(true);   // leave buffer in ready state
+            this.setPunchCheck(true);           // leave buffer in ready state
         } else if (this.stackerCount >= this.stackerLimit) {
             this.setTransportReady(false);
             this.$$("StackerLamp").classList.add("annunciatorLit");
@@ -503,19 +502,19 @@ class CardPunch {
     }
 
     /**************************************/
-    dumpNumeric(digit) {
+    dumpNumeric(ptCode) {
         /* Writes one digit to the card buffer. This should be used directly by
         Dump Numerically (DN, 35). Simply calls this.writeNumeric and returns
         its Promise result */
 
-        return this.writeNumeric(digit);
+        return this.writeNumeric(ptCode);
     }
 
     /**************************************/
-    async writeNumeric(code) {
-        /* Writes one digit to the card buffer. This should be used directly by
-        Write Numerically (WN, 38) Returns 1 after the 80th digit is received */
-        const digit = code & Register.digitMask;
+    async writeNumeric(ptCode) {
+        /* Writes one character code to the card buffer. This should be used
+        directly by Write Numerically (WN, 38) Returns 1 after the 80th
+        character is received */
         let eob = 0;                    // end-of-block signal to Processor
 
         if (this.bufferBusy) {          // buffer not available to receive now
@@ -524,11 +523,7 @@ class CardPunch {
             }
         }
 
-        if (Envir.oddParity5[digit] != digit) {
-            this.punchCheckPending = true;
-        }
-
-        const char = CardPunch.numericGlyphs[digit & Register.notParityMask];
+        const char = CardPunch.xlatePTCodeToNumeric[ptCode] ?? "?";
         if (char == "?") {
             this.punchCheckPending = true;
         }
@@ -544,13 +539,10 @@ class CardPunch {
     }
 
     /**************************************/
-    async writeAlpha(digitPair) {
-        /* Writes one even/odd digit pair as a characterto the card buffer.
-        This should be used directly by Write Alphanumerically (WA, 39).
-        Returns 1 after the 80th digit pair is received */
-        const even = (digitPair >> Register.digitBits) & Register.digitMask;
-        const odd = digitPair & Register.digitMask;
-        const code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
+    async writeAlpha(ptCode) {
+        /* Writes one character code to the card buffer. This should be used
+        directly by Write Alphanumerically (WA, 39). Returns 1 after the 80th
+        character is received */
         let eob = 0;                    // end-of-block signal to Processor
 
         if (this.bufferBusy) {          // buffer not available to receive now
@@ -559,11 +551,7 @@ class CardPunch {
             }
         }
 
-        if (Envir.oddParity5[even] != even || Envir.oddParity5[odd] != odd) {
-            this.punchCheckPending = true;
-        }
-
-        const char = CardPunch.alphaGlyphs[code];
+        const char = CardPunch.xlatePTCodeToAlpha[ptCode] ?? "?";
         if (char == "?") {
             this.punchCheckPending = true;
         }

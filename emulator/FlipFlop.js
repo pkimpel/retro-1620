@@ -23,7 +23,7 @@ class FlipFlop {
 
     // Public Static Properties
 
-    static lampPersistence =  33;       // persistence of incandescent bulb glow [ms]
+    static lampPersistence =  17;       // persistence of incandescent bulb glow [ms]
 
     // Public Instance Properties
 

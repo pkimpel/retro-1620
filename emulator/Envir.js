@@ -192,7 +192,7 @@ class Envir {
         0b001011,               // ..0C8.21   ',' -> '='
                0,               // ..0C84..
         0b100000,               // ..0C84.1   '_' -> '0'   unassigned
-        0b001110,               // ..0C842.   '^' -> '_'   "special char" - paper-tape output only?
+               0,               // ..0C842.   '^' -> '_'   "special char" - paper-tape output only?
                0,               // ..0C8421
         0b010000,               // .X......   '-' -> ']'
                0,               // .X.....1
@@ -252,7 +252,7 @@ class Envir {
                0,               // .X0C.421
                0,               // .X0C8...
         0b101001,               // .X0C8..1   'I' -> '9'
-        0b011010,               // .X0C8.2.   '!' -> '!'   unassigned
+        0b011010,               // .X0C8.2.   '!' -> '!'   alternate for flagged record mark
                0,               // .X0C8.21
         0b101100,               // .X0C84..   ')' -> ' '
                0,               // .X0C84.1
@@ -324,7 +324,7 @@ class Envir {
         0b000010_100011,        // ..0C8.21   ',' -> ','
                       0,        // ..0C84..
         0b100110_100000,        // ..0C84.1
-        0b000010_100110,        // ..0C842.   '^' -> '_'    "special char" - paper-tape output only?
+                      0,        // ..0C842.   '^' -> '_'    "special char" - paper-tape output only?
                       0,        // ..0C8421
         0b000010_100000,        // .X......   '-' -> '-'
                       0,        // .X.....1
@@ -384,7 +384,7 @@ class Envir {
                       0,        // .X0C.421
                       0,        // .X0C8...
         0b000100_101001,        // .X0C8..1   'I' -> 'I'
-        0b100000_101010,        // .X0C8.2.   '!' -> '|'    unassigned
+        0b100000_101010,        // .X0C8.2.   '!' -> '|'    alternate for flagged Record Mark
                       0,        // .X0C8.21
         0b100000_000100,        // .X0C84..   ')' -> ')'
                       0,        // .X0C84.1
@@ -425,7 +425,7 @@ class Envir {
         0b01100100,     0b01110101,     0b01110110,     0b01100111,     // 44
         0b01101000,     0b01111001,              0,              0,     // 48
                  0,              0,              0,              0,     // 4C
-        0b01000000,     0b01010001,     0b01010010,     0b01000011,     // 50
+        0b01011101,     0b01010001,     0b01010010,     0b01000011,     // 50
         0b01010100,     0b01000101,     0b01000110,     0b01010111,     // 54
         0b01011000,     0b01001001,     0b01001010,              0,     // 58
                  0,              0,              0,     0b01001111,     // 5C
@@ -492,7 +492,6 @@ class Envir {
         "G": 0b01100111,
         "H": 0b01101000,
         "I": 0b01111001,
-        "]": 0b01000000,        // -0 (flagged 0)
         "J": 0b01010001,
         "K": 0b01010010,
         "L": 0b01000011,
@@ -524,19 +523,21 @@ class Envir {
         "-": 0b01000000,
         " ": 0b00010000,
         "/": 0b00110001,
-        "^": 0b00111110,        // "special" char
         "}": 0b00101111,        // Group Mark
         "\"":0b01001111,        // flagged Group Mark
      // Codes that cause a CPU MBR parity error when read, per Germain, page 32.
-        "#": 0b00001110,        // DC1 ("\x11") => 842 punch, End Card 1
-        "%": 0b01011110,        // CR  ("\x0D") => XC842 punch, Carriage Return
+     // "#": 0b00001110,        // DC1 ("\x11") => 842 punch, End Card 1
+     // "%": 0b01011110,        // CR  ("\x0D") => XC842 punch, Carriage Return
      // Codes requiring special handling (see initialization code at end)
-     // "-": 0b01011101,        // alternate for flagged zero (-0)
+     // "]": 0b01011101,        // alternate for flagged zero (-0, 1622 only)
      // "!": 0b01111010,        // alternate for flagged Record Mark
+     // "^": 0b00111110,        // "special" char: paper-tape output only, handled as special case
      // "<": 0b10000000,        // EOL (never read into memory)
      // "_": 0b01111111,        // tape-feed (ignored during non-binary read)
     };
 
+    static ptSpaceCode = Envir.xlateASCIIToPTCode[" "];
+    static ptSpecialCode = 0b00111110;
 
     // Translate binary hole patterns to ASCII.
     static xlatePTCodeToASCII = Array(256);     // initialized at end of module
@@ -549,12 +550,14 @@ class Envir {
         }
 
         // Special/alternate hole patterns.
-        Envir.xlatePTCodeToASCII[0b00000000] = " ";     // alternate for tape-feed (blank tape)
-        Envir.xlatePTCodeToASCII[0b01011101] = "-";     // alternate flagged zero (-0)
         Envir.xlatePTCodeToASCII[0b01111010] = "!";     // alternate for flagged Record Mark
+        Envir.xlatePTCodeToASCII[0b01110000] = "-";     // alternate for -0 (paper tape only)
+        Envir.xlatePTCodeToASCII[0b01011101] = "-";     // alternate for -0 (card punch)
+        Envir.xlatePTCodeToASCII[0b00111110] = "^";     // "special" character, paper-tape output only
         Envir.xlatePTCodeToASCII[0b01111111] = "_";     // tape-feed (ignored during non-binary read)
         Envir.xlatePTCodeToASCII[0b10000000] = "<";     // EOL (never read into memory)
     }
+
 
     // Public Instance Properties
 

@@ -73,63 +73,6 @@ class Processor {
         "|": Envir.numRecMark,
         "}": Envir.numGroupMark};
 
-    // CardReader numeric input digit codes.
-    static cardASCIInumeric1620 = {
-        "0": 0,
-        "1": 1,
-        "2": 2,
-        "3": 3,
-        "4": 4,
-        "5": 5,
-        "6": 6,
-        "7": 7,
-        "8": 8,
-        "9": 9,
-        "A": 1,
-        "B": 2,
-        "C": 3,
-        "D": 4,
-        "E": 5,
-        "F": 6,
-        "G": 7,
-        "H": 8,
-        "I": 9,
-        "]": 0 | Register.flagMask,
-        "J": 1 | Register.flagMask,
-        "K": 2 | Register.flagMask,
-        "L": 3 | Register.flagMask,
-        "M": 4 | Register.flagMask,
-        "N": 5 | Register.flagMask,
-        "O": 6 | Register.flagMask,
-        "P": 7 | Register.flagMask,
-        "Q": 8 | Register.flagMask,
-        "R": 9 | Register.flagMask,
-        "S": 2,
-        "T": 3,
-        "U": 4,
-        "V": 5,
-        "W": 6,
-        "X": 7,
-        "Y": 8,
-        "Z": 9,
-        "/": 1,
-        ".": 0o13,
-        ",": 0o13,
-        "@": Envir.numBlank,
-        "(": Envir.numBlank,
-        ")": Envir.numBlank,
-        "=": 0o13,
-        "*": Envir.numBlank | Register.flagMask,
-        "-": 0 | Register.flagMask,
-        "+": 0,
-        "|": Envir.numRecMark,
-        "}": Envir.numGroupMark,
-        "$": 0o13 | Register.flagMask,
-        " ": 0,
-        "!": Envir.numRecMark | Register.flagMask,
-        "\"":Envir.numGroupMark | Register.flagMask,
-        "~": Envir.numBlank | Register.flagMask};
-
     // Standard alphanumeric input character codes for most devices.
     static stdASCIIalpha1620 = {
         " ": 0o00_00,
@@ -1318,9 +1261,9 @@ class Processor {
     /**************************************/
     paperTapeErrorHalt(halt) {
         /* Handles special halt and restart behavior for invalid punches on the
-        paper-tape reader. If "halt" is true, halts the Processor in both manual
-        and automatic modes and sets Write Check. If false, resets Write Check
-        and automatic mode, leaving the Processor in manual, ready to be
+        paper-tape reader. If "halt" is true, halts the Processor in both MANUAL
+        and AUTOMATIC modes and sets Write Check. If false, resets Write Check
+        and AUTOMATIC mode, leaving the Processor in manual, ready to be
         restarted by the START button. Returns true if the operation is Write
         Binary */
 
@@ -1356,10 +1299,13 @@ class Processor {
 
         let eob = 0;
         switch (this.ioSelectNr) {
-        case 2: // Paper Tape Punch
+        case 2: // Paper Tape Punch/Plotter
+        case 4: // Card Reader
             eob = await this.ioDevice.dumpNumeric(ptCode);      // end-of-buffer indication
+            break;
         default:
             eob = await this.ioDevice.dumpNumeric(digit);       // end-of-buffer indication
+            break;
         }
 
         this.gateCHAR_GATE.value = 0;
@@ -1371,7 +1317,7 @@ class Processor {
             }
 
             switch (this.ioSelectNr) {
-            case 2:     // Paper Tape Punch
+            case 2:     // Paper Tape Punch/Plotter
                 if (eob) {                              // punch error occurred
                     this.enterLimbo();                  // just hang on device error
                 } else if (this.gateEND_OF_MODULE.value) {
@@ -1421,7 +1367,7 @@ class Processor {
         this.gateRESP_GATE.value = 0;
         this.gateCHAR_GATE.value = 1;
         switch (this.ioSelectNr) {
-        case 2:         // Paper Tape Punch
+        case 2:         // Paper Tape Punch/Plotter
             if ((digit & Envir.numRecMark) == Envir.numRecMark) {
                 this.gateRM.value = 1;
                 eob = await this.ioDevice.writeNumeric(-1);     // punch the EOL
@@ -1434,7 +1380,7 @@ class Processor {
             }
             break;
         case 4:         // Card Punch
-            eob = await this.ioDevice.writeNumeric(digit);
+            eob = await this.ioDevice.writeNumeric(ptCode);
             if (eob) {
                 this.ioExit();
             }
@@ -1486,7 +1432,7 @@ class Processor {
         this.gateRESP_GATE.value = 0;
         this.gateCHAR_GATE.value = 1;
         switch (this.ioSelectNr) {
-        case 2:         // Paper Tape Punch
+        case 2:         // Paper Tape Punch/Plotter
             if ((digitPair & Envir.numRecMark) == Envir.numRecMark) {
                 this.gateRM.value = 1;
                 eob = await this.ioDevice.writeAlpha(-1);       // punch the EOL
@@ -1499,7 +1445,7 @@ class Processor {
             }
             break;
         case 4:         // Card Punch
-            eob = await this.ioDevice.writeAlpha(digitPair);
+            eob = await this.ioDevice.writeAlpha(ptCode);
             if (eob) {
                 this.ioExit();
             }
@@ -1696,28 +1642,28 @@ class Processor {
     }
 
     /**************************************/
-    receiveCardColumn(char, lastCol) {
-        /* Called by the CardReader to transfer one character to core memory.
-        "char" is the ASCII 1-character string, "lastCol" is true if this is the
-        last column (80) of the card. If the CardReader transfers invalid 1620
-        characters, the RD CHK indicator will be set */
+    receiveCardColumn(ptCode, lastCol) {
+        /* Called by the CardReader to transfer one character code to core
+        memory. "ptCode" is the paper-tape code for the character, "lastCol" is
+        true if this is the last column (80) of the card. If the CardReader
+        transfers invalid 1620 characters, the RD CHK indicator will be set */
 
         if (this.ioSelectNr == 5 && this.gateRD.value) { // must be waiting for CardReader input
             const readNumeric = (this.opBinary == 36 /*RN*/);
 
             this.gateRESP_GATE.value = 1;
             if (readNumeric) {
-                let code = Processor.cardASCIInumeric1620[char];
-                if (code === undefined) {
+                let digit = Envir.xlateInNumeric[ptCode];
+                if ((digit ?? 0) == 0) {
                     this.ioReadCheckPending = true;
-                    code = 0;
+                    digit = 0;
                 } else {
-                    this.gateIO_FLAG.value = code & Register.flagMask;
+                    this.gateIO_FLAG.value = digit & Register.flagMask;
                 }
 
                 this.regMAR.value = this.regOR2.value;
                 this.fetch();
-                this.regMIR.setDigit(this.regMAR.isEven, Envir.oddParity5[code]);
+                this.regMIR.setDigit(this.regMAR.isEven, digit);
                 this.store();
                 this.regOR2.incr(1);
                 if (this.gateINSERT.value && this.regMAR.binaryValue == 99) {
@@ -1725,14 +1671,14 @@ class Processor {
                     this.enterManual();
                 }
             } else {    // read alphanumeric
-                let code = Processor.stdASCIIalpha1620[char];
-                if (code === undefined || char == "^") {        // reject "special" char
+                let digitPair = Envir.xlateInAlpha[ptCode];
+                if ((digitPair ?? 0) == 0) {
                     this.ioReadCheckPending = true;
-                    code = 0;
+                    digitPair = 0;
                 }
 
-                let even = (code >> Register.digitBits) & Register.bcdMask;
-                let odd  = code & Register.bcdMask;
+                let even = (digitPair >> Register.digitBits) & Register.bcdMask;
+                let odd  = digitPair & Register.bcdMask;
                 this.regMAR.value = this.regOR2.value;
                 this.fetch();
 
@@ -1777,7 +1723,7 @@ class Processor {
 
     /**************************************/
     receivePaperTapeFrame(ptCode, eol) {
-        /* Called by the PaperTapeReader to transfer one character to core
+        /* Called by the PaperTapeReader to transfer one character code to core
         memory. "ptCode" is the ASCII 1-character string, "eol" is true if this
         frame has the EOL punch (and ptCode is not stored). If the PaperTapeReader
         transfers invalid 1620 characters, the RD CHK indicator will be set */
@@ -1797,7 +1743,7 @@ class Processor {
                 let digit = Envir.xlateInNumeric[ptCode];
                 if (eol) {
                     digit = Envir.numRecMark;
-                } else if (!digit) {
+                } else if ((digit ?? 0) == 0) {
                     digit = 0;
                     this.ioReadCheck.value = 1;
                     this.ioReadCheckPending = true;
@@ -1814,7 +1760,7 @@ class Processor {
                 let digitPair = Envir.xlateInAlpha[ptCode];
                 if (eol) {
                     digitPair = Envir.numRecMark;
-                } else if (!digitPair) {
+                } else if ((digitPair ?? 0) == 0) {
                     digitPair = 0;
                     this.ioReadCheck.value = 1;
                     this.ioReadCheckPending = true;

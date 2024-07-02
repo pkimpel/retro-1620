@@ -77,6 +77,7 @@
 
 export {Plotter};
 
+import {Envir} from "../emulator/Envir.js";
 import {Register} from "../emulator/Register.js";
 import {Timer} from "../emulator/Timer.js";
 import {openPopup} from "./PopupUtil.js";
@@ -101,43 +102,6 @@ class Plotter {
     static canvasVOffset = 0;           // canvas coordinate vertical offset
     static vCursorTopFactor = 0.50;     // top scrolling boundary offset factor
     static vCursorBottomFactor = 0.50;  // bottom scrolling boundary offset factor
-
-    static numericGlyphs = [            // translate numeric codes to paper-tape glyphs
-        "0", "1", "2",  "3", "4", "5", "6", "7", "8", "9", "|", "<", "@",  "<", "<", "\\"];
-
-    static alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit BCD)
-            " ", "<", "<", ".", ")", "<", "<", "<",     // 00
-            "<", "<", "|", "<", "<", "<", "<", "\\",    // 08
-            "+", "<", "<", "$", "*", "<", "<", "<",     // 10
-            "<", "<", "<", "<", "<", "<", "<", "<",     // 18
-            "-", "/", "<", ",", "(", "<", "^", "<",     // 20
-            "<", "<", "<", "<", "<", "<", "<", "<",     // 28
-            "<", "<", "<", "=", "@", "<", "<", "<",     // 30
-            "<", "<", "<", "<", "<", "<", "<", "<",     // 38
-            "<", "A", "B", "C", "D", "E", "F", "G",     // 40
-            "H", "I", "<", "<", "<", "<", "<", "<",     // 48
-            "-", "J", "K", "L", "M", "N", "O", "P",     // 50
-            "Q", "R", "<", "<", "<", "<", "<", "<",     // 58
-            "<", "<", "S", "T", "U", "V", "W", "X",     // 60
-            "Y", "Z", "<", "<", "<", "<", "<", "<",     // 68
-            "0", "1", "2", "3", "4", "5", "6", "7",     // 70
-            "8", "9", "<", "<", "<", "<", "<", "<",     // 78
-            "<", "<", "<", "<", "<", "<", "<", "<",     // 80
-            "<", "<", "<", "<", "<", "<", "<", "<",     // 88
-            "<", "<", "<", "<", "<", "<", "<", "<",     // 90
-            "<", "<", "<", "<", "<", "<", "<", "<",     // 98
-            "<", "<", "<", "<", "<", "<", "<", "<",     // A0
-            "<", "<", "<", "<", "<", "<", "<", "<",     // A8
-            "<", "<", "<", "<", "<", "<", "<", "<",     // B0
-            "<", "<", "<", "<", "<", "<", "<", "<",     // B8
-            "<", "<", "<", "<", "<", "<", "<", "<",     // C0
-            "<", "<", "<", "<", "<", "<", "<", "<",     // C8
-            "<", "<", "<", "<", "<", "<", "<", "<",     // D0
-            "<", "<", "<", "<", "<", "<", "<", "<",     // D8
-            "<", "<", "<", "<", "<", "<", "<", "<",     // E0
-            "<", "<", "<", "<", "<", "<", "<", "<",     // E8
-            "<", "<", "<", "<", "<", "<", "<", "<",     // F0
-            "<", "<", "<", "<", "<", "<", "<", "<"];    // F8
 
     static plotXlate = {        // 1620 paper-tape code to plotter commands
         "0": {bits: 0b00100000, dx:  0, dy:  0, penUp: 0, penDown: 1},
@@ -937,11 +901,11 @@ class Plotter {
     }
 
     /**************************************/
-    plotCommand(char) {
+    plotCommand(ptCode) {
         /* Decodes one paper-tape character code into the appropriate plotting
         command. Returns a Promise that resolves once any pending delay has
-        taken place. The resolved value is always 1 for EOB */
-        const command = Plotter.plotXlate[char];
+        taken place. The resolved value is always 0 for EOB */
+        const command = Plotter.plotXlate[Envir.xlatePTCodeToASCII[ptCode] ?? "?"];
 
         //console.debug("Plotter: '%s' %5i %5i %i", char, this.x, this.y, this.penDown);
 
@@ -955,7 +919,7 @@ class Plotter {
             return this.move(-command.dy, command.dx);
         } else {
             // Experimental feature to programmatically clear the plot. Not documented //
-            if (char == "@") {
+            if (ptCode == 0b00011100) {         // special case for "@" code
                 this.emptyCanvas();
             }
 
@@ -965,41 +929,41 @@ class Plotter {
     }
 
     /**************************************/
-    dumpNumeric(digit) {
-        /* Writes one digit to the plotter. This should be used directly by
-        Dump Numerically. Returns a Promise for completion */
+    dumpNumeric(ptCode) {
+        /* Writes one numeric character to the Plotter. This should be used
+        directly by Dump Numerically. A negative parameter indicates EOL.
+        Returns a Promise for completion */
 
-        if (digit < 0) {
+        if (ptCode< 0) {
             return Promise.resolve(0);  // ignore the EOL signal for PaperTapePunch
         } else {
-            return this.plotCommand(Plotter.numericGlyphs[digit & Register.bcdMask]);
+            return this.plotCommand(ptCode);
         }
     }
 
     /**************************************/
-    writeNumeric(digit) {
-        /* Writes one digit to the typewriter, suppressing some undigit codes.
-        This should be used directly by Write Numerically. Returns a Promise
-        for completion */
+    writeNumeric(ptCode) {
+        /* Writes one numeric character to the Plotter. This should be used
+        directly by  Write Numerically. A negative parameter indicates EOL.
+        Returns a Promise for completion */
 
-        if (digit < 0) {
+        if (ptCode < 0) {
             return Promise.resolve(0);  // ignore the EOL signal for PaperTapePunch
         } else {
-            return this.plotCommand(Plotter.numericGlyphs[digit & Register.bcdMask]);
+            return this.plotCommand(ptCode);
         }
     }
 
     /**************************************/
-    writeAlpha(digitPair) {
-        /* Writes one even/odd digit pair to the typewriter. This should be used
-        directly by Write Alphanumerically. Returns a Promise for completion */
+    writeAlpha(ptCode) {
+        /* Writes one alphanumeric character to the Plotter. This should be used
+        directly by Write Alphanumerically. A negative parameter indicates EOL.
+        Returns a Promise for completion */
 
-        if (digitPair < 0) {
+        if (ptCode < 0) {
             return Promise.resolve(0);  // ignore the EOL signal for PaperTapePunch
         } else {
-            const even = (digitPair >> Register.digitBits) & Register.bcdMask;
-            const odd = digitPair & Register.bcdMask;
-            return this.plotCommand(Plotter.alphaGlyphs[even*16 + odd]);
+            return this.plotCommand(ptCode);
         }
     }
 

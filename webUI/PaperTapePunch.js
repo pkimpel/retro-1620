@@ -57,6 +57,7 @@ class PaperTapePunch {
     static eolBits = 0b10000000;        // EOL hole pattern
     static eolGlyph = "<";              // EOL glyph in TapeView
     static invalidGlyph = "\xB7";       // invalid hole pattern glyph, B7 = mid-dot
+    static specialGlyph = "^";          // glyph for "special" character, code 0b00111110
     static tapeFeedBits = 0b01111111;   // tape-feed hole pattern
     static tapeFeedGlyph = "_";         // ASCII character for tape-feed
 
@@ -534,7 +535,11 @@ class PaperTapePunch {
             result = -1;                // just quit and leave the I/O hanging
         } else {                        // it's a valid hole pattern
             this.buffer[this.bufIndex++] = ptCode;
-            char = Envir.xlatePTCodeToASCII[ptCode] ?? PaperTapePunch.invalidGlyph;
+            if (ptCode == Envir.ptSpecialCode) {        // "special" character, used in
+                char = PaperTapePunch.specialGlyph;     // paper-tape output and disk only
+            } else {
+                char = Envir.xlatePTCodeToASCII[ptCode] ?? PaperTapePunch.invalidGlyph;
+            }
         }
 
         this.tapeSupplyBar.value = PaperTapePunch.bufferLimit - this.bufIndex;
@@ -545,7 +550,8 @@ class PaperTapePunch {
     /**************************************/
     dumpNumeric(ptCode) {
         /* Writes one digit to the punch. This should be used directly by
-        Dump Numerically. Returns a Promise for completion */
+        Dump Numerically. A negative parameter indicates EOL. Returns a Promise
+        for completion */
 
         if (ptCode < 0) {
             return this.punchFrame(-1, false);
@@ -557,7 +563,7 @@ class PaperTapePunch {
     /**************************************/
     writeNumeric(ptCode) {
         /* Writes one digit to the punch. This should be used directly by
-        Write Numerically. Writes until a negative parameter is received
+        Write Numerically. A negative parameter indicates EOL.
         Returns a Promise for completion */
 
         if (ptCode < 0) {
@@ -570,7 +576,7 @@ class PaperTapePunch {
     /**************************************/
     writeAlpha(ptCode) {
         /* Writes one character to the punch. This should be used directly by
-        Write Alphanumerically. Writes until a negative parameter is received
+        Write Alphanumerically. A negative parameter indicates EOL.
         Returns a Promise for completion */
 
         if (ptCode < 0) {
@@ -582,8 +588,8 @@ class PaperTapePunch {
 
     /**************************************/
     async writeBinary(ptCode) {
-        /* Writes one character to the punch in binary mode. Writes until a
-        negative parameter is received. Returns a Promise for completion */
+        /* Writes one character to the punch in binary mode. A negative parameter
+        indicates EOL. Returns a Promise for completion */
 
         if (ptCode < 0) {
             return this.punchFrame(-1, false);

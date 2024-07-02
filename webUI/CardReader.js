@@ -16,6 +16,7 @@
 
 export {CardReader};
 
+import {Envir} from "../emulator/Envir.js";
 import {Timer} from "../emulator/Timer.js";
 import {PanelButton} from "./PanelButton.js";
 import {openPopup} from "./PopupUtil.js";
@@ -31,6 +32,22 @@ class CardReader {
     static windowHeight = 164;          // window innerHeight, pixels
     static windowWidth = 575;           // window innerWidth, pixels
 
+    // Translate ASCII to paper-tape code.
+    static xlateCardToPTCode = Array(128);
+
+    static {
+        // Build the xlateCardToPTCode table from Envir.xlateASCIIToPTCode.
+        CardReader.xlateCardToPTCode.fill(null);
+        for (let char in Envir.xlateASCIIToPTCode) {
+            CardReader.xlateCardToPTCode[char] = Envir.xlateASCIIToPTCode[char];
+        }
+
+        // Special/alternate codes.
+        CardReader.xlateCardToPTCode["]"] = 0b01011101;     // alternate for flagged zero (-0, 1622 only)
+        CardReader.xlateCardToPTCode["!"] = 0b01111010;     // alternate for flagged Record Mark
+    }
+
+
     // Public Instance Properties
 
     doc = null;                         // window document object
@@ -43,14 +60,13 @@ class CardReader {
     timer = new Timer();                // delay management timer
 
     eolRex = /([^\n\r\f]*)((:?\r[\n\f]?)|\n|\f)?/g;
-    invalidCharRex = /[^A-Z0-9 .)+$*-/,(=@|}!"\x5D\x5E]/;
+    invalidCharRex = /[^A-Z0-9 .)+$*-/,(=@|}!"\x5D]/;
 
 
     constructor(context) {
-        /* Initializes and wires up events for the card reader component of the
-        1622 Card Reader/Punch device.
-        "context" is an object passing other objects and callback functions from
-        the global script:
+        /* Initializes the card reader component of the 1622 Card Reader/Punch
+        device. "context" is an object passing other objects and callback
+        functions from the global script:
             config is the SystemConfig object
             processor is the Processor object
         */
@@ -559,12 +575,12 @@ class CardReader {
 
         let x=0;
         while (x<length) {              // send up to 79 columns
-            p.receiveCardColumn(this.cardBuffer[x], false);
+            p.receiveCardColumn(CardReader.xlateCardToPTCode[this.cardBuffer[x]], false);
             ++x;
         }
 
         while (x<limit) {               // pad to 79 columns with spaces
-            p.receiveCardColumn(" ", false);
+            p.receiveCardColumn(Envir.ptSpaceCode, false);
             ++x;
         }
 
@@ -578,7 +594,7 @@ class CardReader {
             this.setTransportReady(false);
         }
 
-        p.receiveCardColumn(lastChar, true);
+        p.receiveCardColumn(CardReader.xlateCardToPTCode[lastChar], true);
     }
 
     /**************************************/
