@@ -28,7 +28,7 @@ class LinePrinter {
 
     // Static Properties
 
-    static printerTop = 140;            // top coordinate of LinePrinter window
+    static printerTop = 190;            // top coordinate of LinePrinter window
     static windowHeight = 203;          // window innerHeight, pixels
     static windowWidth120 = 820;        // window innerWidth for 120 columns, pixels
     static windowWidth144 = 984;        // window innerWidth for 144 columns, pixels
@@ -39,37 +39,51 @@ class LinePrinter {
     static maxBufferSize = 197;         // maximum number of characters loaded to buffer
     static maxCCLines = 132;            // maximum lines supported on a carriage tape
     static maxPaperLines = 150000;      // maximum printer scrollback (about a box of paper)
-    static greenbarGreen = "#CFC";      // for toggling greenbar shading
+    static greenbarGreen = "#DFD";      // for toggling greenbar shading
 
     static channel1Mask = 0b000000000001;
     static channel9Mask = 0b000100000000;
     static channel12Mask= 0b100000000000;
 
-    static dumpGlyphs = [       // indexed as BCD code prefixed with flag bit: F8421
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", Envir.glyphRecMark, "~", "@", "~", "~", "G",  // 00-0F
-        "-", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "W",                "~", "*", "~", "~", "X"]; // 10-1F
+    // Translate paper-tape code to ASCII.
+    static xlatePTCodeToAlpha = Array(128);
+    static xlatePTCodeToNumeric = Array(128);
+    static xlatePTCodeToDump = Array(128);
 
-    static numericGlyphs = [    // indexed as BCD code prefixed with flag bit: F8421
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "~", " ", "~", "~", "}",                 // 00-0F
-        "-", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "~", " ", "~", "~", "\""];               // 10-1F
+    static {
+        // Build the xlatePTCodeToAlpha/Numeric tables from Envir.xlatePTCodeToASCII.
+        LinePrinter.xlatePTCodeToDump.fill(null);
+        LinePrinter.xlatePTCodeToNumeric.fill(null);
+        LinePrinter.xlatePTCodeToAlpha.fill(null);
+        for (let char in Envir.xlateASCIIToPTCode) {
+            const code = Envir.xlateASCIIToPTCode[char];
+            LinePrinter.xlatePTCodeToDump[code] = char;
+            LinePrinter.xlatePTCodeToNumeric[code] = char;
+            LinePrinter.xlatePTCodeToAlpha[code] = char;
+        }
 
-    static alphaGlyphs = [      // indexed as (even digit BCD)*16 + (odd digit BCD)
-        " ", "~", "?",                ".", ")", "~", "~", "~", "~", "~", "|", "~", "~", "~", "~", "}",  // 00-0F
-        "+", "~", "!",                "$", "*", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // 10-1F
-        "-", "/", Envir.glyphRecMark, ",", "(", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // 20-2F
-        "~", "~", "~",                "=", "@", ":", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // 30-3F
-        "~", "A", "B",                "C", "D", "E", "F", "G", "H", "I", "~", "~", "~", "~", "~", "~",  // 40-4F
-        "-", "J", "K",                "L", "M", "N", "O", "P", "Q", "R", "~", "~", "~", "~", "~", "~",  // 50-5F
-        "~", "~", "S",                "T", "U", "V", "W", "X", "Y", "Z", "~", "~", "~", "~", "~", "~",  // 60-6F
-        "0", "1", "2",                "3", "4", "5", "6", "7", "8", "9", "~", "~", "~", "~", "~", "~",  // 70-7F
-        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // 80-8F
-        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // 90-9F
-        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // A0-AF
-        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // B0-BF
-        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // C0-CF
-        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // D0-DF
-        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~",  // E0-EF
-        "~", "~", "~",                "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~", "~"]; // F0-FF
+        // Special/alternate codes.
+        LinePrinter.xlatePTCodeToDump[0b00001011] = null;       // hex B
+        LinePrinter.xlatePTCodeToDump[0b00011100] = "@";        // numeric blank
+        LinePrinter.xlatePTCodeToDump[0b01001100] = "*";        // flagged numeric blank
+        LinePrinter.xlatePTCodeToDump[0b01000000] = "-";        // flagged zero (-0)
+        LinePrinter.xlatePTCodeToDump[0b01011101] = "-";        // alternate for flagged zero (-0, 1622 only)
+        LinePrinter.xlatePTCodeToDump[0b00101010] = Envir.glyphRecMark;
+        LinePrinter.xlatePTCodeToDump[0b00101111] = "G";        // Group Mark
+        LinePrinter.xlatePTCodeToDump[0b01001010] = "W";        // flagged Record Mark
+        LinePrinter.xlatePTCodeToDump[0b01001111] = "X";        // flagged Group Mark
+
+        LinePrinter.xlatePTCodeToNumeric[0b00011100] = " ";     // numeric blank
+        LinePrinter.xlatePTCodeToNumeric[0b01001100] = " ";     // flagged numeric blank
+        LinePrinter.xlatePTCodeToNumeric[0b01000000] = "-";     // flagged zero (-0)
+        LinePrinter.xlatePTCodeToNumeric[0b01011101] = "-";     // alternate for flagged zero (-0, 1622 only)
+
+        LinePrinter.xlatePTCodeToAlpha[0b00001101] = "?";       // for printer 52 char print bar
+        LinePrinter.xlatePTCodeToAlpha[0b00111101] = "!";       // for printer 52 char print bar
+        LinePrinter.xlatePTCodeToAlpha[0b01101101] = ":";       // for printer 52 char print bar
+        LinePrinter.xlatePTCodeToAlpha[0b01011101] = "-";       // alternate for flagged zero (-0, 1622 only)
+        LinePrinter.xlatePTCodeToAlpha[0b00101010] = Envir.glyphRecMark;        // used only for 22 code in memory
+    }
 
 
     // Public Instance Properties
@@ -728,7 +742,7 @@ class LinePrinter {
         starts with a text node, replaces it with a <div> containing that
         text node. Then processes all of the line <div>s in the outer <div>
         to determine which characters in them are the same as a corresponding
-        character in lineText. Any corresponding characters are formatted as
+        character in lineText. Any matching characters are formatted as
         bold text */
 
         // If the first node in the overstrike group is text, convert it to a <div>.
@@ -961,23 +975,23 @@ class LinePrinter {
     }
 
     /**************************************/
-    async dumpNumeric(code) {
-        /* Writes one digit to the print buffer. This should be used directly by
-        Dump Numerically (DN, 35). Returns 1 after the print buffer is full */
-        const digit = code & Register.digitMask;
+    async dumpNumeric(ptCode) {
+        /* Writes one numeric character code to the print buffer.
+        This should be used directly by Dump Numerically (DN, 35).
+        Returns 1 after the print buffer is full */
         let eob = 0;                    // end-of-block signal to Processor
 
         if (this.bufferBusy) {          // buffer not available to receive now
             if (await this.waitForBuffer.request()) {
-                return 1;                       // wait canceled
+                return 1;               // wait canceled
             }
         }
 
         ++this.bufferOffset;
-        if (this.bufferOffset <= this.columns && code >= 0) {
-            const char = LinePrinter.dumpGlyphs[digit & Register.notParityMask];
+        if (this.bufferOffset <= this.columns && ptCode >= 0) {
+            const char = LinePrinter.xlatePTCodeToDump[ptCode] ?? "~";
             this.printBuffer += char;
-            if (char == "~" || Envir.oddParity5[digit] != digit) {
+            if (char == "~") {
                 this.printCheckPending = true;
             }
         }
@@ -991,25 +1005,25 @@ class LinePrinter {
     }
 
     /**************************************/
-    async writeNumeric(code) {
-        /* Writes one digit to the print buffer. This should be used directly by
-        Write Numerically (WN, 38). A "code" less than zero implies a record mark
-        has been detected by the processor and this call is just to fill out the
-        buffer. Returns 1 after the 80th digit is received */
-        const digit = code & Register.digitMask;
+    async writeNumeric(ptCode) {
+        /* Writes one numeric character code to the print buffer.
+        This should be used directly by Write Numerically (WN, 38). A "ptCode"
+        less than zero implies a record mark has been detected by the processor
+        and this call is just to fill out the buffer.
+        Returns 1 once the buffer is full */
         let eob = 0;                    // end-of-block signal to Processor
 
         if (this.bufferBusy) {          // buffer not available to receive now
             if (await this.waitForBuffer.request()) {
-                return 1;                       // wait canceled
+                return 1;               // wait canceled
             }
         }
 
         ++this.bufferOffset;
-        if (this.bufferOffset <= this.columns && code >= 0) {
-            const char = LinePrinter.numericGlyphs[digit & Register.notParityMask];
+        if (this.bufferOffset <= this.columns && ptCode >= 0) {
+            const char = LinePrinter.xlatePTCodeToNumeric[ptCode] ?? "~";
             this.printBuffer += char;
-            if (char == "~" || Envir.oddParity5[digit] != digit) {
+            if (char == "~") {
                 this.printCheckPending = true;
             }
         }
@@ -1023,28 +1037,25 @@ class LinePrinter {
     }
 
     /**************************************/
-    async writeAlpha(digitPair) {
-        /* Writes one even/odd digit pair as a character to the print buffer.
+    async writeAlpha(ptCode) {
+        /* Writes one alphanumeric character code to the print buffer.
         This should be used directly by Write Alphanumerically (WA, 39). A
-        "code" less than zero implies a record mark has been detected by the
-        processor and this call is just to fill out the buffer. Returns 1
-        after the 80th digit pair is received */
-        const even = (digitPair >> Register.digitBits) & Register.digitMask;
-        const odd = digitPair & Register.digitMask;
-        const code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
+        "ptCode" less than zero implies a record mark has been detected by the
+        processor and this call is just to fill out the buffer.
+        Returns 1 after the buffer is full */
         let eob = 0;                    // end-of-block signal to Processor
 
         if (this.bufferBusy) {          // buffer not available to receive now
             if (await this.waitForBuffer.request()) {
-                return 1;                       // wait canceled
+                return 1;               // wait canceled
             }
         }
 
         ++this.bufferOffset;
-        if (this.bufferOffset <= this.columns && digitPair >= 0) {
-            const char = LinePrinter.alphaGlyphs[code];
+        if (this.bufferOffset <= this.columns && ptCode >= 0) {
+            const char = LinePrinter.xlatePTCodeToAlpha[ptCode] ?? "~";
             this.printBuffer += char;
-            if (char == "~" || Envir.oddParity5[even] != even || Envir.oddParity5[odd] != odd) {
+            if (char == "~") {
                 this.printCheckPending = true;
             }
         }
@@ -1078,7 +1089,7 @@ class LinePrinter {
                 break;
             } else {
                 const code = (even & Register.bcdMask)*16 + (odd & Register.bcdMask);
-                line += LinePrinter.alphaGlyphs[code];
+                line += Envir.alphaGlyphs[code];
             }
         }
         console.log("%s %s  %s", ioVariant.toString(8).padStart(4, "0"),

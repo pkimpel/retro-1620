@@ -39,22 +39,23 @@ class CardPunch {
     static xlatePTCodeToNumeric = Array(128);
 
     static {
-        // Build the xlatePTCodeToAlpha table from Envir.xlatePTCodeToASCII.
+        // Build the xlatePTCodeToAlpha/Numeric tables from Envir.xlatePTCodeToASCII.
+        CardPunch.xlatePTCodeToNumeric.fill(null);
         CardPunch.xlatePTCodeToAlpha.fill(null);
         for (let char in Envir.xlateASCIIToPTCode) {
             const code = Envir.xlateASCIIToPTCode[char];
-            CardPunch.xlatePTCodeToAlpha[code] = char;
             CardPunch.xlatePTCodeToNumeric[code] = char;
+            CardPunch.xlatePTCodeToAlpha[code] = char;
         }
 
         // Special/alternate codes.
-        CardPunch.xlatePTCodeToAlpha[0b01011101] = "]";         // alternate for flagged zero (-0, 1622 only)
-        CardPunch.xlatePTCodeToAlpha[0b01111010] = "!";         // alternate for flagged Record Mark
-
         CardPunch.xlatePTCodeToNumeric[0b00011100] = " ";       // numeric blank
         CardPunch.xlatePTCodeToNumeric[0b01000000] = "]";       // flagged zero (-0)
         CardPunch.xlatePTCodeToNumeric[0b01011101] = "]";       // alternate for flagged zero (-0, 1622 only)
         CardPunch.xlatePTCodeToNumeric[0b01111010] = "!";       // alternate for flagged Record Mark
+
+        CardPunch.xlatePTCodeToAlpha[0b01011101] = "]";         // alternate for flagged zero (-0, 1622 only)
+        CardPunch.xlatePTCodeToAlpha[0b01111010] = "!";         // alternate for flagged Record Mark
     }
 
 
