@@ -37,10 +37,6 @@ class DiskDrive {
     static windowHeight = 30;           // window innerHeight, pixels
     static windowWidth = 350;           // window innerWidth, pixels
 
-    static numericGlyphs = [    // indexed as BCD code prefixed with flag bit: F8421
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", " ", "?", "?", "}",         // 00-0F
-        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "$", "-", "?", "?", "\""];       // 10-1F
-
 
     // Public Instance Properties
 
@@ -150,7 +146,7 @@ class DiskDrive {
                     this.innerWidth, this.innerHeight, this.windowLeft, this.windowTop);
 
             for (const mod of this.module) {
-                if (mod) {
+                if (mod && mod.started) {
                     await mod.openDiskModule();
                 }
             }

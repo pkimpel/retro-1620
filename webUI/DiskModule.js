@@ -327,9 +327,10 @@ class DiskModule {
         if (!this.started) {
             this.started = true;
             this.openDiskModule();
+            setStatus();
         } else {
             this.started = false;
-            this.startBtn.set(this.started);
+            setStatus();
             this.setModuleReadyStatus();
             this.drive.$$("DiskPackDiv").style.display = "block";
             this.drive.$$("DiskPackSelector").addEventListener("change", initiateLoad);
