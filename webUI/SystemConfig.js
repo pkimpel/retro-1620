@@ -10,6 +10,10 @@
 * Defines the system configuration used internally by the emulator and the
 * methods used to manage that configuration data.
 *
+* The configuration export/import mechanism optionally uses the JSZip
+* library to read and create zip files with Deflate compression:
+* https://stuk.github.io/jszip/.
+*
 ************************************************************************
 * 2022-12-07  P.Kimpel
 *   Original version, from retro-220 webUI/B220SystemConfig.js.
@@ -17,6 +21,7 @@
 
 export {SystemConfig};
 
+import {DiskStorage} from "./DiskStorage.js";
 import {openPopup} from "./PopupUtil.js";
 
 class SystemConfig {
@@ -26,6 +31,7 @@ class SystemConfig {
     static configStorageName = "retro-1620-Config";
     static configVersion = 1;
     static flushDelay = 30000;          // flush timer setting, ms
+    static exportConfigFileName = "retro-1620-Config.json";
 
     static defaultConfig = {
         configName: "Default",
@@ -126,6 +132,7 @@ class SystemConfig {
         this.boundFlushHandler = this.flushHandler.bind(this);
         this.boundChangeConfig = this.changeConfig.bind(this);
         this.boundSaveConfigDialog = this.saveConfigDialog.bind(this);
+        this.boundOpenExportImportDialog = this.openExportImportDialog.bind(this);
         this.boundCloseConfigUI = this.closeConfigUI.bind(this);
         this.boundWindowClose = (ev) => {this.window.close()};
         this.boundSetDefaultConfig = (ev) => {
@@ -241,6 +248,10 @@ class SystemConfig {
                }
             }
         }
+        if ("visibleCarriage" in this.configData) {
+            delete this.configData.visibleCarriage;             // initially misplaced
+            this.flush();
+        }
         if ("DebugView" in this.configData.ControlPanel) {      // redesigned 2023-12-16
             this.configData.ControlPanel.RegisterView = this.configData.ControlPanel.DebugView;
             this.configData.ControlPanel.AuxCEPanelView = this.configData.ControlPanel.DebugView;
@@ -249,7 +260,7 @@ class SystemConfig {
         }
 
         // Preserve the exsiting LinePrinter channelSpecs so they don't get merged with the default.
-        let channelSpecs = Object.assign({}, this.configData?.Printer?.carriageControl?.channelSpecs);
+        const channelSpecs = Object.assign({}, this.configData?.Printer?.carriageControl?.channelSpecs);
 
         // Recursively merge any new properties from the defaults.
         this.sortaDeepMerge(this.configData, SystemConfig.defaultConfig);
@@ -482,6 +493,269 @@ class SystemConfig {
         setTimeout(() => {
             win.moveBy(dx, dy);
         }, 100);
+    }
+
+    /***********************************************************************
+    *   Export/Import Configuration Dialog                                 *
+    ***********************************************************************/
+
+    /**************************************/
+    openExportImportDialog(ev) {
+        /* Opens the Export/Import dialog and wires up its events. All export/
+        import functions are contained within this closure */
+
+        //----------------------------
+        const closeExportImportDialog = (ev) => {
+            /* Closes the Export/Import dialog and unwires its events */
+
+            this.$$("ImportSelector").removeEventListener("change", importConfigSelect);
+            this.$$("ExportImportDiv").removeEventListener("click", exportImportDialogClick);
+            this.$$("ExportImportDiv").style.display = "none";
+            this.$$("ExportImportBtn").disabled = false;
+        }
+
+        //----------------------------
+        const exportDiskModule = (store, moduleNr) => {
+            /* Serializes the disk data for the selected module and returns a
+            Promise that resolves with a representation of the disk image.
+            The serializeModuleData() method returns a string designed to be
+            stored in a text file, with each sector's data delmited by a new-line.
+            That 2.24MB string is a little unwieldy in a JSON file, so for
+            purposes of the configuration export, we split that into an array of
+            strings, one string per sector, and return the array */
+
+            return new Promise((resolve, reject) => {
+                const onerror = (ev) => {
+                    this.alertWin.alert(`Config exportModule ${moduleNr} error: ${ev.target.error.name}`);
+                    resolve([]);
+                };
+
+                const onabort = (ev) => {
+                    this.alertWin.alert(`Config exportModule ${moduleNr} abort: ${ev.target.error.name}`);
+                    resolve([]);
+                };
+
+                store.countSectors(moduleNr).then((count) => {
+                    if (count <= 0) {
+                        resolve([]);
+                    } else {
+                        store.serializeModuleData(moduleNr, `Config Export module ${moduleNr}`,
+                                onerror, onabort, (image) => {
+                            resolve(image.trimEnd().split("\n"));
+                        });
+                    }
+                });
+            });
+        };
+
+        //----------------------------
+        const exportConfig = async () => {
+            /* Formats a configuration export as JSON and returns the JSON text.
+            The export always includes the system configuration object. Disk
+            images are included only if the disk is configured, the module
+            exists, and the user has ticked the check box to include disk images */
+            const config = {SystemConfig: this.configData};
+            const disk = this.configData.Disk;
+
+            if (disk.hasDisk && this.$$("ExportIncludeDiskImage").checked) {
+                const store = new DiskStorage();
+                if (await store.openDatabase()) {
+                    const modules = [];
+                    let missing = 0;
+                    for (let x=0; x<disk.module.length; ++x) {
+                        if (!disk.module[x].exists) {
+                            ++missing;                  // trim any non-existent drives from the end
+                        } else {
+                            while (missing > 0) {
+                                modules.push([]);       // output empty arrays for any non-terminal missing drives
+                                --missing;
+                            }
+                            modules.push(await exportDiskModule(store, x));
+                        }
+                    }
+
+                    config.DiskModule = modules;
+                }
+            }
+
+            return JSON.stringify(config, null, 2);
+        };
+
+        //----------------------------
+        const saveExportJSON = async (ev) => {
+            /* Exports the configuration and saves it as a JSON file */
+            const title = "retro-1620-Config.json";
+            const image = await exportConfig();
+
+            const url = `data:text/plain,${encodeURIComponent(image)}`;
+            const hiddenLink = this.doc.createElement("a");
+
+            hiddenLink.setAttribute("download", title);
+            hiddenLink.setAttribute("href", url);
+            hiddenLink.click();
+            closeExportImportDialog(ev);
+        };
+
+        //----------------------------
+        const saveExportZip = async (ev) => {
+            /* Exports the configuration and saves it as a zipped JSON file.
+            The zip archive file can be named anything by the user, but the
+            JSON configuration export inside the archive MUST be named
+            "retro-1620-Config.json" */
+            const title = "retro-1620-Config.zip";
+            const image = await exportConfig();
+            const zip = new this.window.JSZip();
+
+            zip.file(SystemConfig.exportConfigFileName, image);
+            const blob = await zip.generateAsync({
+                type: "blob",
+                compression: "DEFLATE",
+                compressionOptions: {level:9}
+            });
+
+            // Save the zip file blob
+            const reader = new FileReader();
+            reader.addEventListener("load", (ev) => {
+                const url = reader.result;
+                const hiddenLink = document.createElement("a");
+
+                hiddenLink.setAttribute("download", title);
+                hiddenLink.setAttribute("href", url);
+                hiddenLink.click();
+                closeExportImportDialog();
+            }, {once: true});
+
+            reader.readAsDataURL(blob);
+        }
+
+        //----------------------------
+        const importConfigSelect = async (ev) => {
+            /* Handle the <input type=file> onchange event when a file is selected
+            to initiate a configuration load */
+            const f = ev.target.files[0];
+            const fileName = f.name;
+            let fileType = f.type ?? "";
+            let image = "";
+            let x = 0;
+
+            // Determine which type of file we're getting.
+            switch (fileType) {
+            case "application/json":
+            case "application/zip":
+                // do nothing
+                break;
+            default:
+                x = fileName.lastIndexOf(".");
+                if (x > 0) {
+                    switch (fileName.substring(x).toLowerCase()) {
+                    case ".json":
+                        fileType = "application/json";
+                        break;
+                    case ".zip":
+                        fileType = "application/zip";
+                        break;
+                    default:
+                        this.alertWin.alert(`Import file "${fileName}" invalid type "${fileType}"`);
+                        return;
+                        break;
+                    }
+                }
+            }
+
+            // Obtain the configuration image as JSON, unzipping it first if necessary.
+            console.log(`Importing configuration from ${fileName}`);
+            if (fileType == "application/json") {
+                const reader = new FileReader();
+                image = await f.text();
+            } else {                    // then it must be in zip format
+                const zip = new this.window.JSZip();
+                console.debug(`Unzipping ${SystemConfig.exportConfigFileName} from import file`);
+                try {
+                    await zip.loadAsync(f, {checkCRC32: true});
+                    const zobj = zip.file(SystemConfig.exportConfigFileName);
+                    if (zobj) {
+                        image = await zobj.async("text");
+                    } else {
+                        this.alertWin.alert(`${SystemConfig.exportConfigFileName} not present in zip archive`);
+                        return;
+                    }
+                } catch(e) {
+                    this.alertWin.alert(`Error loading zip file: ${e.toString()}`);
+                    return;
+                }
+            }
+
+            // Parse the configuration import image to an object.
+            let config = null;
+            try {
+                config = JSON.parse(image);
+            } catch (e) {
+                this.alertWin.alert("Could not parse import configuration:\n" +
+                      e.message + "\nAborting configuration import.");
+                return;
+            }
+
+            if (config) {
+                if (!("SystemConfig" in config)) {
+                    this.alertWin.alert("No SystemConfig object in import file");
+                    return;
+                } else if (this.alertWin.confirm(
+                        `Are you sure you want to COMPLETELY REPLACE the current configuration?`)) {
+                    // Extract the system configuration object as JSON text and install it
+                    // using the regular config loader mechanism to apply structure updates.
+                    const jsonConfig = JSON.stringify(config.SystemConfig);
+                    this.loadConfigData(jsonConfig);
+
+                    // Now load any disk drive images, even if they're not in the configuration.
+                    const disk = this.configData.Disk;
+                    if (disk.hasDisk && this.$$("ExportIncludeDiskImage").checked && "DiskModule" in config) {
+                        const modules = config.DiskModule;
+                        const store = new DiskStorage();
+                        if (await store.openDatabase()) {
+                            for (let x=0; x<disk.module.length; ++x) {
+                                if (modules[x] && modules[x].length > 0) {
+                                    await store.initializeModule(x);
+                                    // loadModule() requires a line-delimited text blob, so join the array
+                                    // of sector-data strings and make sure it has a new-line at the end.
+                                    if (await store.loadModule(x, `${modules[x].join("\n")}\n`)) {
+                                        this.alertWin.alert(`Error loading disk module image ${x}`);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    closeExportImportDialog(ev);
+                    this.flushHandler();        // persist the new configuration
+                    this.closeConfigUI();       // so the window doesn't show an outdated config
+                }
+            }
+        };
+
+        //----------------------------
+        const exportImportDialogClick = (ev) => {
+            /* Handle click events on the dialog panel */
+            const id = ev.target.id;
+
+            switch (id) {
+            case "ExportJSONBtn":
+                saveExportJSON(ev);
+                break;
+            case "ExportZipBtn":
+                saveExportZip(ev);
+                break;
+            case "ExportImportCloseBtn":
+                closeExportImportDialog(ev);
+                break;
+            }
+        };
+
+        //----------------------------
+
+        this.$$("ExportImportBtn").disabled = true;
+        this.$$("ExportImportDiv").style.display = "block";
+        this.$$("ExportImportDiv").addEventListener("click", exportImportDialogClick);
+        this.$$("ImportSelector").addEventListener("change", importConfigSelect);
     }
 
     /***********************************************************************
@@ -750,15 +1024,21 @@ class SystemConfig {
         this.alertWin = window;         // revert alerts to the global window
         window.focus();
         this.configReporter = null;
-        this.$$("SaveBtn").removeEventListener("click", this.boundSaveConfigDialog, false);
-        this.$$("CancelBtn").removeEventListener("click", this.boundWindowClose, false);
-        this.$$("DefaultsBtn").removeEventListener("click", this.boundSetDefaultConfig, false);
-        this.$$("configDiv").removeEventListener("change", this.boundChangeConfig, false);
-        this.window.removeEventListener("unload", this.boundCloseConfigUI, false);
+        if (this.doc) {
+            this.$$("SaveBtn").removeEventListener("click", this.boundSaveConfigDialog, false);
+            this.$$("CancelBtn").removeEventListener("click", this.boundWindowClose, false);
+            this.$$("DefaultsBtn").removeEventListener("click", this.boundSetDefaultConfig, false);
+            this.$$("configDiv").removeEventListener("change", this.boundChangeConfig, false);
+            this.$$("ExportImportBtn").removeEventListener("click", this.boundOpenExportImportDialog, false);
+            this.window.removeEventListener("unload", this.boundCloseConfigUI, false);
+        }
+
         if (this.window) {
             if (!this.window.closed) {
                 this.window.close();
             }
+
+            this.doc = null;
             this.window = null;
         }
     }
@@ -767,6 +1047,8 @@ class SystemConfig {
     openConfigUI(configReporter) {
         /* Opens the system configuration update dialog and displays the current
         system configuration */
+        const configWidth = Math.max(Math.min(window.innerWidth, 740), 600);
+        const configHeight = screen.availHeight*0.9;
 
         function configUI_Load(ev) {
             this.doc = ev.target;
@@ -778,6 +1060,7 @@ class SystemConfig {
             this.$$("SaveBtn").addEventListener("click", this.boundSaveConfigDialog, false);
             this.$$("CancelBtn").addEventListener("click", this.boundWindowClose, false);
             this.$$("DefaultsBtn").addEventListener("click", this.boundSetDefaultConfig, false);
+            this.$$("ExportImportBtn").addEventListener("click", this.boundOpenExportImportDialog, false);
             this.$$("configDiv").addEventListener("change", this.boundChangeConfig, false);
             this.window.addEventListener("unload", this.boundCloseConfigUI, false);
             this.loadConfigDialog();
@@ -787,7 +1070,7 @@ class SystemConfig {
         this.window = null;
         this.configReporter = configReporter;
         openPopup(window, "../webUI/SystemConfig.html", `retro-1620.${SystemConfig.configStorageName}`,
-                `location=no,scrollbars,resizable,width=${Math.min(window.innerWidth, 740)},height=${screen.availHeight*0.8}`,
+                `location=no,scrollbars,resizable,width=${configWidth},height=${configHeight}`,
                 this, configUI_Load);
     }
 } // SystemConfig class

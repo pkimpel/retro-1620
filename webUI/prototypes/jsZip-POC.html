@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<head>
+<title>jsZip POC</title>
+<meta name="Author" content="Paul Kimpel">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Content-Script-Type" content="text/javascript">
+<meta http-equiv="Content-Style-Type" content="text/css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script>
+/***********************************************************************
+* js-POC.html
+************************************************************************
+* Copyright (c) 2024, Paul Kimpel.
+* Licensed under the MIT License,
+*       see http://www.opensource.org/licenses/mit-license.php
+************************************************************************
+* Script to evaluate the JSZip library.
+************************************************************************
+* 2024-07-12  P.Kimpel
+*   Original version.
+***********************************************************************/
+"use strict";
+
+window.onload = function() {
+    const panel = document.getElementById("TextPanel");
+
+
+    function spout(text) {
+        /* Appends "text"+NL as a new text node to the panel DOM element */
+        let e = document.createTextNode(text + "\n");
+
+        panel.appendChild(e);
+    }
+
+    function clearPanel() {
+        /* Clears the text panel */
+        let kid;
+
+        while (kid = panel.firstChild) {
+            panel.removeChild(kid);
+        }
+    }
+
+    async function fileSelector_onChange(ev) {
+        /* Loads a zip file and extracts the Sample-Config.json file */
+        const configName = "Sample-Config.json";
+        const files = ev.target.files;
+        const zip = new JSZip();
+        var config = null;
+
+        clearPanel();
+        for (const f of files) {
+            spout(`Loading from ${f.name}, size=${f.size} octets, modified ${(new Date(f.lastModified)).toLocaleString()}`);
+            try {
+                await zip.loadAsync(f, {checkCRC32: true});
+                const zobj = zip.file(configName);
+                if (zobj) {
+                    const json = await zobj.async("text");
+                    spout("Loaded " + f.name);
+                    config = JSON.parse(json);
+                    spout(JSON.stringify(config));
+                } else {
+                    spout(`${configName} not present in zip archive`);
+                }
+            } catch(e) {
+                spout(`Error loading zip file: ${e.toString()}`);
+            }
+        }
+    }
+
+    async function genSelector_onChange(ev) {
+        /* Generate a zip file from files selected by the <input type=file> */
+        const files = ev.target.files;
+        const zip = new JSZip();
+
+        clearPanel();
+        for (const f of files) {
+            //alert("File selected: " + f.name +
+            //        "\nModified " + f.lastModifiedDate +
+            //        "\nType=" + f.type + ", Size=" + f.size + " octets");
+            zip.file(f.name, f);
+            spout("Loaded " + f.name);
+        }
+
+        const blob = await zip.generateAsync({
+            type: "blob",
+            compression: "DEFLATE",
+            compressionOptions: {level:9}
+        });
+
+        // Save the zip file
+        const reader = new FileReader();
+        reader.addEventListener("load", (ev) => {
+            const url = reader.result;
+            const hiddenLink = document.createElement("a");
+
+            hiddenLink.setAttribute("download", fileName);
+            hiddenLink.setAttribute("href", url);
+            hiddenLink.click();
+            spout(`Zip file saved as ${fileName}`);
+        }, {once: true});
+
+        reader.readAsDataURL(blob);
+    }
+
+    function checkBrowser() {
+        /* Checks whether this browser can support the necessary stuff */
+        let missing = "";
+
+        if (!window.File) {missing += ", File"}
+        if (!window.FileReader) {missing += ", FileReader"}
+        if (!window.FileList) {missing += ", FileList"}
+        if (!window.Blob) {missing += ", Blob"}
+        if (!window.ArrayBuffer) {missing += ", ArrayBuffer"}
+        if (!window.DataView) {missing += ", DataView"}
+        if (!window.Promise) {missing += ", Promise"}
+
+        if (missing.length == 0) {
+            return false;
+        } else {
+            alert("No can do... your browser does not support the following features:\n" +
+                    missing.substring(2));
+            return true;
+        }
+    }
+
+    /* Start of window.onload() */
+    if (checkBrowser()) {
+        return;
+    }
+
+    document.getElementById("FileSelector").value = null;
+    document.getElementById("FileSelector").addEventListener("change", fileSelector_onChange, false);
+}
+</script>
+</head>
+
+<body>
+
+<div style="position:relative; width:100%; height:3em">
+    <div style="position:absolute; left:0; top:0; width:auto">
+        JSZip Proof-of-Concept
+    </div>
+    <div style="position:absolute; top:0; right:0; width:auto">
+        <input id=FileSelector type=file size=60>
+    </div>
+
+</div>
+
+<pre id=TextPanel>
+</pre>
+
+</body>
+</html>

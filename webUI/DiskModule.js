@@ -21,6 +21,7 @@ export {DiskModule};
 
 import {Envir} from "../emulator/Envir.js";
 import {Register} from "../emulator/Register.js";
+import {DiskStorage} from "./DiskStorage.js";
 import {DiskDrive} from "./DiskDrive.js";
 import {openPopup} from "./PopupUtil.js";
 import {Timer} from "../emulator/Timer.js";
@@ -30,27 +31,12 @@ class DiskModule {
 
     // Static Properties
 
-    static addressSize = 5;             // size of sector address, digits
-    static dataSize = 100;              // size of sector data, digits
     static rpm = 1500;                  // rotational speed, revolutions/minute
-    static trackSectors = 20;           // sectors per track
-    static cylinderTracks = 10;         // tracks per cylinder
-    static maxCylinders = 100;          // cylinders per module
-    static addrNoDriveMask = 0o0117171717; // mask to exclude module number from a sector address
-
     static latency = 60000/DiskModule.rpm; // rotational latency, ms/disk revolution
-    static maxSectors = DiskModule.maxCylinders * DiskModule.cylinderTracks * DiskModule.trackSectors;
-    static sectorPeriod = DiskModule.latency/DiskModule.trackSectors;   // sector transfer time, ms
-    static sectorSize = DiskModule.addressSize + DiskModule.dataSize;
-
-    static numericGlyphs = [    // indexed as BCD code prefixed with flag bit: F8421
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", "@", "?", "?", "}",         // 00-0F
-        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "$", "-", "?", "?", "\"",        // 10-1F
-        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "|", "=", "@", "?", "?", "}",         // 20-2F (parity bit)
-        "]", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "!", "$", "-", "?", "?", "\""];       // 30-3F
-
+    static sectorPeriod = DiskModule.latency/DiskStorage.trackSectors;   // sector transfer time, ms
     static seekTurnaroundTime = 75;     // time for seek turnaround at home position, ms
     static seekUpdateTime = 15;         // time between seek progress updates, ms
+
     static seekToCylinderTime = [       // time to seek from home to a cylinder,  ms
           0,  11,  22,  33,  44,  56,  67,  78,  89, 100,
          97,  94,  90,  87,  84,  81,  78,  74,  71,  68,
@@ -67,64 +53,6 @@ class DiskModule {
         /* Determines the time in ms to seek from a cylinder to the home position */
 
         return fromCyl*1.29;
-    }
-
-    static convertSectorAddress(addr) {
-        /* Converts a BCD sector address to a string */
-        let a = addr;
-        let s = "";
-
-        for (let x=0; x<DiskModule.addressSize; ++x) {
-            s = DiskModule.numericGlyphs[a & Register.notParityMask] + s;
-            a >>= Register.digitBits;
-        }
-
-        return s;
-    }
-
-    static getSectorAddress(buffer) {
-        /* Extracts a five-digit sector address from the start of "buffer" and
-        returns it as a BCD word of digits, including any flags */
-        let addr = 0;
-
-        for (let x=0; x<DiskModule.addressSize; ++x) {
-            addr = (addr << Register.digitBits) | (buffer[x] & Register.notParityMask);
-        }
-
-        return addr;
-    }
-
-    static putSectorAddress(addr, buffer, readOnly=false) {
-        /* Formats a five-digit sector address from the binary "addr" to the
-        first five elements of the "buffer" array. If "readOnly" is true, sets a
-        flag bit on the high-order digit in the formatted address */
-        let a = addr;
-
-        for (let x=DiskModule.addressSize-1; x>=0; --x) {
-            let d = a % 10;
-            a = (a-d)/10;
-            if (x==0 && readOnly) {
-                d |= Register.flagMask;
-            }
-
-            buffer[x] = d;
-        }
-    }
-
-    static compareSectorAddress(sectorAddr, bufferAddr, moduloCompare) {
-        /* Compares the BCD "sectorAddr" address to the BCD "bufferAddr",
-        ignoring any flags, returning true if they match. If "moduloCompare"
-        is true, any disk module number in the high-order digit of the sector
-        address is ignored */
-
-        let ba = bufferAddr & Register.bcdValueMask;
-        let sa = sectorAddr & Register.bcdValueMask;
-        if (moduloCompare) {
-            ba &= DiskModule.addrNoDriveMask;
-            sa &= DiskModule.addrNoDriveMask;
-        }
-
-        return (ba == sa);
     }
 
 
@@ -144,7 +72,7 @@ class DiskModule {
     timer = new Timer();                // delay management timer
 
 
-    constructor(context, doc, db, drive, moduleNr) {
+    constructor(context, doc, store, drive, moduleNr) {
         /* Initializes and wires up events for the disk storage module.
         "context" is an object passing other objects and callback functions from
         the global script:
@@ -160,15 +88,16 @@ class DiskModule {
         this.config = context.config;
         this.processor = context.processor;
         this.doc = doc;
-        this.db = db;
+        this.store = store;
+        this.db = store.db;
         this.drive = drive;
         this.moduleNr = moduleNr;
 
         const moduleConfig = this.config.getNode("Disk.module", moduleNr);
         this.enabled = moduleConfig.enabled;
         this.started = moduleConfig.started;
-        this.moduleName = "Module" + moduleNr;
-        this.sectorBuf = new Uint8Array(DiskModule.sectorSize);
+        this.moduleName = store.moduleName[moduleNr];
+        this.sectorBuf = new Uint8Array(DiskStorage.sectorSize);
 
         this.boundEnableClick = this.enableClick.bind(this);
         this.boundStartClick = this.startClick.bind(this);
@@ -207,18 +136,18 @@ class DiskModule {
         }
 
         this.sectorKey = addr;
-        this.sectorNr = addr % DiskModule.trackSectors;
-        addr = (addr-this.sectorNr)/DiskModule.trackSectors;
-        this.trackNr = addr % DiskModule.cylinderTracks;
-        addr = (addr-this.trackNr)/DiskModule.cylinderTracks;
-        this.cylinderNr = addr % DiskModule.maxCylinders;
+        this.sectorNr = addr % DiskStorage.trackSectors;
+        addr = (addr-this.sectorNr)/DiskStorage.trackSectors;
+        this.trackNr = addr % DiskStorage.cylinderTracks;
+        addr = (addr-this.trackNr)/DiskStorage.cylinderTracks;
+        this.cylinderNr = addr % DiskStorage.maxCylinders;
     }
 
     /**************************************/
     setSectorAddrBox(addr) {
         /* Sets a BCD sector address into this.sectorAddrBox */
 
-        this.sectorAddrBox.value = DiskModule.convertSectorAddress(addr);
+        this.sectorAddrBox.value = DiskStorage.convertSectorAddress(addr);
     }
 
     /**************************************/
@@ -276,7 +205,7 @@ class DiskModule {
                 const image = ev.target.result;
 
                 if (this.drive.window.confirm(`Are you sure you want to OVERWRITE THE CONTENTS of module ${this.moduleNr} and load new data from a disk pack image file?`)) {
-                    this.loadModule(image).then((result) => {
+                    this.store.loadModule(this.moduleNr, image).then((result) => {
                         if (result) {
                             this.drive.window.alert("Error during disk pack image load");
                         } else {
@@ -296,8 +225,11 @@ class DiskModule {
         };
 
         const initiateInitialize = (ev) => {
-            if (this.drive.window.confirm(`Are you sure you want to COMPLETELY ERASE and reinitialize module ${this.moduleNr}?`)) {
-                this.initializeModule().then(() => {
+                if (this.drive.window.confirm(`Are you sure you want to COMPLETELY ERASE and reinitialize module ${this.moduleNr}?`)) {
+                this.store.initializeModule(this.moduleNr).then(() => {
+                    const config = this.config.getNode("Disk.module", this.moduleNr);
+                    config.imageName = "(initialized)";
+                    this.config.putNode("Disk.module", config, this.moduleNr);
                     this.started = true;
                     setStatus();
                     closeDialog();
@@ -347,146 +279,10 @@ class DiskModule {
     }
 
     /**************************************/
-    loadModule(image) {
-        /* Replaces the contents of the module's object store with new contents
-        from the "image" text blob. Returns a Promise that resolves to true if
-        there is an error, false otherwise */
-        let bufIndex = 0;
-        const eolRex = /([^\n\r\f]*)((:?\r[\n\f]?)|\n|\f)?/g;
-        const validCharsRex = /^[0-9|=@?}\]JKLMNOPQR!$-?"]+$/;
-        let result = false;
-
-        const extractSectorImage = () => {
-            /* Extracts one sector image from the buffer. Returns a pair
-            consisting of an error code, the 5-digit sector key, and the
-            105-digit sector data */
-            let errorCode = 0;
-            let key = 0;
-            let data = "";
-            let match = null;                   // result of eolRex.exec()
-
-            eolRex.lastIndex = bufIndex;
-            match = eolRex.exec(image);
-            if (!match) {
-                data = "";
-                key = DiskModule.maxSectors;
-            } else {
-                bufIndex += match[0].length;
-                const text = match[1].toUpperCase();
-                const parts = text.split(",");
-                if (parts.length != 2) {
-                    errorCode = 1;              // invalid row format
-                } else {
-                    key = parseInt(parts[0], 10);
-                    data = parts[1];
-                    if (data.length < DiskModule.sectorSize) {
-                        data = data.padEnd(DiskModule.sectorSize, "0");
-                    } else if (data.length > DiskModule.sectorSize) {
-                        data = data.subString(0, DiskModule.sectorSize);
-                    }
-
-                    if (isNaN(key)) {
-                        errorCode = 2;          // invalid key field
-                    }
-                }
-            }
-
-            return [errorCode, key, data];
-        };
-
-        const validateImage = () => {
-            /* Validates the image is properly formatted, the digit codes are
-            valid, they keys are numeric, and the keys are in ascending order.
-            Returns true if errors */
-            let lastKey = -1;
-            let result = false;
-
-            bufIndex = 0;
-            while (bufIndex < image.length) {
-                let [errorCode, key, data] = extractSectorImage();
-                if (errorCode > 0) {
-                    result = true;
-                    break;
-                } else if (key < 0 || key >= DiskModule.maxSectors || key <= lastKey) {
-                    result = true;
-                    break;
-                } else if (!validCharsRex.test(data)) {
-                    result = true;
-                } else {
-                    lastKey = key;
-                }
-            }
-
-            return result;
-        };
-
-        return new Promise((resolve, reject) => {
-            if (validateImage()) {
-                console.debug("DiskModule load image invalid");
-                resolve(true);
-            } else {
-                const cylinderSize = DiskModule.cylinderTracks*DiskModule.trackSectors;
-                const buffer = new Uint8Array(DiskModule.sectorSize);
-
-                bufIndex = 0;
-                let row = extractSectorImage();
-
-                const loadCylinder = () => {
-                    /* Initializes one cylinder of sectors. On completion, either
-                    calls self for the next cylinder or terminates if at end. This
-                    is done one cylinder at a time to avoid flooding IDB with requests */
-                    const txn = this.db.transaction(this.moduleName, "readwrite");
-                    const store = txn.objectStore(this.moduleName);
-
-                    txn.onerror = (ev) => {
-                        const msg = `DiskModule ${this.moduleName} load txn onerror: ${ev.target.error.name}`;
-                        console.log(msg);
-                        resolve(true);
-                    };
-
-                    txn.onabort = (ev) => {
-                        const msg = `DiskModule ${this.moduleName} load txn onabort: ${ev.target.error.name}`;
-                        console.log(msg);
-                        resolve(true);
-                    };
-
-                    txn.oncomplete = (ev) => {
-                        if (bufIndex < image.length) {
-                            loadCylinder();
-                        } else {
-                            resolve(false);
-                            console.log(`DiskModule ${this.moduleName} load completed`);
-                        }
-                    };
-
-                    let [error, key, data] = row;
-                    const cylinderNr = Math.floor(key/cylinderSize);
-                    const cylStartKey = cylinderNr*cylinderSize;
-                    const cylEndKey = cylStartKey + cylinderSize - 1;
-
-                    do {
-                        for (let x=0; x<data.length; ++x) {
-                            buffer[x] = DiskModule.numericGlyphs.indexOf(data[x]);
-                        }
-
-                        store.put(buffer, key);
-                        row = extractSectorImage();
-                        key = row[1];
-                        data = row[2];
-                    } while (bufIndex < image.length && key < cylEndKey);
-                };
-
-                loadCylinder();
-            }
-        });
-    }
-
-    /**************************************/
     extractModule() {
         /* Extracts the contents of the module storage and converts it to text
         in a new temporary window so it can be copied, printed, or saved by the
-        user. All characters are ASCII according to the convention used by the
-        card punch for the 1620-Jr project */
+        user */
         const title = "retro-1620 Disk Image Extract";
 
         const extractDiskImage = (ev) => {
@@ -494,39 +290,20 @@ class DiskModule {
             const win = doc.defaultView;
             const content = doc.getElementById("Paper");
 
+            const onerror = (ev) => {
+                this.processor.setIndicator(36, `Disk extractModule ${this.moduleName} error: ${ev.target.error.name}`);
+            };
+
+            const onabort = (ev) => {
+                this.processor.setIndicator(36, `Disk extractModule ${this.moduleName} abort: ${ev.target.error.name}`);
+            };
+
             doc.title = title;
             win.moveTo((screen.availWidth-win.outerWidth)/2, (screen.availHeight-win.outerHeight)/2);
 
-            const txn = this.db.transaction(this.moduleName, "readonly");
-            const store = txn.objectStore(this.moduleName);
-            let text = "";
-
-            txn.onerror = (ev) => {
-                this.processor.setIndicator(36, `Disk extractModule ${this.moduleName} error: addr=${this.sectorKey}, ${ev.target.error.name}`);
-            };
-
-            txn.onabort = (ev) => {
-                this.processor.setIndicator(36, `Disk extractModule ${this.moduleName} abort: addr=${this.sectorKey}, ${ev.target.error.name}`);
-            };
-
-            txn.oncomplete = (ev) => {
+            this.store.serializeModuleData(this.moduleNr, "extractModule", onerror, onabort, (text) => {
                 content.textContent = text;
-            };
-
-            store.openCursor().onsuccess = (ev) => {
-                const cursor = ev.target.result;
-                if (cursor) {
-                    const data = cursor.value;
-                    const key = cursor.key;
-                    let line = "";
-                    for (let byte of data) {
-                        line += DiskModule.numericGlyphs[byte & 0x1F];
-                    }
-
-                    text += `${key.toString().padStart(DiskModule.addressSize, " ")},${line}\n`;
-                    cursor.continue();  // advance to next sector
-                }
-            };
+            });
         };
 
         openPopup(this.drive.window, "./FramePaper.html", "",
@@ -537,140 +314,24 @@ class DiskModule {
     /**************************************/
     saveModule() {
         /* Extracts the contents of the module storage, converts it to text,
-        and saves it in the local file system as directed by the user. All
-        characters are ASCII according to the convention used by the card punch
-        for the 1620-Jr project */
+        and saves it in the local file system as directed by the user */
         const title = "retro-1620-Disk-Image.pack";
-        let text = "";
 
-        const txn = this.db.transaction(this.moduleName, "readonly");
-        const store = txn.objectStore(this.moduleName);
-
-        txn.onerror = (ev) => {
-            this.processor.setIndicator(36, `Disk saveModule ${this.moduleName} error: addr=${this.sectorKey}, ${ev.target.error.name}`);
+        const onerror = (ev) => {
+            this.processor.setIndicator(36, `Disk saveModule ${this.moduleName} error: ${ev.target.error.name}`);
         };
 
-        txn.onabort = (ev) => {
-            this.processor.setIndicator(36, `Disk saveModule ${this.moduleName} abort: addr=${this.sectorKey}, ${ev.target.error.name}`);
+        const onabort = (ev) => {
+            this.processor.setIndicator(36, `Disk saveModule ${this.moduleName} abort: ${ev.target.error.name}`);
         };
 
-        txn.oncomplete = (ev) => {
+        this.store.serializeModuleData(this.moduleNr, "saveModule", onerror, onabort, (text) => {
             const url = `data:text/plain,${encodeURIComponent(text)}`;
             const hiddenLink = this.doc.createElement("a");
 
             hiddenLink.setAttribute("download", title);
             hiddenLink.setAttribute("href", url);
             hiddenLink.click();
-        };
-
-        store.openCursor().onsuccess = (ev) => {
-            const cursor = ev.target.result;
-            if (cursor) {
-                const data = cursor.value;
-                const key = cursor.key;
-                let line = "";
-                for (let byte of data) {
-                    line += DiskModule.numericGlyphs[byte & 0x1F];
-                }
-
-                text += `${key.toString().padStart(DiskModule.addressSize, " ")},${line}\n`;
-                cursor.continue();  // advance to next sector
-            }
-        };
-    }
-
-    /**************************************/
-    countSectors() {
-        /* Counts the number of sectors currently on this storage module. Returns
-        a Promise that resolves with the count once determined */
-
-        return new Promise((resolve, reject) => {
-            const txn = this.db.transaction(this.moduleName, "readonly");
-            const store = txn.objectStore(this.moduleName);
-
-            const req = store.count();
-            req.onsuccess = () => {
-                resolve(req.result);
-            };
-        });
-    }
-
-    /**************************************/
-    initializeModule() {
-        /* Initializes the disk pack for a module to all zero digits with
-        standard sector addresses */
-
-        console.debug(`DiskModule initializing sectors for ${this.moduleName}`);
-        const config = this.config.getNode("Disk.module", this.moduleNr);
-        config.imageName = "(initialized)";
-        this.config.putNode("Disk.module", config, this.moduleNr);
-
-        return new Promise((resolve, reject) => {
-            let addr = 0;
-            const buffer = new Uint8Array(DiskModule.sectorSize);
-
-            const fillTrack = () => {
-                /* Initializes one track of sectors. On completion, either resolves
-                the Promise (if all tracks have been done) or calls self for the
-                next track. This is done one track at a time to avoid flooding
-                IDB with requests */
-                const txn = this.db.transaction(this.moduleName, "readwrite");
-                const store = txn.objectStore(this.moduleName);
-
-                txn.onerror = (ev) => {
-                    const msg = `DiskModule ${this.moduleName} init txn onerror: addr=${addr}, ${ev.target.error.name}`;
-                    console.log(msg);
-                    this.drive.window.alert(msg);
-                };
-
-                txn.onabort = (ev) => {
-                    const msg = `DiskModule ${this.moduleName} init txn onabort: addr=${addr}, ${ev.target.error.name}`;
-                    console.log(msg);
-                    this.drive.window.alert(msg);
-                };
-
-                txn.oncomplete = (ev) => {
-                    if (addr < DiskModule.maxSectors) {
-                        fillTrack();
-                    } else {
-                        console.log(`DiskModule ${this.moduleName} sector initialization completed`);
-                        resolve(true);
-                    }
-                };
-
-                for (let x=0; x<DiskModule.trackSectors; ++x) {
-                    DiskModule.putSectorAddress(addr, buffer, false);
-                    store.put(buffer, addr);            // ignore the returned request
-                    ++addr;
-                }
-            };
-
-            const wipeDisk = () => {
-                /* Completely erases the IDB object store for the disk module,
-                then calls fillTrack() to begin writing sectors */
-                const txn = this.db.transaction(this.moduleName, "readwrite");
-
-                txn.onerror = (ev) => {
-                    const msg = `DiskModule ${this.moduleName} clear txn onerror: addr=${addr}, ${ev.target.error.name}`;
-                    console.log(msg);
-                    this.drive.window.alert(msg);
-                };
-
-                txn.onabort = (ev) => {
-                    const msg = `DiskModule ${this.moduleName} clear txn onabort: addr=${addr}, ${ev.target.error.name}`;
-                    console.log(msg);
-                    this.drive.window.alert(msg);
-                };
-
-                txn.oncomplete = (ev) => {
-                    fillTrack();
-                };
-
-                txn.objectStore(this.moduleName).clear();
-            };
-
-            buffer.fill(Register.parityMask);   // initialize to 0 with parity
-            wipeDisk();
         });
     }
 
@@ -679,11 +340,11 @@ class DiskModule {
         /* Opens, and if necessary initializes, the disk storage medium for this
         disk module. Determines and updates the status of the module */
 
-        let count = await this.countSectors();
+        let count = await this.store.countSectors(this.moduleNr);
 
         if (count <= 0) {
             this.panel.classList.add("dimmed");
-            await this.initializeModule();
+            await this.store.initializeModule(this.moduleNr);
             this.panel.classList.remove("dimmed");
         }
 
@@ -753,7 +414,7 @@ class DiskModule {
         The routine first tries the most common case where the sectorAddr matches
         the store's primary key value. If that doesn't work, it reads the entire
         track and searches sector by sector for an address match */
-        const trackStartKey = (this.seekCylinderNr*DiskModule.cylinderTracks + this.trackNr)*DiskModule.trackSectors;
+        const trackStartKey = (this.seekCylinderNr*DiskStorage.cylinderTracks + this.trackNr)*DiskStorage.trackSectors;
         const result = {
             error: false,               // true if an error occurred (not found or worse)
             key: 0,                     // primary key of the matching sector
@@ -763,8 +424,8 @@ class DiskModule {
         };
 
         // Compute a random starting sector number within the current track.
-        const startSectorNr = (Math.floor((startTime % DiskModule.latency)/DiskModule.latency * DiskModule.trackSectors) +
-                               1) % DiskModule.trackSectors;  // add one sector for head-select time
+        const startSectorNr = (Math.floor((startTime % DiskModule.latency)/DiskModule.latency * DiskStorage.trackSectors) +
+                               1) % DiskStorage.trackSectors;  // add one sector for head-select time
 
         result.key = this.sectorKey = trackStartKey + this.sectorNr;
         store.get(this.sectorKey).onsuccess = (ev) => {
@@ -773,18 +434,18 @@ class DiskModule {
             if (!data) {                // nothing found (unlikely)
                 this.processor.setIndicator(36, `Disk findSector key not found=${this.sectorKey} in ${this.moduleName}`);
                 result.error = true;
-                result.timing = (DiskModule.trackSectors*2-startSectorNr)*DiskModule.sectorPeriod;
+                result.timing = (DiskStorage.trackSectors*2-startSectorNr)*DiskModule.sectorPeriod;
                 successor(result);
             } else {
-                result.timing = ((this.sectorKey-trackStartKey-startSectorNr+DiskModule.trackSectors) %
-                                 DiskModule.trackSectors)*DiskModule.sectorPeriod;
-                result.sectorAddr = DiskModule.getSectorAddress(data);
-                if (DiskModule.compareSectorAddress(sectorAddr, result.sectorAddr, moduloCompare)) {
+                result.timing = ((this.sectorKey-trackStartKey-startSectorNr+DiskStorage.trackSectors) %
+                                 DiskStorage.trackSectors)*DiskModule.sectorPeriod;
+                result.sectorAddr = DiskStorage.getSectorAddress(data);
+                if (DiskStorage.compareSectorAddress(sectorAddr, result.sectorAddr, moduloCompare)) {
                     result.data = data; // found it... we're done
                     successor(result);
                 } else {
                     // No address match, so do it the hard way... search for sectorAddr on the track
-                    const trackEndKey = trackStartKey + DiskModule.trackSectors-1;
+                    const trackEndKey = trackStartKey + DiskStorage.trackSectors-1;
                     const range = IDBKeyRange.bound(trackStartKey, trackEndKey);
                     let found = false;  // sectorAddr was found within track
                     let timing = 0;     // additional track search time, ms
@@ -797,10 +458,10 @@ class DiskModule {
                             result.timing += DiskModule.latency;
                         } else {
                             // First search the track starting after the random sector
-                            for (let x=startSectorNr+1; x<DiskModule.trackSectors; ++x) {
+                            for (let x=startSectorNr+1; x<DiskStorage.trackSectors; ++x) {
                                 timing += DiskModule.sectorPeriod;
-                                result.sectorAddr = DiskModule.getSectorAddress(sectors[x]);
-                                if (DiskModule.compareSectorAddress(sectorAddr, result.sectorAddr, moduloCompare)) {
+                                result.sectorAddr = DiskStorage.getSectorAddress(sectors[x]);
+                                if (DiskStorage.compareSectorAddress(sectorAddr, result.sectorAddr, moduloCompare)) {
                                     found = true;
                                     result.key = trackStartKey+x;
                                     result.data = sectors[x];
@@ -810,10 +471,10 @@ class DiskModule {
 
                             // Not found after startSectorNr, so wrap around to start of the track
                             if (!found) {
-                                for (let x=0; x<DiskModule.trackSectors; ++x) {
+                                for (let x=0; x<DiskStorage.trackSectors; ++x) {
                                     timing += DiskModule.sectorPeriod;
-                                    result.sectorAddr = DiskModule.getSectorAddress(data);
-                                    if (DiskModule.compareSectorAddress(sectorAddr, result.sectorAddr, moduloCompare)) {
+                                    result.sectorAddr = DiskStorage.getSectorAddress(data);
+                                    if (DiskStorage.compareSectorAddress(sectorAddr, result.sectorAddr, moduloCompare)) {
                                         found = true;
                                         result.key = trackStartKey+x;
                                         result.data = sectors[x];
@@ -825,7 +486,7 @@ class DiskModule {
                             this.sectorKey = result.key;
                             result.timing += timing;
                             if (!found) {
-                                this.processor.setIndicator(36, `Disk findSector key not on track ${trackStartKey} for ${DiskModule.convertSectorAddress(sectorAddr)} in ${this.moduleName}`);
+                                this.processor.setIndicator(36, `Disk findSector key not on track ${trackStartKey} for ${DiskStorage.convertSectorAddress(sectorAddr)} in ${this.moduleName}`);
                                 result.error = true;
                             }
                         }
@@ -881,7 +542,7 @@ class DiskModule {
                 // Store the first sector; returns false if count not exhausted.
                 if (!storeSector(false, findResult.error, findResult.data)) {
                     // More sectors needed, so open a cursor for the rest of the cylinder.
-                    const cylinderEndKey = (this.seekCylinderNr+1)*DiskModule.cylinderTracks*DiskModule.trackSectors - 1;
+                    const cylinderEndKey = (this.seekCylinderNr+1)*DiskStorage.cylinderTracks*DiskStorage.trackSectors - 1;
                     if (lastKey >= cylinderEndKey) {
                         this.processor.setIndicator(38, `Disk read cylinder overflow at key ${lastKey}`);
                         return;
@@ -895,14 +556,14 @@ class DiskModule {
                             storeSector(true, false, null);     // end of cylinder
                         } else {
                             const data = cursor.value;
-                            const diskAddr = DiskModule.getSectorAddress(data);
+                            const diskAddr = DiskStorage.getSectorAddress(data);
                             this.setSectorAddrBox(diskAddr);
                             timing += DiskModule.sectorPeriod;
                             if (++lastKey != cursor.key) {
                                 this.processor.setIndicator(36, `Disk read cursor key not sequential=${cursor.key} in ${this.moduleName}`);
                                 storeSector(false, true, data);
-                            } else if (!DiskModule.compareSectorAddress(this.drive.sectorAddr, diskAddr, moduloCompare)) {
-                                this.processor.setIndicator(36, `Disk read sector address mismatch ${DiskModule.convertSectorAddress(diskAddr)}`);
+                            } else if (!DiskStorage.compareSectorAddress(this.drive.sectorAddr, diskAddr, moduloCompare)) {
+                                this.processor.setIndicator(36, `Disk read sector address mismatch ${DiskStorage.convertSectorAddress(diskAddr)}`);
                                 storeSector(false, true, data);
                             } else {
                                 if (!storeSector(false, false, data)) {         //store this sector
@@ -936,8 +597,8 @@ class DiskModule {
         this.setSectorAddrBox(sectorAddr);
 
         // Compute a random starting sector number.
-        const startSectorNr = (Math.floor((startTime % DiskModule.latency)/DiskModule.latency * DiskModule.trackSectors) +
-                               1) % DiskModule.trackSectors;  // add one sector for head-select time
+        const startSectorNr = (Math.floor((startTime % DiskModule.latency)/DiskModule.latency * DiskStorage.trackSectors) +
+                               1) % DiskStorage.trackSectors;  // add one sector for head-select time
 
         // Construct and return a Promise for an IDB transaction to read the track.
         return new Promise((resolve, reject) => {
@@ -945,7 +606,7 @@ class DiskModule {
             const store = txn.objectStore(this.moduleName);
 
             // Set timing to start of next index point.
-            let timing = (DiskModule.trackSectors-1-startSectorNr)*DiskModule.sectorPeriod;
+            let timing = (DiskStorage.trackSectors-1-startSectorNr)*DiskModule.sectorPeriod;
 
             txn.onerror = (ev) => {
                 this.processor.setIndicator(36, `Disk readTrack ${this.moduleName} error: addr=${this.sectorKey}, ${ev.target.error.name}`);
@@ -960,8 +621,8 @@ class DiskModule {
                 setTimeout(resolve, delay);     // delay for disk rotation time before resolve
             };
 
-            const trackStartKey = (this.seekCylinderNr*DiskModule.cylinderTracks + this.trackNr)*DiskModule.trackSectors;
-            const range = IDBKeyRange.bound(trackStartKey, trackStartKey+DiskModule.trackSectors-1);
+            const trackStartKey = (this.seekCylinderNr*DiskStorage.cylinderTracks + this.trackNr)*DiskStorage.trackSectors;
+            const range = IDBKeyRange.bound(trackStartKey, trackStartKey+DiskStorage.trackSectors-1);
             let lastKey = trackStartKey;
 
             store.openCursor(range).onsuccess = (ev) => {
@@ -970,7 +631,7 @@ class DiskModule {
                     storeSector(true, false, null);     // end of track
                 } else {
                     const data = cursor.value;
-                    const diskAddr = DiskModule.getSectorAddress(data);
+                    const diskAddr = DiskStorage.getSectorAddress(data);
                     this.setSectorAddrBox(diskAddr);
                     timing += DiskModule.sectorPeriod;
                     if (lastKey != cursor.key) {
@@ -1033,12 +694,12 @@ class DiskModule {
                 if (findResult.error) {
                     storeSector(false, true, null);     // sector address not found
                 } else {
-                    const trackStartKey = (this.seekCylinderNr*DiskModule.cylinderTracks + this.trackNr)*DiskModule.trackSectors;
-                    const range = IDBKeyRange.bound(trackStartKey, trackStartKey+DiskModule.trackSectors-1);
+                    const trackStartKey = (this.seekCylinderNr*DiskStorage.cylinderTracks + this.trackNr)*DiskStorage.trackSectors;
+                    const range = IDBKeyRange.bound(trackStartKey, trackStartKey+DiskStorage.trackSectors-1);
                     let lastKey = findResult.key;
 
                     // Advance timing to start of next index point.
-                    timing = findResult.timing + (DiskModule.trackSectors-1 - lastKey%DiskModule.trackSectors)*DiskModule.sectorPeriod;
+                    timing = findResult.timing + (DiskStorage.trackSectors-1 - lastKey%DiskStorage.trackSectors)*DiskModule.sectorPeriod;
 
                     store.openCursor(range).onsuccess = (ev) => {
                         const cursor = ev.target.result;
@@ -1046,14 +707,14 @@ class DiskModule {
                             storeSector(true, false, null);     // end of track
                         } else {
                             const data = cursor.value;
-                            const diskAddr = DiskModule.getSectorAddress(data);
+                            const diskAddr = DiskStorage.getSectorAddress(data);
                             this.setSectorAddrBox(diskAddr);
                             timing += DiskModule.sectorPeriod;
                             if (++lastKey != cursor.key) {
                                 this.processor.setIndicator(36, `Disk checkTrack cursor key not sequential=${cursor.key} in ${this.moduleName}`);
                                 storeSector(false, true, data);
-                            } else if (!DiskModule.compareSectorAddress(this.drive.sectorAddr, diskAddr, moduloCompare)) {
-                                this.processor.setIndicator(36, `Disk checkTrack sector address mismatch ${DiskModule.convertSectorAddress(diskAddr)}`);
+                            } else if (!DiskStorage.compareSectorAddress(this.drive.sectorAddr, diskAddr, moduloCompare)) {
+                                this.processor.setIndicator(36, `Disk checkTrack sector address mismatch ${DiskStorage.convertSectorAddress(diskAddr)}`);
                                 storeSector(false, true, data);
                             } else {
                                 if (!storeSector(false, false, data)) {         //store this sector
@@ -1117,7 +778,7 @@ class DiskModule {
                     store.put(findResult.data, lastKey);
                     if (!finito) {
                         // More sectors needed, so open a cursor for the rest of the cylinder.
-                        const cylinderEndKey = (this.seekCylinderNr+1)*DiskModule.cylinderTracks*DiskModule.trackSectors - 1;
+                        const cylinderEndKey = (this.seekCylinderNr+1)*DiskStorage.cylinderTracks*DiskStorage.trackSectors - 1;
                         if (lastKey >= cylinderEndKey) {
                             this.processor.setIndicator(38, `Disk read cylinder overflow at key ${lastKey}`);
                             return;
@@ -1131,14 +792,14 @@ class DiskModule {
                                 loadSector(false, true, null);          // end of cylinder
                             } else {
                                 const data = cursor.value;
-                                const diskAddr = DiskModule.getSectorAddress(data);
+                                const diskAddr = DiskStorage.getSectorAddress(data);
                                 this.setSectorAddrBox(diskAddr);
                                 timing += DiskModule.sectorPeriod;
                                 if (++lastKey != cursor.key) {
                                     this.processor.setIndicator(36, `Disk write cursor key not sequential=${cursor.key} in ${this.moduleName}`);
                                     loadSector(false, true, data);
-                                } else if (!DiskModule.compareSectorAddress(this.drive.sectorAddr, diskAddr, moduloCompare)) {
-                                    this.processor.setIndicator(36, `Disk write sector address mismatch ${DiskModule.convertSectorAddress(diskAddr)}`);
+                                } else if (!DiskStorage.compareSectorAddress(this.drive.sectorAddr, diskAddr, moduloCompare)) {
+                                    this.processor.setIndicator(36, `Disk write sector address mismatch ${DiskStorage.convertSectorAddress(diskAddr)}`);
                                     loadSector(false, true, data);
                                 } else if (findResult.data[0] & Register.flagMask) {
                                     this.processor.setIndicator(36, `Disk write read-only flag on sector address at key ${lastKey}`);
@@ -1201,12 +862,12 @@ class DiskModule {
                 if (findResult.error) {
                     loadSector(false, true, null);      // sector address not found
                 } else {
-                    const trackStartKey = (this.seekCylinderNr*DiskModule.cylinderTracks + this.trackNr)*DiskModule.trackSectors;
-                    const range = IDBKeyRange.bound(trackStartKey, trackStartKey+DiskModule.trackSectors-1);
+                    const trackStartKey = (this.seekCylinderNr*DiskStorage.cylinderTracks + this.trackNr)*DiskStorage.trackSectors;
+                    const range = IDBKeyRange.bound(trackStartKey, trackStartKey+DiskStorage.trackSectors-1);
                     let lastKey = findResult.key;
 
                     // Advance timing to start of next index point.
-                    timing = findResult.timing + (DiskModule.trackSectors-1 - lastKey%DiskModule.trackSectors)*DiskModule.sectorPeriod;
+                    timing = findResult.timing + (DiskStorage.trackSectors-1 - lastKey%DiskStorage.trackSectors)*DiskModule.sectorPeriod;
 
                     store.openCursor(range).onsuccess = (ev) => {
                         const cursor = ev.target.result;
@@ -1214,15 +875,15 @@ class DiskModule {
                             loadSector(true, false, null);              // end of track
                         } else {
                             const data = cursor.value;
-                            const diskAddr = DiskModule.getSectorAddress(data);
+                            const diskAddr = DiskStorage.getSectorAddress(data);
                             this.setSectorAddrBox(diskAddr);
                             timing += DiskModule.sectorPeriod;
                             if (lastKey != cursor.key) {
                                 this.processor.setIndicator(36, `Disk writeTrack cursor key not sequential=${cursor.key} in ${this.moduleName}`);
                                 loadSector(false, true, data);
                             } else if (!this.drive.compareDisable &&
-                                       !DiskModule.compareSectorAddress(this.drive.sectorAddr, diskAddr, moduloCompare)) {
-                                this.processor.setIndicator(36, `Disk writeTrack sector address mismatch ${DiskModule.convertSectorAddress(diskAddr)}`);
+                                       !DiskStorage.compareSectorAddress(this.drive.sectorAddr, diskAddr, moduloCompare)) {
+                                this.processor.setIndicator(36, `Disk writeTrack sector address mismatch ${DiskStorage.convertSectorAddress(diskAddr)}`);
                                 loadSector(false, true, data);
                             } else {
                                 ++lastKey;

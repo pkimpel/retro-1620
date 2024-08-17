@@ -19,6 +19,3 @@ $RECYCLE.BIN/
 .DS_Store
 
 # Project-specific files
-webSite/HelpMenu.html
-webUI/ThreeWaySwitch.js
-webUI/resources/ToggleMid.png

@@ -442,3 +442,5 @@ SPAN.flagstrike {
 .number {
     font-family:        DejaVuSansMonoBookWeb, monospace;
     text-align:         right}
+.nowrap {
+    white-space:        nowrap}

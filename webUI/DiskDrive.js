@@ -17,6 +17,7 @@
 export {DiskDrive};
 
 import {Envir} from "../emulator/Envir.js";
+import {DiskStorage} from "./DiskStorage.js";
 import {DiskModule} from "./DiskModule.js";
 import {Register} from "../emulator/Register.js";
 import {Timer} from "../emulator/Timer.js";
@@ -28,19 +29,16 @@ class DiskDrive {
 
     // Static Properties
 
-    static moduleMax = 4;               // max disk modules allowed
     static diskDriveTop = 0;            // initial top coordinate of DiskDrive window
     static diskModuleTop = 42;          // height of top panel controls
     static diskModuleHeight = 34;       // height of small disk module panel
-    static storageName = "retro-1620-Disk-Storage-DB";
-    static storageVersion = 1;          // IndexedDB schema version
     static windowHeight = 30;           // window innerHeight, pixels
     static windowWidth = 350;           // window innerWidth, pixels
 
 
     // Public Instance Properties
 
-    db = null;                          // IndexedDB data base object (after open)
+    store = null;                       // disk storage object
     doc = null;                         // window document object
     window = null;                      // window object
     driveReady = false;                 // true if drive is ready
@@ -54,7 +52,7 @@ class DiskDrive {
     selectedModule = null;              // currently selected module object
     selectedModuleNr = 0;               // currently selected module number 0-3
     sectorAddr = 0;                     // current BCD sector address
-    moduloCompare = false;              // current address comparison mode (true=>cyl/track/sector only)
+    moduloCompare = false;              // current address-comparison mode (true=>cyl/track/sector only)
 
     timer = new Timer();                // delay management timer
 
@@ -71,6 +69,7 @@ class DiskDrive {
         this.context = context;
         this.config = context.config;
         this.processor = context.processor;
+        this.store = new DiskStorage();
 
         this.waitForIdle = new WaitSignal();
 
@@ -90,7 +89,7 @@ class DiskDrive {
                        `,innerWidth=${this.innerWidth},innerHeight=${this.innerHeight}`;
         }
 
-        this.openDatabase().then((result) => {
+        this.store.openDatabase().then((result) => {
             openPopup(window, "../webUI/DiskDrive.html", "retro-1620.Disk Drive",
                     "location=no,scrollbars,resizable" + geometry,
                     this, this.diskDriveOnLoad);
@@ -117,6 +116,8 @@ class DiskDrive {
         this.origin = `${this.window.location.protocol}//${this.window.location.host}`;
         this.innerHeight = DiskDrive.diskModuleTop;
 
+        this.store.alertWindow = this.window;
+
         this.compareDisableSwitch = this.$$("DiskCompareDisableSwitch");
         this.compareDisableSwitch.checked = false;      // always initializes to off
         this.compareDisableSwitch.addEventListener("click", this.boundCompareDisableClick);
@@ -133,7 +134,7 @@ class DiskDrive {
                 ++this.moduleCount;
                 this.innerHeight += DiskDrive.diskModuleHeight;
                 this.$$(`DiskModule${moduleNr}`).style.display = "block";
-                this.module[moduleNr] = new DiskModule(this.context, this.doc, this.db, this, moduleNr);
+                this.module[moduleNr] = new DiskModule(this.context, this.doc, this.store, this, moduleNr);
             }
         }
 
@@ -179,80 +180,6 @@ class DiskDrive {
         /* Sets the drive ready status from the module status states */
 
         this.driveReady = (this.moduleCount > 0 && this.module[0].enabled);
-    }
-
-    /**************************************/
-    genericIDBError(ev) {
-        // Formats a generic alert message when an otherwise-unhandled data base error occurs */
-
-        alert("DiskDrive storage UNHANDLED ERROR: " + ev.target.error.message);
-    }
-
-    /**************************************/
-    openDatabase() {
-        /* Attempts to open the DiskDrive storage database specified by
-        DiskDrive.storageName. If successful, sets this.db to the IDB object and
-        fulfills the async Promise with value true */
-
-        return new Promise((resolve, reject) => {
-            const req = indexedDB.open(DiskDrive.storageName, DiskDrive.storageVersion);
-
-            req.onerror = (ev) => {
-                alert("Cannot open DiskDrive storage\ndata base \"" +
-                      DiskDrive.storageName + "\":\n" + ev.target.error);
-            };
-
-            req.onblocked = (ev) => {
-                alert(DiskDrive.storageName + " DiskDrive storage open is blocked -- CANNOT CONTINUE");
-            };
-
-            req.onupgradeneeded = (ev) => {
-                /* Handles the onupgradeneeded event for the IDB data base. Upgrades
-                the schema to the current version. For a new data base, creates the default
-                configuration. "ev" is the upgradeneeded event */
-                const req = ev.target;
-                const db = req.result;
-                const txn = req.transaction;
-
-                txn.onabort = (ev) => {
-                    alert("Aborted DB upgrade to DiskDrive storage\ndata base \"" +
-                          DiskDrive.storageName + "\":\n" + ev.target.error);
-                };
-
-                txn.onerror = (ev) => {
-                    alert("Error in DB upgrade to DataFile storage\ndata base \"" +
-                          DiskDrive.storageName + "\":\n" + ev.target.error);
-                };
-
-                if (ev.oldVersion < 1) {
-                    // New data base: create stores for each possible disk module
-                    db.createObjectStore("Module0");
-                    db.createObjectStore("Module1");
-                    db.createObjectStore("Module2");
-                    db.createObjectStore("Module3");
-                    console.log(`DiskDrive data base initialized to version=${ev.newVersion}`);
-                }
-
-                if (ev.newVersion > DiskDrive.storageVersion) {
-                    alert("DiskDrive storage upgrade unsupported IDB version: old=" +
-                          ev.oldVersion + ", new=" + ev.newVersion);
-                    txn.abort();
-                }
-            };
-
-            req.onsuccess = (ev) => {
-                /* Handles a successful IDB open result */
-                const idbError = this.genericIDBError.bind(this);
-
-                // Save the DB object reference globally for later use
-                this.db = ev.target.result;
-                // Set up the generic error handlers
-                this.db.onerror = idbError;
-                this.db.onabort = idbError;
-                resolve(true);
-                console.debug(`DiskDrive data base opened successfully, version=${DiskDrive.storageVersion}`);
-            };
-        });
     }
 
     /**************************************/
@@ -488,8 +415,9 @@ class DiskDrive {
         this.writeAddressBtn.removeEventListener("click", this.boundWriteAddressClick);
         for (let x=0; x<DiskDrive.maxModules; ++x) {
             this.module[x]?.shutDown();
-}
+        }
 
+        this.store = null;              // shut down the IndexedDB data base
         this.window.close();
     }
 
