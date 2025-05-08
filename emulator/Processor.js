@@ -46,6 +46,28 @@ const procStateE4 = 14;
 const procStateE5 = 15;
 
 
+//// DEBUG ONLY ////
+/*******************************
+class MonitoredFF extends FlipFlop {
+
+    constructor(envir, visible, caption) {
+        super(envir, visible);
+        this.caption = caption;
+    }
+
+    get value() {
+        return super.value;
+    }
+
+    set value(value) {
+        console.log(`${this.caption}: set(${value}), was ${this.intVal}`);
+        console.trace();
+        super.value = value;
+    }
+}
+*******************************/
+
+
 class Processor {
 
     // Static class properties
@@ -696,6 +718,17 @@ class Processor {
         this.gateSHIFT_ENTRY =      new FlipFlop(this.envir, true);
         this.gateSHIFT_MODE =       new FlipFlop(this.envir, true);
         this.gateSIG_DIGIT =        new FlipFlop(this.envir, true);
+
+        //// DEBUG ONLY ////
+        /**********************
+        this.gateEZ =               new MonitoredFF(this.envir, true, "EZ");
+        this.gateHP =               new MonitoredFF(this.envir, true, "HP");
+        this.gateFP_HI_PLUS =       new MonitoredFF(this.envir, true, "FP_HI_PLUS");
+        this.gateDIG_FORCE_MODE =   new MonitoredFF(this.envir, true, "DIG_FORCE_MODE");
+        this.gateEXP_OFLO =         new MonitoredFF(this.envir, true, "EXP_OFLO");
+        this.gateEXP_UFLO =         new MonitoredFF(this.envir, true, "EXP_UFLO");
+        this.gateEXP_OFLO_CORR =    new MonitoredFF(this.envir, true, "EXP_OFLO_CORR");
+        **********************/
 
         // Input-Output Gates
         this.gateCHAR_GATE =        new FlipFlop(this.envir, true);
@@ -4229,9 +4262,9 @@ class Processor {
     /**************************************/
     checkFPExponentOfloUflo(op) {
         /* Evaluates the end of an exponent add/subtract operation for overflow
-        or underflow and sets the oflo/uflo gates appropriately. Note that the
-        ILD lies about using FP_HI_PLUS -- it should be HP.
-        See ILD 10.0.00.93.1 */
+        or underflow and sets the oflo/uflo gates appropriately.
+        See ILD 10.0.00.93.1. Note that the ILD lies about using FP_HI_PLUS --
+        it should be HP */
 
         if (this.gateCARRY_OUT.value && !this.gateCOMP.value) {
             if ((op == 3 /*FMUL*/ && this.gateHP.value) ||
@@ -5434,10 +5467,13 @@ class Processor {
                 this.gateHP.value = this.gateFP_HI_PLUS.value;
                 if (this.gateEZ.value || this.gateEXP_OFLO.value || this.gateEXP_UFLO.value) {
                     this.enterFPDigitForce();
+                    if (this.gateEZ.value && (op == 3 /*FMUL*/ || op == 9 /*FDIV*/)) {
+                        this.gateEXP_UFLO.value = 0;    // implied by "F/MUL F/DIV EXIT ZERO" on ILD 10.00.93.1
+                    }
                 } else {
                     if (this.gateHI_ORDER_ZERO.value) {
                         this.enterICycle();     // exit to I-Cycle entry
-                    } else if (op == 3 || op == 9) {
+                    } else if (op == 3 /*FMUL*/ || op == 9 /*FDIV*/) {
                         this.enterFPResultTransmit();
                     } else if (this.gateNORM_SHIFT_RT.value ){
                         this.enterFPShift();
@@ -7414,6 +7450,7 @@ class Processor {
         this.exitAutomatic();
         this.enterManual();
         console.info(`>>CHECK STOP: ${msg}`);
+        console.trace();
     }
 
     /**************************************/
