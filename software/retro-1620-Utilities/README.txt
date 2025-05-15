@@ -44,6 +44,10 @@ Diacritics.html
     characters to represent 1620 flag bits using a number of different
     fonts.
 
+FPTest-Reformatter.wsf
+    Script to reformat the printed results of the software/diagnostics/
+    FPTest.sps diagnostic for easier analysis.
+
 Lamp-Color-Test.html
     HTML/CSS page to explore progression of control panel lamp colors
     from full brightness to off.

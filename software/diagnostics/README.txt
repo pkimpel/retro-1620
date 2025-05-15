@@ -15,6 +15,9 @@ DT0022/
 DT0032/
     IBM diagnostic for the 1443 line printer and interface circuits.
 
+FPTest/
+    Floating-point arithmetic diagnostic written by Dave Babcock. This works by computing floating add, subtract, multiply, and divide for all combinations of 64 "interesting" values, using both retro-1620 "hardware" floating-point instructions and the intrinsic SPS software floating-point library. The result of both implementations are then compared and any differences printed out. See also software/retro-1620-Utilities/FPTest-Reformatter.wsf.
+
 XR01/
     Diagnostic written by Paul Kimpel for index register operations.
 
@@ -28,11 +31,24 @@ CU01-Mod2_General_Op_Codes.cmem
     file was the one Dave Babcock recovered as part of the Computer
     History Museum 1620 Jr. project.
 
+    This version also requires the 1622 card punch to be configured in
+    the system. To run, load the CMEM file and press START. Note that by
+    default, the program does not include the divide tests. To include
+    the divide tests, load the CMEM file, then press INSERT and enter
+    4914004, then press RELEASE/START.
+
 CU01-Mod2_General_Op_Codes.pt
     Standard CU01 diagnostic program paper-tape image file modified by
     Paul Kimpel for the Model 2 as for CU01-Mod2_General_Op_Codes.cmem
     above. The original file came from the DaveW_paper_tapes folder in
     http://bitsavers.org/bits/IBM/1620/1620.zip.
+
+    This version also requires the paper-tape punch to be configured in
+    the system. To run, mount the tape image and load it by pressing the
+    INSERT key on the console and entering 3600024003004900828, then
+    press RELEASE/ START. That is the default entry point, which does
+    not execute the divide tests. To include the divide tests, change
+    the last five digits from 00828 to 14004.
 
 CU03-1311_Indirect_Addressing.cmem
     Standard CU03 diagnostic program CMEM file from the Computer History
@@ -44,12 +60,18 @@ CU03-1311_Indirect_Addressing.cmem
     seek (34 PPPPP x07x1). The original file was the one Dave Babcock
     recovered as part of the Computer History Museum 1620 Jr. project.
 
+    To run, load the CMEM file and press START.
+
 CU03-1311_Indirect_Addressing.pt
     Standard CU03 diagnostic program paper-tape image file modified by
     Paul Kimpel for system with a 1311 disk drive, as for CU01-Mod2_
     General_Op_Codes.cmem above. The original file came from the
     DaveW_paper_tapes folder in
     http://bitsavers.org/bits/IBM/1620/1620.zip.
+
+    To run, mount the tape image and load it by pressing the INSERT key
+    on the console and entering 3600096003004900828, then press RELEASE/
+    START.
 
 FP1620Math.card
     FORTRAN II-D compile deck to run under Monitor I to generate
@@ -62,4 +84,3 @@ FP1620Math.card
 Printer-Overstrike-Test.sps
     SPS assemble deck to run under Monitor I for a simple program to
     test overstrike printing on the 1443 line printer.
-

@@ -1,0 +1,243 @@
+<?XML version="1.0"?>
+<package>
+<job id="FPTest-Reformatter">
+<reference object="Scripting.FileSystemObject" /> 'Microsoft Scripting Runtime TypeLib (for fso)
+<script language="VBScript">
+<![CDATA[
+
+Option Explicit
+'-----------------------------------------------------------------------
+' retro-1620 FPTest-Reformatter.wsf
+' Copyright (c) 2024, Paul Kimpel,
+' Licensed under the MIT License, see
+'       http://www.opensource.org/licenses/mit-license.php
+'-----------------------------------------------------------------------
+' VBScript to reformat the output of Dave Babcock's FPTest.sps diagnostic
+' for easier analysis.
+'
+' Uses Scripting Runtime FileSystemObject.
+' Parameters:
+'   1. Name of the transcription file.
+'-----------------------------------------------------------------------
+' Modification Log.
+' 2024-08-31  P.Kimpel
+'   Original version, cloned from SPS-Xscript-Reformatter.wsf.
+'-----------------------------------------------------------------------
+
+Dim args
+Dim outName
+Dim testName
+Dim fso
+
+'---------------------------------------
+Function FormatSignedDigit(d)
+  Dim f
+
+  Select Case LCase(d)
+    Case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
+      f = " " & d
+    Case "]"
+      f = "-0"
+    Case "j"
+      f = "-1"
+    Case "k"
+      f = "-2"
+    Case "l"
+      f = "-3"
+    Case "m"
+      f = "-4"
+    Case "n"
+      f = "-5"
+    Case "o"
+      f = "-6"
+    Case "p"
+      f = "-7"
+    Case "q"
+      f = "-8"
+    Case "r"
+      f = "-9"
+    Case Else
+      f = "?" & d
+  End Select
+
+  FormatSignedDigit = f
+End Function
+
+'---------------------------------------
+Function ParseFP10(s)
+  Dim text
+  Dim sign
+  Dim digit
+
+  sign = FormatSignedDigit(Mid(s, 8, 1))
+  text = Left(sign, 1) & Right(FormatSignedDigit(Mid(s, 1, 1)), 1) & Mid(s, 2, 6) & Right(sign, 1)
+  sign = FormatSignedDigit(Mid(s, 10, 1))
+  text = text & "e" & Left(sign, 1) & Right(FormatSignedDigit(Mid(s, 9, 1)), 1) & Right(sign, 1)
+  ParseFP10 = text
+End Function
+
+'---------------------------------------
+Function FormatIndicators(s)
+  Dim text
+  Dim digit
+
+  digit = Mid(s, 1, 1)
+  If digit = "]" or digit = "0" Then
+    text = " "
+  Else
+    text = "X"
+  End If
+
+  If Mid(s, 2, 1) = "0" Then
+    text = text & " "
+  Else
+    text = text & "V"
+  End If
+
+  If Mid(s, 3, 1) = "0" Then
+    text = text & " "
+  Else
+    text = text & "P"
+  End If
+
+  If Mid(s, 4, 1) = "0" Then
+    text = text & " "
+  Else
+    text = text & "Z"
+  End If
+
+  FormatIndicators = text
+End Function
+
+
+
+'---------------------------------------
+Sub ReformatTestResults(byVal testName, byVal outName)
+  'Extracts source from an assembler transcription file.
+  'The assembler source is written as card images to a file with the same
+  'name as the transcription file, but modified with a ".sps" extension.
+  Dim outFile
+  Dim line
+  Dim lineNr
+  Dim seq
+  Dim text
+  Dim testFile
+
+  Dim op
+  Dim hwArg
+  Dim hwResult
+  Dim hwIndicators
+  Dim hwi
+  Dim swArg
+  Dim swResult
+  Dim swIndicators
+  Dim swi
+
+  Set outFile = fso.OpenTextFile(outName, ForWriting, True, False)
+  Set testFile = fso.OpenTextfile(testName, ForReading, False, False)
+  lineNr = 0
+
+  Do
+    line = testFile.ReadLine
+    lineNr = lineNr+1
+  Loop Until testFile.AtEndOfStream Or Trim(line) = "X OP Y"
+
+  For seq = 1 To 3
+    line = testFile.ReadLine
+    lineNr = lineNr+1
+  Next
+
+  Do
+    Do While Not testFile.AtEndOfStream And Trim(line) = ""
+      line = testFile.ReadLine
+      lineNr = lineNr+1
+    Loop
+
+    hwArg = ParseFP10(Mid(line, 1, 10))
+    op = Mid(line, 12, 1)
+    swArg = ParseFP10(Mid(line, 14, 10))
+    line = testFile.ReadLine
+    lineNr = lineNr+1
+    hwResult = ParseFP10(Mid(line, 4, 10))
+    hwIndicators = FormatIndicators(Mid(line, 15, 4))
+    line = testFile.ReadLine
+    lineNr = lineNr+1
+    swResult = ParseFP10(Mid(line, 4, 10))
+    swIndicators = FormatIndicators(Mid(line, 15, 4))
+
+    text = hwArg & " " & op & " " & swArg & " : " & hwResult & " [" & hwIndicators & "] : " & _
+                                                    swResult & " [" & swIndicators & "] => ["
+    For seq = 1 to 4
+      hwi = Mid(hwIndicators, seq, 1)
+      swi = Mid(swIndicators, seq, 1)
+      If hwi = swi Then
+        text = text & " "
+      ElseIf hwi = " " Then
+        text = text & swi
+      Else
+        text = text & hwi
+      End If
+    Next
+
+    text = text & "] "
+    If Left(swResult, 9) <> Left(hwResult, 9) Then
+      text = text & " M<>"
+    Else
+      Text = text & "    "
+    End If
+
+    If Right(swResult, 3) <> Right(hwResult, 3) Then
+      text = text & " E<>"
+    Else
+      text = text & "    "
+    End If
+
+    outFile.writeLine text
+    outFile.writeLine " "
+    Do
+      line = testFile.ReadLine
+      lineNr = lineNr+1
+    Loop While Not testFile.AtEndOfStream And Trim(line) = ""
+
+  Loop Until testFile.AtEndOfStream Or Left(line, 6) = "COUNT "
+
+  outFile.Close
+  Set outFile = Nothing
+  testFile.Close
+  Set testFile = Nothing
+End Sub
+
+'---------------------------------------------------------------
+
+Set fso = WScript.CreateObject("Scripting.FileSystemObject")
+
+Set args = WScript.Arguments
+For Each outName In args
+  If Len(testName) = 0 Then
+    testName = Trim(outName)
+  End If
+Next
+
+Set args = Nothing
+If Len(testName) = 0 Then
+  MsgBox "Must supply the name of the FPTest results file."
+  WScript.Quit 9
+Else
+  '-- Main Line --
+  If Not fso.FileExists(testName) Then
+    MsgBox "FPTest results file does not exist: " & vbCrLf & testName
+    WScript.Quit 8
+  Else
+    outName = fso.BuildPath(fso.GetParentFolderName(testName), fso.GetBaseName(testName)) & "-RF.txt"
+    ReformatTestResults testName, outName
+    MsgBox "Reformatted results file created: " & vbCrLf & outName
+    WScript.Quit 0
+  End If
+End If
+
+Set fso = Nothing
+
+]]>
+</script>
+</job>
+</package>

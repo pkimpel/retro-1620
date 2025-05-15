@@ -46,28 +46,6 @@ const procStateE4 = 14;
 const procStateE5 = 15;
 
 
-//// DEBUG ONLY ////
-/*******************************
-class MonitoredFF extends FlipFlop {
-
-    constructor(envir, visible, caption) {
-        super(envir, visible);
-        this.caption = caption;
-    }
-
-    get value() {
-        return super.value;
-    }
-
-    set value(value) {
-        console.log(`${this.caption}: set(${value}), was ${this.intVal}`);
-        console.trace();
-        super.value = value;
-    }
-}
-*******************************/
-
-
 class Processor {
 
     // Static class properties
@@ -718,17 +696,6 @@ class Processor {
         this.gateSHIFT_ENTRY =      new FlipFlop(this.envir, true);
         this.gateSHIFT_MODE =       new FlipFlop(this.envir, true);
         this.gateSIG_DIGIT =        new FlipFlop(this.envir, true);
-
-        //// DEBUG ONLY ////
-        /**********************
-        this.gateEZ =               new MonitoredFF(this.envir, true, "EZ");
-        this.gateHP =               new MonitoredFF(this.envir, true, "HP");
-        this.gateFP_HI_PLUS =       new MonitoredFF(this.envir, true, "FP_HI_PLUS");
-        this.gateDIG_FORCE_MODE =   new MonitoredFF(this.envir, true, "DIG_FORCE_MODE");
-        this.gateEXP_OFLO =         new MonitoredFF(this.envir, true, "EXP_OFLO");
-        this.gateEXP_UFLO =         new MonitoredFF(this.envir, true, "EXP_UFLO");
-        this.gateEXP_OFLO_CORR =    new MonitoredFF(this.envir, true, "EXP_OFLO_CORR");
-        **********************/
 
         // Input-Output Gates
         this.gateCHAR_GATE =        new FlipFlop(this.envir, true);
