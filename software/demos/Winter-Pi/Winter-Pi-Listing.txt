@@ -1,0 +1,207 @@
+     **********************************************************************
+     *                           WINTER-PI                                *
+     **********************************************************************
+     * CALCULATE N DIGITS OF PI BASED ON A SPECIFIED AMOUNT OF MEMORY.
+     * THE TOTAL AMOUNT OF MEMORY (MAX ADDRESS+1) IS SPECIFIED IN LOCATIONS
+     * 00402-00406. THIS MAY BE CHANGED BY AN INSERT OF THE FORM
+     *     1600406L00004900540
+     * WHERE THE L IS A FLAGGED 3 TO SET THE FIELD MARK. THIS WILL USE
+     * THE FIRST 30000 DIGITS OF MEMORY. TO COMPUTE THE NUMBER OF PI DIGITS
+     * THIS WILL GENERATE, USE THE FORMULA (WHERE THE DIVISIONS TRUNCATE)
+     *     (((MEMSIZE - 1500)/9)/14)*4
+     * THUS, 30000 DIGITS OF MEMORY WILL GENERATE 904 PI DIGITS.
+     *
+     * THIS WAS WRITTEN FOR A 1620 MODEL 2, BUT IT SHOULD RUN ON A MODEL 1
+     * WITH AUTOMATIC DIVISION AND INDIRECT INDEXING IF YOU CHANGE THE
+     * BSIA (60) INSTRUCTION AT LABEL -START- TO A NOOP (41).
+     *
+     * BASED ON A C PROGRAM BY DIK WINTER OF CWI, AMSTERDAM AS DISCUSSED IN
+     * HTTPS..//CRYPTO.STANFORD.EDU/PBC/NOTES/PI/CODE.HTML
+     **********************************************************************
+     * 2023-04-15  P.KIMPEL
+     *   ORIGINAL VERSION, FROM RETRO-B5500 (BURROUGHS B5500) VERSION.
+     * 2025-05-31  P.KIMPEL
+     *   UPDATE FOR 9-DIGIT PRECISION AND 60K DIGIT MEMORY.
+     **********************************************************************
+      PROD   DS   20,99,,                  ADDR OF PRODUCT AREA                 00099 00020
+      WORK   DS   20,PROD-20,,             ADDR OF SCRATCH AREA                 00079 00020
+      SCALDG DS   2,4,,                    DECIMAL PLACES IN SCALE FACTOR       00004 00002
+      WORDDG DS   2,SCALDG*2+1,,           DIGITS PER TERM WORD                 00009 00002
+      PGMMEM DS   5,1500,,                 MEMORY REQ FOR PROGRAM CODE          01500 00005
+             DORG 402                                                           00402
+      MEMSZ  DC   5,60000,,                MAX ADDRESS ON SYSTEM                00406 00005
+      WORDBT DC   2,14,,                   BITS REQUIRED FOR SCALE FACTOR       00408 00002
+      DIGITS DC   4,0,,                    DIGITS OF PI TO COMPUTE              00412 00004
+     *
+      A      DC   5,10000,,                INTEGER ARITHMETIC SCALE FACTOR      00417 00005
+      B      DC   5,0,,                    CURRENT INDEX INTO F                 00422 00005
+      C      DC   5,0,,                    CURRENT LAST TERM IN F               00427 00005
+      D      DC   WORDDG,0,,               SCALED F TERM                        00436 00009
+      E      DC   4,0,,                    RESIDUE FROM PRIOR CYCLE             00440 00004
+      FADJ   DC   4,0,,                    FTOP ADDR ADJ EACH CYCLE             00444 00004
+      FLIM   DC   5,0,,                    NR TERMS IN F ARRAY                  00449 00005
+      FLOC   DC   5,0,,                    CURRENT F TERM ADDRESS, F(B)         00454 00005
+      FTOP   DC   5,0,,                    CURRENT ADDR OF STARTING F TERM      00459 00005
+      G      DC   5,0,,                    BASICALLY B*2                        00464 00005
+     *
+      LINECT DC   2,10,,                   LINE COUNTER, 10 GROUPS/LINE         00466 00002
+      MSG1   DAC  14,CALCULATE ****,                                            00469 00014
+      PIDIG  DAS  0,MSG1+26,,                                                   00495 00000
+             DAC  2, @                                                          00497 00002
+      MSG2   DAC  13,DIGITS OF PI@                                              00501 00013
+      FINITO DAC  7,FINITO@                                                     00527 00007
+     *
+      START  60   *+12,9,,                 BSIA..TURN ON INDIRECT ADDRESSING    00540 60 00552 00009
+             MM   WORDBT,WORDDG,10,        COMPUTE F ADDR ADJUSTMENT            00552 13 00408 000-9
+             TF   FADJ,PROD,,              FADJ=FTOP ADJUSTMENT EACH CYCLE      00564 26 00444 00099
+             TF   WORK,MEMSZ,,             LOAD TOTAL SIZE OF MEMORY            00576 26 00079 00406
+             SM   WORK,PGMMEM,,            SUBTRACT MEM REQ FOR PROGRAM         00588 12 00079 -1500
+             LD   PROD,WORK,,              LOAD MEM DIGITS AVAIL AS DIVIDEND    00600 28 00099 00079
+             DM   PROD-4,WORDDG,10,        DIVIDE BY DIGITS PER WORD            00612 19 00095 000-9
+             TF   WORK,PROD-2,,            SAVE QUOTIENT, NR WORDS              00624 26 00079 00097
+             LD   PROD,WORK,,              LOAD NR WORDS AS DIVIDEND            00636 28 00099 00079
+             D    PROD-4,WORDBT,,          DIVIDE BY BITS/WORD                  00648 29 00095 00408
+             TF   WORK,PROD-2,,            SAVE QUOTIENT, DISCARD REMAINDER     00660 26 00079 00097
+             MM   WORK,SCALDG,10,          COMPUTE NUMBER OF PI DIGITS          00672 13 00079 000-4
+             SF   PROD-3,,,                LIMIT PRODUCT TO 4 DIGITS            00684 32 00096 00000
+             TF   DIGITS,PROD,,            SAVE NUMBER OF PI DIGITS             00696 26 00412 00099
+             M    WORK,WORDBT,,            MUL BY BITS/WORD, ACTUAL NR WORDS    00708 23 00079 00408
+             SF   PROD-4,,,                LIMIT PRODUCT TO 5 DIGITS            00720 32 00095 00000
+             TF   FLIM,PROD,,              SAVE ACTUAL NR WORDS IN F            00732 26 00449 00099
+             TF   C,FLIM,,                 INITIALIZE C TO LAST F TERM INDEX    00744 26 00427 00449
+             TF   FTOP,MEMSZ,,             FTOP=SIZE OF MEMORY                  00756 26 00459 00406
+             SM   FTOP,1,10,               FTOP=ADDR OF LAST TERM               00768 12 00459 000-1
+     *
+             RCTY                                                               00780 34 00000 00102
+             RCTY                                                               00792 34 00000 00102
+             TNF  PIDIG,DIGITS,,                                                00804 73 00495 00412
+             WATY MSG1,,,                  PRINT NUMBER OF PI DIGITS            00816 39 00469 00100
+             WATY MSG2,,,                                                       00828 39 00501 00100
+             RCTY                                                               00840 34 00000 00102
+             RCTY                                                               00852 34 00000 00102
+     *
+     * INITIALIZE F ARRAY
+     *
+             TF   B,FLIM,,                 B=MAX F INDEX                        00864 26 00422 00449
+             AM   B,1,10,                  B+=1, CLEAR FLIM+1 TERMS             00876 11 00422 000-1
+             TF   FLOC,FTOP,,              SET ADDR OF LAST F TERM              00888 26 00454 00459
+      INITF  TFM  -FLOC,2000,8,            STORE INITIAL F TERM VALUE           00900 16 0045M 0K000
+             SM   FLOC,WORDDG,10,          STEP TO NEXT TERM                    00912 12 00454 000-9
+             SM   B,1,10,                  DECREMENT B                          00924 12 00422 000-1
+             BNZ  INITF,,,                 LOOP UNTIL DONE                      00936 47 00900 01200
+     *
+     * OUTER LOOP - INITIALIZE NEXT SET OF TERMS TO GENERATE PI DIGITS
+     *
+      L1     TF   G,C,,                    SET G TO CURRENT LAST TERM INDEX     00948 26 00464 00427
+             A    G,C,,                    G = C*2                              00960 21 00464 00427
+             BZ   DONE,,,                  IF G=C=0, WE ARE DONE                00972 46 01392 01200
+     *
+             S    D,D,,                    D=0, RESIDUE FOR THIS CYCLE          00984 22 00436 00436
+             TF   B,C,,                    B=C, TERM INDEX FOR THIS CYCLE       00996 26 00422 00427
+             TF   FLOC,FTOP,,              INITIALIZE FLOC TO LAST TERM ADDR    01008 26 00454 00459
+     *
+     * INNER LOOP - PROCESS NEXT SET OF TERMS
+     *
+      L2     M    -FLOC,A,,                F(B)*A, SHIFT LEFT 4 DIGITS          01020 23 0045M 00417
+             SF   PROD-WORDDG+1,,,         LIMIT PRODUCT TO WORDDG DIGITS       01032 32 00091 00000
+             A    D,PROD,,                 D += F(B)*A                          01044 21 00436 00099
+             SM   G,1,10,                  --G                                  01056 12 00464 000-1
+             LD   PROD,D,,                 LOAD D AS DIVIDEND                   01068 28 00099 00436
+             D    PROD-WORDDG+1,G,,        COMPUTE D/G                          01080 29 00091 00464
+             TF   -FLOC,PROD,,             SAVE D MOD G IN F TERM               01092 26 0045M 00099
+             TF   D,PROD-5,,               SAVE D/G IN D                        01104 26 00436 00094
+             SM   G,1,10,                  --G (AGAIN)                          01116 12 00464 000-1
+             SM   B,1,10,                  --B                                  01128 12 00422 000-1
+             BZ   ENDL2,,,                 IF B=0, JUMP OUT OF INNER LOOP       01140 46 01212 01200
+             SM   FLOC,WORDDG,10,          ELSE DECREMENT FLOC TO MATCH B       01152 12 00454 000-9
+             M    D,B,,                    COMPUTE D*B                          01164 23 00436 00422
+             SF   PROD-WORDDG+1,,,         LIMIT PRODUCT TO WORDDG DIGITS       01176 32 00091 00000
+             TF   D,PROD,,                 D = D*B                              01188 26 00436 00099
+             B    L2,,,                    REPEAT INNER LOOP FOR NEXT TERM      01200 49 01020 00000
+     *
+      ENDL2  LD   PROD,D,,                 LOAD D AS DIVIDEND                   01212 28 00099 00436
+             D    PROD-WORDDG+1,A,,        DIVIDE BY 10000                      01224 29 00091 00417
+             SF   PROD-8,,,                LIMIT QUOTIENT TO 4 DIGITS           01236 32 00091 00000
+             A    E,PROD-5,,               E += D/A (REMAINDER USE BELOW)       01248 21 00440 00094
+             TNF  PIDIG,E,,                MOVE 4 DIGITS TO OUTPUT              01260 73 00495 00440
+             WATY PIDIG-6,,,               PRINT 4 DIGITS OF PI                 01272 39 00489 00100
+             SM   LINECT,1,10,             --LINECT                             01284 12 00466 000-1
+             BNZ  *+36,,,                  IF NON-ZERO, CONTINUE ON SAME LINE   01296 47 01332 01200
+             RCTY ,,,                      ELSE, START NEW LINE                 01308 34 00000 00102
+             TFM  LINECT,10,10,            RESET LINE COUNTER                   01320 16 00466 000J0
+     *
+             S    C,WORDBT,,               DECREMENT C BY NR TERMS COMPLETED    01332 22 00427 00408
+             S    FTOP,FADJ,,              DECREMENT FTOP ADDR ACCORDINGLY      01344 22 00459 00444
+             SF   PROD-3,,,                LIMIT REMAINDER TO 4 DIGITS          01356 32 00096 00000
+             TF   E,PROD,,                 E = D MOD A                          01368 26 00440 00099
+             B    L1,,,                    LOOP TO NEXT SET OF TERMS            01380 49 00948 00000
+     *
+      DONE   RCTY                                                               01392 34 00000 00102
+             RCTY                                                               01404 34 00000 00102
+             WATY FINITO,,,                                                     01416 39 00527 00100
+             H    99999,77777,,                                                 01428 48 99999 77777
+             DEND START                                                         00540
+
+
+SPS PROCESSOR  FOR 1620/1710 CARD I/O SYSTEM,DATED 1/1/1962
+
+END OF PASSI
+END OF PASSII
+00099   PROD    00079   WORK    00004 *SCALDG   00009 *WORDDG   01500 *PGMMEM
+00406   MEMSZ   00408 *WORDBT   00412 *DIGITS   00417   A       00422   B
+00427   C       00436   D       00440   E       00444   FADJ    00449   FLIM
+00454   FLOC    00459   FTOP    00464   G       00466 *LINECT   00469   MSG1
+00495   PIDIG   00501   MSG2    00527 *FINITO   00540   START   00900   INITF
+00948   L1      01020   L2      01212   ENDL2   01392   DONE
+
+CALCULATE 1856 DIGITS OF PI
+
+3141 5926 5358 9793 2384 6264 3383 2795 0288 4197
+1693 9937 5105 8209 7494 4592 3078 1640 6286 2089
+9862 8034 8253 4211 7067 9821 4808 6513 2823 0664
+7093 8446 0955 0582 2317 2535 9408 1284 8111 7450
+2841 0270 1938 5211 0555 9644 6229 4895 4930 3819
+6442 8810 9756 6593 3446 1284 7564 8233 7867 8316
+5271 2019 0914 5648 5669 2346 0348 6104 5432 6648
+2133 9360 7260 2491 4127 3724 5870 0660 6315 5881
+7488 1520 9209 6282 9254 0917 1536 4367 8925 9036
+0011 3305 3054 8820 4665 2138 4146 9519 4151 1609
+4330 5727 0365 7595 9195 3092 1861 1738 1932 6117
+9310 5118 5480 7446 2379 9627 4956 7351 8857 5272
+4891 2279 3818 3011 9491 2983 3673 3624 4065 6643
+0860 2139 4946 3952 2473 7190 7021 7986 0943 7027
+7053 9217 1762 9317 6752 3846 7481 8467 6694 0513
+2000 5681 2714 5263 5608 2778 5771 3427 5778 9609
+1736 3717 8721 4684 4090 1224 9534 3014 6549 5853
+7105 0792 2796 8925 8923 5420 1995 6112 1290 2196
+0864 0344 1815 9813 6297 7477 1309 9605 1870 7211
+3499 9999 8372 9780 4995 1059 7317 3281 6096 3185
+9502 4459 4553 4690 8302 6425 2230 8253 3446 8503
+5261 9311 8817 1010 0031 3783 8752 8865 8753 3208
+3814 2061 7177 6691 4730 3598 2534 9042 8755 4687
+3115 9562 8638 8235 3787 5937 5195 7781 8577 8053
+2171 2268 0661 3001 9278 7661 1195 9092 1642 0198
+9380 9525 7201 0654 8586 3278 8659 3615 3381 8279
+6823 0301 9520 3530 1852 9689 9577 3622 5994 1389
+1249 7217 7528 3479 1315 1557 4857 2424 5415 0695
+9508 2953 3116 8617 2785 5889 0750 9838 1754 6374
+6493 9319 2550 6040 0927 7016 7113 9009 8488 2401
+2858 3616 0356 3707 6601 0471 0181 9429 5559 6198
+9467 6783 7449 4482 5537 9774 7268 4710 4047 5346
+4620 8046 6842 5906 9491 2933 1367 7028 9891 5210
+4752 1620 5696 6024 0580 3815 0193 5112 5338 2430
+0355 8764 0247 4964 7326 3914 1992 7260 4269 9227
+9678 2354 7816 3600 9341 7216 4121 9924 5863 1503
+0286 1829 7455 5706 7498 3850 5494 5885 8692 6995
+6909 2721 0797 5093 0295 5321 1653 4498 7202 7559
+6023 6480 6654 9911 9881 8347 9775 3566 3698 0742
+6542 5278 6255 1818 4175 7467 2890 9777 7279 3800
+0816 4706 0016 1452 4919 2173 2172 1477 2350 1414
+4197 3568 5481 6136 1157 3525 5213 3475 7418 4946
+8438 5233 2390 7394 1433 3454 7762 4168 6251 8983
+5694 8556 2099 2192 2218 4272 5502 5425 6887 6717
+9049 4601 6534 6680 4988 6272 3279 1786 0857 8438
+3827 9679 7668 1454 1009 5388 3786 3609 5068 0064
+2251 2520 5117 3929
+
+FINITO

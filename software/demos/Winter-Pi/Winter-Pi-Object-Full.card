@@ -8,278 +8,306 @@
                                                                            90007
      * CALCULATE N DIGITS OF PI BASED ON A SPECIFIED AMOUNT OF MEMORY.     00008
                                                                            90009
-     * BASED ON A C PROGRAM BY DIK WINTER OF CWI, AMSTERDAM AS DISCUSSED IN00010
+     * THE TOTAL AMOUNT OF MEMORY (MAX ADDRESS+1) IS SPECIFIED IN LOCATIONS00010
                                                                            90011
-     * HTTPS..//CRYPTO.STANFORD.EDU/PBC/NOTES/PI/CODE.HTML                 00012
+     * 00402-00406. THIS MAY BE CHANGED BY AN INSERT OF THE FORM           00012
                                                                            90013
-     **********************************************************************00014
+     *     1600406L00004900540                                             00014
                                                                            90015
-     * 2023-04-15  P.KIMPEL                                                00016
+     * WHERE THE L IS A FLAGGED 3 TO SET THE FIELD MARK. THIS WILL USE     00016
                                                                            90017
-     *   ORIGINAL VERSION, FROM RETRO-B5500 (BURROUGHS B5500) VERSION.     00018
+     * THE FIRST 30000 DIGITS OF MEMORY. TO COMPUTE THE NUMBER OF PI DIGITS00018
                                                                            90019
-     **********************************************************************00020
+     * THIS WILL GENERATE, USE THE FORMULA (WHERE THE DIVISIONS TRUNCATE)  00020
                                                                            90021
-     PROD  DS  20,99,,                  ADDR OF PRODUCT AREA               00022
-0000000099  00020                                                          90023
-     WORK  DS  20,PROD-20,,             ADDR OF SCRATCH AREA               00024
-0000000079  00020                                                          90025
-           DORG402                                                         00026
-0000000402                                                                 90027
-     MAXADRDC  5,19999,,                MAX ADDRESS ON SYSTEM              00028
-0000000406  00005                                                          90029
-00000J9999|                                                   ]6]0402]0407 ]0030
-     MEMSZ DC  5,18000,,                DIGITS OF MEMORY AVAILABLE         00031
-0000000411  00005                                                          90032
-00000J8000|                                                   ]6]0407]0412 ]0033
-     SCALDGDC  2,4,,                    DECIMAL PLACES IN SCALE FACTOR     00034
-0000000413  00002                                                          90035
-00000]4|                                                      ]6]0412]0414 ]0036
-     WORDSZDC  2,8,,                    DIGITS PER TERM WORD               00037
-0000000415  00002                                                          90038
-00000]8|                                                      ]6]0414]0416 ]0039
-     WORDBTDC  2,14,,                   BITS REQUIRED FOR SCALE FACTOR     00040
-0000000417  00002                                                          90041
-00000J4|                                                      ]6]0416]0418 ]0042
-     DIGITSDC  4,0,,                    DIGITS OF PI TO COMPUTE            00043
-0000000421  00004                                                          90044
-00000]000|                                                    ]6]0418]0422 ]0045
-     ZERO8 DC  8,0,,                    CONSTANT 8-DIGIT ZERO              00046
-0000000429  00008                                                          90047
-00000]0000000|                                                ]6]0422]0430 ]0048
-     *                                                                     00049
-                                                                           90050
-     A     DC  5,10000,,                INTEGER ARITHMETIC SCALE FACTOR    00051
-0000000434  00005                                                          90052
-00000J0000|                                                   ]6]0430]0435 ]0053
-     B     DC  4,0,,                    CURRENT INDEX INTO F               00054
-0000000438  00004                                                          90055
-00000]000|                                                    ]6]0435]0439 ]0056
-     C     DC  4,0,,                    CURRENT LAST TERM IN F             00057
-0000000442  00004                                                          90058
-00000]000|                                                    ]6]0439]0443 ]0059
-     D     DC  8,0,,                    SCALED F TERM                      00060
-0000000450  00008                                                          90061
-00000]0000000|                                                ]6]0443]0451 ]0062
-     E     DC  4,0,,                    RESIDUE FROM PRIOR CYCLE           00063
-0000000454  00004                                                          90064
-00000]000|                                                    ]6]0451]0455 ]0065
-     FADJ  DC  4,0,,                    FTOP ADDR ADJ EACH CYCLE (8*14)    00066
-0000000458  00004                                                          90067
-00000]000|                                                    ]6]0455]0459 ]0068
-     FLIM  DC  4,0,,                    NR TERMS IN F ARRAY                00069
-0000000462  00004                                                          90070
-00000]000|                                                    ]6]0459]0463 ]0071
-     FLOC  DC  5,0,,                    CURRENT F TERM ADDRESS, F(B)       00072
-0000000467  00005                                                          90073
-00000]0000|                                                   ]6]0463]0468 ]0074
-     FTOP  DC  5,0,,                    CURRENT ADDR OF STARTING F TERM    00075
-0000000472  00005                                                          90076
-00000]0000|                                                   ]6]0468]0473 ]0077
-     G     DC  4,0,,                    BASICALLY B*2                      00078
-0000000476  00004                                                          90079
-00000]000|                                                    ]6]0473]0477 ]0080
-     *                                                                     00081
-                                                                           90082
-     LINECTDC  2,10,,                   LINE COUNTER, 10 GROUPS/LINE       00083
-0000000478  00002                                                          90084
-00000J0|                                                      ]6]0477]0479 ]0085
-     MSG1  DAC 14,CALCULATE ****,                                          00086
-0000000481  00014                                                          90087
-00000M341534364534163450014141414|                            ]6]0480]0508 ]0088
-     PIDIG DAS 0,MSG1+26,,                                                 00089
-0000000507  00000                                                          90090
-           DAC 2, @                                                        00091
-0000000509  00002                                                          90092
-00000]00|                                                     ]6]0508]0512 ]0093
-     MSG2  DAC 13,DIGITS OF PI@                                            00094
-0000000513  00013                                                          90095
-00000M449474963620056460057490|                               ]6]0512]0538 ]0096
-     FINITODAC 7,FINITO@                                                   00097
-0000000539  00007                                                          90098
-00000M649554963560|                                           ]6]0538]0552 ]0099
-     *                                                                     00100
-                                                                           90101
-     START 60  *+12,9,,                 BSIA..TURN ON INDIRECT ADDRESSING  00102
-0000000552600056400009|                                       J1]0552]0564 R0103
-           TF  WORDSZ,SCALDG,,                                             00104
-0000000564260041500413|                                       J1]0564]0576 R0105
-           A   WORDSZ,SCALDG,,          WORDSZ=SCALEDG*2                   00106
-0000000576210041500413|                                       J1]0576]0588 R0107
-           M   WORDSZ,WORDBT,,          COMPUTE F ADDR ADJUSTMENT          00108
-0000000588230041500417|                                       J1]0588]0600 R0109
-           TF  FADJ,PROD,,              FADJ=FTOP ADJUSTMENT EACH CYCLE    00110
-0000000600260045800099|                                       J1]0600]0612 R0111
-           LD  PROD,MEMSZ,,             LOAD MEM DIGITS AVAIL AS DIVIDEND  00112
-0000000612280009900411|                                       J1]0612]0624 R0113
-           D   PROD-4,WORDSZ,,          DIVIDE BY DIGITS PER WORD          00114
-0000000624290009500415|                                       J1]0624]0636 R0115
-           TF  WORK,PROD-2,,            SAVE QUOTIENT, NR WORDS            00116
-0000000636260007900097|                                       J1]0636]0648 R0117
-           LD  PROD,WORK,,              LOAD NR WORDS AS DIVIDEND          00118
-0000000648280009900079|                                       J1]0648]0660 R0119
-           D   PROD-4,WORDBT,,          DIVIDE BY BITS/WORD                00120
-0000000660290009500417|                                       J1]0660]0672 R0121
-           TF  WORK,PROD-2,,            SAVE QUOTIENT, DISCARD REMAINDER   00122
-0000000672260007900097|                                       J1]0672]0684 R0123
-           M   WORK,SCALDG,,            COMPUTE NUMBER OF PI DIGITS        00124
-0000000684230007900413|                                       J1]0684]0696 R0125
-           SF  PROD-3,,,                SET PRODUCT LENGTH TO 4 DIGITS     00126
-0000000696320009600000|                                       J1]0696]0708 R0127
-           TF  DIGITS,PROD,,            SAVE NUMBER OF PI DIGITS           00128
-0000000708260042100099|                                       J1]0708]0720 R0129
-           M   WORK,WORDBT,,            MUL BY BITS/WORD, ACTUAL NR WORDS  00130
-0000000720230007900417|                                       J1]0720]0732 R0131
-           SF  PROD-3,,,                SET PRODUCT LENGTH TO 4 DIGITS     00132
-0000000732320009600000|                                       J1]0732]0744 R0133
-           TF  FLIM,PROD,,              SAVE ACTUAL NR WORDS IN F          00134
-0000000744260046200099|                                       J1]0744]0756 R0135
-           TF  C,FLIM,,                 INITIALIZE C TO LAST F TERM INDEX  00136
-0000000756260044200462|                                       J1]0756]0768 R0137
-           TF  FTOP,MAXADR,,            FTOP=ADDR OF LAST TERM             00138
-0000000768260047200406|                                       J1]0768]0780 R0139
-     *                                                                     00140
-                                                                           90141
-           RCTY                                                            00142
-0000000780340000000102|                                       J1]0780]0792 R0143
-           RCTY                                                            00144
-0000000792340000000102|                                       J1]0792]0804 R0145
-           TNF PIDIG,DIGITS,,                                              00146
-0000000804730050700421|                                       J1]0804]0816 R0147
-           WATYMSG1,,,                  PRINT NUMBER OF PI DIGITS          00148
-0000000816390048100100|                                       J1]0816]0828 R0149
-           WATYMSG2,,,                                                     00150
-0000000828390051300100|                                       J1]0828]0840 R0151
-           RCTY                                                            00152
-0000000840340000000102|                                       J1]0840]0852 R0153
-           RCTY                                                            00154
-0000000852340000000102|                                       J1]0852]0864 R0155
-     *                                                                     00156
-                                                                           90157
-     * INITIALIZE F                                                        00158
-                                                                           90159
-     *                                                                     00160
-                                                                           90161
-           TF  B,FLIM,,                 B=MAX F INDEX                      00162
-0000000864260043800462|                                       J1]0864]0876 R0163
-           AM  B,1,10,                  B+=1, CLEAR FLIM+1 TERMS           00164
-00000008761100438000]1|                                       J1]0876]0888 R0165
-           TF  FLOC,FTOP,,              SET ADDR OF LAST F TERM            00166
-0000000888260046700472|                                       J1]0888]0900 R0167
-     INITF TFM -FLOC,2000,8,            STORE INITIAL F TERM VALUE         00168
-0000000900160046P0K000|                                       J1]0900]0912 R0169
-           S   FLOC,WORDSZ,,            STEP TO NEXT TERM                  00170
-0000000912220046700415|                                       J1]0912]0924 R0171
-           SM  B,1,10,                  DECREMENT B                        00172
-00000009241200438000]1|                                       J1]0924]0936 R0173
-           BNZ INITF,,,                 LOOP UNTIL DONE                    00174
-0000000936470090001200|                                       J1]0936]0948 R0175
-     *                                                                     00176
-                                                                           90177
-     * OUTER LOOP - INITIALIZE NEXT SET OF TERMS TO GENERATE PI DIGITS     00178
-                                                                           90179
-     *                                                                     00180
-                                                                           90181
-     L1    TF  G,C,,                    SET G TO CURRENT LAST TERM INDEX   00182
-0000000948260047600442|                                       J1]0948]0960 R0183
-           A   G,C,,                    G = C*2                            00184
-0000000960210047600442|                                       J1]0960]0972 R0185
-           BZ  DONE,,,                  IF G=C=0, WE ARE DONE              00186
-0000000972460138001200|                                       J1]0972]0984 R0187
-     *                                                                     00188
-                                                                           90189
-           TF  D,ZERO8,,                D=0, RESIDUE FOR THIS CYCLE        00190
-0000000984260045000429|                                       J1]0984]0996 R0191
-           TF  B,C,,                    B=C, TERM INDEX FOR THIS CYCLE     00192
-0000000996260043800442|                                       J1]0996]1008 R0193
-           TF  FLOC,FTOP,,              INITIALIZE FLOC TO LAST TERM ADDR  00194
-0000001008260046700472|                                       J1]1008]1020 R0195
-     *                                                                     00196
-                                                                           90197
-     * INNER LOOP - PROCESS NEXT SET OF TERMS                              00198
-                                                                           90199
-     *                                                                     00200
-                                                                           90201
-     L2    M   -FLOC,A,,                F(B)*A, SHIFT LEFT 4 DIGITS        00202
-0000001020230046P00434|                                       J1]1020]1032 R0203
-           SF  PROD-7,,,                LIMIT SIZE OF PRODUCT TO 8 DIGITS  00204
-0000001032320009200000|                                       J1]1032]1044 R0205
-           A   D,PROD,,                 D += F(B)*A                        00206
-0000001044210045000099|                                       J1]1044]1056 R0207
-           SM  G,1,10,                  --G                                00208
-00000010561200476000]1|                                       J1]1056]1068 R0209
-           LD  PROD,D,,                 LOAD D AS DIVIDEND                 00210
-0000001068280009900450|                                       J1]1068]1080 R0211
-           D   PROD-7,G,,               COMPUTE D/G                        00212
-0000001080290009200476|                                       J1]1080]1092 R0213
-           TF  -FLOC,PROD,,             SAVE D MOD G IN F TERM             00214
-0000001092260046P00099|                                       J1]1092]1104 R0215
-           TF  D,PROD-4,,               SAVE D/G IN D                      00216
-0000001104260045000095|                                       J1]1104]1116 R0217
-           SM  G,1,10,                  --G (AGAIN)                        00218
-00000011161200476000]1|                                       J1]1116]1128 R0219
-           SM  B,1,10,                  --B                                00220
-00000011281200438000]1|                                       J1]1128]1140 R0221
-           BZ  ENDL2,,,                 IF B=0, JUMP OUT OF INNER LOOP     00222
-0000001140460121201200|                                       J1]1140]1152 R0223
-           S   FLOC,WORDSZ,,            ELSE DECREMENT FLOC TO MATCH B     00224
-0000001152220046700415|                                       J1]1152]1164 R0225
-           M   D,B,,                    COMPUTE D*B                        00226
-0000001164230045000438|                                       J1]1164]1176 R0227
-           SF  PROD-7,,,                LIMIT SIZE OF PRODUCT TO 8 DIGITS  00228
-0000001176320009200000|                                       J1]1176]1188 R0229
-           TF  D,PROD,,                 D = D*B                            00230
-0000001188260045000099|                                       J1]1188]1200 R0231
-           B   L2,,,                    REPEAT INNER LOOP FOR NEXT TERM    00232
-0000001200490102000000|                                       J1]1200]1212 R0233
-     *                                                                     00234
-                                                                           90235
-     ENDL2 TF  PROD,D,,                 SET D AS DIVIDEND                  00236
-0000001212260009900450|                                       J1]1212]1224 R0237
-           D   PROD-7,A,,               DIVIDE BY 10000                    00238
-0000001224290009200434|                                       J1]1224]1236 R0239
-           A   E,PROD-5,,               E += D/A (REMAINDER USE BELOW)     00240
-0000001236210045400094|                                       J1]1236]1248 R0241
-           TNF PIDIG,E,,                MOVE 4 DIGITS TO OUTPUT            00242
-0000001248730050700454|                                       J1]1248]1260 R0243
-           WATYPIDIG-6,,,               PRINT 4 DIGITS OF PI               00244
-0000001260390050100100|                                       J1]1260]1272 R0245
-           SM  LINECT,1,10,             --LINECT                           00246
-00000012721200478000]1|                                       J1]1272]1284 R0247
-           BNZ *+36,,,                  IF NON-ZERO, CONTINUE ON SAME LINE 00248
-0000001284470132001200|                                       J1]1284]1296 R0249
-           RCTY,,,                      ELSE, START NEW LINE               00250
-0000001296340000000102|                                       J1]1296]1308 R0251
-           TFM LINECT,10,10,            RESET LINE COUNTER                 00252
-00000013081600478000J0|                                       J1]1308]1320 R0253
-     *                                                                     00254
-                                                                           90255
-           S   C,WORDBT,,               DECREMENT C BY NR TERMS COMPLETED  00256
-0000001320220044200417|                                       J1]1320]1332 R0257
-           S   FTOP,FADJ,,              DECREMENT FTOP ADDR ACCORDINGLY    00258
-0000001332220047200458|                                       J1]1332]1344 R0259
-           SF  PROD-3,,,                LIMIT SIZE OF REMAINDER TO 4 DIGITS00260
-0000001344320009600000|                                       J1]1344]1356 R0261
-           TF  E,PROD,,                 E = D MOD A                        00262
-0000001356260045400099|                                       J1]1356]1368 R0263
-           B   L1,,,                    LOOP TO NEXT SET OF TERMS          00264
-0000001368490094800000|                                       J1]1368]1380 R0265
-     *                                                                     00266
-                                                                           90267
-     DONE  RCTY                                                            00268
-0000001380340000000102|                                       J1]1380]1392 R0269
-           RCTY                                                            00270
-0000001392340000000102|                                       J1]1392]1404 R0271
-           WATYFINITO,,,                                                   00272
-0000001404390053900100|                                       J1]1404]1416 R0273
-           H   99999,77777,,                                               00274
-0000001416489999977777|                                       J1]1416]1428 R0275
-           DENDSTART                                                       00276
-0000000552                                                                 90277
-00000  L600000005004900000|1205723]000133057230000049057120000]8]0096]0115 ]0278
-360010000500360017200500360024400500360031600500360000000500               ]0279
-000000000000102030400020406080003060902100408021610050015102006021814200|  ]0280
-704112820080614223009081726300000000005060708090012141618151811242720242|  ]0281
-822363520353045403632484455324946536048465462754453627180123456789123456|  ]0282
-789]23456789]J3456789]JK456789]JKL56789]JKLM6789]JKLMN789]JKLMNO89]JKLMN|  ]0283
-M8000000000049]0552OP9]JKLMNOPQ|    L10038800019M90000000000M90003600000   ]0284
+     *     (((MEMSIZE - 1500)/9)/14)*4                                     00022
+                                                                           90023
+     * THUS, 30000 DIGITS OF MEMORY WILL GENERATE 904 PI DIGITS.           00024
+                                                                           90025
+     *                                                                     00026
+                                                                           90027
+     * THIS WAS WRITTEN FOR A 1620 MODEL 2, BUT IT SHOULD RUN ON A MODEL 1 00028
+                                                                           90029
+     * WITH AUTOMATIC DIVISION AND INDIRECT INDEXING IF YOU CHANGE THE     00030
+                                                                           90031
+     * BSIA (60) INSTRUCTION AT LABEL -START- TO A NOOP (41).              00032
+                                                                           90033
+     *                                                                     00034
+                                                                           90035
+     * BASED ON A C PROGRAM BY DIK WINTER OF CWI, AMSTERDAM AS DISCUSSED IN00036
+                                                                           90037
+     * HTTPS..//CRYPTO.STANFORD.EDU/PBC/NOTES/PI/CODE.HTML                 00038
+                                                                           90039
+     **********************************************************************00040
+                                                                           90041
+     * 2023-04-15  P.KIMPEL                                                00042
+                                                                           90043
+     *   ORIGINAL VERSION, FROM RETRO-B5500 (BURROUGHS B5500) VERSION.     00044
+                                                                           90045
+     * 2025-05-31  P.KIMPEL                                                00046
+                                                                           90047
+     *   UPDATE FOR 9-DIGIT PRECISION AND 60K DIGIT MEMORY.                00048
+                                                                           90049
+     **********************************************************************00050
+                                                                           90051
+     PROD  DS  20,99,,                  ADDR OF PRODUCT AREA               00052
+0000000099  00020                                                          90053
+     WORK  DS  20,PROD-20,,             ADDR OF SCRATCH AREA               00054
+0000000079  00020                                                          90055
+     SCALDGDS  2,4,,                    DECIMAL PLACES IN SCALE FACTOR     00056
+0000000004  00002                                                          90057
+     WORDDGDS  2,SCALDG*2+1,,           DIGITS PER TERM WORD               00058
+0000000009  00002                                                          90059
+     PGMMEMDS  5,1500,,                 MEMORY REQ FOR PROGRAM CODE        00060
+0000001500  00005                                                          90061
+           DORG402                                                         00062
+0000000402                                                                 90063
+     MEMSZ DC  5,60000,,                MAX ADDRESS ON SYSTEM              00064
+0000000406  00005                                                          90065
+00000O0000|                                                   ]6]0402]0407 ]0066
+     WORDBTDC  2,14,,                   BITS REQUIRED FOR SCALE FACTOR     00067
+0000000408  00002                                                          90068
+00000J4|                                                      ]6]0407]0409 ]0069
+     DIGITSDC  4,0,,                    DIGITS OF PI TO COMPUTE            00070
+0000000412  00004                                                          90071
+00000]000|                                                    ]6]0409]0413 ]0072
+     *                                                                     00073
+                                                                           90074
+     A     DC  5,10000,,                INTEGER ARITHMETIC SCALE FACTOR    00075
+0000000417  00005                                                          90076
+00000J0000|                                                   ]6]0413]0418 ]0077
+     B     DC  5,0,,                    CURRENT INDEX INTO F               00078
+0000000422  00005                                                          90079
+00000]0000|                                                   ]6]0418]0423 ]0080
+     C     DC  5,0,,                    CURRENT LAST TERM IN F             00081
+0000000427  00005                                                          90082
+00000]0000|                                                   ]6]0423]0428 ]0083
+     D     DC  WORDDG,0,,               SCALED F TERM                      00084
+0000000436  00009                                                          90085
+00000]00000000|                                               ]6]0428]0437 ]0086
+     E     DC  4,0,,                    RESIDUE FROM PRIOR CYCLE           00087
+0000000440  00004                                                          90088
+00000]000|                                                    ]6]0437]0441 ]0089
+     FADJ  DC  4,0,,                    FTOP ADDR ADJ EACH CYCLE           00090
+0000000444  00004                                                          90091
+00000]000|                                                    ]6]0441]0445 ]0092
+     FLIM  DC  5,0,,                    NR TERMS IN F ARRAY                00093
+0000000449  00005                                                          90094
+00000]0000|                                                   ]6]0445]0450 ]0095
+     FLOC  DC  5,0,,                    CURRENT F TERM ADDRESS, F(B)       00096
+0000000454  00005                                                          90097
+00000]0000|                                                   ]6]0450]0455 ]0098
+     FTOP  DC  5,0,,                    CURRENT ADDR OF STARTING F TERM    00099
+0000000459  00005                                                          90100
+00000]0000|                                                   ]6]0455]0460 ]0101
+     G     DC  5,0,,                    BASICALLY B*2                      00102
+0000000464  00005                                                          90103
+00000]0000|                                                   ]6]0460]0465 ]0104
+     *                                                                     00105
+                                                                           90106
+     LINECTDC  2,10,,                   LINE COUNTER, 10 GROUPS/LINE       00107
+0000000466  00002                                                          90108
+00000J0|                                                      ]6]0465]0467 ]0109
+     MSG1  DAC 14,CALCULATE ****,                                          00110
+0000000469  00014                                                          90111
+00000M341534364534163450014141414|                            ]6]0468]0496 ]0112
+     PIDIG DAS 0,MSG1+26,,                                                 00113
+0000000495  00000                                                          90114
+           DAC 2, @                                                        00115
+0000000497  00002                                                          90116
+00000]00|                                                     ]6]0496]0500 ]0117
+     MSG2  DAC 13,DIGITS OF PI@                                            00118
+0000000501  00013                                                          90119
+00000M449474963620056460057490|                               ]6]0500]0526 ]0120
+     FINITODAC 7,FINITO@                                                   00121
+0000000527  00007                                                          90122
+00000M649554963560|                                           ]6]0526]0540 ]0123
+     *                                                                     00124
+                                                                           90125
+     START 60  *+12,9,,                 BSIA..TURN ON INDIRECT ADDRESSING  00126
+0000000540600055200009|                                       J1]0540]0552 R0127
+           MM  WORDBT,WORDDG,10,        COMPUTE F ADDR ADJUSTMENT          00128
+00000005521300408000]9|                                       J1]0552]0564 R0129
+           TF  FADJ,PROD,,              FADJ=FTOP ADJUSTMENT EACH CYCLE    00130
+0000000564260044400099|                                       J1]0564]0576 R0131
+           TF  WORK,MEMSZ,,             LOAD TOTAL SIZE OF MEMORY          00132
+0000000576260007900406|                                       J1]0576]0588 R0133
+           SM  WORK,PGMMEM,,            SUBTRACT MEM REQ FOR PROGRAM       00134
+00000005881200079]1500|                                       J1]0588]0600 R0135
+           LD  PROD,WORK,,              LOAD MEM DIGITS AVAIL AS DIVIDEND  00136
+0000000600280009900079|                                       J1]0600]0612 R0137
+           DM  PROD-4,WORDDG,10,        DIVIDE BY DIGITS PER WORD          00138
+00000006121900095000]9|                                       J1]0612]0624 R0139
+           TF  WORK,PROD-2,,            SAVE QUOTIENT, NR WORDS            00140
+0000000624260007900097|                                       J1]0624]0636 R0141
+           LD  PROD,WORK,,              LOAD NR WORDS AS DIVIDEND          00142
+0000000636280009900079|                                       J1]0636]0648 R0143
+           D   PROD-4,WORDBT,,          DIVIDE BY BITS/WORD                00144
+0000000648290009500408|                                       J1]0648]0660 R0145
+           TF  WORK,PROD-2,,            SAVE QUOTIENT, DISCARD REMAINDER   00146
+0000000660260007900097|                                       J1]0660]0672 R0147
+           MM  WORK,SCALDG,10,          COMPUTE NUMBER OF PI DIGITS        00148
+00000006721300079000]4|                                       J1]0672]0684 R0149
+           SF  PROD-3,,,                LIMIT PRODUCT TO 4 DIGITS          00150
+0000000684320009600000|                                       J1]0684]0696 R0151
+           TF  DIGITS,PROD,,            SAVE NUMBER OF PI DIGITS           00152
+0000000696260041200099|                                       J1]0696]0708 R0153
+           M   WORK,WORDBT,,            MUL BY BITS/WORD, ACTUAL NR WORDS  00154
+0000000708230007900408|                                       J1]0708]0720 R0155
+           SF  PROD-4,,,                LIMIT PRODUCT TO 5 DIGITS          00156
+0000000720320009500000|                                       J1]0720]0732 R0157
+           TF  FLIM,PROD,,              SAVE ACTUAL NR WORDS IN F          00158
+0000000732260044900099|                                       J1]0732]0744 R0159
+           TF  C,FLIM,,                 INITIALIZE C TO LAST F TERM INDEX  00160
+0000000744260042700449|                                       J1]0744]0756 R0161
+           TF  FTOP,MEMSZ,,             FTOP=SIZE OF MEMORY                00162
+0000000756260045900406|                                       J1]0756]0768 R0163
+           SM  FTOP,1,10,               FTOP=ADDR OF LAST TERM             00164
+00000007681200459000]1|                                       J1]0768]0780 R0165
+     *                                                                     00166
+                                                                           90167
+           RCTY                                                            00168
+0000000780340000000102|                                       J1]0780]0792 R0169
+           RCTY                                                            00170
+0000000792340000000102|                                       J1]0792]0804 R0171
+           TNF PIDIG,DIGITS,,                                              00172
+0000000804730049500412|                                       J1]0804]0816 R0173
+           WATYMSG1,,,                  PRINT NUMBER OF PI DIGITS          00174
+0000000816390046900100|                                       J1]0816]0828 R0175
+           WATYMSG2,,,                                                     00176
+0000000828390050100100|                                       J1]0828]0840 R0177
+           RCTY                                                            00178
+0000000840340000000102|                                       J1]0840]0852 R0179
+           RCTY                                                            00180
+0000000852340000000102|                                       J1]0852]0864 R0181
+     *                                                                     00182
+                                                                           90183
+     * INITIALIZE F ARRAY                                                  00184
+                                                                           90185
+     *                                                                     00186
+                                                                           90187
+           TF  B,FLIM,,                 B=MAX F INDEX                      00188
+0000000864260042200449|                                       J1]0864]0876 R0189
+           AM  B,1,10,                  B+=1, CLEAR FLIM+1 TERMS           00190
+00000008761100422000]1|                                       J1]0876]0888 R0191
+           TF  FLOC,FTOP,,              SET ADDR OF LAST F TERM            00192
+0000000888260045400459|                                       J1]0888]0900 R0193
+     INITF TFM -FLOC,2000,8,            STORE INITIAL F TERM VALUE         00194
+0000000900160045M0K000|                                       J1]0900]0912 R0195
+           SM  FLOC,WORDDG,10,          STEP TO NEXT TERM                  00196
+00000009121200454000]9|                                       J1]0912]0924 R0197
+           SM  B,1,10,                  DECREMENT B                        00198
+00000009241200422000]1|                                       J1]0924]0936 R0199
+           BNZ INITF,,,                 LOOP UNTIL DONE                    00200
+0000000936470090001200|                                       J1]0936]0948 R0201
+     *                                                                     00202
+                                                                           90203
+     * OUTER LOOP - INITIALIZE NEXT SET OF TERMS TO GENERATE PI DIGITS     00204
+                                                                           90205
+     *                                                                     00206
+                                                                           90207
+     L1    TF  G,C,,                    SET G TO CURRENT LAST TERM INDEX   00208
+0000000948260046400427|                                       J1]0948]0960 R0209
+           A   G,C,,                    G = C*2                            00210
+0000000960210046400427|                                       J1]0960]0972 R0211
+           BZ  DONE,,,                  IF G=C=0, WE ARE DONE              00212
+0000000972460139201200|                                       J1]0972]0984 R0213
+     *                                                                     00214
+                                                                           90215
+           S   D,D,,                    D=0, RESIDUE FOR THIS CYCLE        00216
+0000000984220043600436|                                       J1]0984]0996 R0217
+           TF  B,C,,                    B=C, TERM INDEX FOR THIS CYCLE     00218
+0000000996260042200427|                                       J1]0996]1008 R0219
+           TF  FLOC,FTOP,,              INITIALIZE FLOC TO LAST TERM ADDR  00220
+0000001008260045400459|                                       J1]1008]1020 R0221
+     *                                                                     00222
+                                                                           90223
+     * INNER LOOP - PROCESS NEXT SET OF TERMS                              00224
+                                                                           90225
+     *                                                                     00226
+                                                                           90227
+     L2    M   -FLOC,A,,                F(B)*A, SHIFT LEFT 4 DIGITS        00228
+0000001020230045M00417|                                       J1]1020]1032 R0229
+           SF  PROD-WORDDG+1,,,         LIMIT PRODUCT TO WORDDG DIGITS     00230
+0000001032320009100000|                                       J1]1032]1044 R0231
+           A   D,PROD,,                 D += F(B)*A                        00232
+0000001044210043600099|                                       J1]1044]1056 R0233
+           SM  G,1,10,                  --G                                00234
+00000010561200464000]1|                                       J1]1056]1068 R0235
+           LD  PROD,D,,                 LOAD D AS DIVIDEND                 00236
+0000001068280009900436|                                       J1]1068]1080 R0237
+           D   PROD-WORDDG+1,G,,        COMPUTE D/G                        00238
+0000001080290009100464|                                       J1]1080]1092 R0239
+           TF  -FLOC,PROD,,             SAVE D MOD G IN F TERM             00240
+0000001092260045M00099|                                       J1]1092]1104 R0241
+           TF  D,PROD-5,,               SAVE D/G IN D                      00242
+0000001104260043600094|                                       J1]1104]1116 R0243
+           SM  G,1,10,                  --G (AGAIN)                        00244
+00000011161200464000]1|                                       J1]1116]1128 R0245
+           SM  B,1,10,                  --B                                00246
+00000011281200422000]1|                                       J1]1128]1140 R0247
+           BZ  ENDL2,,,                 IF B=0, JUMP OUT OF INNER LOOP     00248
+0000001140460121201200|                                       J1]1140]1152 R0249
+           SM  FLOC,WORDDG,10,          ELSE DECREMENT FLOC TO MATCH B     00250
+00000011521200454000]9|                                       J1]1152]1164 R0251
+           M   D,B,,                    COMPUTE D*B                        00252
+0000001164230043600422|                                       J1]1164]1176 R0253
+           SF  PROD-WORDDG+1,,,         LIMIT PRODUCT TO WORDDG DIGITS     00254
+0000001176320009100000|                                       J1]1176]1188 R0255
+           TF  D,PROD,,                 D = D*B                            00256
+0000001188260043600099|                                       J1]1188]1200 R0257
+           B   L2,,,                    REPEAT INNER LOOP FOR NEXT TERM    00258
+0000001200490102000000|                                       J1]1200]1212 R0259
+     *                                                                     00260
+                                                                           90261
+     ENDL2 LD  PROD,D,,                 LOAD D AS DIVIDEND                 00262
+0000001212280009900436|                                       J1]1212]1224 R0263
+           D   PROD-WORDDG+1,A,,        DIVIDE BY 10000                    00264
+0000001224290009100417|                                       J1]1224]1236 R0265
+           SF  PROD-8,,,                LIMIT QUOTIENT TO 4 DIGITS         00266
+0000001236320009100000|                                       J1]1236]1248 R0267
+           A   E,PROD-5,,               E += D/A (REMAINDER USE BELOW)     00268
+0000001248210044000094|                                       J1]1248]1260 R0269
+           TNF PIDIG,E,,                MOVE 4 DIGITS TO OUTPUT            00270
+0000001260730049500440|                                       J1]1260]1272 R0271
+           WATYPIDIG-6,,,               PRINT 4 DIGITS OF PI               00272
+0000001272390048900100|                                       J1]1272]1284 R0273
+           SM  LINECT,1,10,             --LINECT                           00274
+00000012841200466000]1|                                       J1]1284]1296 R0275
+           BNZ *+36,,,                  IF NON-ZERO, CONTINUE ON SAME LINE 00276
+0000001296470133201200|                                       J1]1296]1308 R0277
+           RCTY,,,                      ELSE, START NEW LINE               00278
+0000001308340000000102|                                       J1]1308]1320 R0279
+           TFM LINECT,10,10,            RESET LINE COUNTER                 00280
+00000013201600466000J0|                                       J1]1320]1332 R0281
+     *                                                                     00282
+                                                                           90283
+           S   C,WORDBT,,               DECREMENT C BY NR TERMS COMPLETED  00284
+0000001332220042700408|                                       J1]1332]1344 R0285
+           S   FTOP,FADJ,,              DECREMENT FTOP ADDR ACCORDINGLY    00286
+0000001344220045900444|                                       J1]1344]1356 R0287
+           SF  PROD-3,,,                LIMIT REMAINDER TO 4 DIGITS        00288
+0000001356320009600000|                                       J1]1356]1368 R0289
+           TF  E,PROD,,                 E = D MOD A                        00290
+0000001368260044000099|                                       J1]1368]1380 R0291
+           B   L1,,,                    LOOP TO NEXT SET OF TERMS          00292
+0000001380490094800000|                                       J1]1380]1392 R0293
+     *                                                                     00294
+                                                                           90295
+     DONE  RCTY                                                            00296
+0000001392340000000102|                                       J1]1392]1404 R0297
+           RCTY                                                            00298
+0000001404340000000102|                                       J1]1404]1416 R0299
+           WATYFINITO,,,                                                   00300
+0000001416390052700100|                                       J1]1416]1428 R0301
+           H   99999,77777,,                                               00302
+0000001428489999977777|                                       J1]1428]1440 R0303
+           DENDSTART                                                       00304
+0000000540                                                                 90305
+00000  L600000005004900000|1205723]000133057230000049057120000]8]0096]0115 ]0306
+360010000500360017200500360024400500360031600500360000000500               ]0307
+000000000000102030400020406080003060902100408021610050015102006021814200|  ]0308
+704112820080614223009081726300000000005060708090012141618151811242720242|  ]0309
+822363520353045403632484455324946536048465462754453627180123456789123456|  ]0310
+789]23456789]J3456789]JK456789]JKL56789]JKLM6789]JKLMN789]JKLMNO89]JKLMN|  ]0311
+M8000000000049]0540OP9]JKLMNOPQ|    L10038800019M90000000000M90003600000   ]0312
