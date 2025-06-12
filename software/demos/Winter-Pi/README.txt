@@ -30,16 +30,23 @@ if you change the BSIA (60) instruction at the label START (location
 00540) to a NOOP (41).
 
 Winter-Pi.sps
-    Source deck for the card-based SPS assembler.
+    Source deck for the card-based SPS assembler. You can use this file
+    as either a card-image deck or as a paper-tape image (in ASCII text
+    mode) to assemble the program.
 
 Winter-Pi-Listing.txt
     Assembly listing and typewriter output for the program.
 
+Winter-Pi-Monitor-Job.card
+    Monitor I bootstrap card and Monitor I control cards that can be
+    placed in front of the Winter-Pi.sps deck to assemble and run the
+    Winter-Pi program under Monitor I and SPS-IID. You will need to add
+    an end-of-job card after the .sps deck. Due to the extra memory
+    required by Monitor I, Winter-Pi will generate only 1792 digits of
+    Pi when assembled and run under Monitor I.
+
 Winter-Pi-Object.card
     Bootable object card deck for the program.
-
-Winter-Pi-Object-Full.card
-    Full (non-condensed) bootable object card deck for the program.
 
 Winter-Pi-Object.pt
     Bootable binary paper tape image for the program. Load by pressing
@@ -49,8 +56,20 @@ Winter-Pi-Object.pt.txt
     Bootable ASCII paper tape image for the program. Load by pressing
     INSERT and entering 360000000300 on the typewriter.
 
+Winter-Pi-Object-Full.card
+    Full (non-condensed) bootable object card deck for the program.
+
 Winter-Pi-Output.txt
-    Typewriter output from the program for 1856 digits of Pi.
+    Typewriter output from the card-based assembly for 1856 digits of
+    Pi.
 
+Winter-Pi-SPS-IID-Listing.txt
+    Assembly listing from SPS-IID under Monitor I.
 
+Winter-Pi-SPS-IID-Object.card
+    Object card deck from assembling the program with SPD-IID under
+    Monitor I. This can be run only by loading it under Monitor I.
 
+Winter-Pi-SPS-IID-Output.txt
+    Typewriter output from the Monitor I-based assembly for 1792 digits
+    of Pi.

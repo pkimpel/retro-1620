@@ -27,8 +27,7 @@
       WORK   DS   20,PROD-20,,             ADDR OF SCRATCH AREA                 00079 00020
       SCALDG DS   2,4,,                    DECIMAL PLACES IN SCALE FACTOR       00004 00002
       WORDDG DS   2,SCALDG*2+1,,           DIGITS PER TERM WORD                 00009 00002
-      PGMMEM DS   5,1500,,                 MEMORY REQ FOR PROGRAM CODE          01500 00005
-             DORG 402                                                           00402
+     *
       MEMSZ  DC   5,60000,,                MAX ADDRESS ON SYSTEM                00406 00005
       WORDBT DC   2,14,,                   BITS REQUIRED FOR SCALE FACTOR       00408 00002
       DIGITS DC   4,0,,                    DIGITS OF PI TO COMPUTE              00412 00004
@@ -55,7 +54,7 @@
              MM   WORDBT,WORDDG,10,        COMPUTE F ADDR ADJUSTMENT            00552 13 00408 000-9
              TF   FADJ,PROD,,              FADJ=FTOP ADJUSTMENT EACH CYCLE      00564 26 00444 00099
              TF   WORK,MEMSZ,,             LOAD TOTAL SIZE OF MEMORY            00576 26 00079 00406
-             SM   WORK,PGMMEM,,            SUBTRACT MEM REQ FOR PROGRAM         00588 12 00079 -1500
+             SM   WORK,PGMMEM,,            SUBTRACT MEM REQ FOR PROGRAM         00588 12 00079 -1440
              LD   PROD,WORK,,              LOAD MEM DIGITS AVAIL AS DIVIDEND    00600 28 00099 00079
              DM   PROD-4,WORDDG,10,        DIVIDE BY DIGITS PER WORD            00612 19 00095 000-9
              TF   WORK,PROD-2,,            SAVE QUOTIENT, NR WORDS              00624 26 00079 00097
@@ -140,6 +139,7 @@
              RCTY                                                               01404 34 00000 00102
              WATY FINITO,,,                                                     01416 39 00527 00100
              H    99999,77777,,                                                 01428 48 99999 77777
+      PGMMEM DS   ,*+1,,                   MEMORY REQ FOR PROGRAM CODE          01440 00000
              DEND START                                                         00540
 
 
@@ -147,12 +147,12 @@ SPS PROCESSOR  FOR 1620/1710 CARD I/O SYSTEM,DATED 1/1/1962
 
 END OF PASSI
 END OF PASSII
-00099   PROD    00079   WORK    00004 *SCALDG   00009 *WORDDG   01500 *PGMMEM
-00406   MEMSZ   00408 *WORDBT   00412 *DIGITS   00417   A       00422   B
-00427   C       00436   D       00440   E       00444   FADJ    00449   FLIM
-00454   FLOC    00459   FTOP    00464   G       00466 *LINECT   00469   MSG1
-00495   PIDIG   00501   MSG2    00527 *FINITO   00540   START   00900   INITF
-00948   L1      01020   L2      01212   ENDL2   01392   DONE
+00099   PROD    00079   WORK    00004 *SCALDG   00009 *WORDDG   00406   MEMSZ
+00408 *WORDBT   00412 *DIGITS   00417   A       00422   B       00427   C
+00436   D       00440   E       00444   FADJ    00449   FLIM    00454   FLOC
+00459   FTOP    00464   G       00466 *LINECT   00469   MSG1    00495   PIDIG
+00501   MSG2    00527 *FINITO   00540   START   00900   INITF   00948   L1
+01020   L2      01212   ENDL2   01392   DONE    01440 *PGMMEM
 
 CALCULATE 1856 DIGITS OF PI
 

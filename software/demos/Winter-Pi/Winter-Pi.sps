@@ -27,8 +27,7 @@
      WORK  DS  20,PROD-20,,             ADDR OF SCRATCH AREA
      SCALDGDS  2,4,,                    DECIMAL PLACES IN SCALE FACTOR
      WORDDGDS  2,SCALDG*2+1,,           DIGITS PER TERM WORD
-     PGMMEMDS  5,1500,,                 MEMORY REQ FOR PROGRAM CODE
-           DORG402
+     *
      MEMSZ DC  5,60000,,                MAX ADDRESS ON SYSTEM
      WORDBTDC  2,14,,                   BITS REQUIRED FOR SCALE FACTOR
      DIGITSDC  4,0,,                    DIGITS OF PI TO COMPUTE
@@ -140,4 +139,5 @@
            RCTY
            WATYFINITO,,,
            H   99999,77777,,
+     PGMMEMDS  ,*+1,,                   MEMORY REQ FOR PROGRAM CODE
            DENDSTART
