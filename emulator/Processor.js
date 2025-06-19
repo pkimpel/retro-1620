@@ -2093,11 +2093,18 @@ class Processor {
 
             this.gateRESP_GATE.value = 1;
             if (readNumeric) {
-                // Check for DC1 (842 punch, End Card 1) or CR  (XC842 punch, Carriage Return)
-                // frames that cause MBRE errors. See Germain, p.32.
-                if (ptCode == 0b00001110 || ptCode == 0b01011110) {
+                switch (ptCode) {
+                case 0b00001110:
+                case 0b01011110:
+                    // Check for DC1 (842 punch, End Card 1) or CR  (XC842 punch, Carriage Return)
+                    // frames that cause MBRE errors. See Germain, p.32.
                     this.parityMBREvenCheck.value = 1;
                     this.ioMBRCheckPending = true;
+                    break;
+                case 0b0111000:
+                    // Check for X0C punch (alternate for -0 on paper-tape input)
+                    ptCode = 0b01000000;
+                    break;
                 }
 
                 let digit = Processor.xlateInNumeric[ptCode];

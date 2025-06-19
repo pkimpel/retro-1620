@@ -32,9 +32,9 @@
 * "Binary Capabilities" option. To support this, all tape image files
 * are handled internally as 8-bit binary tape frames.
 *
-* The reader allows multiple tape image file to be loaded to its internal
-* buffer. Once loaded, however, the image files are treated as if they
-* had been spliced, and are treated as one continugous tape.
+* The reader allows multiple tape image files to be loaded to its
+* internal buffer. Once loaded, however, the image files are treated
+* as if they had been spliced, and are treated as one continugous tape.
 *
 ************************************************************************
 * 2024-04-25  P.Kimpel

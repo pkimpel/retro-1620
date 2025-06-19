@@ -207,7 +207,6 @@ class Envir {
 
         // Special/alternate hole patterns.
         Envir.xlatePTCodeToASCII[0b01111010] = "!";     // alternate for flagged Record Mark
-        Envir.xlatePTCodeToASCII[0b01110000] = "-";     // alternate for -0 (paper tape only)
         Envir.xlatePTCodeToASCII[0b01011101] = "-";     // alternate for -0 (card punch)
         Envir.xlatePTCodeToASCII[0b00111110] = "^";     // "special" character, paper-tape output only
         Envir.xlatePTCodeToASCII[0b01111111] = "_";     // tape-feed (ignored during non-binary read)
