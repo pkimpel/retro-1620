@@ -1,0 +1,178 @@
+<?XML version="1.0"?>
+<package>
+<job id="SPS-Object-Deck-Lister-LHCode">
+<reference object="Scripting.FileSystemObject" /> 'Microsoft Scripting Runtime TypeLib (for fso)
+<script language="VBScript">
+<![CDATA[
+
+Option Explicit
+'-----------------------------------------------------------------------
+' retro-1620 SPS-Object-Deck-Lister-LHCode.wsf
+' Copyright (c) 2026, Paul Kimpel
+' Licensed under the MIT License, see
+'       http://www.opensource.org/licenses/mit-license.php
+'-----------------------------------------------------------------------
+' VBScript to convert the non-condensed card punch object output from the
+' card-based SPS assembler to a text file in the format of a line printer
+' assembly listing. This script differs from SPS-Object-Deck-Lister.wsf
+' in that the generated object code is placed on the left side of the
+' card-image source code.
+'
+' This script should be executed in the current path of the punch output
+' file. The output file will be written to that path as well with a .lst
+' extension.
+'
+' Uses Scripting Runtime FileSystemObject.
+' Parameters:
+'   1. Name of the non-condensed card punch object file.
+'-----------------------------------------------------------------------
+' Modification Log.
+' 2026-06-28  P.Kimpel
+'   Original version, cloned from retro-1620/software/retro-1620-Utilities/
+'   SPS-Object-Deck-Lister.wsf.
+'-----------------------------------------------------------------------
+
+Dim args
+Dim fileName
+Dim fso
+Dim listName
+Dim quietMode
+
+'---------------------------------------
+Function FormatSourceLine(byVal line)
+  'Reformats a line as an assembler source line and returns it.
+
+  FormatSourceLine = Mid(line, 1, 5) & " " & _
+                     Mid(line, 6, 6) & " " & _
+                     Mid(line, 12, 4) & _
+                     Mid(line, 16, 60)
+End Function
+
+'---------------------------------------
+Function ReformatInstruction(byVal deckFile, byVal listFile, byVal source)
+  'Reformats the group of object deck card images that result form a single
+  'single assembler directive and writes a line to the listing file.
+  Dim done
+  Dim line
+  Dim text
+
+  text = FormatSourceLine(source)
+  done = deckFile.AtEndOfStream
+  If done Then
+      listFile.WriteLine Space(20) & text
+      line = "<EOF>"
+  End If
+
+  While Not done
+    line = deckFile.ReadLine
+    Select Case Mid(line, 76, 1)
+    Case "0", "]"
+      done = true
+    Case "9"
+      listFile.WriteLine Mid(line, 6, 5) & "    " & Mid(line, 13, 5) & "       " & text '-- may need digit/char adjustment
+    Case "R"
+      listFile.WriteLine Mid(line, 6, 5) & " " & _
+          Replace(Mid(line, 11, 2), "]", "0") & " " & _
+          Replace(Mid(line, 13, 5), "]", "-") & " " & _
+          Replace(Mid(line, 18, 5), "]", "-") & " " & text
+    Case Else
+      listFile.WriteLine ">> Invalid instruction line: " & line & " : " & text
+    End Select
+
+    text = ""
+    If Not done Then
+      If deckFile.atEndOfStream Then
+        line = "<EOF>"
+        done = True
+      End If
+    End If
+  Wend
+
+  ReformatInstruction = line
+End Function
+
+'---------------------------------------
+Sub FormatListing(byVal fileName, byVal listName)
+  'Extracts source and object code from an assembler object punch deck
+  'and reformats it as an assembler listing. The listing file is created
+  'with the same name as the object deck file, but modified with a ".txt"
+  'extension.
+  Dim card
+  Dim listFile
+  Dim eof
+  Dim line
+  Dim deckFile
+
+  Set listFile = fso.OpenTextFile(listName, ForWriting, True, False)
+  Set deckFile = fso.OpenTextfile(fileName, ForReading, False, False)
+  line = deckFile.ReadLine
+  eof = deckFile.AtEndOfStream
+
+  Do
+    Select Case Mid(line, 76, 1)
+    Case "]"
+      '-- ignore loader object cards
+      If deckFile.AtEndOfStream Then
+        eof = True
+      Else
+        line = deckFile.ReadLine
+      End If
+    Case "0"
+      line = ReformatInstruction(deckFile, listFile, line)
+    Case Else
+      listFile.WriteLine ">> Invalid line type: " & line
+      If deckFile.AtEndOfStream Then
+        eof = True
+      Else
+        line = deckFile.ReadLine
+      End If
+    End Select
+  Loop Until eof
+
+  listFile.Close
+  Set listFile = Nothing
+  deckFile.Close
+  Set deckFile = Nothing
+End Sub
+
+'---------------------------------------------------------------
+
+Set fso = WScript.CreateObject("Scripting.FileSystemObject")
+quietMode = False
+
+
+Set args = WScript.Arguments
+For Each listName In args
+  If UCase(Trim(listName)) = "/Q" Then
+    quietMode = True
+  ElseIf Len(fileName) = 0 Then
+    fileName = Trim(listName)
+  End If
+Next
+
+Set args = Nothing
+If Len(fileName) = 0 Then
+  MsgBox "Must supply the name of the object deck file."
+  WScript.Quit 9
+Else
+  '-- Main Line --
+  If Not fso.FileExists(fileName) Then
+    MsgBox "Object deck file does not exist: " & vbCrLf & fileName
+    WScript.Quit 8
+  Else
+    listName = fso.BuildPath(fso.GetParentFolderName(fileName), fso.GetBaseName(fileName)) & ".lsx"
+    FormatListing fileName, listName
+    If not quietMode Then
+      MsgBox "SPS assembler card deck created: " & vbCrLf & listName
+    End If
+
+    WScript.Quit 0
+  End If
+End If
+
+Set fso = Nothing
+
+]]>
+</script>
+</job>
+</package>

@@ -88,6 +88,13 @@ SPS-Object-Deck-Lister.wsf
     from the card-based SPS assembler to a listing in the format of the
     SPS-IID 1443 line printer version.
 
+SPS-Object-Deck-Lister-LHCode.wsf
+    VBScript script to convert the non-consolidated card punch output
+    from the card-based SPS assembler to a listing similar to that of
+    SPS-Object-Deck-Lister.wsf, but with the generated code on the left
+    side of the line. This script was customized to generate the
+    assembly listing for the IPL-V interpreter.
+
 SPS-Xscript-Reformatter.wsf
     VBScript script to extract an SPS source code deck for the card-
     based assembler from a line printer listing transcription (.spt)
