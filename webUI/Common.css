@@ -44,7 +44,10 @@
 }
 
 HTML {
-    height:             100%}
+    height:             100%;
+    --ibm-blue:         #3576BA;        /* was 718DBD, supposed to be Pantone 116-16 U (#147599), but that's UGLY */
+    --ibm-gray:         #4A4B4D}        /* was 555555, now Pantone 19-3906 TCX */
+
 
 BODY {
     font-family:        DejaVuSansWeb, sans-serif;
@@ -436,9 +439,9 @@ SPAN.flagstrike {
 .data {
     font-family:        DejaVuSansMonoBookWeb, monospace}
 .ibmBlue {
-    background-color:   #3576BA}        /* was 718DBD, supposed to be Pantone 116-16 U (#147599), but that's UGLY */
+    background-color:   var(--ibm-blue)}
 .ibmGray {
-    background-color:   #4A4B4D}        /* was 555555, now Pantone 19-3906 TCX */
+    background-color:   var(--ibm-gray)}
 .number {
     font-family:        DejaVuSansMonoBookWeb, monospace;
     text-align:         right}

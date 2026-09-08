@@ -56,6 +56,15 @@ class Processor {
     static diskAddressSize = 5;         // size of address field in disk sectors
     static diskSectorSize = 105;        // size of a disk sector including address digits
 
+    // Instruction address type codes.
+    static adNotUsed = 0;
+    static adAddress = 1;
+    static adField = 2;
+    static adRecord = 3;
+    static adLiteral = 4;
+    static adDigit = 5;
+    static adSpecial = 6;
+
     // Typewriter numeric input keystroke digit codes.
     static twprASCIInumeric1620 = {
         " ": 0,
@@ -835,7 +844,8 @@ class Processor {
         this.MM = new Uint16Array(this.envir.memorySize >> 1);
 
         // Op Code Attributes
-        this.opBinary = 0;                              // binary value of current op code
+        this.opAddress = 0;                             // binary address of current op code
+        this.opBinary = -1;                             // binary value of current op code
         this.opIndexable = 0;                           // op code is valid for indexing addresses
         this.opAtts = new Array(100);                   // op code attributes table
         this.opThisAtts = null;                         // op code attributes for current op
@@ -853,6 +863,13 @@ class Processor {
         this.procState = procStateLimbo;                // processor instruction load/execute state
         this.running = false;                           // true when this.run() is active
         this.runTime = 0;                               // actual system run time, ms
+        this.tracing = false;                           // instruction trace is active
+        this.traceLine = "";                            // instruction trace fields
+        this.tracePAddr = new Register("TR2", 5, this.envir, false, false,  false);
+        this.tracePData = "";                           // instruction trace P data string
+        this.tracePLabel = "";                          // label for P operand trace data
+        this.traceQData = "";                           // instruction trace Q data string
+        this.traceQLabel = "";                          // label for Q operand trace data
 
         // I/O Subsystem
         this.ioDevice = null;                           // I/O device object
@@ -863,9 +880,17 @@ class Processor {
         this.ioWriteCheckPending = false;               // Write Check condition has occurred but not het been set
         this.ioMBRCheckPending = false;                 // MBR check condition due to even address on alpha I/O
 
-        // Initialization
+        // Initialization - Address Types
+        const adNU = Processor.adNotUsed;
+        const adAD = Processor.adAddress;
+        const adFL = Processor.adField;
+        const adRE = Processor.adRecord;
+        const adLT = Processor.adLiteral;
+        const adDG = Processor.adDigit;
+        const adSP = Processor.adSpecial;
+
         const buildOpAtts = (opCode,
-                opValid, eState, pIA, qIA, pIX, qIX, immed, fp, index, binary, qa4) => {
+                opValid, eState, pIA, qIA, pIX, qIX, immed, fp, index, binary, qa4, mnem, pType, qType) => {
             this.opAtts[opCode] = {
                 opValid,                // op code is valid (some are set from config)
                 eState,                 // initial execution state
@@ -877,119 +902,122 @@ class Processor {
                 fp,                     // floating-point op code
                 index,                  // index register op code
                 binary,                 // binary capabilities op code
-                qa4};                   // Q address is 4 digits (binary capabilities only)
+                qa4,                    // Q address is 4 digits (binary capabilities only)
+                mnem,                   // Opcode mnemonic
+                pType,                  // P address type
+                qType};                 // Q address type
         };
 
         //          op   v  es  pi  qi  px  qx  im  fp  ix  bi  q4
-        buildOpAtts( 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 00
-        buildOpAtts( 1,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0);    // 01 FADD
-        buildOpAtts( 2,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0);    // 02 FSUB
-        buildOpAtts( 3,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0);    // 03 FMUL
-        buildOpAtts( 4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 04
-        buildOpAtts( 5,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0);    // 05 FSL
-        buildOpAtts( 6,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 06 TFL
-        buildOpAtts( 7,  1,  2,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 07 BTFL
-        buildOpAtts( 8,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0);    // 08 FSR
-        buildOpAtts( 9,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0);    // 09 FDIV
+        buildOpAtts( 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<00>", adNU, adNU);    // 00
+        buildOpAtts( 1,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0, "FADD", adFL, adFL);    // 01
+        buildOpAtts( 2,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0, "FSUB", adFL, adFL);    // 02
+        buildOpAtts( 3,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0, "FMUL", adFL, adFL);    // 03
+        buildOpAtts( 4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<04>", adNU, adNU);    // 04
+        buildOpAtts( 5,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0, "FSL ", adFL, adAD);    // 05
+        buildOpAtts( 6,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "TFL ", adFL, adFL);    // 06
+        buildOpAtts( 7,  1,  2,  1,  1,  1,  1,  0,  0,  0,  0,  0, "BTFL", adAD, adFL);    // 07
+        buildOpAtts( 8,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0, "FSR ", adFL, adAD);    // 08
+        buildOpAtts( 9,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0, "FDIV", adFL, adFL);    // 09
 
-        buildOpAtts(10,  1,  2,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 10 BTAM
-        buildOpAtts(11,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 11 AM
-        buildOpAtts(12,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 12 SM
-        buildOpAtts(13,  1,  5,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 13 MM
-        buildOpAtts(14,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 14 CM
-        buildOpAtts(15,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 15 TDM
-        buildOpAtts(16,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 16 TFM
-        buildOpAtts(17,  1,  2,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 17 BTM
-        buildOpAtts(18,  1,  5,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 18 LDM
-        buildOpAtts(19,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0);    // 19 DM
+        buildOpAtts(10,  1,  2,  1,  0,  1,  0,  1,  0,  0,  0,  0, "BTAM", adAD, adLT);    // 10
+        buildOpAtts(11,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0, "AM  ", adFL, adLT);    // 11
+        buildOpAtts(12,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0, "SM  ", adFL, adLT);    // 12
+        buildOpAtts(13,  1,  5,  1,  0,  1,  0,  1,  0,  0,  0,  0, "MM  ", adFL, adLT);    // 13
+        buildOpAtts(14,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0, "CM  ", adFL, adLT);    // 14
+        buildOpAtts(15,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0, "TDM ", adDG, adDG);    // 15
+        buildOpAtts(16,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0, "TFM ", adFL, adLT);    // 16
+        buildOpAtts(17,  1,  2,  1,  0,  1,  0,  1,  0,  0,  0,  0, "BTM ", adAD, adLT);    // 17
+        buildOpAtts(18,  1,  5,  1,  0,  1,  0,  1,  0,  0,  0,  0, "LDM ", adFL, adLT);    // 18
+        buildOpAtts(19,  1,  1,  1,  0,  1,  0,  1,  0,  0,  0,  0, "DM  ", adFL, adLT);    // 19
 
-        buildOpAtts(20,  1,  2,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 20 BTA
-        buildOpAtts(21,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 21 A
-        buildOpAtts(22,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 22 S
-        buildOpAtts(23,  1,  5,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 23 M
-        buildOpAtts(24,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 24 C
-        buildOpAtts(25,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 25 TD
-        buildOpAtts(26,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 26 TF
-        buildOpAtts(27,  1,  2,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 27 BT
-        buildOpAtts(28,  1,  5,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 28 LD
-        buildOpAtts(29,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 29 D
+        buildOpAtts(20,  1,  2,  1,  1,  1,  1,  0,  0,  0,  0,  0, "BTA ", adAD, adAD);    // 20
+        buildOpAtts(21,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "A   ", adFL, adFL);    // 21
+        buildOpAtts(22,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "S   ", adFL, adFL);    // 22
+        buildOpAtts(23,  1,  5,  1,  1,  1,  1,  0,  0,  0,  0,  0, "M   ", adFL, adFL);    // 23
+        buildOpAtts(24,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "C   ", adFL, adFL);    // 24
+        buildOpAtts(25,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "TD  ", adDG, adDG);    // 25
+        buildOpAtts(26,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "TF  ", adFL, adFL);    // 26
+        buildOpAtts(27,  1,  2,  1,  1,  1,  1,  0,  0,  0,  0,  0, "BT  ", adAD, adFL);    // 27
+        buildOpAtts(28,  1,  5,  1,  1,  1,  1,  0,  0,  0,  0,  0, "LD  ", adAD, adFL);    // 28
+        buildOpAtts(29,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "D   ", adAD, adFL);    // 29
 
-        buildOpAtts(30,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 30 TRNM
-        buildOpAtts(31,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 31 TR
-        buildOpAtts(32,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 32 SF
-        buildOpAtts(33,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 33 CF
-        buildOpAtts(34,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 34 K
-        buildOpAtts(35,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 35 DN
-        buildOpAtts(36,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 36 RN
-        buildOpAtts(37,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 37 RA
-        buildOpAtts(38,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 38 WN
-        buildOpAtts(39,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 39 WA
+        buildOpAtts(30,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "TRNM", adRE, adRE);    // 30
+        buildOpAtts(31,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "TR  ", adRE, adRE);    // 31
+        buildOpAtts(32,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0, "SF  ", adDG, adNU);    // 32
+        buildOpAtts(33,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0, "CF  ", adDG, adNU);    // 33
+        buildOpAtts(34,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0, "K   ", adAD, adSP);    // 34
+        buildOpAtts(35,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0, "DN  ", adAD, adSP);    // 35
+        buildOpAtts(36,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0, "RN  ", adAD, adSP);    // 36
+        buildOpAtts(37,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0, "RA  ", adAD, adSP);    // 37
+        buildOpAtts(38,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0, "WN  ", adAD, adSP);    // 38
+        buildOpAtts(39,  1,  2,  1,  0,  1,  0,  0,  0,  0,  0,  0, "WA  ", adAD, adSP);    // 39
 
-        buildOpAtts(40,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 40
-        buildOpAtts(41,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 41 NOP
-        buildOpAtts(42,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 42 BB
-        buildOpAtts(43,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 43 BD
-        buildOpAtts(44,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 44 BNF
-        buildOpAtts(45,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 45 BNR
-        buildOpAtts(46,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 46 BI
-        buildOpAtts(47,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 47 BNI
-        buildOpAtts(48,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 48 H
-        buildOpAtts(49,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 49 B
+        buildOpAtts(40,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<40>", adNU, adNU);    // 40
+        buildOpAtts(41,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "NOP ", adNU, adNU);    // 41
+        buildOpAtts(42,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "BB  ", adNU, adNU);    // 42
+        buildOpAtts(43,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "BD  ", adAD, adDG);    // 43
+        buildOpAtts(44,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "BNF ", adAD, adDG);    // 44
+        buildOpAtts(45,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "BNR ", adAD, adDG);    // 45
+        buildOpAtts(46,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0, "BI  ", adAD, adSP);    // 46
+        buildOpAtts(47,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0, "BNI ", adAD, adSP);    // 47
+        buildOpAtts(48,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "H   ", adNU, adNU);    // 48
+        buildOpAtts(49,  1,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0, "B   ", adAD, adNU);    // 49
 
-        buildOpAtts(50,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 50
-        buildOpAtts(51,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 51
-        buildOpAtts(52,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 52
-        buildOpAtts(53,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 53
-        buildOpAtts(54,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 54
-        buildOpAtts(55,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 55 BNG
-        buildOpAtts(56,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 56
-        buildOpAtts(57,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 57
-        buildOpAtts(58,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 58
-        buildOpAtts(59,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 59
+        buildOpAtts(50,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<50>", adNU, adNU);    // 50
+        buildOpAtts(51,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<51>", adNU, adNU);    // 51
+        buildOpAtts(52,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<52>", adNU, adNU);    // 52
+        buildOpAtts(53,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<53>", adNU, adNU);    // 53
+        buildOpAtts(54,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<54>", adNU, adNU);    // 54
+        buildOpAtts(55,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "BNG ", adAD, adDG);    // 55
+        buildOpAtts(56,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<56>", adNU, adNU);    // 56
+        buildOpAtts(57,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<57>", adNU, adNU);    // 57
+        buildOpAtts(58,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<58>", adNU, adNU);    // 58
+        buildOpAtts(59,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<59>", adNU, adNU);    // 59
 
-        buildOpAtts(60,  1,  1,  1,  0,  1,  0,  0,  0,  0,  0,  0);    // 60 BS
-        buildOpAtts(61,  1,  1,  1,  0,  1,  0,  0,  0,  1,  0,  0);    // 61 BX
-        buildOpAtts(62,  1,  1,  1,  0,  1,  0,  1,  0,  1,  0,  0);    // 62 BXM
-        buildOpAtts(63,  1,  1,  1,  0,  1,  0,  0,  0,  1,  0,  0);    // 63 BCX
-        buildOpAtts(64,  1,  1,  1,  0,  1,  0,  1,  0,  1,  0,  0);    // 64 BCXM
-        buildOpAtts(65,  1,  1,  1,  0,  1,  0,  0,  0,  1,  0,  0);    // 65 BLX
-        buildOpAtts(66,  1,  1,  1,  0,  1,  0,  1,  0,  1,  0,  0);    // 66 BLXM
-        buildOpAtts(67,  1,  1,  1,  0,  1,  0,  0,  0,  1,  0,  0);    // 67 BSX
-        buildOpAtts(68,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 68
-        buildOpAtts(69,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 69
+        buildOpAtts(60,  1,  1,  1,  0,  1,  0,  0,  0,  0,  0,  0, "BS  ", adAD, adSP);    // 60
+        buildOpAtts(61,  1,  1,  1,  0,  1,  0,  0,  0,  1,  0,  0, "BX  ", adAD, adFL);    // 61
+        buildOpAtts(62,  1,  1,  1,  0,  1,  0,  1,  0,  1,  0,  0, "BXM ", adAD, adLT);    // 62
+        buildOpAtts(63,  1,  1,  1,  0,  1,  0,  0,  0,  1,  0,  0, "BCX ", adAD, adFL);    // 63
+        buildOpAtts(64,  1,  1,  1,  0,  1,  0,  1,  0,  1,  0,  0, "BCXM", adAD, adLT);    // 64
+        buildOpAtts(65,  1,  1,  1,  0,  1,  0,  0,  0,  1,  0,  0, "BLX ", adAD, adFL);    // 65
+        buildOpAtts(66,  1,  1,  1,  0,  1,  0,  1,  0,  1,  0,  0, "BLXM", adAD, adLT);    // 66
+        buildOpAtts(67,  1,  1,  1,  0,  1,  0,  0,  0,  1,  0,  0, "BSX ", adAD, adFL);    // 67
+        buildOpAtts(68,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<68>", adNU, adNU);    // 68
+        buildOpAtts(69,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<69>", adNU, adNU);    // 69
 
-        buildOpAtts(70,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 70 MA
-        buildOpAtts(71,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 71 MF
-        buildOpAtts(72,  1,  2,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 72 TNS
-        buildOpAtts(73,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0);    // 73 TNF
-        buildOpAtts(74,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 74
-        buildOpAtts(75,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 75
-        buildOpAtts(76,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 76
-        buildOpAtts(77,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 77
-        buildOpAtts(78,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 78
-        buildOpAtts(79,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 79
+        buildOpAtts(70,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "MA  ", adAD, adAD);    // 70
+        buildOpAtts(71,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "MF  ", adDG, adDG);    // 71
+        buildOpAtts(72,  1,  2,  1,  1,  1,  1,  0,  0,  0,  0,  0, "TNS ", adFL, adFL);    // 72
+        buildOpAtts(73,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0, "TNF ", adFL, adFL);    // 73
+        buildOpAtts(74,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<74>", adNU, adNU);    // 74
+        buildOpAtts(75,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<75>", adNU, adNU);    // 75
+        buildOpAtts(76,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<76>", adNU, adNU);    // 76
+        buildOpAtts(77,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<77>", adNU, adNU);    // 77
+        buildOpAtts(78,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<78>", adNU, adNU);    // 78
+        buildOpAtts(79,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<79>", adNU, adNU);    // 79
 
-        buildOpAtts(80,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 80
-        buildOpAtts(81,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 81
-        buildOpAtts(82,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 82
-        buildOpAtts(83,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 83
-        buildOpAtts(84,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 84
-        buildOpAtts(85,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 85
-        buildOpAtts(86,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 86
-        buildOpAtts(87,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 87
-        buildOpAtts(88,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 88
-        buildOpAtts(89,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 89
+        buildOpAtts(80,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<80>", adNU, adNU);    // 80
+        buildOpAtts(81,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<81>", adNU, adNU);    // 81
+        buildOpAtts(82,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<82>", adNU, adNU);    // 82
+        buildOpAtts(83,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<83>", adNU, adNU);    // 83
+        buildOpAtts(84,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<84>", adNU, adNU);    // 84
+        buildOpAtts(85,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<85>", adNU, adNU);    // 85
+        buildOpAtts(86,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<86>", adNU, adNU);    // 86
+        buildOpAtts(87,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<87>", adNU, adNU);    // 87
+        buildOpAtts(88,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<88>", adNU, adNU);    // 88
+        buildOpAtts(89,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<89>", adNU, adNU);    // 89
 
-        buildOpAtts(90,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  1);    // 90 BBT
-        buildOpAtts(91,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  1);    // 91 BMK
-        buildOpAtts(92,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0);    // 92 ORF
-        buildOpAtts(93,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0);    // 93 ANDF
-        buildOpAtts(94,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0);    // 94 CPFL
-        buildOpAtts(95,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0);    // 95 EORF
-        buildOpAtts(96,  1,  5,  1,  1,  1,  1,  0,  0,  0,  1,  0);    // 96 OTD
-        buildOpAtts(97,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0);    // 97 DTO
-        buildOpAtts(98,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 98
-        buildOpAtts(99,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0);    // 99
+        buildOpAtts(90,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  1, "BBT ", adAD, adAD);    // 90
+        buildOpAtts(91,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  1, "BMK ", adAD, adAD);    // 91
+        buildOpAtts(92,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0, "ORF ", adFL, adFL);    // 92
+        buildOpAtts(93,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0, "ANDF", adFL, adFL);    // 93
+        buildOpAtts(94,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0, "CPFL", adFL, adFL);    // 94
+        buildOpAtts(95,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0, "EORF", adFL, adFL);    // 95
+        buildOpAtts(96,  1,  5,  1,  1,  1,  1,  0,  0,  0,  1,  0, "OTD ", adAD, adFL);    // 96
+        buildOpAtts(97,  1,  1,  1,  1,  1,  1,  0,  0,  0,  1,  0, "DTO ", adAD, adFL);    // 97
+        buildOpAtts(98,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<98>", adNU, adNU);    // 98
+        buildOpAtts(99,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, "<99>", adNU, adNU);    // 99
 
         // Configure op code attributes for special features.
         for (let att of this.opAtts) {
@@ -1095,8 +1123,8 @@ class Processor {
     addDigits(addend) {
         /* Adds two digits and yields their sum. The augend must be in regDR.odd.
         Addition is handled by a two-step process. First, the augend (Q digit)
-        addend (P digit) are converted to index values by the pCompTable[] and
-        qCompTable[] lookups on the incoming digit values. These tables auto-
+        and addend (P digit) are converted to index values by the pCompTable[]
+        and qCompTable[] lookups on the incoming digit values. These tables auto-
         matically complement as necessary based on gateCOMP for the augend and
         gateP_COMP for the addend. Then the P and Q index values are used to
         look up the sum from addTable[]. gateCARRY_IN is included in the sum
@@ -1109,6 +1137,13 @@ class Processor {
 
         let qCarry = (qIndex & Processor.compCarryBit) ? 1 : 0;
         qIndex &= ~Processor.compCarryBit;      // zero the complement carry bit
+
+        if ((addend & Envir.numRecMark) == Envir.numRecMark || (this.regDR.odd & Envir.numRecMark) == Envir.numRecMark) {
+            console.log(`Invalid Record Mark in addition for Model 2 @${this.opAddress.toString().padStart(5, "0")}, ` +
+                        `OR1=${this.regOR1.toBCDString()}, OR2=${this.regOR2.toBCDString()}, ` +
+                        `augend=${this.regDR.odd.toString(16)}, addend=${addend.toString(16)}`);
+            debugger;
+        }
 
         let sum = Processor.addTable[pIndex][qIndex];
         this.gateCARRY_OUT.value = (sum & Processor.addCarryBit) | qCarry; // coerced to 0/1
@@ -1259,25 +1294,6 @@ class Processor {
         this.regIR1.value = this.regMAR.clear();
         this.manualReset();
         return (errors ? `${errors} error(s), last was ${errMsg}.` : "");
-    }
-
-    /**************************************/
-    traceState() {
-        /* Debugging routine to write selected Processor state to the JavaScript
-        console. There is no standard way to invoke this -- you have to insert a
-        call somewhere in the code (and take it back out when you're done!) */
-
-        console.debug("%2i %s %s %s %s %s %s %s %s %s %s | %i %i %i %i|%i %i %i %i|%i %i %i %i|%i %i %i %i|%i %i | %2s %2s",
-            this.procState, this.regOP.toBCDString(),
-            this.regIR1.toBCDString(), this.regOR1.toBCDString(), this.regOR2.toBCDString(),
-            this.regOR3.toBCDString(), this.regOR4.toBCDString(), this.regPR1.toBCDString(),
-            this.regPR2.toBCDString(), this.regMQ.toBCDString(), this.regDR.toBCDString(),
-            this.gateFL_1.value, this.gateFL_2.value, this.gateFIELD_MK_1.value, this.gateFIELD_MK_2.value,
-            this.gate1ST_CYC.value, this.gate1ST_CYC_DELAYD.value, this.gateDIV_1_CYC.value, this.gateDVD_L_CYC.value,
-            this.gateADD_ENT.value, this.gateADD_MODE.value, this.gate2_DIG_CNTRL.value, this.gateCOMP.value,
-            this.gateCARRY_IN.value, this.gateCARRY_OUT.value, this.gateDVD_SIGN.value, this.gateLAST_LD_CYC.value,
-            this.gateHP.value, this.gateEZ.value,
-            this.regMBR.even.toString(16).padStart(2, "0"), this.regMBR.odd.toString(16).padStart(2, "0"));
     }
 
     /**************************************/
@@ -1464,6 +1480,220 @@ class Processor {
         this.regMQ.updateLampGlow(gamma);
         this.regOP.updateLampGlow(gamma);
         this.regXR.updateLampGlow(gamma);
+    }
+
+
+    /*******************************************************************
+    *  Tracing Methods                                                 *
+    *******************************************************************/
+
+    /**************************************/
+    traceGetDigit(addr) {
+        /* Fetches and returns the digit at "addr" as bits 0F8421. Ignores and
+        strips the parity bit */
+        let pair = this.MM[addr >> 1];  // addr div 2
+
+        return ((addr & 1) ? pair : pair >> 6) & Register.notParityMask;
+    }
+
+    /**************************************/
+    traceGetData(addr, len) {
+        /* Translates memory BCD codes and flags to ASCII starting at "addr" for
+        "len" digits. Returns the formatted string */
+        const limit = addr+len;
+        let s = "";
+
+        for (let a=addr; a<limit; ++a) {
+            s += Envir.numericGlyphs[this.traceGetDigit(a)];
+        }
+
+        return s;
+    }
+
+    /**************************************/
+    traceGetFieldData(addr, maxLen) {
+        /* Formats and returns the digits of a field, starting at "addr" and up
+        to "maxLen" digits in length */
+        let a = addr-1;                 // ignore flag in first digit: fields are 2+ digits long
+        let flag = false;               // found field delimiter flag
+        let len = 1;                    // field length
+        let s = Envir.numericGlyphs[this.traceGetDigit(addr)];  // result string
+        let wrapped = false;            // true if no delimiter found and search wrapped around
+
+        while (true) {
+            if (a < 0) {                // memory address wraparound
+                a = this.envir.memorySize-1;
+            }
+
+            const d = this.traceGetDigit(a);
+            ++len;
+            if (len <= maxLen) {
+                s = Envir.numericGlyphs[d] + s;
+            }
+
+            if (d & 0x10) {
+                flag = true;
+                break;                  // out of while loop
+            } else {
+                --a;
+                if (a == addr) {
+                    wrapped = true;
+                    break;
+                }
+            }
+        }
+
+        if (len > maxLen || wrapped) {
+           s = `${wrapped ? "wrap:" : ""}${len}::` + s;
+        }
+
+        return s;
+    }
+
+    /**************************************/
+    traceGetRecordData(addr, maxLen) {
+        /* Formats and returns the digits of a record, starting at "addr" and up
+        to "maxLen" digits in length */
+        let a = addr;                   // current address
+        let len = 0;                    // record length
+        let rm = false;                 // found Record Mark delimiter flag
+        let s = "";                     // result string
+        let wrapped = false;            // true if not delimiter found and search wrapped around
+
+        while (true) {
+            if (a >= this.envir.memorySize) {   // memory address wraparound
+                a = 0;
+            }
+
+            const d = this.traceGetDigit(a);
+            ++len;
+            if (len <= maxLen) {
+                s += Envir.numericGlyphs[d];
+            }
+
+            if ((d & Envir.numRecMark) == Envir.numRecMark) {
+                rm = true;
+                break;                  // out of while loop
+            } else {
+                ++a;
+                if (a == addr) {
+                    wrapped = true;
+                    break;
+                }
+            }
+        }
+
+        if (len > maxLen || wrapped) {
+            s += `::${len}${wrapped ? "[wrap]" : ""}`;
+        }
+
+        return s;
+    }
+
+    /**************************************/
+    tracePOperand() {
+        /* Formats and returns the digits of the P operand depending on the op
+        code. The address is taken from this.tracePAddr, which is set to the
+        address in OR2 at the time of exitAddressing() because this operand's
+        data is formatted at the end of an instruction (enterICycle()) and OR2
+        typically changes during instruction execution */
+        let s = "";
+
+        switch (this.opThisAtts.pType) {
+        case Processor.adNotUsed:
+            s = "(n/a)";
+            break;
+        case Processor.adAddress:
+            s = `(${this.tracePAddr.toBCDString()})`;
+            break;
+        case Processor.adField:
+            s = this.traceGetFieldData(this.tracePAddr.binaryValue, 30);
+            break;
+        case Processor.adRecord:
+            s = this.traceGetRecordData(this.tracePAddr.binaryValue, 30);
+            break;
+        case Processor.adLiteral:
+            s = "(P-literal?)";
+            break;
+        case Processor.adDigit:
+            s = this.traceGetData(this.tracePAddr.binaryValue, 1);
+            break;
+        case Processor.adSpecial:
+            s = `(special ${this.traceGetData(this.opAddress+7, 5)})`;
+            break;
+        default:
+            s = `(pType=${this.opThisAtts.pType}?)`;
+            break;
+        }
+
+        return this.tracePLabel.length ? `${this.tracePLabel}=${s}` : "";
+    }
+
+    /**************************************/
+    traceQOperand() {
+        /* Formats and returns the digits of the Q operand depending on the op
+        code. This routine must be called from exitAddressing() after OR1 is
+        completely determined and before the instruction begins executing */
+        let s = "";
+
+        switch (this.opThisAtts.qType) {
+        case Processor.adNotUsed:
+            s = "(n/a)";
+            break;
+        case Processor.adAddress:
+            s = `(${this.regOR1.toBCDString()})`;
+            break;
+        case Processor.adField:
+            s = this.traceGetFieldData(this.regOR1.binaryValue, 30);
+            break;
+        case Processor.adRecord:
+            s = this.traceGetRecordData(this.regOR1.binaryValue, 30);
+            break;
+        case Processor.adLiteral:
+            s = this.traceGetFieldData(this.regOR1.binaryValue, 5);
+            break;
+        case Processor.adDigit:
+            s = this.traceGetData(this.regOR1.binaryValue, 1);
+            break;
+        case Processor.adSpecial:
+            s = `(special ${this.traceGetData(this.opAddress+7, 5)})`;
+            break;
+        default:
+            s = `(pType=${this.opThisAtts.pType}?)`;
+            break;
+        }
+
+        return this.traceQLabel.length ? `${this.traceQLabel}=${s}` : "";
+    }
+
+    /**************************************/
+    traceState() {
+        /* Debugging routine to write selected Processor state to the JavaScript
+        console. There is no standard way to invoke this -- you have to insert a
+        call somewhere in the code (and take it back out when you're done!) */
+
+        console.debug("%2i %s %s %s | %s %s %s %s | %s %s %s %s | %i %i %i %i|%i %i %i %i|%i %i %i %i|%i %i %i %i|%i %i | %s %s %s %s",
+            this.procState, this.regOP.toBCDString(),
+            this.regIR1.toBCDString(), this.regIR2.toBCDString(),
+            this.regOR1.toBCDString(), this.regOR2.toBCDString(), this.regOR3.toBCDString(),
+            this.regOR4.toBCDString(), this.regPR1.toBCDString(), this.regPR2.toBCDString(),
+            this.regMQ.toBCDString(), this.regDR.toBCDString(),
+            this.gateFL_1.value, this.gateFL_2.value, this.gateFIELD_MK_1.value, this.gateFIELD_MK_2.value,
+            this.gate1ST_CYC.value, this.gate1ST_CYC_DELAYD.value, this.gateDIV_1_CYC.value, this.gateDVD_L_CYC.value,
+            this.gateADD_ENT.value, this.gateADD_MODE.value, this.gate2_DIG_CNTRL.value, this.gateCOMP.value,
+            this.gateCARRY_IN.value, this.gateCARRY_OUT.value, this.gateDVD_SIGN.value, this.gateLAST_LD_CYC.value,
+            this.gateHP.value, this.gateEZ.value,
+            this.regMBR.even.toString(16).padStart(2, "0"), this.regMBR.odd.toString(16).padStart(2, "0"),
+            this.regMIR.even.toString(16).padStart(2, "0"), this.regMIR.odd.toString(16).padStart(2, "0"));
+    }
+
+    /**************************************/
+    traceInstruction() {
+        /* Traces the instruction just executed */
+
+        console.log(`<TRACE> ${this.traceLine}  ${this.tracePData}  ${this.traceQData}`);
+
+        this.traceLine = this.tracePData = this.tracePLabel = this.traceQData = this.traceQLabel = "";
     }
 
 
@@ -3076,7 +3306,14 @@ class Processor {
         }
 
         if (this.gateEXP_OFLO.value || this.gateEXP_UFLO.value) {
-            this.setIndicator(15, `Exponent overflow/underflow: op=${this.opBinary}, IR1=${this.regIR1.binaryValue-12}`);
+            this.setIndicator(15, `Exponent overflow/underflow: op=${this.opBinary}, IR1=$this.opAddress.toString().padStart(5, "0")}`);
+        }
+
+        // Trace the instruction just completed.
+        if (this.tracing && this.opBinary >= 0) {       // to avoid tracing nothing after a START
+            this.tracePData = this.tracePOperand();
+            this.traceInstruction();
+            this.opBinary = -1;
         }
 
         this.resetICycle();
@@ -3202,6 +3439,7 @@ class Processor {
             this.gateBR_EXEC.value = 0;
         }
 
+        this.opAddress = this.regIR1.binaryValue;       // for tracing
         this.regMAR.value = this.regIR1.value;
         this.fetch();
         if (this.regMAR.value & 1) {
@@ -3237,6 +3475,11 @@ class Processor {
 
         this.opThisAtts = this.opAtts[this.opBinary];
         this.setProcState(procStateI2);
+        if (this.tracing) {
+            this.traceLine = `${this.opAddress.toString().padStart(5, "0")} ` +
+                    `${this.traceGetData(this.opAddress, 2)} ${this.traceGetData(this.opAddress+2, 5)} ${this.traceGetData(this.opAddress+7, 5)}: ` +
+                    `${this.opThisAtts.mnem} ${this.regOP.toBCDString()}`;
+        }
     }
 
     /**************************************/
@@ -3338,6 +3581,10 @@ class Processor {
         if ((mbrEven & Register.flagMask) &&
                 this.opThisAtts.pIA && this.gateIA_SEL.value) {
             this.gateIA_REQ.value = 1;          // set the IA latch
+        }
+
+        if (this.tracing) {
+            this.tracePLabel = "P";
         }
 
         this.regIR1.incr(2);
@@ -3525,6 +3772,10 @@ class Processor {
             this.gateIA_REQ.value = 1;          // set the IA latch
         }
 
+        if (this.tracing) {
+            this.traceQLabel = "Q";
+        }
+
         this.regIR1.incr(2);
         if (this.regXR.isntZero && !this.opThisAtts.index) {
             this.enterIndexing();
@@ -3547,8 +3798,22 @@ class Processor {
         if (this.gateP.value) {
             this.regOR2.clear();
             this.regOR3.clear();
+            if (this.tracing) {
+                if (this.tracePLabel.length < 20) {
+                    this.tracePLabel = `[${this.gateIXBand1.value ? "A":"B"}${this.regXR.binaryValue}]${this.tracePLabel}`;
+                } else if (!this.tracePLabel.startsWith("...")) {
+                    this.tracePLabel = `...${this.tracePLabel}`;
+                }
+            }
         } else {
             this.regOR1.clear();
+            if (this.tracing) {
+                if (this.traceQLabel.length < 20) {
+                    this.traceQLabel = `[${this.gateIXBand1.value ? "A":"B"}${this.regXR.binaryValue}]${this.traceQLabel}`;
+                } else if (!this.traceQLabel.startsWith("...")) {
+                    this.traceQLabel = `...${this.traceQLabel}`;
+                }
+            }
         }
 
         this.gateIX.value = 1;
@@ -3606,6 +3871,21 @@ class Processor {
 
         this.gateIA_ENT.value = 1;
         this.setProcState(procStateIA1);
+        if (this.tracing) {
+            if (this.gateP.value) {
+                if (this.tracePLabel.length < 20) {
+                    this.tracePLabel = `*${this.tracePLabel}`;
+                } else if (!this.tracePLabel.startsWith("...")) {
+                    this.tracePLabel = `...${this.tracePLabel}`;
+                }
+            } else {
+                if (this.traceQLabel.length < 20) {
+                    this.traceQLabel = `*${this.traceQLabel}`;
+                } else if (!this.traceQLabel.startsWith("...")) {
+                    this.traceQLabel = `...${this.traceQLabel}`;
+                }
+            }
+        }
     }
 
     /**************************************/
@@ -3727,6 +4007,11 @@ class Processor {
         the P or Q addresses */
 
         if (this.gateP.value) {         // finish with P address
+            if (this.tracing) {
+                this.traceLine += ` ${this.regOR2.toBCDString()}`;
+                this.tracePAddr.value = this.regOR2.value;      // P data is formatted in enterICycle()
+            }
+
             if (this.opBinary == 49) {  // 49 = Branch (B) early exit
                 this.gateBR_EXEC.value = 1;
                 this.enterICycle();
@@ -3734,7 +4019,31 @@ class Processor {
                 this.setProcState(procStateI5);
             }
         } else {                        // finish with Q address
+            if (this.tracing) {
+                this.traceLine += ` ${this.regOR1.toBCDString()}`;
+                this.traceQData = this.traceQOperand();
+            }
+
             switch(this.opBinary) {
+            case 16:    // TFM, Transmit Field Immediate
+            case 26:    // TF,  Transmit Field
+                if (this.regOR1.binaryValue - this.regOR2.binaryValue == 1) {   // Q-P
+                    // This is a backward smearing move with a distance of 1: works on Mod 1 but not 2.
+                    console.debug(`Invalid smearing Transmit for Model 2 @${this.opAddress.toString().padStart(5, "0")}, ` +
+                                  `P=${this.regOR2.toBCDString()}, Q=${this.regOR1.toBCDString()}`);
+                    debugger;
+                }
+                this.enterECycle();
+                break;
+            case 31:    // TR,  Transmit record
+                if (this.regOR2.binaryValue - this.regOR1.binaryValue == 1) {   // P-Q
+                    // This is a forward smearing move with a distance of 1: works on Mod 1 but not 2.
+                    console.debug(`Invalid smearing Transmit for Model 2 @${this.opAddress.toString().padStart(5, "0")}, ` +
+                                  `P=${this.regOR2.toBCDString()}, Q=${this.regOR1.toBCDString()}`);
+                    debugger;
+                }
+                this.enterECycle();
+                break;
             case 34:    // K, Control
                 if (!this.ioDevice) {
                     this.enterLimbo();
@@ -3876,7 +4185,7 @@ class Processor {
         this.regMQ.clear();
 
         if (!this.opThisAtts.opValid) {
-            this.marCheck(`E-Cyc-Ent: invalid op code ${this.regOP.toBCDString()} @${this.regIR1.binaryValue-12}`);
+            this.marCheck(`E-Cyc-Ent: invalid op code ${this.regOP.toBCDString()} @${this.opAddress.toString().padStart(5, "0")}`);
             return;
         }
 
@@ -3959,7 +4268,7 @@ class Processor {
         case 64:        // BCXM - Branch Conditionally and Modify Index Register Immediate
             this.gateADD_ENT.value = 1;
             if (!(this.gateIX_BAND_1.value || this.gateIX_BAND_2.value)) {
-                this.marCheck(`E-Cyc-Ent: IX op no band ${this.regOP.toBCDString()} @${this.regIR1.binaryValue-12}`);
+                this.marCheck(`E-Cyc-Ent: IX op no band ${this.regOP.toBCDString()} @${this.opAddress.toString().padStart(5, "0")}`);
             } else {
                 this.gateIX_EXEC.value = 1;
             }
@@ -3970,7 +4279,7 @@ class Processor {
         case 67:        // BSX - Branch and Store Index Register
             this.gateEXMIT_ENT.value = 1;
             if (!(this.gateIX_BAND_1.value || this.gateIX_BAND_2.value)) {
-                this.marCheck(`E-Cyc-Ent: IX op no band ${this.regOP.toBCDString()} @${this.regIR1.binaryValue-12}`);
+                this.marCheck(`E-Cyc-Ent: IX op no band ${this.regOP.toBCDString()} @${this.opAddress.toString().padStart(5, "0")}`);
             } else {
                 this.gateIX_EXEC.value = 1;
             }
@@ -5816,7 +6125,7 @@ class Processor {
             // Check for overflow.
             if (!this.gateFIELD_MK_1.value ||
                     (this.gateCARRY_OUT.value && !this.gateCOMP.value && !compare)) {
-                this.setIndicator(14, `A/S/C Arithmetic overflow: op=${this.opBinary}, IR1=${this.regIR1.binaryValue-12}`);
+                this.setIndicator(14, `A/S/C Arithmetic overflow: op=${this.opBinary}, IR1=${this.opAddress.toString().padStart(5, "0")}`);
             }
 
             // Check for initiation of RECOMP phase.
@@ -6145,7 +6454,7 @@ class Processor {
                         nextState = procStateE1;// and do another subtraction cycle
                     } else {                    // exceeded max subtractions, set overflow and quit
                         this.regMQ.value = (op==97 /*DTO*/ ? 0x8 : 0xA); // MQ counted to binary 10 or 8 on overflow
-                        this.setIndicator(14, `DIV Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue-12}`);
+                        this.setIndicator(14, `DIV Arithmetic overflow: op=${op}, IR1=${this.opAddress.toString().padStart(5, "0")}`);
                         nextState = 0;          // inhibit any other state change and exit
                         this.enterICycle();
                     }
@@ -6264,7 +6573,7 @@ class Processor {
         if (this.gateFIELD_MK_2.value) {
             // Check for overflow.
             if (!this.gateFIELD_MK_1.value) {
-                this.setIndicator(14, `A/S/C Arithmetic overflow: op=${op}, IR1=${this.regIR1.binaryValue-12}`);
+                this.setIndicator(14, `A/S/C Arithmetic overflow: op=${op}, IR1=${this.opAddress.toString().padStart(5, "0")}`);
             }
 
             // Check for initiation of RECOMP phase.
@@ -7026,15 +7335,11 @@ class Processor {
             break;
 
         case 72:        // TNS - Transmit Numeric Strip
-            if (this.regMAR.isEven) {
-                // Simulate the problem with even starting addresses. This is
-                // just a guess to what happened, and probably not a good one.
-                digit = this.regMBR.odd & Register.bcdMask;
-                this.setDROdd(this.regMBR.even);
-            } else {
-                digit = this.regMBR.even & Register.bcdMask;
-                this.setDROdd(this.regMBR.odd);
-            }
+            // Note that if MAR is even (a no-no for this instruction), the
+            // digits will be reversed -- zone will be taken from the even
+            // address and numeric will be taken from the odd address.
+            digit = this.regMBR.even & Register.bcdMask;
+            this.setDROdd(this.regMBR.odd);
 
             if (this.gate1ST_CYC_DELAYD.value) { // special sign logic for TNS
                 if (digit == 5 || digit == 1 || (digit == 2 &&
@@ -7048,16 +7353,11 @@ class Processor {
             break;
 
         case 73:        // TNF - Transmit Numeric Fill
-            digit = (this.gateFIELD_MK_2.value ? 5 : 7);
-            if (this.regMAR.isEven) {
-                // Simulate the problem with even starting addresses. This is
-                // just a guess to what happened, and probably not a good one.
-                this.regMIR.even = this.regDR.odd;
-                this.regMIR.odd = digit;
-            } else {
-                this.regMIR.even = digit;
-                this.regMIR.odd = this.regDR.odd;
-            }
+            // Note that if MAR is even (a no-no for this instruction), the
+            // digits will be reversed -- zone will be in the even address and
+            // numeric will be in the odd address.
+            this.regMIR.even = (this.gateFIELD_MK_2.value ? 5 : 7);
+            this.regMIR.odd = this.regDR.odd;
 
             this.store();
             this.regOR2.decr(2);

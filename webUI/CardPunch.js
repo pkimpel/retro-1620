@@ -590,6 +590,7 @@ class CardPunch {
     shutDown() {
         /* Shuts down the device */
 
+        this.menuClose();
         this.startBtn.removeEventListener("click", this.boundStartBtnChange);
         this.stopBtn.removeEventListener("click", this.boundStopBtnChange);
         this.checkResetBtn.removeEventListener("click", this.boundCheckResetBtnClick);

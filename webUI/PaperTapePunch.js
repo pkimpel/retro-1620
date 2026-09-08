@@ -15,7 +15,7 @@
 *       the end of a record.
 *   (2) Each tape frame is represented in the image file as one ASCII or
 *       Unicode character. Only characters valid for 1620 paper tape are
-*       allowed; all other are treated as parity errors and are written
+*       allowed; all others are treated as parity errors and are written
 *       as a tape-feed frame.
 *
 * The punches in a tape frame were identified, highest to lowest order,
@@ -260,7 +260,7 @@ class PaperTapePunch {
     }
 
     /**************************************/
-    async punchTapeFeed(dx, dy) {
+    async punchTapeFeed() {
         /* Initiates and terminates punching tape-feed frames */
 
         this.punchFeeding = true;
@@ -306,7 +306,7 @@ class PaperTapePunch {
             b64 += encoding[(chunk & 0xFC0000) >> 18] +
                    encoding[(chunk &  0x3F000) >> 12] +
                    encoding[(chunk &    0xFC0) >>  6] +
-                   encoding[chunk &      0x3F];
+                   encoding[ chunk &      0x3F];
         }
 
         // Deal with any remaining bytes and padding.
@@ -405,9 +405,11 @@ class PaperTapePunch {
         /* Extracts the contents of the punch buffer as binary tape image,
         converts it to a base64-encoded DataURL, and constructs a link to cause
         the URL to be "downloaded" and stored on the local device. All
-        characters are ASCII according to the convention used by the 1620-Jr
-        project */
+        characters are represented as 8-bit bytes according to the convention
+        used by the 1620-Jr project */
         const title = "retro-1620 Paper Tape Punch Output.pt";
+
+        // Eventually btoaUint8() should be replaced with ArrayBuffer.toBase64().
 
         if (this.bufIndex > 0) {
             const url = "data:application/octet-stream;base64," +
@@ -626,6 +628,7 @@ class PaperTapePunch {
         run, do nothing because this.window, etc., didn't get initialized */
 
         if (this.window) {
+            this.menuClose();
             this.$$("PunchMenuIcon").removeEventListener("click", this.boundMenuClick);
             this.$$("PunchFeedSwitch").removeEventListener("click", this.boundPunchFeedSwitchClick);
             this.window.removeEventListener("resize", this.boundResizeWindow);

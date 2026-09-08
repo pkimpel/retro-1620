@@ -240,7 +240,7 @@ class Register {
         /* Returns the value of digit 0 from a register. This is useful and more
         efficient than getDigit() for the 2-digit even/odd registers */
 
-        return this.intVal & Register.digitMask;
+        return this.intVal & this.digitMask;
     }
 
     set odd(value) {
@@ -261,7 +261,7 @@ class Register {
         more efficient than getDigit() for the 2-digit even/odd registers.
         If a register has only one digit, returns zero */
 
-        return (this.intVal >> Register.digitBits) & Register.digitMask;
+        return (this.intVal >> Register.digitBits) & this.digitMask;
     }
 
     set even(value) {

@@ -14,8 +14,8 @@
 * Licensed under the MIT License,
 *       see http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* Script to convert IBM 1620 binary paper tape images in the "Dave W"
-* format to the ASCII format used by retro-1620.
+* Script to validate IBM 1620 binary paper tape images in the "Dave W"
+* format for valid punch patterns and correct odd parity.
 *
 * Each 8-bit byte in the tape image represents one frame from the paper
 * tape with the following channel orientation from high order to low
@@ -26,17 +26,13 @@
 * where "E" is the EOL punch. The sprocket holes go between the 4 and 8
 * channel punches.
 *
-* This script decodes the bits in each byte and translates them to the
-* ASCII encoding used by the Computer History Museum's 1620 Jr. project.
-* Invalid bit combinations are translated to "?".
-*
 * To use, select the .PT file using the file selection control on the
 * page. Selecting a file automatically starts the conversion.
 *
-* This version outputs the converted data by opening a browser window for
-* the file and inserting the converted text into a <pre> element in
-* that window. From there you can copy the text and paste into another
-* program that can save the data to a local filesystem.
+* This version outputs its results by opening a browser window for
+* the file and writing text messages into a <pre> element in that 
+* window. From there you can copy the text and paste into another
+* program.
 ************************************************************************
 * 2024-06-26  P.Kimpel
 *   Original version, from Paper-Tape-Decoder.html.

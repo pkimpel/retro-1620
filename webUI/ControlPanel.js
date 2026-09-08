@@ -828,12 +828,25 @@ class ControlPanel {
         };
 
         //----------------------------
+        const toggleTracing = (ev) => {
+            /* Handle the click event on the Trace Execution check box */
+
+            p.tracing = ev.target.checked;
+            if (p.tracing) {
+                console.log(`<Tracing On> ${Date()}`);
+            } else {
+                console.log(`<Tracing Off> ${Date()}`);
+            }
+        };
+
+        //----------------------------
         const closeDebugPanel = (ev) => {
-            /* Unwires the local events and closes the load panel */
+            /* Unwires the local events and closes the debug panel */
 
             this.$$("DebugCloseBtn").removeEventListener("click", closeDebugPanel);
             this.$$("RegisterViewCheck").removeEventListener("click", toggleRegisterView);
             this.$$("AuxCEPanelViewCheck").removeEventListener("click", toggleAuxCEPanelView);
+            this.$$("TracingCheck").removeEventListener("click", toggleTracing);
             this.$$("MemoryDumpBtn").removeEventListener("click", initiateMemDumpView);
             this.$$("CMEMSaveBtn").removeEventListener("click", saveCMEMFile);
             this.$$("CMEMDumpBtn").removeEventListener("click", initiateCMEMView);
@@ -845,10 +858,12 @@ class ControlPanel {
         //----------------------------
         this.$$("RegisterViewCheck").checked = this.registerView;
         this.$$("AuxCEPanelViewCheck").checked = this.auxCEPanel !== null;
+        this.$$("TracingCheck").checked = p.tracing;
 
         this.$$("DebugPanelDiv").style.display = "block";
         this.$$("RegisterViewCheck").addEventListener("click", toggleRegisterView);
         this.$$("AuxCEPanelViewCheck").addEventListener("click", toggleAuxCEPanelView);
+        this.$$("TracingCheck").addEventListener("click", toggleTracing);
         this.$$("CMEMSelector").addEventListener("change", initiateCMEMLoad);
         this.$$("CMEMDumpBtn").addEventListener("click", initiateCMEMView);
         this.$$("CMEMSaveBtn").addEventListener("click", saveCMEMFile);
@@ -914,23 +929,6 @@ class ControlPanel {
            this.$$("RegisterViewTable").style.display = "none";
            this.$$("RunStatsTable").style.display = "none";
            this.config.putNode("ControlPanel.RegisterView", 0);
-        }
-    }
-
-    /**************************************/
-    toggleTracing(ev) {
-        /* Toggles the Processor's tracing option */
-        const p = this.context.processor;
-
-        this.$$("FrontPanel").focus();  // de-select the version <div>
-
-        p.tracing = !p.tracing;
-        if (p.tracing) {
-            ev.target.classList.add("active");
-            console.log("<TRACE ON>");
-        } else {
-            ev.target.classList.remove("active");
-            console.log("<TRACE OFF>");
         }
     }
 

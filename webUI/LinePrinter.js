@@ -1173,6 +1173,7 @@ class LinePrinter {
     shutDown() {
         /* Shuts down the device */
 
+        this.menuClose();
         this.startBtn.removeEventListener("click", this.boundControlClick);
         this.stopBtn.removeEventListener("click", this.boundControlClick);
         this.resetBtn.removeEventListener("click", this.boundControlClick);

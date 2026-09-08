@@ -1136,6 +1136,7 @@ class Typewriter {
         run, do nothing because this.window, etc., didn't get initialized */
 
         if (this.window) {
+            this.menuClose();
             this.$$("FormatControlsDiv").removeEventListener("change", this.boundTextOnChange);
             this.$$("InsertBtn").removeEventListener("click", this.boundInsertBtnClick);
             this.$$("TypewriterMenuIcon").removeEventListener("click", this.boundMenuClick);

@@ -47,7 +47,7 @@
 * general use. The plotting area is not scaled, only the display of it.
 *
 * Different browsers support different maximum sizes of the <canvas>
-* element. As of late 2023, desktop versions of the following browsers
+* element. As of late 2025, desktop versions of the following browsers
 * support maximum coordinate values of: Firefox 32767, Chrome and Edge
 * 65535, Apple Safari 4,194,303 in width and 8,388,607 in height.
 * There are further restrictions on the total area of a canvas.
@@ -64,7 +64,7 @@
 *
 * Note that canvas pixels are not the same as css (window) pixels,
 * except at a scale factor of 1.000 (100%). At 50% scale, there are
-* two canvas pixels per css pixels, but that relationship will change
+* two canvas pixels per css pixel, but that relationship will change
 * as the Plotter window is resized.
 *
 * See the wiki on the device for more information:
@@ -78,7 +78,6 @@
 export {Plotter};
 
 import {Envir} from "../emulator/Envir.js";
-import {Register} from "../emulator/Register.js";
 import {Timer} from "../emulator/Timer.js";
 import {openPopup} from "./PopupUtil.js";
 
@@ -86,7 +85,7 @@ class Plotter {
 
     // Static properties
 
-    static fpsAlpha = 0.01;             // alpha for moving exponential average frames/sec
+    // static fpsAlpha = 0.01;             // alpha for moving exponential average frames/sec
     static minWait = 7;                 // minimum accumulated delay before throttling, ms
     static penPeriod = 100;             // time for pen up/down, ms
     static stepPeriod = 1000/300;       // time per pen step, ms
@@ -173,7 +172,7 @@ class Plotter {
     canvasMaxHeight = 0;                // maximum canvas height, canvas pixels
     cxLast = 0;                         // last horizontal canvas coord
     cyLast = 0;                         // last vertical canvas coord
-    fps = 60.0;                         // moving exponential average frames/sec
+    // fps = 60.0;                         // moving exponential average frames/sec
     frameLastStamp = performance.now(); // last animation frame timestamp
     innerHeight = 0;                    // window inner height, css pixels
     innerWidth = 0;                     // window inner width, css pixels
@@ -542,10 +541,10 @@ class Plotter {
     *******************************************************************/
 
     /**************************************/
-    toInternalCoord(x, y) {
+    toInternalCoord(cx, cy) {
         /* Converts canvas pixel coordinates to internal pixel coordinates */
 
-        return [Plotter.canvasHOffset-x, y-Plotter.canvasVOffset];
+        return [Plotter.canvasHOffset-cx, cy-Plotter.canvasVOffset];
     }
 
     /**************************************/
@@ -639,8 +638,8 @@ class Plotter {
 
     /**************************************/
     cloneCanvas(margin) {
-        /* Copies that part of the visible canvas from (0,0) to (xMax,yMax) and
-        returns that portion as a new canvas object. "margin" specifies the
+        /* Copies that part of the visible canvas from (xMin,yMin) to (xMax,yMax)
+        and returns that portion as a new canvas object. "margin" specifies the
         number of margin pixels to be added around the original canvas */
         const margin2 = margin*2;
         const [cxMin, cyMin] = this.toCanvasCoord(this.xMin, this.yMin);
@@ -670,6 +669,7 @@ class Plotter {
         this.$$("CarriageUpperGuide").style.display = display;
         this.$$("CarriageLowerRail").style.display = display;
         this.$$("CarriageLowerGuide").style.display = display;
+        this.window.getSelection().removeAllRanges();   // de-select the PEN caption
         this.config.putNode("Plotter.visibleCarriage", (this.visibleCarriage ? 1 : 0));
     }
 

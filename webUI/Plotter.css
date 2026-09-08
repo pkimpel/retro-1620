@@ -149,6 +149,8 @@
     width:              68px;
     background-color:   #999;
     cursor:             auto}
+#ButtonDiv DIV.caption {
+    font-size:          10px}
 
 #IBMLogo {
     position:           absolute;
@@ -240,8 +242,8 @@
     border:             2px solid transparent;
     border-radius:      4px}
 #PenUpLamp {
-    top:                34px;
-    left:               calc(50% - 11px)}
+    top:                36px;
+    left:               calc(50% - 9px)}
 #PenDownBtn {
     position:           absolute;
     top:                12px;
@@ -250,8 +252,8 @@
     border:             2px solid transparent;
     border-radius:      4px}
 #PenDownLamp {
-    top:                34px;
-    right:              calc(50% - 11px)}
+    top:                36px;
+    left:               calc(50% + 9px)}
 
 #ButtonDiv {
     position:           absolute;
@@ -263,6 +265,7 @@
     left:               50%;
     transform:          translate(-50%, 0);
     width:              calc(100% - 8px);
+    height:             24px;
     font-weight:        bold;
     border:             2px solid black;
     border-radius:      8px}
@@ -290,32 +293,32 @@
     left:               5px;
     background-color:   black}
 #BlackLamp {
-    top:                28px;
-    left:               8px}
+    top:                30px;
+    left:               10px}
 #RedBtn {
     left:               17px;
     background-color:   red}
 #RedLamp {
-    top:                28px;
-    left:               20px}
+    top:                30px;
+    left:               22px}
 #GreenBtn {
     left:               29px;
     background-color:   green}
 #GreenLamp {
-    top:                28px;
-    left:               32px}
+    top:                30px;
+    left:               34px}
 #BlueBtn {
     left:               41px;
     background-color:   blue}
 #BlueLamp {
-    top:                28px;
-    left:               44px}
+    top:                30px;
+    left:               46px}
 #BrownBtn {
     left:               53px;
     background-color:   #630}
 #BrownLamp {
-    top:                28px;
-    left:               56px}
+    top:                30px;
+    left:               58px}
 
 #LineWidthDiv {
     position:           absolute;
@@ -351,7 +354,8 @@
 .panelLamp {
     position:           absolute;
     display:            none;
-    width:              4px;
-    height:             4px;
+    width:              6px;
+    height:             6px;
+    transform:          translate(-50%, -50%);
     background-color:   white;
-    border-radius:      2px}
+    border-radius:      50%}

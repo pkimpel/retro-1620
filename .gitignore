@@ -19,3 +19,4 @@ $RECYCLE.BIN/
 .DS_Store
 
 # Project-specific files
+*.tws                   # TextPad Workspace files

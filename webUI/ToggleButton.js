@@ -22,8 +22,8 @@ class ToggleButton {
 
     // Static class properties
 
-    static topCaptilitClass = "coloredLampTopCaption";
-    static bottomCaptilitClass = "coloredLampBottomCaption";
+    static topCaptionClass = "coloredLampTopCaption";
+    static bottomCaptionClass = "coloredLampBottomCaption";
 
 
     constructor(parent, x, y, id, caption, offClass, litClass) {
@@ -107,10 +107,10 @@ class ToggleButton {
             e = document.createElement("div");
             if (atBottom) {
                 this.bottomCaptionDiv = e;
-                e.className = ToggleButton.bottomCaptilitClass;
+                e.className = ToggleButton.bottomCaptionClass;
             } else {
                 this.topCaptionDiv = e;
-                e.className = ToggleButton.topCaptilitClass;
+                e.className = ToggleButton.topCaptionClass;
             }
             e.appendChild(document.createTextNode(caption));
             this.element.appendChild(e);
