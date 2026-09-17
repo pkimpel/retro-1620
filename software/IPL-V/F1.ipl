@@ -1,0 +1,47 @@
+      TYPE=9, FIRST CARD.               9
+      EXAMPLE RUN OF F1 TO ILLUSTRATE   1
+      ASSEMBLY LISTING AND TRACE.       1
+      THE A-REGION=10 CELLS, A0-A9.     2 A0            10
+      THE B-REGION=10 CELLS, B0-B9.     2 B0            10
+      THE C-REGION=10 CELLS, C0-C9.     2 C0            10
+      THE E-REGION=10 CELLS, E0-E9.     2 E0            10
+      THE F-REGION=10 CELLS, F0-F9.     2 F0            10
+      THE K-REGION=10 CELLS, K0-K9.     2 K0            10
+      ROUTINE HEADER. TYPE=5,Q=0.       5       00
+      E1---EXECUTIVE ROUTINE.           1
+      EXECUTE F1 WITH THE LIST K1       1
+      AS INPUT AND PRINT THE            1
+      RESULTING OUTPUT LIST.            1
+      Q=3 SAYS TRACE THIS ROUTINE.        E1    13K1
+      EXECUTE F1 AND                              F1
+      PRINT THE OUTPUT LIST.                      J151  0
+      ROUTINE HEADER, TYPE=5,Q=0.       5       00
+      F1---PRODUCE AN OUTPUT LIST (O)   1
+      CONTAINING ONLY ONE OCCURRENCE OF 1
+      EACH DISTINCT SYMBOL ON THE INPUT 1
+      LIST (O). THE ROUTINE F1 IS       1
+      MARKED TO TRACE CONDITIONALLY WITH1
+      Q=4 IN ITS FIRST INSTRUCTION.     1
+      CREATE AN EMPTY OUTPUT LIST.        F1    04J90
+      PRESERVE W0.                              40W0
+      W0 HOLDS NAME OF OUTPUT LIST.             20W0
+      LOCATE NEXT CELL OF INPUT LIST.     9-1     J60
+      GO TO 9-2 IF NO NEXT CELL.                709-2
+      INPUT THE SYMBOL IN THE CELL.             12H0
+      INPUT THE NAME OF THE OUTPUT LIST.        11W0
+      REVERSE THEIR POSITION IN H0, AND           J6
+      ADD THE SYMBOL TO THE OUTPUT LIST           J66   9-1
+      IF IT IS NOT ALREADY ON IT---     1
+      RETURN TO 9-1 IN EITHER CASE.     1
+      PUT THE NAME OF THE OUTPUT LIST     9-2   51W0
+      IN H0 AND RESTORE W0 BEFORE               30W0    0
+      QUITTING.                         1
+      DATA HEADER. TYPE=5,Q=1.          5       01
+      THE LIST K1.                        K1      0
+                                                  B1
+                                                  C1
+                                                  B1
+                                                  A1
+                                                  A1
+                                                  B1    0
+      START CARD. EXECUTE E1.           5         E1

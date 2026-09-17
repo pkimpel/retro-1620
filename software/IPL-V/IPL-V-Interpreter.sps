@@ -62,7 +62,7 @@
 10640INSTR DS  12
 10650      DS  1,
 10660LADR  DS  5
-10670PBLK  DC  10,0750014987
+10670PBLK  DC  10,0718214987                                                    MOD-4
 10680RWD   DS  5
 10690NMBR  DS  5
 10700TMP   DS  5,
@@ -1543,8 +1543,8 @@
 25040COM2  AM  COM+11,5,10,
 25050      B   COM+24
 25060      DORG *-4
-25070D5    DS  30
-25080D6    DS  ,D5-12
+25070      DS  30                       ,,,AVAIL - WAS D5, NOW AT 07181         MOD-4
+25080**D6  DS  ,D5-12                   ,,,D6 MOVED WITH D5                     MOD-4
 25090      DS  5
 25100LBLNK BD  *+72,LBLNK-1,11
 25110      SM  LBLNK-1,1,10
@@ -1876,6 +1876,8 @@
 28400      BNE BCWTST-1,,6
 28410      BB
 28420      DORG*-9
+28500D5    DS  30,7181,,                RELOCATED FROM 03920 TO ODD ADDRESS     MOD-4
+28510D6    DS  ,D5-12,,                 RELOCATED ALONG WITH D5                 MOD-4
 30000******    1620 IPL-V PRIMITIVE PROCESSES (RELOCATABLE)
 30010      DORG 0
 30020      51  1,72
@@ -1986,8 +1988,8 @@
 31070      DORG 0
 31080      51  62,108
 31090JJ62  BTM POPUP,H0,7,LOCATE (0) ON (1)
-31100      SF  D2-9
-31110      TF  D6,D2-5
+31100      TF  D6,D2-5                                                          MOD-3
+31110      SF  D6-4                                                             MOD-3
 31120      BTM J60SP,*+60,17,
 31130      TF  D5,H0-5,11,
 31140      C   D6,D5-5
@@ -2011,7 +2013,7 @@
 31320      TF  D3,D6,6,
 31330      BT  POPH0,JJ64-1,1,
 31340      DORG 0
-31350      51  66,108
+31350      51  66,120                                                           MOD-3A
 31360JJ66  TF  79,H5-5,,USES J62 AND J64
 31370      BTM J62-5,*+12,167,
 31380      C   PLUS,H5-5
@@ -2019,6 +2021,7 @@
 31400      BNE *+24,,0,
 31410      BT  POPH0,JJ66-1,1,
 31420      BTM PSHDN,H0
+31425      CF  D6-4                                                             MOD-3
 31430      TF  H0-5,D6
 31440      BT  J64-5,JJ66-1,16,
 31450      DORG 0
