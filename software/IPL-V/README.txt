@@ -1,21 +1,42 @@
-IBM-1620 IPL-V Interpreter.
+IBM-1620 IPL-V Interpreter
 
-Interpreter for the IPL-V list-processing language written by Wendell
-Terry Beyer of the University of Oregon in 1963, taken from a scanned
-PDF document in the Feigenbaum collection of the Stanford Digital
-Repository.
+IPL -- the "Information Processing Language" -- was a programming language 
+created  in the mid 1950s by Allan Newell, Herb Simon, and Cliff Shaw 
+at RAND and Carnegie Tech (now CMU). IPL was the first programming language 
+developed specifically for AI and cognitive simulation. Like Lisp, IPL is 
+specialized for working with symbols and lists. In fact, it was a direct 
+predecessor of Lisp, and was made extinct by Lisp the 1970s because Lisp
+does exact same work as IPL, but Lisp uses a much more elegant syntax.
+However, in the second half of the 1950s, and through the mid 1960s, IPL 
+was the language in which the most important AI and cognitive models 
+were written, including The Logic Theorist, considered to be the first 
+true AI, and GPS, the General Problem Solver.
+
+IPL-V is described in the book:
+    "Information Processing Language-V, Second Edition", Allen Newell,
+    Fred M. Tonge, Edward A. Feigenbaum, Bert F. Green, Jr., George H.
+    Mealy (the RAND Corporation), Prentice-Hall, 1964.
+    https://stacks.stanford.edu/file/druid:yz379pw9306/yz379pw9306.pdf
+
+And this video gives a brief introduction to IPL-V:
+    https://www.youtube.com/watch?v=Q6e8XQEdOFY
+
+This IBM 1620 interpreter for IPL-V was written by Wendell Terry Beyer 
+of the University of Oregon in 1963. It wastaken from this scanned PDF 
+found in the Feigenbaum collection of the Stanford Digital
+Repository, and brought to our attention by David Moews:
 
 IPL-V SPS Listing PDF
     https://stacks.stanford.edu/file/hj487fn0811/hj487fn0811.pdf
     Call Number: SC0340, Accession: 1986-052, Box: 46, Folder: 52,
     Title: IPL-V
 
-Two small updates to the SPS source have been found, identified as
-Modification Letters 3 and 4. Presumably Letters 1 and 2 existed, and
-perhaps even later updates, but we have not been able to find any
-evidence of them. Despite the possibility of the changes in Letters 3
-and 4 having dependencies on earlier updates, the changes in Letters 3
-and 4 have been applied to the source code derived from the SPS Listing
+In making this IPL-V interpreter work, two small updates to the source
+were applied, identified as Modification Letters 3 and 4. (Presumably 
+Letters 1 and 2 existed, and perhaps even later updates, but we have 
+not been able to find any of these.) Despite the possibility of the 
+changes in Letters 3 and 4 having dependencies on earlier updates, 
+they have been applied to the source code derived from the SPS Listing
 PDF, as discussed below. Modification Letter 4 is necessary in order for
 the interpreter to run on at least the 1620 Model 2.
 
@@ -38,13 +59,6 @@ OCR system:
 
 OCR transcription results.
     https://github.com/rupertl/iplv-listings/
-
-IPL-V is described in the book:
-    "Information Processing Language-V, Second Edition", Allen Newell,
-    Fred M. Tonge, Edward A. Feigenbaum, Bert F. Green, Jr., George H.
-    Mealy (the RAND Corporation), Prentice-Hall, 1964.
-    https://stacks.stanford.edu/file/druid:yz379pw9306/yz379pw9306.pdf
-
 
 Running the program:
 
@@ -221,6 +235,20 @@ IPL-V-Subroutines.card
     reader.
 
 simple.ipl
-    A minimal IPL-V program that runs, but effectively does nothing.
+    A simple list-manipulation program that exercises an important part
+    of the IPL-V machinery. IPL-V's "built-in" functions (subroutines) 
+    all begin with "J". Many of these are built into the interpreter, 
+    written in 1620 assembler. However, like many modern languages, IPL-V
+    builds itself up from the basic set by adding a set of "loaded" 
+    subroutines that are written in IPL-V itself! In fact, this is the
+    set that are loaded from the deck described just above, called:
+    IPL-V-Subroutines.card. This program (simple.ipl) calls J76, which
+    is not only defined on IPL-V itself, and loaded from the above deck,
+    but there is a 4-deep called stack through many other loaded functions!
+    Therefore, although this program is called "simple", and what it does
+    is a very simple list manipulation (inserting one list into another),
+    by called J76 it exercises the "self-definition" part of IPL-V, which
+    is a critical part of the definition of the language.
+
 
 
