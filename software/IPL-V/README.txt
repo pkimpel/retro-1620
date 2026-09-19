@@ -1,43 +1,16 @@
 IBM-1620 IPL-V Interpreter.
 
-Interpreter for the IPL-V list-processing language written by Wendell
-Terry Beyer of the University of Oregon in 1963, taken from a scanned
-PDF document in the Feigenbaum collection of the Stanford Digital
-Repository.
-
-IPL-V SPS Listing PDF
-    https://stacks.stanford.edu/file/hj487fn0811/hj487fn0811.pdf
-    Call Number: SC0340, Accession: 1986-052, Box: 46, Folder: 52,
-    Title: IPL-V
-
-Two small updates to the SPS source have been found, identified as
-Modification Letters 3 and 4. Presumably Letters 1 and 2 existed, and
-perhaps even later updates, but we have not been able to find any
-evidence of them. Despite the possibility of the changes in Letters 3
-and 4 having dependencies on earlier updates, the changes in Letters 3
-and 4 have been applied to the source code derived from the SPS Listing
-PDF, as discussed below. Modification Letter 4 is necessary in order for
-the interpreter to run on at least the 1620 Model 2.
-
-Modification Letter 3
-    https://purl.stanford.edu/bk072pk3345
-
-Modification Letter 4
-    https://purl.stanford.edu/qg281jn8061
-
-The interpreter is described by Beyer in a paper included in:
-
-1620 Users Group Western Region Minutes Denver, 1964-06, "1620 IPL-V A
-Non-numeric Problem Solving Tool", Wendell Terry Beyer, p.147
-    https://bitsavers.org/pdf/ibm/common/1620_Users_Group_Western_Region
-    _196406.pdf
-
-Transcribed from the SPS Listing PDF by Rupert Lane using his "gridlock"
-OCR system:
-    https://github.com/rupertl/gridlock/
-
-OCR transcription results.
-    https://github.com/rupertl/iplv-listings/
+IPL -- the "Information Processing Language" -- was a programming
+language created in the mid 1950s by Allan Newell, Herb Simon, and Cliff
+Shaw at RAND and Carnegie Tech (now CMU). IPL was the first programming
+language developed specifically for AI and cognitive simulation. Like
+Lisp, IPL is specialized for working with symbols and lists. In fact, it
+was a direct predecessor of Lisp, and was made extinct by Lisp the 1970s
+because Lisp does the exact same work as IPL, but Lisp uses a much more
+elegant syntax. However, in the second half of the 1950s and through the
+mid 1960s, IPL was the language in which the most important AI and
+cognitive models were written, including The Logic Theorist, considered
+to be the first true AI, and GPS, the General Problem Solver.
 
 IPL-V is described in the book:
     "Information Processing Language-V, Second Edition", Allen Newell,
@@ -45,16 +18,73 @@ IPL-V is described in the book:
     Mealy (the RAND Corporation), Prentice-Hall, 1964.
     https://stacks.stanford.edu/file/druid:yz379pw9306/yz379pw9306.pdf
 
+This video gives a brief introduction to IPL-V:
+    https://www.youtube.com/watch?v=Q6e8XQEdOFY
+
+This IPL-V interpreter for the IBM 1620  was written by Wendell Terry
+Beyer and John D. MacDonald at the University of Oregon in 1963. The
+interpreter is described by Beyer in a paper included in:
+
+1620 Users Group Western Region Minutes, Denver, 1964-06, "1620 IPL-V A
+Non-numeric Problem Solving Tool", Wendell Terry Beyer, p.147
+    https://bitsavers.org/pdf/ibm/common/1620_Users_Group_Western_Region
+    _196406.pdf
+
+A scanned PDF of the program listing was found in the Feigenbaum
+collection of the Stanford Digital Repository by David Moews:
+
+IPL-V SPS Listing PDF
+    https://stacks.stanford.edu/file/hj487fn0811/hj487fn0811.pdf
+    Call Number: SC0340, Accession: 1986-052, Box: 46, Folder: 52,
+    Title: IPL-V
+
+David reported this find to Jeff Shrager, who discovered the existence
+of the retro-1620 emulator and contacted its author, Paul Kimpel, for
+assistance in getting the program to run in the emulator.
+
+The scanned PDF listing was transcribed by Rupert Lane using his
+"gridlock" OCR system.
+    https://github.com/rupertl/gridlock/
+
+OCR transcription results.
+    https://github.com/rupertl/iplv-listings/
+
+SPS assembly source code was extracted manually from the transcription
+and assembled using the IBM 1620 SPS II card-based assembler. A listing
+of the assembled program was obtained as a text file and compared back
+to the transcription output to validate the transcription. Any OCR mis-
+reads (largely confusion between letter "O" and digit "0") were then
+corrected manually and the source assembled again, repeating the process
+until the transcription and assembler listing matched.
+
+In making this IPL-V interpreter work, two small updates, identified as
+Modification Letters 3 and 4, were applied to the source. Presumably
+Letters 1 and 2 existed, and perhaps even later updates, but we have not
+been able to find any of these. Despite the possibility of the changes
+in Letters 3 and 4 having dependencies on earlier updates, they have
+been applied to the source code derived from the scanned PDF listing, as
+discussed for the update "diff" files below. Modification Letter 4 is
+necessary in order for the interpreter to run on the 1620 Model 2, which
+is the model that retro-1620 emulates. Apparently the program was able
+to run without this update on at least some versions of the 1620 Model
+1.
+
+Modification Letter 3
+    https://purl.stanford.edu/bk072pk3345
+
+Modification Letter 4
+    https://purl.stanford.edu/qg281jn8061
 
 Running the program:
 
-With the retro-1620 emulator in a halted state (which it is immediately
-after being started), load the following card-image files into the Card
-Reader, in the following exact order:
+With the retro-1620 emulator in a halted state (i.e., the MANUAL lamp on
+the 1620 control panel is on and the AUTOMATIC lamp is off), load the
+following card-image files into the emulator's card reader in the
+following exact order:
 
     1. IPL-V-Interpreter-Deck-1.card
-    2. Your program's own source card images (e.g. Ackermann.ipl). If
-       desired, multiple source files can be loaded, which will be
+    2. Your program's own IPL-V source card images (e.g. Ackermann.ipl).
+       If desired, multiple source files can be loaded, which will be
        concatenated in the reader's buffer and treated as one unified
        source file.
     3. IPL-V-Subroutines.card
@@ -65,18 +95,18 @@ Reader, in the following exact order:
     which we believe would have been inserted between items 2 and 3
     above.
 
-Once these decks are loaded, press the LOAD button on the Card Reader
+Once these decks are loaded, press the LOAD button on the card reader
 panel. This will boot Deck-1, which will process and load the remaining
-files. When the load completes, the 1620 will halt. Press START to run
-the assembled IPL-V program.
+files. When the load completes, the 1620 will halt. Press START on the
+1620 control panel to run the assembled IPL-V program.
 
-Most of the output will be written to the emulator's Card Punch. Once
-the IPL-V run has ended, the contents of the Card Punch can be printed
+Most of the output will be written to the emulator's card punch. Once
+the IPL-V run has ended, the contents of the card punch can be printed
 or saved as a text file to your local system. Error and informational
 messages are written to the emulator's typewriter.
 
 Diagnostic output is controlled by the four Program Switches on the 1620
-Control Panel and written to the Card Punch. The switches operate
+Control Panel and written to the card punch. The switches operate
 independently and can be turned on or off in any combination.
 
     Switch 1: when on, a trace of IPL-V instruction execution will be
@@ -87,8 +117,8 @@ independently and can be turned on or off in any combination.
     enabled.
 
     Switch 3: when on, the memory addresses and internal descriptions of
-    system storage cells and "J" intrinsic routines used by the program
-    will be listed.
+    system storage cells and "J" intrinsic subroutines used by the
+    program will be listed.
 
     Switch 4: when on, the card images of the source program will be
     listed, with some assembly information included on the right of each
@@ -99,27 +129,10 @@ independently and can be turned on or off in any combination.
 
 Repository files:
 
-Ackermann.ipl
-    A small sample IPL-V program discussed in Newell, et al, that
-    computes the Ackermann function.
-
-Ackermann-Punch-Output.card
-    Card Punch output from running program Ackermann.ipl in the
-    interpreter with Program Switches 3 and 4 on and Switches 1 and 2
-    off. This run was for evaluation of Ackermann(3,3). The program's
-    output is the last line of the file, showing N having a value of 61.
-
-F1.ipl
-    Another sample IPL-V program from Newell, described on pages 17-23.
-
-F1-Punch-Output.card
-    Card Punch output from running program F1.ipl in the interpreter
-    with Program Switches 1, 3, and 4 on and Switch 2 off. The first
-    part of the output, through the line "0078 ... PROGRAM BEGINS AT E1"
-    is the source listing produced by Switches 3 and 4 being on. The
-    rest of the file is the output generated by the program along with
-    the trace enabled by Switch 1. These outputs can be compared to the
-    figures on pages 21 and 23 of the Newell book.
+IPL-V-Samples/
+    A directory containing set of sample IPL-V programs and their
+    output. See the README.txt file in the directory for more
+    information.
 
 IPL-V-Interpreter.sps
     SPS assembly source deck extracted from the corrected IPL-V-
@@ -158,7 +171,7 @@ IPL-V-Interpreter-Deck-2.card
          card is followed by:
       3. Cards ending in ]0293 through ]0447; followed by:
       4. Cards ending in ]0627 through ]0633, the end of the object code
-      file.
+         file.
 
 IPL-V-Interpreter-label-index.txt
     A cross-reference of assembler labels by their card-sequence numbers
@@ -176,6 +189,16 @@ IPL-V-Interpreter-Listing.lst
 IPL-V-Interpreter-Mod-3.diff
     Unix unified diff file for the changes from Modification Letter 3 to
     the interpreter SPS source file above.
+
+    There is an additional change to this file not included in Letter 3.
+    The IPL-V J-subroutine primitives written in SPS are prefixed by a
+    12-digit header that consists of "51" followed by the five-digit J-
+    routine number, followed by the five-digit length of the routine in
+    digits, excluding the length of the header. Letter 3 added a CF
+    instruction to the routine (card-sequence 31425) but did not add a
+    corresponding adjustment to the header. Therefore, this patch
+    modifies card-sequence 31350 to change the routine length from 108
+    to 120.
 
 IPL-V-Interpreter.Mod-4.diff
     Unix unified diff file for the changes from Modification Letter 4 to
@@ -219,8 +242,4 @@ IPL-V-Subroutines.card
     text as part of Lane's gridlock OCR process. It should be placed
     after the source program and immediately before Deck-2 in the card
     reader.
-
-simple.ipl
-    A minimal IPL-V program that runs, but effectively does nothing.
-
 
