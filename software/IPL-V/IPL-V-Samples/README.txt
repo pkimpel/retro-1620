@@ -27,6 +27,10 @@ F1-Punch-Output.card
     the trace enabled by Switch 1. These outputs can be compared to the
     figures on pages 21 and 23 of the Newell book.
 
+raven/
+    A directory of files for Jeff Shrager's bigram Markov text generator
+    example. See the README file in that directory for details.
+
 simple.ipl
     A simple list-manipulation program that exercises an important part
     of the IPL-V machinery. IPL-V's "built-in" functions (subroutines)

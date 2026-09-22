@@ -1,0 +1,867 @@
+      RAVEN4  TRAIN + GENERATE          9
+      DEFINE REGIONS                    2 A0            2
+      LIST REGION                       2 L0            900
+      TOKEN REGION                      2 T0            85
+      SUPPORT LIST REGION               2 X0            6
+      ROUTINE REGION                    2 G0            6
+      NUMBER REGION                     2 N0            4
+      TEXT-PIECE REGION                 2 V0            133
+      PIECE-LIST REGION                 2 Y0            85
+      ATTRIBUTE KEY REGION              2 K0            3
+      ROUTINE HEADER. TYPE=5,Q=0.       5       00
+      PUSH WORD LIST X2                   A0    10X2
+      J60  (0) = FIRST WORD CELL                  J60
+      W3 = WORD CELL  POP                       20W3
+                                                10X3
+      (0) = FIRST PIECE-LIST CELL                 J60
+      W6 = PIECE-LIST CELL  POP                 20W6
+      MAP LOOP  PUSH MAP LIST X4 = (2)    9-4   10X4
+                                                11W6
+      (0) = PIECE LIST (VALUE (1))                J80
+                                                11W3
+      (0) = WORD SYMBOL (ATTRIBUTE (0))           J80
+      J11  X4 WORD  = PIECE LIST                  J11
+                                                11W3
+      NEXT WORD CELL                              J60
+      IF H5-, ALL LABELLED  GO 9-5              709-5
+      W3 = NEXT WORD CELL                       20W3
+                                                11W6
+                                                  J60
+      NEXT TEXT CELL  LOOP                      20W6    9-4
+      POP LEFTOVER CELL                   9-5     J8
+      PUSH TEXT LIST HEAD X1                    10X1
+      J60  (0) = FIRST TEXT CELL                  J60
+      W6 = FIRST CELL  POP                      20W6
+      PUSH CONTENTS OF W6 (THE CELL)            11W6
+      J80  (0) = WORD IN CELL                     J80
+      W4 = PREVIOUS WORD  POP                   20W4
+                                                11W4
+      W7 = FIRST WORD                           20W7
+      LOOP  PUSH CURRENT CELL             9-1   11W6
+      J60  (0) = NEXT CELL, SET H5                J60
+      IF H5-, TEXT ENDED  GO 9-9                709-9
+      W6 = NEXT CELL  POP                       20W6
+                                                11W6
+      (0) = WORD IN THAT CELL                     J80
+      W5 = THIS WORD  POP                       20W5
+      G2  COUNT PAIR (W4 -  W5)                   G2
+                                                11W5
+      W4 = W5  GO BACK TO 9-1                   20W4    9-1
+      POP LEFTOVER CELL                   9-9     J8
+                                                11W7
+      W5 = FIRST WORD                           20W5
+      G2  COUNT PAIR (W4 -  W5)                   G2
+                                                10X2
+                                                  J60
+      W3 = FIRST WORD CELL                      20W3
+      TABLE LOOP  PUSH WORD CELL          9-6   11W3
+      (0) = WORD SYMBOL                           J80
+      W9 = WORD TO PRINT  POP                   20W9
+                                                10K2
+      PRINT SEPARATOR ****                        J152
+      G3  PRINT WORD + ITS SUCCESSORS             G3
+                                                11W3
+      NEXT WORD CELL                              J60
+      IF H5-, TABLE DONE  GO 9-7                709-7
+      W3 = NEXT CELL  LOOP                      20W3    9-6
+      POP LEFTOVER CELL                   9-7     J8
+                                                10K2
+      PRINT END-OF-TABLE MARK ****                J152
+      PUSH FIRST WORD                           10T1
+      W9 = CURRENT WORD  POP                    20W9
+                                                10X4
+                                                11W9
+      J10  PIECE LIST OF WORD                     J10
+      G4  PRINT ITS TEXT                          G4
+                                                10N2
+      J120  COPY OF ZERO                          J120
+      W8 = COUNTER = 0                          20W8
+      LOOP  PUSH LIMIT N1 (=(1))          9-2   10N1
+      PUSH COUNTER (=(0))                       11W8
+      J116  H5+ IF COUNTER   LIMIT                J116
+      IF H5-, DONE  GO 9-3                      709-3
+      G1  MAKE AND PRINT ONE WORD                 G1
+                                                11W8
+      J125  ADD 1 TO COUNTER, LEAVE (0)           J125
+      J8 POPS (0)  GO BACK TO 9-2                 J8    9-2
+      9-3  HALT                           9-3     J7    0
+      ROUTINE HEADER. TYPE=5,Q=0.       5       00
+      PUSH CURRENT WORD                   G1    11W9
+      J16  (0) = WEIGHTED RANDOM SUCCESS          J16
+      W9 = NEXT WORD  POP                       20W9
+                                                10X4
+                                                11W9
+      J10  PIECE LIST OF NEW WORD                 J10
+      G4  PRINT TEXT  END OF G1                   G4    0
+      ROUTINE HEADER. TYPE=5,Q=0.       5       00
+      PUSH MAP X4                         G3    10X4
+                                                11W9
+      J10  PIECE LIST OF THE WORD                 J10
+      G4  PRINT WORD TEXT                         G4
+                                                11W9
+      J80  (0) = DESCRIPTION LIST NAME            J80
+      J60  (0) = FIRST ATTRIBUTE CELL             J60
+      W4 = ATTRIBUTE CELL  POP                  20W4
+      LOOP  PUSH ATTRIBUTE CELL           9-3   11W4
+      (0) = SUCCESSOR SYMBOL                      J80
+      W5 = SUCCESSOR                            20W5
+                                                11W4
+      J60  VALUE CELL                             J60
+                                                20W4
+                                                11W4
+      (0) = COUNT                                 J80
+      W6 = COUNT                                20W6
+                                                10X4
+                                                11W5
+      J10  PIECE LIST OF SUCCESSOR                J10
+      G4  PRINT SUCCESSOR TEXT                    G4
+                                                11W6
+      PRINT ITS COUNT                             J152
+      ADVANCE  PUSH CELL                        11W4
+      J60  NEXT ATTRIBUTE CELL                    J60
+      IF H5-, NO MORE  GO 9-7                   709-7
+      W4 = NEXT CELL  LOOP                      20W4    9-3
+      POP LEFTOVER CELL  END OF G3        9-7     J8    0
+      ROUTINE HEADER. TYPE=5,Q=0.       5       00
+      J60  (0) = FIRST PIECE CELL         G4      J60
+      W7 = PIECE CELL  POP                      20W7
+      LOOP  PUSH PIECE CELL               9-1   11W7
+      (0) = PIECE                                 J80
+      PRINT IT                                    J152
+                                                11W7
+      NEXT PIECE CELL                             J60
+      IF H5-, NO MORE  GO 9-2                   709-2
+      W7 = NEXT CELL  LOOP                      20W7    9-1
+      POP LEFTOVER CELL  END OF G4        9-2     J8    0
+      ROUTINE HEADER. TYPE=5,Q=0.       5       00
+      PUSH LIST = PREVIOUS WORD           G2    11W4
+      PUSH ATTRIBUTE = THIS WORD                11W5
+      J10  FIND COUNT  SET H5                     J10
+      IF H5- (NEW PAIR), GO 9-5                 709-5
+      J125  COUNT = COUNT + 1                     J125
+      POP COUNT  GO 9-6                           J8    9-6
+      PUSH LIST (2)                       9-5   11W4
+                                                10N3
+      J120  NEW COUNT CELL = 1 (1)                J120
+      PUSH ATTRIBUTE (0)                        11W5
+      J11  ADD (W5 -  1) TO W4                    J11   0
+      9-6  END OF G2 (NO-OP)              9-6     J0    0
+      DATA HEADER. TYPE=5,Q=1.          5       01
+      N1 = STEPS                          N1    01        100
+      N2 = ZERO                           N2    01          0
+      N3 = ONE                            N3    01          1
+                                          K2    21****
+                                          V1    21+ONCE
+                                          V2    21+UPON
+                                          V3    21+A
+                                          V4    21+MIDN
+                                          V5    21-IGHT
+                                          V6    21+DREA
+                                          V7    21-RY
+                                          V8    21+WHIL
+                                          V9    21-E
+                                          V10   21+I
+                                          V11   21+POND
+                                          V12   21-ERED
+                                          V13   21+WEAK
+                                          V14   21+AND
+                                          V15   21+WEAR
+                                          V16   21-Y
+                                          V17   21+OVER
+                                          V18   21+MANY
+                                          V19   21+QUAI
+                                          V20   21-NT
+                                          V21   21+CURI
+                                          V22   21-OUS
+                                          V23   21+VOLU
+                                          V24   21-ME
+                                          V25   21+OF
+                                          V26   21+FORG
+                                          V27   21-OTTE
+                                          V28   21-N
+                                          V29   21+LORE
+                                          V30   21+NODD
+                                          V31   21-ED
+                                          V32   21+NEAR
+                                          V33   21-LY
+                                          V34   21+NAPP
+                                          V35   21-ING
+                                          V36   21+SUDD
+                                          V37   21-ENLY
+                                          V38   21+THER
+                                          V39   21-E
+                                          V40   21+CAME
+                                          V41   21+TAPP
+                                          V42   21-ING
+                                          V43   21+AS
+                                          V44   21+SOME
+                                          V45   21+ONE
+                                          V46   21+GENT
+                                          V47   21-LY
+                                          V48   21+RAPP
+                                          V49   21-ING
+                                          V50   21+AT
+                                          V51   21+MY
+                                          V52   21+CHAM
+                                          V53   21-BER
+                                          V54   21+DOOR
+                                          V55   21+TIS
+                                          V56   21+VISI
+                                          V57   21-TER
+                                          V58   21+MUTT
+                                          V59   21-ERED
+                                          V60   21+ONLY
+                                          V61   21+THIS
+                                          V62   21+NOTH
+                                          V63   21-ING
+                                          V64   21+MORE
+                                          V65   21+AH
+                                          V66   21+DIST
+                                          V67   21-INCT
+                                          V68   21-LY
+                                          V69   21+REME
+                                          V70   21-MBER
+                                          V71   21+IT
+                                          V72   21+WAS
+                                          V73   21+IN
+                                          V74   21+THE
+                                          V75   21+BLEA
+                                          V76   21-K
+                                          V77   21+DECE
+                                          V78   21-MBER
+                                          V79   21+EACH
+                                          V80   21+SEPA
+                                          V81   21-RATE
+                                          V82   21+DYIN
+                                          V83   21-G
+                                          V84   21+EMBE
+                                          V85   21-R
+                                          V86   21+WROU
+                                          V87   21-GHT
+                                          V88   21+ITS
+                                          V89   21+GHOS
+                                          V90   21-T
+                                          V91   21+FLOO
+                                          V92   21-R
+                                          V93   21+EAGE
+                                          V94   21-RLY
+                                          V95   21+WISH
+                                          V96   21-ED
+                                          V97   21+MORR
+                                          V98   21-OW
+                                          V99   21+VAIN
+                                          V100  21-LY
+                                          V101  21+HAD
+                                          V102  21+SOUG
+                                          V103  21-HT
+                                          V104  21+TO
+                                          V105  21+BORR
+                                          V106  21-OW
+                                          V107  21+FROM
+                                          V108  21+BOOK
+                                          V109  21-S
+                                          V110  21+SURC
+                                          V111  21-EASE
+                                          V112  21+SORR
+                                          V113  21-OW
+                                          V114  21+FOR
+                                          V115  21+LOST
+                                          V116  21+LENO
+                                          V117  21-RE
+                                          V118  21+RARE
+                                          V119  21+RADI
+                                          V120  21-ANT
+                                          V121  21+MAID
+                                          V122  21-EN
+                                          V123  21+WHOM
+                                          V124  21+ANGE
+                                          V125  21-LS
+                                          V126  21+NAME
+                                          V127  21+NAME
+                                          V128  21-LESS
+                                          V129  21+HERE
+                                          V130  21+EVER
+                                          V131  21-MORE
+      SPELLING OF ONCE                    Y1      0
+                                                  V1    0
+      SPELLING OF UPON                    Y2      0
+                                                  V2    0
+      SPELLING OF A                       Y3      0
+                                                  V3    0
+      SPELLING OF MIDNIGHT                Y4      0
+                                                  V4
+                                                  V5    0
+      SPELLING OF DREARY                  Y5      0
+                                                  V6
+                                                  V7    0
+      SPELLING OF WHILE                   Y6      0
+                                                  V8
+                                                  V9    0
+      SPELLING OF I                       Y7      0
+                                                  V10   0
+      SPELLING OF PONDERED                Y8      0
+                                                  V11
+                                                  V12   0
+      SPELLING OF WEAK                    Y9      0
+                                                  V13   0
+      SPELLING OF AND                     Y10     0
+                                                  V14   0
+      SPELLING OF WEARY                   Y11     0
+                                                  V15
+                                                  V16   0
+      SPELLING OF OVER                    Y12     0
+                                                  V17   0
+      SPELLING OF MANY                    Y13     0
+                                                  V18   0
+      SPELLING OF QUAINT                  Y14     0
+                                                  V19
+                                                  V20   0
+      SPELLING OF CURIOUS                 Y15     0
+                                                  V21
+                                                  V22   0
+      SPELLING OF VOLUME                  Y16     0
+                                                  V23
+                                                  V24   0
+      SPELLING OF OF                      Y17     0
+                                                  V25   0
+      SPELLING OF FORGOTTEN               Y18     0
+                                                  V26
+                                                  V27
+                                                  V28   0
+      SPELLING OF LORE                    Y19     0
+                                                  V29   0
+      SPELLING OF NODDED                  Y20     0
+                                                  V30
+                                                  V31   0
+      SPELLING OF NEARLY                  Y21     0
+                                                  V32
+                                                  V33   0
+      SPELLING OF NAPPING                 Y22     0
+                                                  V34
+                                                  V35   0
+      SPELLING OF SUDDENLY                Y23     0
+                                                  V36
+                                                  V37   0
+      SPELLING OF THERE                   Y24     0
+                                                  V38
+                                                  V39   0
+      SPELLING OF CAME                    Y25     0
+                                                  V40   0
+      SPELLING OF TAPPING                 Y26     0
+                                                  V41
+                                                  V42   0
+      SPELLING OF AS                      Y27     0
+                                                  V43   0
+      SPELLING OF SOME                    Y28     0
+                                                  V44   0
+      SPELLING OF ONE                     Y29     0
+                                                  V45   0
+      SPELLING OF GENTLY                  Y30     0
+                                                  V46
+                                                  V47   0
+      SPELLING OF RAPPING                 Y31     0
+                                                  V48
+                                                  V49   0
+      SPELLING OF AT                      Y32     0
+                                                  V50   0
+      SPELLING OF MY                      Y33     0
+                                                  V51   0
+      SPELLING OF CHAMBER                 Y34     0
+                                                  V52
+                                                  V53   0
+      SPELLING OF DOOR                    Y35     0
+                                                  V54   0
+      SPELLING OF  TIS                    Y36     0
+                                                  V55   0
+      SPELLING OF VISITER                 Y37     0
+                                                  V56
+                                                  V57   0
+      SPELLING OF MUTTERED                Y38     0
+                                                  V58
+                                                  V59   0
+      SPELLING OF ONLY                    Y39     0
+                                                  V60   0
+      SPELLING OF THIS                    Y40     0
+                                                  V61   0
+      SPELLING OF NOTHING                 Y41     0
+                                                  V62
+                                                  V63   0
+      SPELLING OF MORE                    Y42     0
+                                                  V64   0
+      SPELLING OF AH                      Y43     0
+                                                  V65   0
+      SPELLING OF DISTINCTLY              Y44     0
+                                                  V66
+                                                  V67
+                                                  V68   0
+      SPELLING OF REMEMBER                Y45     0
+                                                  V69
+                                                  V70   0
+      SPELLING OF IT                      Y46     0
+                                                  V71   0
+      SPELLING OF WAS                     Y47     0
+                                                  V72   0
+      SPELLING OF IN                      Y48     0
+                                                  V73   0
+      SPELLING OF THE                     Y49     0
+                                                  V74   0
+      SPELLING OF BLEAK                   Y50     0
+                                                  V75
+                                                  V76   0
+      SPELLING OF DECEMBER                Y51     0
+                                                  V77
+                                                  V78   0
+      SPELLING OF EACH                    Y52     0
+                                                  V79   0
+      SPELLING OF SEPARATE                Y53     0
+                                                  V80
+                                                  V81   0
+      SPELLING OF DYING                   Y54     0
+                                                  V82
+                                                  V83   0
+      SPELLING OF EMBER                   Y55     0
+                                                  V84
+                                                  V85   0
+      SPELLING OF WROUGHT                 Y56     0
+                                                  V86
+                                                  V87   0
+      SPELLING OF ITS                     Y57     0
+                                                  V88   0
+      SPELLING OF GHOST                   Y58     0
+                                                  V89
+                                                  V90   0
+      SPELLING OF FLOOR                   Y59     0
+                                                  V91
+                                                  V92   0
+      SPELLING OF EAGERLY                 Y60     0
+                                                  V93
+                                                  V94   0
+      SPELLING OF WISHED                  Y61     0
+                                                  V95
+                                                  V96   0
+      SPELLING OF MORROW                  Y62     0
+                                                  V97
+                                                  V98   0
+      SPELLING OF VAINLY                  Y63     0
+                                                  V99
+                                                  V100  0
+      SPELLING OF HAD                     Y64     0
+                                                  V101  0
+      SPELLING OF SOUGHT                  Y65     0
+                                                  V102
+                                                  V103  0
+      SPELLING OF TO                      Y66     0
+                                                  V104  0
+      SPELLING OF BORROW                  Y67     0
+                                                  V105
+                                                  V106  0
+      SPELLING OF FROM                    Y68     0
+                                                  V107  0
+      SPELLING OF BOOKS                   Y69     0
+                                                  V108
+                                                  V109  0
+      SPELLING OF SURCEASE                Y70     0
+                                                  V110
+                                                  V111  0
+      SPELLING OF SORROW                  Y71     0
+                                                  V112
+                                                  V113  0
+      SPELLING OF FOR                     Y72     0
+                                                  V114  0
+      SPELLING OF LOST                    Y73     0
+                                                  V115  0
+      SPELLING OF LENORE                  Y74     0
+                                                  V116
+                                                  V117  0
+      SPELLING OF RARE                    Y75     0
+                                                  V118  0
+      SPELLING OF RADIANT                 Y76     0
+                                                  V119
+                                                  V120  0
+      SPELLING OF MAIDEN                  Y77     0
+                                                  V121
+                                                  V122  0
+      SPELLING OF WHOM                    Y78     0
+                                                  V123  0
+      SPELLING OF ANGELS                  Y79     0
+                                                  V124
+                                                  V125  0
+      SPELLING OF NAME                    Y80     0
+                                                  V126  0
+      SPELLING OF NAMELESS                Y81     0
+                                                  V127
+                                                  V128  0
+      SPELLING OF HERE                    Y82     0
+                                                  V129  0
+      SPELLING OF EVERMORE                Y83     0
+                                                  V130
+                                                  V131  0
+      PIECE-LIST LIST                     X3      0
+                                                  Y1
+                                                  Y2
+                                                  Y3
+                                                  Y4
+                                                  Y5
+                                                  Y6
+                                                  Y7
+                                                  Y8
+                                                  Y9
+                                                  Y10
+                                                  Y11
+                                                  Y12
+                                                  Y13
+                                                  Y14
+                                                  Y15
+                                                  Y16
+                                                  Y17
+                                                  Y18
+                                                  Y19
+                                                  Y20
+                                                  Y21
+                                                  Y22
+                                                  Y23
+                                                  Y24
+                                                  Y25
+                                                  Y26
+                                                  Y27
+                                                  Y28
+                                                  Y29
+                                                  Y30
+                                                  Y31
+                                                  Y32
+                                                  Y33
+                                                  Y34
+                                                  Y35
+                                                  Y36
+                                                  Y37
+                                                  Y38
+                                                  Y39
+                                                  Y40
+                                                  Y41
+                                                  Y42
+                                                  Y43
+                                                  Y44
+                                                  Y45
+                                                  Y46
+                                                  Y47
+                                                  Y48
+                                                  Y49
+                                                  Y50
+                                                  Y51
+                                                  Y52
+                                                  Y53
+                                                  Y54
+                                                  Y55
+                                                  Y56
+                                                  Y57
+                                                  Y58
+                                                  Y59
+                                                  Y60
+                                                  Y61
+                                                  Y62
+                                                  Y63
+                                                  Y64
+                                                  Y65
+                                                  Y66
+                                                  Y67
+                                                  Y68
+                                                  Y69
+                                                  Y70
+                                                  Y71
+                                                  Y72
+                                                  Y73
+                                                  Y74
+                                                  Y75
+                                                  Y76
+                                                  Y77
+                                                  Y78
+                                                  Y79
+                                                  Y80
+                                                  Y81
+                                                  Y82
+                                                  Y83   0
+      WORD LIST                           X2      0
+                                                  T1
+                                                  T2
+                                                  T3
+                                                  T4
+                                                  T5
+                                                  T6
+                                                  T7
+                                                  T8
+                                                  T9
+                                                  T10
+                                                  T11
+                                                  T12
+                                                  T13
+                                                  T14
+                                                  T15
+                                                  T16
+                                                  T17
+                                                  T18
+                                                  T19
+                                                  T20
+                                                  T21
+                                                  T22
+                                                  T23
+                                                  T24
+                                                  T25
+                                                  T26
+                                                  T27
+                                                  T28
+                                                  T29
+                                                  T30
+                                                  T31
+                                                  T32
+                                                  T33
+                                                  T34
+                                                  T35
+                                                  T36
+                                                  T37
+                                                  T38
+                                                  T39
+                                                  T40
+                                                  T41
+                                                  T42
+                                                  T43
+                                                  T44
+                                                  T45
+                                                  T46
+                                                  T47
+                                                  T48
+                                                  T49
+                                                  T50
+                                                  T51
+                                                  T52
+                                                  T53
+                                                  T54
+                                                  T55
+                                                  T56
+                                                  T57
+                                                  T58
+                                                  T59
+                                                  T60
+                                                  T61
+                                                  T62
+                                                  T63
+                                                  T64
+                                                  T65
+                                                  T66
+                                                  T67
+                                                  T68
+                                                  T69
+                                                  T70
+                                                  T71
+                                                  T72
+                                                  T73
+                                                  T74
+                                                  T75
+                                                  T76
+                                                  T77
+                                                  T78
+                                                  T79
+                                                  T80
+                                                  T81
+                                                  T82
+                                                  T83   0
+      HEAD OF ONCE                        T1      0     0
+      HEAD OF UPON                        T2      0     0
+      HEAD OF A                           T3      0     0
+      HEAD OF MIDNIGHT                    T4      0     0
+      HEAD OF DREARY                      T5      0     0
+      HEAD OF WHILE                       T6      0     0
+      HEAD OF I                           T7      0     0
+      HEAD OF PONDERED                    T8      0     0
+      HEAD OF WEAK                        T9      0     0
+      HEAD OF AND                         T10     0     0
+      HEAD OF WEARY                       T11     0     0
+      HEAD OF OVER                        T12     0     0
+      HEAD OF MANY                        T13     0     0
+      HEAD OF QUAINT                      T14     0     0
+      HEAD OF CURIOUS                     T15     0     0
+      HEAD OF VOLUME                      T16     0     0
+      HEAD OF OF                          T17     0     0
+      HEAD OF FORGOTTEN                   T18     0     0
+      HEAD OF LORE                        T19     0     0
+      HEAD OF NODDED                      T20     0     0
+      HEAD OF NEARLY                      T21     0     0
+      HEAD OF NAPPING                     T22     0     0
+      HEAD OF SUDDENLY                    T23     0     0
+      HEAD OF THERE                       T24     0     0
+      HEAD OF CAME                        T25     0     0
+      HEAD OF TAPPING                     T26     0     0
+      HEAD OF AS                          T27     0     0
+      HEAD OF SOME                        T28     0     0
+      HEAD OF ONE                         T29     0     0
+      HEAD OF GENTLY                      T30     0     0
+      HEAD OF RAPPING                     T31     0     0
+      HEAD OF AT                          T32     0     0
+      HEAD OF MY                          T33     0     0
+      HEAD OF CHAMBER                     T34     0     0
+      HEAD OF DOOR                        T35     0     0
+      HEAD OF  TIS                        T36     0     0
+      HEAD OF VISITER                     T37     0     0
+      HEAD OF MUTTERED                    T38     0     0
+      HEAD OF ONLY                        T39     0     0
+      HEAD OF THIS                        T40     0     0
+      HEAD OF NOTHING                     T41     0     0
+      HEAD OF MORE                        T42     0     0
+      HEAD OF AH                          T43     0     0
+      HEAD OF DISTINCTLY                  T44     0     0
+      HEAD OF REMEMBER                    T45     0     0
+      HEAD OF IT                          T46     0     0
+      HEAD OF WAS                         T47     0     0
+      HEAD OF IN                          T48     0     0
+      HEAD OF THE                         T49     0     0
+      HEAD OF BLEAK                       T50     0     0
+      HEAD OF DECEMBER                    T51     0     0
+      HEAD OF EACH                        T52     0     0
+      HEAD OF SEPARATE                    T53     0     0
+      HEAD OF DYING                       T54     0     0
+      HEAD OF EMBER                       T55     0     0
+      HEAD OF WROUGHT                     T56     0     0
+      HEAD OF ITS                         T57     0     0
+      HEAD OF GHOST                       T58     0     0
+      HEAD OF FLOOR                       T59     0     0
+      HEAD OF EAGERLY                     T60     0     0
+      HEAD OF WISHED                      T61     0     0
+      HEAD OF MORROW                      T62     0     0
+      HEAD OF VAINLY                      T63     0     0
+      HEAD OF HAD                         T64     0     0
+      HEAD OF SOUGHT                      T65     0     0
+      HEAD OF TO                          T66     0     0
+      HEAD OF BORROW                      T67     0     0
+      HEAD OF FROM                        T68     0     0
+      HEAD OF BOOKS                       T69     0     0
+      HEAD OF SURCEASE                    T70     0     0
+      HEAD OF SORROW                      T71     0     0
+      HEAD OF FOR                         T72     0     0
+      HEAD OF LOST                        T73     0     0
+      HEAD OF LENORE                      T74     0     0
+      HEAD OF RARE                        T75     0     0
+      HEAD OF RADIANT                     T76     0     0
+      HEAD OF MAIDEN                      T77     0     0
+      HEAD OF WHOM                        T78     0     0
+      HEAD OF ANGELS                      T79     0     0
+      HEAD OF NAME                        T80     0     0
+      HEAD OF NAMELESS                    T81     0     0
+      HEAD OF HERE                        T82     0     0
+      HEAD OF EVERMORE                    T83     0     0
+      MAP LIST                            X4      0     0
+      TEXT LIST                           X1      0
+                                                  T1
+                                                  T2
+                                                  T3
+                                                  T4
+                                                  T5
+                                                  T6
+                                                  T7
+                                                  T8
+                                                  T9
+                                                  T10
+                                                  T11
+                                                  T12
+                                                  T13
+                                                  T3
+                                                  T14
+                                                  T10
+                                                  T15
+                                                  T16
+                                                  T17
+                                                  T18
+                                                  T19
+                                                  T6
+                                                  T7
+                                                  T20
+                                                  T21
+                                                  T22
+                                                  T23
+                                                  T24
+                                                  T25
+                                                  T3
+                                                  T26
+                                                  T27
+                                                  T17
+                                                  T28
+                                                  T29
+                                                  T30
+                                                  T31
+                                                  T31
+                                                  T32
+                                                  T33
+                                                  T34
+                                                  T35
+                                                  T36
+                                                  T28
+                                                  T37
+                                                  T7
+                                                  T38
+                                                  T26
+                                                  T32
+                                                  T33
+                                                  T34
+                                                  T35
+                                                  T39
+                                                  T40
+                                                  T10
+                                                  T41
+                                                  T42
+                                                  T43
+                                                  T44
+                                                  T7
+                                                  T45
+                                                  T46
+                                                  T47
+                                                  T48
+                                                  T49
+                                                  T50
+                                                  T51
+                                                  T10
+                                                  T52
+                                                  T53
+                                                  T54
+                                                  T55
+                                                  T56
+                                                  T57
+                                                  T58
+                                                  T2
+                                                  T49
+                                                  T59
+                                                  T60
+                                                  T7
+                                                  T61
+                                                  T49
+                                                  T62
+                                                  T63
+                                                  T7
+                                                  T64
+                                                  T65
+                                                  T66
+                                                  T67
+                                                  T68
+                                                  T33
+                                                  T69
+                                                  T70
+                                                  T17
+                                                  T71
+                                                  T71
+                                                  T72
+                                                  T49
+                                                  T73
+                                                  T74
+                                                  T72
+                                                  T49
+                                                  T75
+                                                  T10
+                                                  T76
+                                                  T77
+                                                  T78
+                                                  T49
+                                                  T79
+                                                  T80
+                                                  T74
+                                                  T81
+                                                  T82
+                                                  T72
+                                                  T83   0
+      START AT A0                       5         A0

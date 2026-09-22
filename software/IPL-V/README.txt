@@ -106,15 +106,22 @@ or saved as a text file to your local system. Error and informational
 messages are written to the emulator's typewriter.
 
 Diagnostic output is controlled by the four Program Switches on the 1620
-Control Panel and written to the card punch. The switches operate
-independently and can be turned on or off in any combination.
+Control Panel and written to the card punch. The switches can be turned
+on or off in any combination.
 
-    Switch 1: when on, a trace of IPL-V instruction execution will be
-    written for all routines for which tracing has been enabled.
+    Switches 1 & 2 OFF: no tracing takes place.
 
-    Switch 2: similar to Switch 1, but the instruction trace is
-    unconditional, and not just for the routines for which it has been
-    enabled.
+    Switch 1 ON/Switch 2 OFF: a trace of IPL-V instruction execution
+    will be written for the current program list if the Q digit of the
+    current instruction is 3.
+
+    Switch 1 OFF/Switch 2 ON: trace all instructions unconditionally.
+
+    Switches 1 & 2 ON: trace the current instruction based on value of
+    the trace mode cell W31:
+        0 => no trace
+        1 => full trace
+        other => no trace
 
     Switch 3: when on, the memory addresses and internal descriptions of
     system storage cells and "J" intrinsic subroutines used by the
@@ -122,7 +129,7 @@ independently and can be turned on or off in any combination.
 
     Switch 4: when on, the card images of the source program will be
     listed, with some assembly information included on the right of each
-    lines. This information consists of the memory address where the
+    line. This information consists of the memory address where the
     assembled list cell is located and the 12-digit internal
     representation of the cell.
 
