@@ -53,8 +53,8 @@ simple-Punch-Output.card
     Card punch output from running program simple.ipl in the interpreter
     with Program Switches 3 and 4 on and Switches 1 and 2 off.
 
-ysimon.fixed.ipl
-    Victor Yngve's phrase-structure machine, an English reandom-sentence
+ysimon.original.ipl
+    Victor Yngve's phrase-structure machine, an English random-sentence
     generator, ported from MIT's COMIT into Carnegie Tech's IPL-V by
     Herbert A. Simon and his daughter Katherine in 1962. Recovered from
     the Carnegie Mellon University Archives and fixed to correct an
@@ -70,9 +70,16 @@ ysimon.fixed.ipl
     YngveSentenceGenerator/Yngve_guide.md#running-it-today-the-1620-vers
     ion
 
-ysimon-fixed-Punch-Output.card
+ysimon-original-Punch-Output.card
     Card punch output from running program ysimon-fixed.ipl in the
     interpreter with Program Switches 3 and 4 on and Switches 1 and 2
     off.
 
+ysimon-typewriter.card
+    A version of the ysimon-original program modified by Jeff Shrager to
+    disable tracing and output the generated sentence words to the 1620
+    console typewriter.
+
+ysimon-typewriter-Output.txt
+    Typwriter output from running ysimon-typewriter.card.
 
