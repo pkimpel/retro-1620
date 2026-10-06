@@ -164,6 +164,26 @@ DIV.panelSurface {
     background-color:   #246;
     color:              white}
 
+DIV.throttlingOverlay {
+    position:           fixed;
+    display:            none;
+    width:              100%;
+    height:             100%;
+    z-index:            100;
+    color:              white;
+    background-color:   #00000080}
+DIV.throttlingOverlay DIV.throttlingCaption {
+    position:           absolute;
+    top:                50%;
+    left:               50%;
+    max-width:          calc(90% - 12px);
+    transform:          translate(-50%, -50%);
+    text-align:         center;
+    font-size:          5vh;
+    font-weight:        bold;
+    padding:            8px;
+    border:             2px dotted white}
+
 DIV.panelRegister {
     position:           absolute;
     overflow:           hidden;

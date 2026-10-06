@@ -106,11 +106,10 @@
 
 #HopperBar {
     position:           absolute;
-    top:                26px;
+    top:                27px;
     left:               0;
     width:              100%;
-    height:             16px;
-    border:             1px solid white}
+    height:             16px}
 
 #HopperCaption {
     position:           absolute;

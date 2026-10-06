@@ -107,11 +107,10 @@
     position:           absolute;
     top:                50%;
     right:              136px;
-    height:             20px;
+    height:             16px;
     width:              calc(100% - 212px);
     min-width:          60px;
-    transform:          translate(0,-50%);
-    border:             1px solid white}
+    transform:          translate(0,-50%)}
 
 .outerToggleControl {
     position:           absolute;

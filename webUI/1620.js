@@ -32,6 +32,8 @@ const globalLoad = (ev) => {
 
     const context = {
         config,
+        startEmulationSlowdown,
+        endEmulationSlowdown,
         systemShutDown,
         window
     };
@@ -68,6 +70,20 @@ const globalLoad = (ev) => {
             $$("StatusMsg").textContent = "";
             statusMsgTimer = 0;
         }, inSeconds*1000);
+    }
+
+    /**************************************/
+    function startEmulationSlowdown(timestamp) {
+        /* Handles emulation slowdown due to browser throttling */
+
+        $$("ThrottlingOverlayDiv").style.display = "block";
+    }
+
+    /**************************************/
+    function endEmulationSlowdown(deltaTime) {
+        /* Handles end of emulation slowdown due to browser throttling */
+
+        $$("ThrottlingOverlayDiv").style.display = "none";
     }
 
     /**************************************/

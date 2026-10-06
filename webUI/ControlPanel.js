@@ -52,11 +52,13 @@ class ControlPanel {
     avgInstructionRate = 0;             // running average instructions/sec
     auxCEPanel = null;                  // Aux CE Panel object
     diskResetLatch = 0;                 // RESET / RELEASE simultaneous sequence pending
+    emulationSlowed = false;            // true => emulation has been throttled by browser
     intervalToken = 0;                  // panel refresh timer cancel token
     lastETime = 0;                      // last emulation clock value
     lastInstructionCount = 0;           // prior total instruction count (for average)
     lastRunTime = 0;                    // prior total run time (for average), ms
     modifyLatch = 0;                    // MODIFY / CHECK RESET simultaneous sequence pending
+    slowdownStartStamp = 0;             // timestamp when the current tab throttling occurred
     registerView = false;               // true if Register View is displaying
 
     /**************************************/
@@ -75,6 +77,7 @@ class ControlPanel {
         this.boundUpdatePanel = this.updatePanel.bind(this);
         this.boundMARSelectorChange = this.marSelectorChange.bind(this);
         this.boundBeforeUnload = this.beforeUnload.bind(this);
+        this.boundChangeVisibility = this.changeVisibility.bind(this);
         this.boundControlSwitchClick = this.controlSwitchClick.bind(this);
         this.boundSimultaneousButtonDrag = this.simultaneousButtonDrag.bind(this);
         this.boundToggleRegisterView = this.toggleRegisterView.bind(this);
@@ -389,6 +392,7 @@ class ControlPanel {
         }
 
         this.$$("EmulatorVersion").textContent = Version.retro1620Version;
+        window.document.addEventListener("visibilitychange", this.boundChangeVisibility);
         this.window.addEventListener("beforeunload", this.boundBeforeUnload);
         this.window.addEventListener("unload", this.boundPanelUnload);
         this.$$("OperatorContainer").addEventListener("click", this.boundControlSwitchClick);
@@ -1362,6 +1366,66 @@ class ControlPanel {
     }
 
     /**************************************/
+    startEmulationSlowdown() {
+        /* Called when a window visibility change event indicates the emulation
+        may be throttled by the browser */
+
+        if (this.emulationSlowed) {
+            throw new Error("<ERROR> Slowdown requested during slowdown state");
+        } else {
+            this.emulationSlowed = true;
+            this.slowdownStartStamp = performance.now();
+            this.context.startEmulationSlowdown(this.slowdownStartStamp);
+            this.context.processor.startEmulationSlowdown(this.slowdownStartStamp);
+            console.debug(`<Emulation slowdown started>  stamp=${this.slowdownStartStamp}`);
+            clearTimeout(this.intervalToken);           // stop Control Panel refresh
+            this.intervalToken = 0;                     // reset the token
+            this.$$("ThrottlingOverlayDiv").style.display = "block";
+        }
+    }
+
+    /**************************************/
+    endEmulationSlowdown() {
+        /* Called when a window visibility change event indicates the emulation
+        has resumed nomal-speed operation */
+
+        if (!this.emulationSlowed) {
+            throw new Error("<ERROR> Slowdown ended when not in a slowed state");
+        } else {
+            const now = performance.now();
+            const deltaTime = now - this.slowdownStartStamp;
+            this.emulationSlowed = false;
+            this.context.endEmulationSlowdown(this.slowdownStartStamp, deltaTime);
+            this.context.processor.endEmulationSlowdown(this.slowdownStartStamp, deltaTime);
+            console.debug(`<Emulation slowdown ended> stamp=${now}, delta=${deltaTime} ms`);
+            this.$$("ThrottlingOverlayDiv").style.display = "none";
+            if (this.intervalToken == 0) {
+                this.intervalToken = this.window.setTimeout(this.boundUpdatePanel, ControlPanel.displayRefreshPeriod);
+            }
+        }
+    }
+
+    /**************************************/
+    changeVisibility(ev) {
+        /* Called when the visibilitychange event fires to report a change in
+        the visibility of the Home page window. This indicates the the browser
+        may soon severely slow down the application */
+        const doc = window.document;
+        const state = doc.visibilityState;
+
+        console.debug(`<Visibility Change> visibility=${state}, slowed=${this.emulationSlowed}`);
+        if (state == "hidden") {
+            if (!this.emulationSlowed) {
+                this.startEmulationSlowdown();
+            }
+        } else {
+            if (this.emulationSlowed) {
+                this.endEmulationSlowdown();
+            }
+        }
+    }
+
+    /**************************************/
     beforeUnload(ev) {
         const msg = "Closing this window will make the panel unusable.\n" +
                     "Suggest you stay on the page and minimize this window instead";
@@ -1411,6 +1475,7 @@ class ControlPanel {
             this.config.putWindowGeometry(this.window, "ControlPanel");
             this.window.removeEventListener("beforeunload", this.boundBeforeUnload);
             this.window.removeEventListener("unload", this.boundPanelUnload);
+            window.document.removeEventListener("visibilitychange", this.boundChangeVisibility);
             this.context.systemShutDown();
             this.window.setTimeout(() => {
                 this.window.close();

@@ -8243,6 +8243,7 @@ class Processor {
             this.enterAutomatic();
             this.gateREL.value = 0;
             this.regOP.binaryValue = this.opBinary = 36; // RN, Read Numerically
+            this.opThisAtts = this.opAtts[this.opBinary];
             this.ioSelect((cardLoad ? 5 : 1), 0);        // select card(5) or typewriter(1)
             if (!this.gateRD.value) {   // not sure about this...
                 this.gateRD.value = 1;
@@ -8337,6 +8338,26 @@ class Processor {
                 this.enterManual();
             }
         }
+    }
+
+    /**************************************/
+    startEmulationSlowdown(timestamp) {
+        /* Handles start of emulation slowdown due to browser throttling */
+
+        // Presently this is just a stub to satisfy the API.
+        //for(let name in this.context.devices) {
+        //    this.context.devices[name].startEmulationSlowdown(timestamp);
+        //}
+    }
+
+    /**************************************/
+    endEmulationSlowdown(deltaTime) {
+        /* Handles end of emulation slowdown due to browser throttling */
+
+        this.envir.startTiming();
+        //for (let name in this.context.devices) {
+        //    this.context.devices[name].endEmulationSlowdown(deltaTime);
+        //}
     }
 
 

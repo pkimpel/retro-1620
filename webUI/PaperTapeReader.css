@@ -71,11 +71,10 @@
 
 #TapeSupplyBar {
     position:           absolute;
-    top:                30px;
+    top:                32px;
     right:              66px;
     width:              calc(100% - 120px);
-    height:             16px;
-    border:             1px solid white}
+    height:             16px}
 #TapeSupplyCaption {
     position:           absolute;
     display:            none;           /* for now... */

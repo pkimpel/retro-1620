@@ -80,10 +80,9 @@
 #TapeSupplyBar {
     position:           absolute;
     top:                4px;
-    right:              38px;
+    right:              40px;
     width:              calc(100% - 108px);
-    height:             16px;
-    border:             1px solid white}
+    height:             16px}
 #TapeSupplyCaption {
     position:           absolute;
     display:            none;           /* for now... */
