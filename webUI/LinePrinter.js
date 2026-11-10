@@ -5,7 +5,7 @@
 * Licensed under the MIT License, see
 *       http://www.opensource.org/licenses/mit-license.php
 ************************************************************************
-* Line printer module for the 11433 Line Printer unit.
+* Line printer module for the 1443 Line Printer unit.
 *
 * Defines a line printer peripheral unit type.
 *

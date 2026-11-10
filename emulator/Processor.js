@@ -4749,8 +4749,8 @@ class Processor {
 
         if (this.regMBR.getDigit(this.regMAR.isEven) & Register.flagMask) {
             if (this.gate1ST_CYC.value) {
-                this.gateSCAN_MINUS.value = (this.gateHP.value ? 0 : 1);
-            } else {
+                this.gateSCAN_MINUS.value = !(this.gateHP.value && this.gateHI_ORDER_ZERO.value);
+            } else if (!this.gateHI_ORDER_ZERO.value) {
                 this.gateFIELD_MK_1.value = 1;
             }
         }
@@ -5019,12 +5019,11 @@ class Processor {
                 digit = 0;
             } else {
                 this.gateFIELD_MK_2.value = 1;
-                this.enterICycle();             // done -- otherwise, stay in E2
                 if (this.gateSCAN_MINUS.value) {// detected flag in negative low-order digit
                     digit = Register.flagMask;
-                } else {                        // detected flag in high-order exponent digit
-                    return;
-                }
+                } // else detected flag in high-order exponent digit, so just exit
+
+                this.enterICycle();             // done -- otherwise, stay in E2
             }
 
             this.regMIR.setDigit(dx, digit);
@@ -5067,8 +5066,8 @@ class Processor {
 
     /**************************************/
     stepE1FPShift08() {
-        /* Handles the E1 shift right state for op 08. Reads digits via OR1 to
-        DR. MBR is fetched via OR1 by caller. See ILD 10.00.84.1 */
+        /* Handles the E1 shift right state for op 08=FSR. Reads digits via OR1
+        to DR. MBR is fetched via OR1 by caller. See ILD 10.00.84.1 */
 
         if (this.gate1ST_CYC.value) {
             this.gateSHIFT_ENTRY.value = 0;
@@ -5097,7 +5096,6 @@ class Processor {
         if (this.gateFIELD_MK_1.value) {
             // Do zero fill
             if (this.regMBR.getDigit(dx) & Register.flagMask) {
-                digit |= Register.flagMask;
                 this.gateFIELD_MK_2.value = 1;
                 this.enterICycle();             // done -- otherwise, stay in E2
             }
@@ -5113,13 +5111,12 @@ class Processor {
 
             if (this.gate1ST_CYC_DELAYD.value) {// set sign flag on L.O. digit
                 digit = (digit & Register.notFlagMask) | (this.regMBR.getDigit(dx) & Register.flagMask);
+            } else if (this.gateFL_1.value) {   // check for end of Q field
+                this.gateFIELD_MK_1.value = 1;
+                digit |= Register.flagMask;
+                nextState = 0;                  // stay in E2 for zero fill
             } else {
                 digit &= Register.notFlagMask;  // clear all other flags in transferred digits
-            }
-
-            if (this.gateFL_1.value) {          // check for end of Q field
-                this.gateFIELD_MK_1.value = 1;
-                nextState = 0;                  // stay in E2 for zero fill
             }
         }
 
@@ -6773,7 +6770,6 @@ class Processor {
             }
             //--no break
         case  7:        // BTFL - Branch and Transmit Floating
-        case  8:        // FSR - Floating Shift Right
         case 10:        // BTA - Branch and Transmit
         case 17:        // BTM - Branch and Transmit Immediate
         case 20:        // BTAM - Branch and Transmit Immediate
